@@ -3,7 +3,7 @@
 RUNSERVERCOMMAND="nohup ./runserver.sh > server.log 2>&1 &"
 
 # Reserve a number of nodes.
-NODES=$(./reserve-nodes $1)
+NODES=$(./reserve-nodes.sh $1)
 # Appoint master. This will run MC Server.
 MASTER=$(echo $NODES | cut -d' ' -f1)
 # Appoint slaves. This will run MC clients.
