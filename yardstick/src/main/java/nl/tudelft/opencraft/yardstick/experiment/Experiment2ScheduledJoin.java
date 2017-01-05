@@ -73,11 +73,11 @@ public class Experiment2ScheduledJoin extends Experiment implements SessionListe
         botsJoined++; // Presume the bot will join
 
         if (nodeId != node) {
-            System.out.println("Bot " + botsJoined + " joining on node " + node);
+            logger.info("Bot " + botsJoined + " joining on node " + node);
             return;
         }
 
-        System.out.println("Bot " + botsJoined + " joining on node " + node + " (this node)");
+        logger.info("Bot " + botsJoined + " joining on node " + node + " (this node)");
 
         // Connect
         Client client = new Client(options.host, options.port, new MinecraftProtocol("YSBot-" + node + "-" + botsJoined), new TcpSessionFactory());
@@ -85,14 +85,14 @@ public class Experiment2ScheduledJoin extends Experiment implements SessionListe
         client.getSession().connect();
 
         if (client.getSession().isConnected()) {
-            System.out.println("  > Connected");
+            logger.info("  > Connected");
         } else {
-            System.out.println("Terminating...");
+            logger.info("Terminating...");
             botsJoined = Integer.MAX_VALUE;
         }
 
         if (step == botsTotal) {
-            System.out.println("All bots have joined. Sleeping 10 seconds");
+            logger.info("All bots have joined. Sleeping 10 seconds");
         }
     }
 
