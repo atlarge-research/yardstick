@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.util.logging.Level;
 import nl.tudelft.opencraft.yardstick.Options;
 import nl.tudelft.opencraft.yardstick.Report;
-import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
-import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 import nl.tudelft.opencraft.yardstick.util.CountingOutputStream;
 import org.spacehq.mc.protocol.MinecraftProtocol;
 import org.spacehq.packetlib.Client;
@@ -23,9 +21,7 @@ public class Experiment1SimpleJoin extends Experiment implements SessionListener
 
     public static final long EXPERIMENT_DURATION = 10_000;
     //
-    private SubLogger logger;
     private Client client;
-    private long tick;
     //
     private final CountingOutputStream cos = new CountingOutputStream();
     private final NetOutput cno = new StreamNetOutput(cos);
@@ -35,27 +31,31 @@ public class Experiment1SimpleJoin extends Experiment implements SessionListener
     private long bytesOut;
 
     public Experiment1SimpleJoin(Options opts) {
-        super(opts);
+        super(1,
+                "A simple experiment. A bot joins the server and disconnects after 10 seconds. "
+                + "The amount of packets and bytes that are both sent and received are counted and reported.",
+                opts);
     }
 
     @Override
-    public String getDescription() {
-        return "Experiment 1 - A simple experiment. A bot joins the server and disconnects after 10 seconds. "
-                + "The amount of packets and bytes that are both sent and received are counted and reported.";
-    }
-
-    @Override
-    public void before() {
-        logger = GlobalLogger.getLogger().newSubLogger("ex1");
-        client = new Client(opts.host, opts.port, new MinecraftProtocol("YSBot-1"), new TcpSessionFactory());
+    protected void before() {
+        client = new Client(options.host, options.port, new MinecraftProtocol("YSBot-1"), new TcpSessionFactory());
         client.getSession().addListener(this);
         client.getSession().connect();
     }
 
     @Override
-    public Report after() {
-        client.getSession().disconnect("disconnect");
+    protected void tick() {
+        // In this case, wait and do nothing...
+    }
 
+    @Override
+    protected void after() {
+        client.getSession().disconnect("disconnect");
+    }
+
+    @Override
+    public Report report() {
         Report r = new Report("Simple Join");
         r.put("packets_in", "Packets received", packIn);
         r.put("bytes_in", "Bytes received", bytesIn);
@@ -66,11 +66,6 @@ public class Experiment1SimpleJoin extends Experiment implements SessionListener
         r.seal();
 
         return r;
-    }
-
-    @Override
-    public void tick(long tick) {
-        this.tick = tick;
     }
 
     @Override

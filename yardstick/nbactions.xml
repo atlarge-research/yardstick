@@ -10,7 +10,7 @@
             <goal>org.codehaus.mojo:exec-maven-plugin:1.2.1:exec</goal>
         </goals>
         <properties>
-            <exec.args>-classpath %classpath nl.tudelft.opencraft.yardstick.Yardstick --host 127.0.0.1 --port 25565 -e 1</exec.args>
+            <exec.args>-classpath %classpath nl.tudelft.opencraft.yardstick.Yardstick --host 127.0.0.1 --port 25565 -e 2 -Eid=1 -Enodes=4 -Ebots=10 -Einterval=2000</exec.args>
             <exec.executable>java</exec.executable>
         </properties>
     </action>
@@ -24,7 +24,7 @@
             <goal>org.codehaus.mojo:exec-maven-plugin:1.2.1:exec</goal>
         </goals>
         <properties>
-            <exec.args>-Xdebug -Xrunjdwp:transport=dt_socket,server=n,address=${jpda.address} -classpath %classpath nl.tudelft.opencraft.yardstick.Yardstick --host 127.0.0.1 --port 25565 -e 1</exec.args>
+            <exec.args>-Xdebug -Xrunjdwp:transport=dt_socket,server=n,address=${jpda.address} -classpath %classpath nl.tudelft.opencraft.yardstick.Yardstick --host 127.0.0.1 --port 25565 -e 2 -Eid=1 -Enodes=4 -Ebots=10 -Einterval=2000</exec.args>
             <exec.executable>java</exec.executable>
             <jpda.listen>true</jpda.listen>
         </properties>
@@ -39,7 +39,7 @@
             <goal>org.codehaus.mojo:exec-maven-plugin:1.2.1:exec</goal>
         </goals>
         <properties>
-            <exec.args>-classpath %classpath nl.tudelft.opencraft.yardstick.Yardstick --host 127.0.0.1 --port 25565 -e 1</exec.args>
+            <exec.args>-classpath %classpath nl.tudelft.opencraft.yardstick.Yardstick --host 127.0.0.1 --port 25565 -e 2 -Eid=1 -Enodes=4 -Ebots=10 -Einterval=2000</exec.args>
             <exec.executable>java</exec.executable>
         </properties>
     </action>

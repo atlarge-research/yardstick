@@ -3,6 +3,7 @@ package nl.tudelft.opencraft.yardstick;
 import com.beust.jcommander.JCommander;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment1SimpleJoin;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment2ScheduledJoin;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SimpleTimeFormatter;
 
@@ -24,14 +25,19 @@ public class Yardstick {
         LOGGER.info("Yardstick v" + VERSION);
 
         Experiment ex;
-        if (opts.experiment == 1) {
-            ex = new Experiment1SimpleJoin(opts);
-        } else {
-            System.out.println("Invalid experiment: " + opts.experiment);
-            return;
+        switch (opts.experiment) {
+            case 1:
+                ex = new Experiment1SimpleJoin(opts);
+                break;
+            case 2:
+                ex = new Experiment2ScheduledJoin(opts);
+                break;
+            default:
+                System.out.println("Invalid experiment: " + opts.experiment);
+                return;
         }
 
-        Thread t = new Thread(new ExperimentRunnable(ex));
+        Thread t = new Thread(ex);
         t.setName("experiment-" + opts.experiment);
 
         t.start();
