@@ -1,6 +1,15 @@
 package nl.tudelft.opencraft.yardstick;
 
 import com.beust.jcommander.JCommander;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.chrono.ChronoLocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment1SimpleJoin;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment2ScheduledJoin;
@@ -23,6 +32,24 @@ public class Yardstick {
 
         // Let's go!
         LOGGER.info("Yardstick v" + VERSION);
+
+        if (opts.start != null) {
+            LOGGER.info("Starting at: " + opts.start.format(DateTimeFormatter.ISO_LOCAL_TIME));
+
+            LocalTime now = LocalTime.now();
+
+            if (opts.start.isBefore(now)) {
+                LOGGER.warning("Indicated time is in the past.");
+            } else {
+                long ms = now.until(opts.start, ChronoUnit.MILLIS);
+                LOGGER.info("-> Sleeping " + ms + " milliseconds");
+                try {
+                    Thread.sleep(ms);
+                } catch (InterruptedException ex) {
+                    LOGGER.log(Level.WARNING, "Sleeping interrupted", ex);
+                }
+            }
+        }
 
         Experiment ex;
         switch (opts.experiment) {
