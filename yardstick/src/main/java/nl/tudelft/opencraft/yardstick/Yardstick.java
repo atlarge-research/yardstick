@@ -33,6 +33,11 @@ public class Yardstick {
         // Let's go!
         LOGGER.info("Yardstick v" + VERSION);
 
+        if (opts.help) {
+            optParser.usage();
+            return;
+        }
+
         if (opts.start != null) {
             LOGGER.info("Starting at: " + opts.start.format(DateTimeFormatter.ISO_LOCAL_TIME));
 

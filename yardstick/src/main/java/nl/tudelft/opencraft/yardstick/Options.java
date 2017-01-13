@@ -13,22 +13,22 @@ import java.util.Map;
 
 public class Options {
 
-    @Parameter(names = {"--help"}, help = true)
+    @Parameter(names = {"--help"}, help = true, description = "Shows help")
     public boolean help;
 
-    @Parameter(names = {"--experiment", "-e"}, required = true)
+    @Parameter(names = {"--experiment", "-e"}, required = true, description = "The experiment ID - int")
     public int experiment;
 
-    @Parameter(names = {"--host", "-h"}, required = true)
+    @Parameter(names = {"--host", "-h"}, required = true, description = "The host of the Minecraft server")
     public String host;
 
-    @Parameter(names = {"--port", "-p"}, required = true)
+    @Parameter(names = {"--port", "-p"}, required = true, description = "The port of the Minecraft server")
     public int port;
 
-    @Parameter(names = {"--start", "-s"}, converter = DateConverter.class)
+    @Parameter(names = {"--start", "-s"}, converter = DateConverter.class, description = "The start time of the experiment - HH:mm[:ss]")
     public LocalTime start;
 
-    @DynamicParameter(names = "-E", description = "Experiment parameters.")
+    @DynamicParameter(names = "-E", description = "The experiment parameters. Differs per experiment")
     public Map<String, String> experimentParams = new HashMap<>();
 
     public static class DateConverter implements IStringConverter<LocalTime> {
