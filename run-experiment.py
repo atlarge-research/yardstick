@@ -14,8 +14,8 @@ def main(args):
         for line in fin:
             num, role = line.split()
             num = int(num)
-            num += total
-            if thisindex < num:
+            total += num
+            if thisindex < total:
                thisrole = role 
                break
     print thisrole
