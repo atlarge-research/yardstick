@@ -25,6 +25,12 @@ public class Options {
     @Parameter(names = {"--port", "-p"}, required = true, description = "The port of the Minecraft server")
     public int port;
 
+    @Parameter(names = {"--prometheus-host", "-ph"}, description = "The host of the Prometheus server")
+    public String prometheusHost;
+
+    @Parameter(names = {"--prometheus-port", "-pp"}, description = "The port of the Prometheus server")
+    public int prometheusPort;
+
     @Parameter(names = {"--start", "-s"}, converter = DateConverter.class, description = "The start time of the experiment - HH:mm[:ss]")
     public LocalTime start;
 

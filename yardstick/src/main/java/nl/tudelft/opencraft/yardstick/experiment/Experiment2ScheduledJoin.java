@@ -2,20 +2,11 @@ package nl.tudelft.opencraft.yardstick.experiment;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import nl.tudelft.opencraft.yardstick.Options;
-import nl.tudelft.opencraft.yardstick.Report;
 import org.spacehq.mc.protocol.MinecraftProtocol;
 import org.spacehq.packetlib.Client;
-import org.spacehq.packetlib.event.session.ConnectedEvent;
-import org.spacehq.packetlib.event.session.DisconnectedEvent;
-import org.spacehq.packetlib.event.session.DisconnectingEvent;
-import org.spacehq.packetlib.event.session.PacketReceivedEvent;
-import org.spacehq.packetlib.event.session.PacketSentEvent;
-import org.spacehq.packetlib.event.session.SessionListener;
 import org.spacehq.packetlib.tcp.TcpSessionFactory;
 
-public class Experiment2ScheduledJoin extends Experiment implements SessionListener {
+public class Experiment2ScheduledJoin extends Experiment {
 
     // Index of the current app instance
     private int nodeId;
@@ -35,8 +26,8 @@ public class Experiment2ScheduledJoin extends Experiment implements SessionListe
     // All connections
     private final List<Client> clients = new ArrayList<>();
 
-    public Experiment2ScheduledJoin(Options opts) {
-        super(2, "Gradually lets bots join a server in a scheduled manner. Supports a clustered approach.", opts);
+    public Experiment2ScheduledJoin() {
+        super(2, "Gradually lets bots join a server in a scheduled manner. Supports a clustered approach.");
     }
 
     @Override
@@ -80,13 +71,13 @@ public class Experiment2ScheduledJoin extends Experiment implements SessionListe
         logger.info("Bot " + botsJoined + " joining on node " + node + " (this node)");
 
         // Connect
-        Client client = new Client(options.host, options.port, new MinecraftProtocol("YSBot-" + node + "-" + botsJoined), new TcpSessionFactory());
-        client.getSession().addListener(this);
+        String name = "YSBot-" + node + "-" + botsJoined;
+        Client client = new Client(options.host, options.port, new MinecraftProtocol(name), new TcpSessionFactory());
+        client.getSession().addListener(new ExperimentLogger(logger.newSubLogger(name)));
+        client.getSession().addListener(stats);
         client.getSession().connect();
 
-        if (client.getSession().isConnected()) {
-            logger.info("  > Connected");
-        } else {
+        if (!client.getSession().isConnected()) {
             logger.info("Terminating...");
             botsJoined = Integer.MAX_VALUE;
         }
@@ -102,42 +93,6 @@ public class Experiment2ScheduledJoin extends Experiment implements SessionListe
             client.getSession().disconnect("disconnect");
         }
         clients.clear();
-    }
-
-    @Override
-    public Report report() {
-        Report r = new Report("Scheduled Join");
-
-        r.put("node_id", "Node ID", nodeId);
-        r.put("node_count", "Node count", nodeCount);
-        r.put("bots_joined", "Bots joined", botsJoined);
-        r.put("interval", "Interval (ms)", interval);
-
-        r.seal();
-        return r;
-    }
-
-    @Override
-    public void packetReceived(PacketReceivedEvent pre) {
-    }
-
-    @Override
-    public void packetSent(PacketSentEvent pse) {
-    }
-
-    @Override
-    public void connected(ConnectedEvent ce) {
-    }
-
-    @Override
-    public void disconnecting(DisconnectingEvent de) {
-    }
-
-    @Override
-    public void disconnected(DisconnectedEvent de) {
-        if (de.getCause() != null) {
-            logger.log(Level.SEVERE, "Connection closed unexpectedly!", de.getCause());
-        }
     }
 
 }

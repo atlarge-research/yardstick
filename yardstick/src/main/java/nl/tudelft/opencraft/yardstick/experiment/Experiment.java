@@ -1,9 +1,11 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import java.util.logging.Level;
 import nl.tudelft.opencraft.yardstick.Options;
-import nl.tudelft.opencraft.yardstick.Report;
+import nl.tudelft.opencraft.yardstick.Yardstick;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
+import nl.tudelft.opencraft.yardstick.statistic.Statistics;
 
 public abstract class Experiment implements Runnable {
 
@@ -11,16 +13,17 @@ public abstract class Experiment implements Runnable {
     //
     protected final int number;
     protected final String description;
-    protected final Options options;
+    protected final Options options = Yardstick.OPTIONS;
     protected final SubLogger logger;
+    protected final Statistics stats;
     //
     protected long tick = 0;
 
-    public Experiment(int number, String desc, Options opts) {
+    public Experiment(int number, String desc) {
         this.number = number;
         this.description = desc;
-        this.options = opts;
         this.logger = GlobalLogger.getLogger().newSubLogger("Experiment " + number);
+        this.stats = new Statistics(options.prometheusHost, options.prometheusPort);
     }
 
     @Override
@@ -31,6 +34,8 @@ public abstract class Experiment implements Runnable {
             logger.info("Parameter - " + key + ": " + options.experimentParams.get(key));
         }
 
+        stats.startPushing();
+
         before();
 
         do {
@@ -40,7 +45,7 @@ public abstract class Experiment implements Runnable {
             try {
                 Thread.sleep(TICK_MS);
             } catch (InterruptedException ex) {
-                throw new RuntimeException(ex);
+                logger.log(Level.SEVERE, "Ticker interrupted", ex);
             }
             tick += TICK_MS;
 
@@ -48,11 +53,8 @@ public abstract class Experiment implements Runnable {
 
         after();
 
-        logger.info("Experiment complete, generating report");
-
-        Report r = report();
-
-        logger.info(r.toString());
+        logger.info("Experiment complete, exiting");
+        stats.stopPushing();
     }
 
     protected abstract void before();
@@ -62,7 +64,5 @@ public abstract class Experiment implements Runnable {
     protected abstract boolean isDone();
 
     protected abstract void after();
-
-    public abstract Report report();
 
 }

@@ -1,4 +1,4 @@
-package nl.tudelft.opencraft.yardstick.util;
+package nl.tudelft.opencraft.yardstick.statistic;
 
 import java.io.IOException;
 import java.io.OutputStream;
