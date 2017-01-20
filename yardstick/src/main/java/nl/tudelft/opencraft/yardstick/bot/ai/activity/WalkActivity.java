@@ -1,26 +1,15 @@
-package nl.tudelft.opencraft.yardstick.bot.ai.activity;
-
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import nl.tudelft.opencraft.yardstick.bot.Bot;
-import nl.tudelft.opencraft.yardstick.bot.Vector3i;
-import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
-import nl.tudelft.opencraft.yardstick.bot.world.World;
-
 /*
  Copyright (c) 2013, DarkStorm (darkstorm@evilminecraft.net)
  All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
- modification, are permitted provided that the following conditions are met: 
+ modification, are permitted provided that the following conditions are met:
 
  1. Redistributions of source code must retain the above copyright notice, this
- list of conditions and the following disclaimer. 
+ list of conditions and the following disclaimer.
  2. Redistributions in binary form must reproduce the above copyright notice,
  this list of conditions and the following disclaimer in the documentation
- and/or other materials provided with the distribution. 
+ and/or other materials provided with the distribution.
 
  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -33,6 +22,21 @@ import nl.tudelft.opencraft.yardstick.bot.world.World;
  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+package nl.tudelft.opencraft.yardstick.bot.ai.activity;
+
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import nl.tudelft.opencraft.yardstick.bot.Bot;
+import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.PathNode;
+import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.PathSearch;
+import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
+import nl.tudelft.opencraft.yardstick.bot.world.Material;
+import nl.tudelft.opencraft.yardstick.bot.world.World;
+import nl.tudelft.opencraft.yardstick.util.Vector3d;
+import nl.tudelft.opencraft.yardstick.util.Vector3i;
+
 public class WalkActivity implements Activity {
 
     private static double defaultSpeed = 0.15, defaultJumpFactor = 3, defaultFallFactor = 4, defaultLiquidFactor = 0.5;
@@ -74,8 +78,8 @@ public class WalkActivity implements Activity {
                 if (world == null || player == null || target == null) {
                     return null;
                 }
-                Vector3i ourLocation = player.getLocation();
-                PathSearch search = world.getPathFinder().provideSearch(ourLocation, target);
+                Vector3d ourLocation = player.getLocation();
+                PathSearch search = bot.getPathFinder().provideSearch(ourLocation.intVector(), target);
                 while (!search.isDone() && (thread == null || !thread.isCancelled())) {
                     System.out.println("Stepping...");
                     search.step();
@@ -159,11 +163,11 @@ public class WalkActivity implements Activity {
         if (nextStep != null) {
             BotPlayer player = bot.getPlayer();
             System.out.println(" -> Moving from " + player.getLocation() + " to " + nextStep);
-            if (nextStep.getNext() != null && player.getDistanceToSquared(nextStep.getNext().getLocation()) < 0.2) {
+            if (nextStep.getNext() != null && player.getLocation().distanceSquared(nextStep.getNext().getLocation().doubleVector()) < 0.2) {
                 nextStep = nextStep.getNext();
                 ticksSinceStepChange = 0;
             }
-            if (player.getDistanceToSquared(nextStep.getLocation()) > 4) {
+            if (player.getLocation().distanceSquared(nextStep.getLocation().doubleVector()) > 4) {
                 nextStep = null;
                 return;
             }
@@ -175,34 +179,46 @@ public class WalkActivity implements Activity {
             double speed = this.speed;
             Vector3i location = nextStep.getLocation();
             Vector3i block = player.getLocation().intVector();
+            Vector3d playerLoc = player.getLocation();
+
             double x = location.getX() + 0.5, y = location.getY(), z = location.getZ() + 0.5;
-            boolean inLiquid = player.isInLiquid();
-            if (BlockType.getById(bot.getWorld().getBlockIdAt(block.add(new Vector3i(0, -1, 0)))) == BlockType.SOUL_SAND) {
-                if (BlockType.getById(bot.getWorld().getBlockIdAt(location.offset(0, -1, 0))) == BlockType.SOUL_SAND) {
+            boolean inLiquid = false; // TODO: player.isInLiquid();
+            if (Material.getById(bot.getWorld().getBlockAt(block.add(new Vector3i(0, -1, 0))).getTypeId())
+                    == Material.SOUL_SAND) {
+                if (Material.getById(bot.getWorld().getBlockAt(location.add(new Vector3i(0, -1, 0))).getTypeId()) == Material.SOUL_SAND) {
                     y -= 0.12;
                 }
                 speed *= liquidFactor;
             } else if (inLiquid) {
                 speed *= liquidFactor;
             }
-            if (player.getY() != y) {
-                if (!inLiquid && !bot.getWorld().getPathFinder().getWorldPhysics().canClimb(block)) {
-                    if (player.getY() < y) {
+
+            if (playerLoc.getY() != y) {
+                if (!inLiquid && !bot.getPathFinder().getWorldPhysics().canClimb(block)) {
+                    if (playerLoc.getY() < y) {
                         speed *= jumpFactor;
                     } else {
                         speed *= fallFactor;
                     }
                 }
-                player.setY(player.getY() + (player.getY() < y ? Math.min(speed, y - player.getY()) : Math.max(-speed, y - player.getY())));
-            }
-            if (player.getX() != x) {
-                player.setX(player.getX() + (player.getX() < x ? Math.min(speed, x - player.getX()) : Math.max(-speed, x - player.getX())));
-            }
-            if (player.getZ() != z) {
-                player.setZ(player.getZ() + (player.getZ() < z ? Math.min(speed, z - player.getZ()) : Math.max(-speed, z - player.getZ())));
+                double offsetY = playerLoc.getY() < y ? Math.min(speed, y - playerLoc.getY()) : Math.max(-speed, y - playerLoc.getY());
+                playerLoc = playerLoc.add(new Vector3d(0, offsetY, 0));
             }
 
-            if (player.getX() == x && player.getY() == y && player.getZ() == z) {
+            if (playerLoc.getX() != x) {
+                double offsetX = playerLoc.getX() < x ? Math.min(speed, x - playerLoc.getX()) : Math.max(-speed, x - playerLoc.getX());
+                playerLoc = playerLoc.add(new Vector3d(offsetX, 0, 0));
+            }
+
+            if (playerLoc.getZ() != z) {
+                double offsetZ = playerLoc.getZ() < z ? Math.min(speed, z - playerLoc.getZ()) : Math.max(-speed, z - playerLoc.getZ());
+                playerLoc = playerLoc.add(new Vector3d(0, 0, offsetZ));
+            }
+
+            // Set new player location
+            player.setLocation(playerLoc);
+
+            if (playerLoc.getX() == x && playerLoc.getY() == y && playerLoc.getZ() == z) {
                 nextStep = nextStep.getNext();
                 ticksSinceStepChange = 0;
             }

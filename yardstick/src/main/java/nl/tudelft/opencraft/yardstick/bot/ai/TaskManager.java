@@ -3,13 +3,13 @@
  All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
- modification, are permitted provided that the following conditions are met: 
+ modification, are permitted provided that the following conditions are met:
 
  1. Redistributions of source code must retain the above copyright notice, this
- list of conditions and the following disclaimer. 
+ list of conditions and the following disclaimer.
  2. Redistributions in binary form must reproduce the above copyright notice,
  this list of conditions and the following disclaimer in the documentation
- and/or other materials provided with the distribution. 
+ and/or other materials provided with the distribution.
 
  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -24,13 +24,13 @@
  */
 package nl.tudelft.opencraft.yardstick.bot.ai;
 
-import nl.tudelft.opencraft.yardstick.bot.ai.activity.Activity;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
+import nl.tudelft.opencraft.yardstick.bot.ai.activity.Activity;
 
 public class TaskManager {
 
@@ -43,7 +43,11 @@ public class TaskManager {
     public TaskManager(Bot bot) {
         this.bot = bot;
     }
-    
+
+    public Bot getBot() {
+        return bot;
+    }
+
     public synchronized Activity getActivity() {
         return activity;
     }
@@ -109,7 +113,7 @@ public class TaskManager {
                 if (highestExclusiveTask == null
                         || taskPriority > highestPriority
                         || (taskPriority == highestPriority && taskStartTime
-                        .compareTo(highestStartTime) < 0)) {
+                                .compareTo(highestStartTime) < 0)) {
                     highestExclusiveTask = task;
                     highestPriority = taskPriority;
                     highestStartTime = taskStartTime;

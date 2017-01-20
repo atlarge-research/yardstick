@@ -63,7 +63,7 @@ public class Yardstick {
                 ex = new Experiment2ScheduledJoin();
                 break;
             case 3:
-                ex = new Experiment3WalkAround(opts);
+                ex = new Experiment3WalkAround();
                 break;
             default:
                 System.out.println("Invalid experiment: " + OPTIONS.experiment);

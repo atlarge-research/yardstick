@@ -2,6 +2,10 @@ package nl.tudelft.opencraft.yardstick.bot;
 
 import java.util.logging.Logger;
 import nl.tudelft.opencraft.yardstick.bot.ai.TaskManager;
+import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.EuclideanHeuristic;
+import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.PathSearchProvider;
+import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.SimpleWorldPhysics;
+import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.AStarPathSearchProvider;
 import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
@@ -21,6 +25,7 @@ public class Bot {
     private World world;
     private Server server;
     private BotPlayer player;
+    private PathSearchProvider pathFinder;
 
     public Bot(MinecraftProtocol protocol) {
         this.name = protocol.getProfile().getName();
@@ -43,7 +48,7 @@ public class Bot {
 
     public void disconnect(String reason) {
         ticker.stop();
-        
+
         if (client == null || !client.getSession().isConnected()) {
             return;
         }
@@ -57,6 +62,10 @@ public class Bot {
 
     public Logger getLogger() {
         return logger;
+    }
+
+    public PathSearchProvider getPathFinder() {
+        return pathFinder;
     }
 
     public MinecraftProtocol getProtocol() {
@@ -85,6 +94,8 @@ public class Bot {
 
     public void setWorld(World world) {
         this.world = world;
+        // TODO: This shouldn't go here
+        this.pathFinder = new AStarPathSearchProvider(new EuclideanHeuristic(), new SimpleWorldPhysics(world));
     }
 
     public void setServer(Server server) {

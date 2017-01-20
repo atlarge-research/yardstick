@@ -1,7 +1,7 @@
 package nl.tudelft.opencraft.yardstick.bot.world;
 
 import java.util.Objects;
-import nl.tudelft.opencraft.yardstick.bot.Vector3i;
+import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import org.spacehq.mc.protocol.data.game.chunk.BlockStorage;
 import org.spacehq.mc.protocol.data.game.chunk.Column;
 import org.spacehq.mc.protocol.data.game.world.block.BlockState;

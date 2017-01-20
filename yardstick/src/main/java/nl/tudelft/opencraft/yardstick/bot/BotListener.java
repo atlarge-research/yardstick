@@ -1,5 +1,6 @@
 package nl.tudelft.opencraft.yardstick.bot;
 
+import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import java.util.UUID;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
 import nl.tudelft.opencraft.yardstick.bot.world.Chunk;

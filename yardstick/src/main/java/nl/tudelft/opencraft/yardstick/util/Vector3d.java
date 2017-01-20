@@ -1,4 +1,4 @@
-package nl.tudelft.opencraft.yardstick.bot;
+package nl.tudelft.opencraft.yardstick.util;
 
 /**
  * Represents an immutable 3 dimensional vector of doubles.

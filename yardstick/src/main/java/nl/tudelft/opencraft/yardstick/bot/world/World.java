@@ -3,7 +3,7 @@ package nl.tudelft.opencraft.yardstick.bot.world;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import nl.tudelft.opencraft.yardstick.bot.Vector3i;
+import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import nl.tudelft.opencraft.yardstick.bot.entity.Entity;
 import org.spacehq.mc.protocol.data.game.entity.metadata.Position;
 import org.spacehq.mc.protocol.data.game.world.WorldType;
