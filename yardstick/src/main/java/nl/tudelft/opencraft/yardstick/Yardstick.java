@@ -8,6 +8,7 @@ import com.beust.jcommander.JCommander;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment1SimpleJoin;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment2ScheduledJoin;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment3WalkAround;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SimpleTimeFormatter;
 import nl.tudelft.opencraft.yardstick.statistic.StatisticsPusher;
@@ -60,6 +61,9 @@ public class Yardstick {
                 break;
             case 2:
                 ex = new Experiment2ScheduledJoin();
+                break;
+            case 3:
+                ex = new Experiment3WalkAround(opts);
                 break;
             default:
                 System.out.println("Invalid experiment: " + OPTIONS.experiment);
