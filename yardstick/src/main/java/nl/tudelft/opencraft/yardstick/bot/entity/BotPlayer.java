@@ -3,7 +3,10 @@ package nl.tudelft.opencraft.yardstick.bot.entity;
 import java.nio.charset.Charset;
 import java.util.UUID;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
+import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import org.spacehq.mc.protocol.data.game.entity.player.GameMode;
+import org.spacehq.mc.protocol.packet.ingame.client.player.ClientPlayerMovementPacket;
+import org.spacehq.mc.protocol.packet.ingame.client.player.ClientPlayerPositionPacket;
 import org.spacehq.packetlib.Session;
 
 public class BotPlayer extends Player {
@@ -81,6 +84,11 @@ public class BotPlayer extends Player {
 
     public void setSaturation(double saturation) {
         this.saturation = saturation;
+    }
+
+    public void updateLocation(Vector3d vector) {
+        this.setLocation(vector);
+        session.send(new ClientPlayerPositionPacket(true, vector.getX(), vector.getY(), vector.getZ()));
     }
 
 }

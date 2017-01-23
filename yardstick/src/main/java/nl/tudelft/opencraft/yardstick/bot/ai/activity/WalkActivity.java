@@ -139,7 +139,7 @@ public class WalkActivity implements Activity {
     }
 
     @Override
-    public void run() {
+    public void tick() {
         if (thread != null && !thread.isDone()) {
             if (timeout > 0 && System.currentTimeMillis() - startTime > timeout) {
                 thread.cancel(true);
@@ -216,7 +216,7 @@ public class WalkActivity implements Activity {
             }
 
             // Set new player location
-            player.setLocation(playerLoc);
+            player.updateLocation(playerLoc);
 
             if (playerLoc.getX() == x && playerLoc.getY() == y && playerLoc.getZ() == z) {
                 nextStep = nextStep.getNext();

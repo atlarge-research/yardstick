@@ -2,6 +2,7 @@ package nl.tudelft.opencraft.yardstick.bot;
 
 import java.util.logging.Logger;
 import nl.tudelft.opencraft.yardstick.bot.ai.TaskManager;
+import nl.tudelft.opencraft.yardstick.bot.ai.activity.Activity;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.EuclideanHeuristic;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.PathSearchProvider;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.SimpleWorldPhysics;
@@ -26,6 +27,7 @@ public class Bot {
     private Server server;
     private BotPlayer player;
     private PathSearchProvider pathFinder;
+    private Activity activity;
 
     public Bot(MinecraftProtocol protocol) {
         this.name = protocol.getProfile().getName();
@@ -54,6 +56,14 @@ public class Bot {
         }
 
         client.getSession().disconnect(reason);
+    }
+
+    public void setActivity(Activity activity) {
+        this.activity = activity;
+    }
+
+    public Activity getActivity() {
+        return this.activity;
     }
 
     public TaskManager getTasks() {

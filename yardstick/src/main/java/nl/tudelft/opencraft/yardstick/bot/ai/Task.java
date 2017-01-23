@@ -47,7 +47,7 @@ public interface Task {
     public void run();
 
     /**
-     * Returns true as long as the task can continue to run.
+     * Returns true as long as the task can continue to tick.
      */
     public boolean isActive();
 

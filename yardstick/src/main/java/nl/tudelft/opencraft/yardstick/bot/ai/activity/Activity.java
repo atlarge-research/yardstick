@@ -26,7 +26,7 @@ package nl.tudelft.opencraft.yardstick.bot.ai.activity;
 
 public interface Activity {
 
-    public void run();
+    public void tick();
 
     public boolean isActive();
 
