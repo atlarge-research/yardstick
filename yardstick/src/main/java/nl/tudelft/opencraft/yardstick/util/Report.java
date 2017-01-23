@@ -1,4 +1,4 @@
-package nl.tudelft.opencraft.yardstick;
+package nl.tudelft.opencraft.yardstick.util;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

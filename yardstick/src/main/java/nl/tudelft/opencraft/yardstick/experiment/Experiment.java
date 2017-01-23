@@ -1,11 +1,11 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import java.util.logging.Level;
 import nl.tudelft.opencraft.yardstick.Options;
 import nl.tudelft.opencraft.yardstick.Yardstick;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 import nl.tudelft.opencraft.yardstick.statistic.Statistics;
+import nl.tudelft.opencraft.yardstick.util.Scheduler;
 
 public abstract class Experiment implements Runnable {
 
@@ -36,19 +36,14 @@ public abstract class Experiment implements Runnable {
 
         stats.startPushing();
 
+        Scheduler sched = new Scheduler(TICK_MS);
+        sched.start();
+
         before();
 
         do {
             tick();
-
-            // TODO: Proper scheduler
-            try {
-                Thread.sleep(TICK_MS);
-            } catch (InterruptedException ex) {
-                logger.log(Level.SEVERE, "Ticker interrupted", ex);
-            }
-            tick += TICK_MS;
-
+            sched.sleepTick();
         } while (!isDone());
 
         after();

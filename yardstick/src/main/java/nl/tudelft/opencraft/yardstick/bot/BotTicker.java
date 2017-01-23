@@ -1,6 +1,7 @@
 package nl.tudelft.opencraft.yardstick.bot;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import nl.tudelft.opencraft.yardstick.util.Scheduler;
 
 public class BotTicker implements Runnable {
 
@@ -20,15 +21,17 @@ public class BotTicker implements Runnable {
         t.setName("YSBot Ticker " + bot.getName());
         t.start();
     }
-    
+
     public void stop() {
         running.set(false);
     }
 
     @Override
     public void run() {
+        Scheduler sched = new Scheduler(50); // 50ms per tick
+        sched.start();
         while (running.get()) {
-            
+            sched.sleepTick();
         }
     }
 
