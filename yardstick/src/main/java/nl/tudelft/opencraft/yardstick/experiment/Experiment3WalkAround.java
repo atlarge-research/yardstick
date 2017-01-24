@@ -23,12 +23,17 @@ public class Experiment3WalkAround extends Experiment {
     @Override
     protected void before() {
         this.bot = new Bot(new MinecraftProtocol("YSBot-1"));
-
-        bot.getClient().getSession().addListener(stats);
-        bot.connect(options.host, options.port);
-
-        this.originalLocation = bot.getPlayer().getLocation();
-
+        this.bot.connect(options.host, options.port);
+        this.bot.getClient().getSession().addListener(this.getStats());
+        while (this.bot.getPlayer() == null) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                return;
+            }
+        }
+        this.originalLocation = this.bot.getPlayer().getLocation();
     }
 
     @Override

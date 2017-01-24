@@ -15,15 +15,14 @@ public abstract class Experiment implements Runnable {
     protected final String description;
     protected final Options options = Yardstick.OPTIONS;
     protected final SubLogger logger;
-    protected final Statistics stats;
-    //
+
     protected long tick = 0;
+    private Statistics stats;
 
     public Experiment(int number, String desc) {
         this.number = number;
         this.description = desc;
         this.logger = GlobalLogger.getLogger().newSubLogger("Experiment " + number);
-        this.stats = new Statistics(options.prometheusHost, options.prometheusPort);
     }
 
     @Override
@@ -34,7 +33,9 @@ public abstract class Experiment implements Runnable {
             logger.info("Parameter - " + key + ": " + options.experimentParams.get(key));
         }
 
-        stats.startPushing();
+        if (stats != null) {
+            stats.startPushing();
+        }
 
         Scheduler sched = new Scheduler(TICK_MS);
         sched.start();
@@ -49,7 +50,9 @@ public abstract class Experiment implements Runnable {
         after();
 
         logger.info("Experiment complete, exiting");
-        stats.stopPushing();
+        if (stats != null) {
+            stats.stopPushing();
+        }
     }
 
     protected abstract void before();
@@ -60,4 +63,11 @@ public abstract class Experiment implements Runnable {
 
     protected abstract void after();
 
+    public Statistics getStats() {
+        return stats;
+    }
+
+    public void setStats(Statistics stats) {
+        this.stats = stats;
+    }
 }

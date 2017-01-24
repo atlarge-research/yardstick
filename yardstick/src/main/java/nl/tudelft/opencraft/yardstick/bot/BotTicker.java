@@ -1,12 +1,14 @@
 package nl.tudelft.opencraft.yardstick.bot;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
 import nl.tudelft.opencraft.yardstick.util.Scheduler;
 
 public class BotTicker implements Runnable {
 
     private final Bot bot;
-    private final AtomicBoolean running = new AtomicBoolean(true);
+    private final AtomicBoolean running = new AtomicBoolean(false);
 
     public BotTicker(Bot bot) {
         this.bot = bot;
@@ -31,7 +33,10 @@ public class BotTicker implements Runnable {
         Scheduler sched = new Scheduler(50); // 50ms per tick
         sched.start();
         while (running.get()) {
-            bot.getTask().tick();
+            if (bot.getTask() != null
+                    && bot.getTask().getStatus().getType() == TaskStatus.StatusType.IN_PROGRESS) {
+                bot.getTask().tick();
+            }
             sched.sleepTick();
         }
     }

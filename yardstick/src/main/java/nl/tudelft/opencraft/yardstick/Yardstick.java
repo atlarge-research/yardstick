@@ -11,6 +11,7 @@ import nl.tudelft.opencraft.yardstick.experiment.Experiment2ScheduledJoin;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment3WalkAround;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SimpleTimeFormatter;
+import nl.tudelft.opencraft.yardstick.statistic.Statistics;
 import nl.tudelft.opencraft.yardstick.statistic.StatisticsPusher;
 
 public class Yardstick {
@@ -68,6 +69,10 @@ public class Yardstick {
             default:
                 System.out.println("Invalid experiment: " + OPTIONS.experiment);
                 return;
+        }
+
+        if (OPTIONS.prometheusHost != null) {
+            ex.setStats(new Statistics(OPTIONS.prometheusHost, OPTIONS.prometheusPort));
         }
 
         Thread t = new Thread(ex);
