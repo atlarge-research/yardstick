@@ -60,7 +60,7 @@ public class Vector3d {
     }
 
     public double distanceSquared(Vector3d a) {
-        double dx = x - a.y;
+        double dx = x - a.x;
         double dy = y - a.y;
         double dz = z - a.z;
 

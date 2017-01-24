@@ -29,6 +29,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
+import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.BlockPathNode;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.PathNode;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.PathSearch;
 import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
@@ -60,22 +61,18 @@ public class WalkTask implements Task {
         this.bot = bot;
         this.target = target;
 
-        pathFuture = service.submit(new Callable<PathNode>() {
-            @Override
-            public PathNode call() throws Exception {
-                World world = bot.getWorld();
-                BotPlayer player = bot.getPlayer();
-                if (world == null || player == null || target == null) {
-                    return null;
-                }
-                Vector3d ourLocation = player.getLocation();
-                PathSearch search = bot.getPathFinder().provideSearch(ourLocation.intVector(), target);
-                while (!search.isDone() && (pathFuture == null || !pathFuture.isCancelled())) {
-                    System.out.println("Stepping...");
-                    search.step();
-                }
-                return search.getPath();
-            }
+        pathFuture = service.submit(() -> {
+            World world = bot.getWorld();
+            BotPlayer player = bot.getPlayer();
+            PathNode start = bot.getPathFinder().provideSearch(player.getLocation().intVector(), target);
+            // Half the step size to make sure bot can track path.
+//            for(PathNode node = start; node.getNext() != null; node = node.getNext()) {
+//                PathNode nextNode = node.getNext();
+//                PathNode halfNode = new BlockPathNode(Vector3i.average(node.getLocation(), nextNode.getLocation()), 0);
+//                node.setNext(halfNode);
+//                halfNode.setNext(nextNode);
+//            }
+            return start;
         });
 
         startTime = System.currentTimeMillis();
@@ -187,7 +184,6 @@ public class WalkTask implements Task {
         } else if (inLiquid) {
             speed *= liquidFactor;
         }
-
         if (playerLoc.getY() != y) {
             if (!inLiquid && !bot.getPathFinder().getWorldPhysics().canClimb(block)) {
                 if (playerLoc.getY() < y) {

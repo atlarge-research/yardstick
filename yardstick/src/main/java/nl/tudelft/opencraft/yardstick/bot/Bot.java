@@ -1,10 +1,9 @@
 package nl.tudelft.opencraft.yardstick.bot;
 
-import java.util.logging.Logger;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.EuclideanHeuristic;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.PathSearchProvider;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.SimpleWorldPhysics;
-import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.AStarPathSearchProvider;
+import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.SaneAStar;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
 import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
@@ -12,6 +11,8 @@ import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import org.spacehq.mc.protocol.MinecraftProtocol;
 import org.spacehq.packetlib.Client;
 import org.spacehq.packetlib.tcp.TcpSessionFactory;
+
+import java.util.logging.Logger;
 
 public class Bot {
 
@@ -24,7 +25,7 @@ public class Bot {
     private World world;
     private Server server;
     private BotPlayer player;
-    private PathSearchProvider pathFinder;
+    private SaneAStar pathFinder;
     private Task task;
 
     public Bot(MinecraftProtocol protocol) {
@@ -67,7 +68,7 @@ public class Bot {
         return logger;
     }
 
-    public PathSearchProvider getPathFinder() {
+    public SaneAStar getPathFinder() {
         return pathFinder;
     }
 
@@ -98,7 +99,9 @@ public class Bot {
     public void setWorld(World world) {
         this.world = world;
         // TODO: This shouldn't go here
-        this.pathFinder = new AStarPathSearchProvider(new EuclideanHeuristic(), new SimpleWorldPhysics(world));
+        if (this.pathFinder == null) {
+            this.pathFinder = new SaneAStar(new EuclideanHeuristic(), new SimpleWorldPhysics(world));
+        }
     }
 
     public void setServer(Server server) {

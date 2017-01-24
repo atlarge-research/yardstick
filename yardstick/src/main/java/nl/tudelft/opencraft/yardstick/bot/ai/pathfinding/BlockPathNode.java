@@ -29,11 +29,10 @@ import nl.tudelft.opencraft.yardstick.util.Vector3i;
 public class BlockPathNode implements PathNode {
 
     private final Vector3i location;
-    private final PathSearch source;
 
     private PathNode previous, next;
 
-    private double cost = Integer.MAX_VALUE, costEstimate = Integer.MAX_VALUE;
+    private int cost = Integer.MAX_VALUE;
 
     public BlockPathNode(PathSearch source, Vector3i location) {
         this(source, location, null, null);
@@ -41,9 +40,13 @@ public class BlockPathNode implements PathNode {
 
     public BlockPathNode(PathSearch source, Vector3i location, PathNode previous, PathNode next) {
         this.location = location;
-        this.source = source;
         this.previous = previous;
         this.next = next;
+    }
+
+    public BlockPathNode(Vector3i location, int cost) {
+        this.location = location;
+        this.cost = cost;
     }
 
     @Override
@@ -82,28 +85,13 @@ public class BlockPathNode implements PathNode {
     }
 
     @Override
-    public PathSearch getSource() {
-        return source;
-    }
-
-    @Override
-    public double getCost() {
+    public int getCost() {
         return cost;
     }
 
     @Override
-    public double getCostEstimate() {
-        return costEstimate;
-    }
-
-    @Override
-    public void setCost(double cost) {
+    public void setCost(int cost) {
         this.cost = cost;
-    }
-
-    @Override
-    public void setCostEstimate(double costEstimate) {
-        this.costEstimate = costEstimate;
     }
 
     @Override
@@ -113,6 +101,16 @@ public class BlockPathNode implements PathNode {
 
     @Override
     public String toString() {
-        return location.toString() + " Cost=" + cost + " Estimate=" + costEstimate;
+        return location.toString() + " Cost=" + cost ;
+    }
+
+    @Override
+    public int compareTo(PathNode pathNode) {
+        return this.cost - pathNode.getCost();
+    }
+
+    @Override
+    public int hashCode() {
+        return location.hashCode();
     }
 }

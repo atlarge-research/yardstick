@@ -26,7 +26,7 @@ package nl.tudelft.opencraft.yardstick.bot.ai.pathfinding;
 
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
-public interface PathNode {
+public interface PathNode extends Comparable<PathNode> {
 
     public Vector3i getLocation();
 
@@ -38,17 +38,11 @@ public interface PathNode {
 
     public void setPrevious(PathNode node);
 
-    public double getCost();
+    public int getCost();
 
-    public double getCostEstimate();
-
-    public void setCost(double cost);
-
-    public void setCostEstimate(double costEstimate);
+    public void setCost(int cost);
 
     public boolean isStart();
 
     public boolean isEnd();
-
-    public PathSearch getSource();
 }

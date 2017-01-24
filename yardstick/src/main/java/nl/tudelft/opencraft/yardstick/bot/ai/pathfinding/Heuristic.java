@@ -28,5 +28,5 @@ import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public interface Heuristic {
 
-    public double calculateCost(Vector3i from, Vector3i to);
+    int calculateCost(Vector3i from, Vector3i to);
 }

@@ -2,6 +2,7 @@ package nl.tudelft.opencraft.yardstick.experiment;
 
 import java.util.Random;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
+import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.PathNode;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTask;
@@ -28,6 +29,14 @@ public class Experiment3WalkAround extends Experiment {
             this.bot.getClient().getSession().addListener(this.getStats());
         }
         while (this.bot.getPlayer() == null) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                return;
+            }
+        }
+        while (this.bot.getPlayer().getLocation() == null) {
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {

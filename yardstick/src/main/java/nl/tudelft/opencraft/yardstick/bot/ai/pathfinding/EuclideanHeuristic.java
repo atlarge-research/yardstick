@@ -29,7 +29,7 @@ import nl.tudelft.opencraft.yardstick.util.Vector3i;
 public class EuclideanHeuristic implements Heuristic {
 
     @Override
-    public double calculateCost(Vector3i from, Vector3i to) {
-        return from.distance(to);
+    public int calculateCost(Vector3i from, Vector3i to) {
+        return ((int) Math.round(from.distance(to)));
     }
 }

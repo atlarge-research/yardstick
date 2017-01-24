@@ -29,7 +29,7 @@ import nl.tudelft.opencraft.yardstick.util.Vector3i;
 public class ManhattanHeuristic implements Heuristic {
 
     @Override
-    public double calculateCost(Vector3i from, Vector3i to) {
+    public int calculateCost(Vector3i from, Vector3i to) {
         return Math.abs(from.getX() - to.getX()) + Math.abs(from.getY() - to.getY()) + Math.abs(from.getZ() - to.getZ());
     }
 }

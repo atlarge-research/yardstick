@@ -24,6 +24,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package nl.tudelft.opencraft.yardstick.bot.ai.pathfinding;
 
+import nl.tudelft.opencraft.yardstick.bot.world.Material;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
 
@@ -59,13 +60,6 @@ public class SimpleWorldPhysics implements WorldPhysics {
         new Vector3i(-1, 1, -1),
         new Vector3i(0, 1, -1),
         new Vector3i(1, 1, -1),};
-    private static final boolean[] NON_TRAVERSABLE_TYPES;
-
-    static {
-        // TODO
-        NON_TRAVERSABLE_TYPES = new boolean[256];
-        NON_TRAVERSABLE_TYPES[0] = true;
-    }
 
     private final World world;
 
@@ -165,7 +159,8 @@ public class SimpleWorldPhysics implements WorldPhysics {
 
     private boolean isEmpty(int x, int y, int z) {
         int id = world.getBlockAt(x, y, z).getTypeId();
-        return id >= 0 && id < NON_TRAVERSABLE_TYPES.length && !NON_TRAVERSABLE_TYPES[id];
+        // TODO let bot also walk through other non-blocking objects.
+        return id == Material.AIR.getId();
     }
 
     @Override

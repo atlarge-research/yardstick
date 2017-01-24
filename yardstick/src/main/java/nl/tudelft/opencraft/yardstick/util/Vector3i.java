@@ -1,5 +1,7 @@
 package nl.tudelft.opencraft.yardstick.util;
 
+import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.PathNode;
+
 /**
  * Represents an immutable 3 dimensional vector of ints.
  */
@@ -64,7 +66,7 @@ public class Vector3i {
     }
 
     public double distanceSquared(Vector3i a) {
-        double dx = x - a.y;
+        double dx = x - a.x;
         double dy = y - a.y;
         double dz = z - a.z;
 
@@ -78,6 +80,15 @@ public class Vector3i {
 
     public Vector3d doubleVector() {
         return new Vector3d(x, y, z);
+    }
+
+    @Override
+    public String toString() {
+        return "Vector3i{" +
+                "x=" + x +
+                ", y=" + y +
+                ", z=" + z +
+                '}';
     }
 
     @Override
@@ -110,4 +121,7 @@ public class Vector3i {
         return true;
     }
 
+    public static Vector3i average(Vector3i a, Vector3i b) {
+        return new Vector3i((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
+    }
 }
