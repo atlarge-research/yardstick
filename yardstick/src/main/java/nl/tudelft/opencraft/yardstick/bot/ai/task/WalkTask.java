@@ -181,6 +181,8 @@ public class WalkTask implements Task {
             thisBlock = bot.getWorld().getBlockAt(blockPosition);
         } catch (ChunkNotLoadedException e) {
             // Wait until chunk is loaded.
+            logger.warning(String.format("Block under player: %s", blockPosition));
+            logger.warning(String.format("Player at %s", playerLoc));
             return status = TaskStatus.forInProgress();
         }
         if (thisBlock == null) {

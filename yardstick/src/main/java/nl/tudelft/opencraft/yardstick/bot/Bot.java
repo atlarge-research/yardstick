@@ -1,7 +1,6 @@
 package nl.tudelft.opencraft.yardstick.bot;
 
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.EuclideanHeuristic;
-import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.PathSearchProvider;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.SimpleWorldPhysics;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.SaneAStar;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;

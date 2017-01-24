@@ -24,7 +24,7 @@ public class SaneAStar {
         PriorityQueue<PathNode> locations = new PriorityQueue<>();
         PathNode startNode = new BlockPathNode(start, 0);
         locations.add(startNode);
-        while (!locations.isEmpty()) {
+        while (!locations.isEmpty() && !Thread.interrupted()) {
             PathNode current = locations.poll();
             visited.put(current, current.getCost());
             if (current.getLocation().equals(end)) {

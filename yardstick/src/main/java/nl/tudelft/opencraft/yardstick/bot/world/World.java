@@ -3,6 +3,8 @@ package nl.tudelft.opencraft.yardstick.bot.world;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Logger;
+
 import nl.tudelft.opencraft.yardstick.bot.entity.Entity;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import org.spacehq.mc.protocol.data.game.entity.metadata.Position;
@@ -10,6 +12,7 @@ import org.spacehq.mc.protocol.data.game.world.WorldType;
 
 public class World {
 
+    private final Logger logger = Logger.getLogger(World.class.getName());
     private final Dimension dimension;
     private final WorldType type;
     //
@@ -57,6 +60,8 @@ public class World {
         ChunkLocation location = new ChunkLocation(chunkX, chunkZ);
         Chunk chunk = chunks.get(location);
         if (chunk == null) {
+            logger.warning(String.format("Could not load chunk at %s", location));
+            Thread.dumpStack();
             throw new ChunkNotLoadedException(location.toString());
         }
 
@@ -100,8 +105,8 @@ public class World {
         private final int x, z;
 
         public ChunkLocation(int x, int z) {
-            this.x = 0;
-            this.z = 0;
+            this.x = x;
+            this.z = z;
         }
 
         public int getX() {
@@ -134,6 +139,14 @@ public class World {
                 return false;
             }
             return true;
+        }
+
+        @Override
+        public String toString() {
+            return "ChunkLocation{" +
+                    "x=" + x +
+                    ", z=" + z +
+                    '}';
         }
     }
 
