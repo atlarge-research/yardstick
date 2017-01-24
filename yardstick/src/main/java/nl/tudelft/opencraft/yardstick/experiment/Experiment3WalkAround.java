@@ -24,7 +24,9 @@ public class Experiment3WalkAround extends Experiment {
     protected void before() {
         this.bot = new Bot(new MinecraftProtocol("YSBot-1"));
         this.bot.connect(options.host, options.port);
-        this.bot.getClient().getSession().addListener(this.getStats());
+        if (this.getStats() != null) {
+            this.bot.getClient().getSession().addListener(this.getStats());
+        }
         while (this.bot.getPlayer() == null) {
             try {
                 Thread.sleep(1000);
@@ -59,7 +61,7 @@ public class Experiment3WalkAround extends Experiment {
         int minz = ((int) originalLocation.getZ()) - side / 2;
         int newx = random.nextInt(maxx - minx) + minx;
         int newz = random.nextInt(maxz - minz) + minz;
-        return new Vector3i(newx, 0, newz);
+        return new Vector3i(newx, ((int) this.originalLocation.getY()), newz);
     }
 
     @Override

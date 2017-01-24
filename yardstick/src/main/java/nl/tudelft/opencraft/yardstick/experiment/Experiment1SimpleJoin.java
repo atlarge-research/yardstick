@@ -24,7 +24,9 @@ public class Experiment1SimpleJoin extends Experiment {
         client = new Client(options.host, options.port, new MinecraftProtocol(name), new TcpSessionFactory());
         Session s = client.getSession();
         s.addListener(new ExperimentLogger(logger.newSubLogger(name)));
-        s.addListener(this.getStats());
+        if (this.getStats() != null) {
+            s.addListener(this.getStats());
+        }
         s.connect();
     }
 
