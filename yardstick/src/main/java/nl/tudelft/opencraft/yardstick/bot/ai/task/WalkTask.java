@@ -22,7 +22,7 @@
  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package nl.tudelft.opencraft.yardstick.bot.ai.activity;
+package nl.tudelft.opencraft.yardstick.bot.ai.task;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -37,10 +37,10 @@ import nl.tudelft.opencraft.yardstick.bot.world.World;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
-public class WalkActivity implements Activity {
+public class WalkTask implements Task {
 
     private static double defaultSpeed = 0.15, defaultJumpFactor = 3, defaultFallFactor = 4, defaultLiquidFactor = 0.5;
-    private static int defaultTimeout = 60000;
+    private static int defaultTimeout = 10000;
 
     private final Bot bot;
     private final ExecutorService service = Executors.newSingleThreadExecutor();
@@ -48,29 +48,19 @@ public class WalkActivity implements Activity {
 
     private final long startTime;
 
-    private Future<PathNode> thread;
+    private Future<PathNode> pathFuture;
     private PathNode nextStep;
     private int ticksSinceStepChange = 0;
     private int timeout = defaultTimeout;
     private double speed = defaultSpeed, jumpFactor = defaultJumpFactor, fallFactor = defaultFallFactor, liquidFactor = defaultLiquidFactor;
 
-    public WalkActivity(Bot bot, Vector3i target) {
-        this(bot, target, false);
-    }
+    private TaskStatus status = TaskStatus.forInProgress();
 
-    public WalkActivity(final Bot bot, final Vector3i target, boolean keepWalking) {
+    public WalkTask(final Bot bot, final Vector3i target) {
         this.bot = bot;
         this.target = target;
-        System.out.println("Walking!");
-        if (keepWalking) {
-            Activity activity = bot.getTasks().getActivity();
-            if (activity != null && activity instanceof WalkActivity && ((WalkActivity) activity).isMoving()) {
-                WalkActivity walkActivity = (WalkActivity) activity;
-                nextStep = walkActivity.nextStep;
-                ticksSinceStepChange = walkActivity.ticksSinceStepChange;
-            }
-        }
-        thread = service.submit(new Callable<PathNode>() {
+
+        pathFuture = service.submit(new Callable<PathNode>() {
             @Override
             public PathNode call() throws Exception {
                 World world = bot.getWorld();
@@ -80,13 +70,14 @@ public class WalkActivity implements Activity {
                 }
                 Vector3d ourLocation = player.getLocation();
                 PathSearch search = bot.getPathFinder().provideSearch(ourLocation.intVector(), target);
-                while (!search.isDone() && (thread == null || !thread.isCancelled())) {
+                while (!search.isDone() && (pathFuture == null || !pathFuture.isCancelled())) {
                     System.out.println("Stepping...");
                     search.step();
                 }
                 return search.getPath();
             }
         });
+
         startTime = System.currentTimeMillis();
     }
 
@@ -139,107 +130,112 @@ public class WalkActivity implements Activity {
     }
 
     @Override
-    public void tick() {
-        if (thread != null && !thread.isDone()) {
+    public TaskStatus tick() {
+        if (pathFuture != null && !pathFuture.isDone()) {
             if (timeout > 0 && System.currentTimeMillis() - startTime > timeout) {
-                thread.cancel(true);
-                thread = null;
+                pathFuture.cancel(true);
+                pathFuture = null;
                 nextStep = null;
-                return;
+                return status = TaskStatus.forFailure("Path search timed out");
             }
-        } else if (thread != null && thread.isDone() && !thread.isCancelled()) {
+        } else if (pathFuture != null && pathFuture.isDone() && !pathFuture.isCancelled()) {
             try {
-                nextStep = thread.get();
+                nextStep = pathFuture.get();
                 System.out.println("Path found, walking...");
                 ticksSinceStepChange = 0;
             } catch (Exception exception) {
                 exception.printStackTrace();
                 nextStep = null;
-                return;
+                return status = TaskStatus.forFailure("Could not get path!");
             } finally {
-                thread = null;
+                pathFuture = null;
             }
         }
-        if (nextStep != null) {
-            BotPlayer player = bot.getPlayer();
-            System.out.println(" -> Moving from " + player.getLocation() + " to " + nextStep);
-            if (nextStep.getNext() != null && player.getLocation().distanceSquared(nextStep.getNext().getLocation().doubleVector()) < 0.2) {
-                nextStep = nextStep.getNext();
-                ticksSinceStepChange = 0;
-            }
-            if (player.getLocation().distanceSquared(nextStep.getLocation().doubleVector()) > 4) {
-                nextStep = null;
-                return;
-            }
-            ticksSinceStepChange++;
-            if (ticksSinceStepChange > 80) {
-                nextStep = null;
-                return;
-            }
-            double speed = this.speed;
-            Vector3i location = nextStep.getLocation();
-            Vector3i block = player.getLocation().intVector();
-            Vector3d playerLoc = player.getLocation();
 
-            double x = location.getX() + 0.5, y = location.getY(), z = location.getZ() + 0.5;
-            boolean inLiquid = false; // TODO: player.isInLiquid();
-            if (Material.getById(bot.getWorld().getBlockAt(block.add(new Vector3i(0, -1, 0))).getTypeId())
-                    == Material.SOUL_SAND) {
-                if (Material.getById(bot.getWorld().getBlockAt(location.add(new Vector3i(0, -1, 0))).getTypeId()) == Material.SOUL_SAND) {
-                    y -= 0.12;
-                }
-                speed *= liquidFactor;
-            } else if (inLiquid) {
-                speed *= liquidFactor;
-            }
-
-            if (playerLoc.getY() != y) {
-                if (!inLiquid && !bot.getPathFinder().getWorldPhysics().canClimb(block)) {
-                    if (playerLoc.getY() < y) {
-                        speed *= jumpFactor;
-                    } else {
-                        speed *= fallFactor;
-                    }
-                }
-                double offsetY = playerLoc.getY() < y ? Math.min(speed, y - playerLoc.getY()) : Math.max(-speed, y - playerLoc.getY());
-                playerLoc = playerLoc.add(new Vector3d(0, offsetY, 0));
-            }
-
-            if (playerLoc.getX() != x) {
-                double offsetX = playerLoc.getX() < x ? Math.min(speed, x - playerLoc.getX()) : Math.max(-speed, x - playerLoc.getX());
-                playerLoc = playerLoc.add(new Vector3d(offsetX, 0, 0));
-            }
-
-            if (playerLoc.getZ() != z) {
-                double offsetZ = playerLoc.getZ() < z ? Math.min(speed, z - playerLoc.getZ()) : Math.max(-speed, z - playerLoc.getZ());
-                playerLoc = playerLoc.add(new Vector3d(0, 0, offsetZ));
-            }
-
-            // Set new player location
-            player.updateLocation(playerLoc);
-
-            if (playerLoc.getX() == x && playerLoc.getY() == y && playerLoc.getZ() == z) {
-                nextStep = nextStep.getNext();
-                ticksSinceStepChange = 0;
-            }
+        if (nextStep == null) {
+            return status = TaskStatus.forSuccess();
         }
+
+        BotPlayer player = bot.getPlayer();
+        System.out.println(" -> Moving from " + player.getLocation() + " to " + nextStep);
+        if (nextStep.getNext() != null && player.getLocation().distanceSquared(nextStep.getNext().getLocation().doubleVector()) < 0.2) {
+            nextStep = nextStep.getNext();
+            ticksSinceStepChange = 0;
+        }
+        if (player.getLocation().distanceSquared(nextStep.getLocation().doubleVector()) > 4) {
+            nextStep = null;
+            return status = TaskStatus.forFailure("Step too far away!");
+        }
+        ticksSinceStepChange++;
+        if (ticksSinceStepChange > 80) {
+            nextStep = null;
+            return status = TaskStatus.forFailure("Too many ticks since step change");
+        }
+        double speed = this.speed;
+        Vector3i location = nextStep.getLocation();
+        Vector3i block = player.getLocation().intVector();
+        Vector3d playerLoc = player.getLocation();
+
+        double x = location.getX() + 0.5, y = location.getY(), z = location.getZ() + 0.5;
+        boolean inLiquid = false; // TODO: player.isInLiquid();
+        if (Material.getById(bot.getWorld().getBlockAt(block.add(new Vector3i(0, -1, 0))).getTypeId())
+                == Material.SOUL_SAND) {
+            if (Material.getById(bot.getWorld().getBlockAt(location.add(new Vector3i(0, -1, 0))).getTypeId()) == Material.SOUL_SAND) {
+                y -= 0.12;
+            }
+            speed *= liquidFactor;
+        } else if (inLiquid) {
+            speed *= liquidFactor;
+        }
+
+        if (playerLoc.getY() != y) {
+            if (!inLiquid && !bot.getPathFinder().getWorldPhysics().canClimb(block)) {
+                if (playerLoc.getY() < y) {
+                    speed *= jumpFactor;
+                } else {
+                    speed *= fallFactor;
+                }
+            }
+            double offsetY = playerLoc.getY() < y ? Math.min(speed, y - playerLoc.getY()) : Math.max(-speed, y - playerLoc.getY());
+            playerLoc = playerLoc.add(new Vector3d(0, offsetY, 0));
+        }
+
+        if (playerLoc.getX() != x) {
+            double offsetX = playerLoc.getX() < x ? Math.min(speed, x - playerLoc.getX()) : Math.max(-speed, x - playerLoc.getX());
+            playerLoc = playerLoc.add(new Vector3d(offsetX, 0, 0));
+        }
+
+        if (playerLoc.getZ() != z) {
+            double offsetZ = playerLoc.getZ() < z ? Math.min(speed, z - playerLoc.getZ()) : Math.max(-speed, z - playerLoc.getZ());
+            playerLoc = playerLoc.add(new Vector3d(0, 0, offsetZ));
+        }
+
+        // Set new player location
+        player.updateLocation(playerLoc);
+
+        if (playerLoc.getX() == x && playerLoc.getY() == y && playerLoc.getZ() == z) {
+            nextStep = nextStep.getNext();
+            ticksSinceStepChange = 0;
+        }
+
+        return status = TaskStatus.forInProgress();
     }
 
     @Override
     public void stop() {
-        if (thread != null && !thread.isDone()) {
-            thread.cancel(true);
+        if (pathFuture != null && !pathFuture.isDone()) {
+            pathFuture.cancel(true);
         }
         nextStep = null;
     }
 
-    public boolean isMoving() {
-        return nextStep != null;
+    @Override
+    public TaskStatus getStatus() {
+        return status;
     }
 
-    @Override
-    public boolean isActive() {
-        return thread != null || nextStep != null;
+    public boolean isMoving() {
+        return nextStep != null;
     }
 
     public static double getDefaultSpeed() {
@@ -247,7 +243,7 @@ public class WalkActivity implements Activity {
     }
 
     public static void setDefaultSpeed(double defaultSpeed) {
-        WalkActivity.defaultSpeed = defaultSpeed;
+        WalkTask.defaultSpeed = defaultSpeed;
     }
 
     public static double getDefaultJumpFactor() {
@@ -255,7 +251,7 @@ public class WalkActivity implements Activity {
     }
 
     public static void setDefaultJumpFactor(double defaultJumpFactor) {
-        WalkActivity.defaultJumpFactor = defaultJumpFactor;
+        WalkTask.defaultJumpFactor = defaultJumpFactor;
     }
 
     public static double getDefaultFallFactor() {
@@ -263,7 +259,7 @@ public class WalkActivity implements Activity {
     }
 
     public static void setDefaultFallFactor(double defaultFallFactor) {
-        WalkActivity.defaultFallFactor = defaultFallFactor;
+        WalkTask.defaultFallFactor = defaultFallFactor;
     }
 
     public static double getDefaultLiquidFactor() {
@@ -271,7 +267,7 @@ public class WalkActivity implements Activity {
     }
 
     public static void setDefaultLiquidFactor(double defaultLiquidFactor) {
-        WalkActivity.defaultLiquidFactor = defaultLiquidFactor;
+        WalkTask.defaultLiquidFactor = defaultLiquidFactor;
     }
 
     public static int getDefaultTimeout() {
@@ -279,6 +275,6 @@ public class WalkActivity implements Activity {
     }
 
     public static void setDefaultTimeout(int defaultTimeout) {
-        WalkActivity.defaultTimeout = defaultTimeout;
+        WalkTask.defaultTimeout = defaultTimeout;
     }
 }

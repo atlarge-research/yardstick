@@ -5,7 +5,6 @@ import java.util.UUID;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import org.spacehq.mc.protocol.data.game.entity.player.GameMode;
-import org.spacehq.mc.protocol.packet.ingame.client.player.ClientPlayerMovementPacket;
 import org.spacehq.mc.protocol.packet.ingame.client.player.ClientPlayerPositionPacket;
 import org.spacehq.packetlib.Session;
 
@@ -27,6 +26,10 @@ public class BotPlayer extends Player {
 
         this.bot = bot;
         this.session = bot.getClient().getSession();
+    }
+
+    public Bot getBot() {
+        return bot;
     }
 
     // TODO: Player actions, data

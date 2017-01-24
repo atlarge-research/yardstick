@@ -75,7 +75,7 @@ public class Vector3i {
         double length = length();
         return new Vector3d(x / length, y / length, z / length);
     }
-    
+
     public Vector3d doubleVector() {
         return new Vector3d(x, y, z);
     }
@@ -109,7 +109,5 @@ public class Vector3i {
         }
         return true;
     }
-    
-    
 
 }

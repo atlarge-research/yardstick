@@ -3,8 +3,8 @@ package nl.tudelft.opencraft.yardstick.bot.world;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import nl.tudelft.opencraft.yardstick.bot.entity.Entity;
+import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import org.spacehq.mc.protocol.data.game.entity.metadata.Position;
 import org.spacehq.mc.protocol.data.game.world.WorldType;
 
@@ -45,7 +45,7 @@ public class World {
     public void unloadChunk(int x, int z) {
         chunks.remove(new ChunkLocation(x, z));
     }
-    
+
     public Block getBlockAt(Vector3i v) {
         return getBlockAt(v.getX(), v.getY(), v.getZ());
     }
@@ -69,7 +69,7 @@ public class World {
     public boolean isEntityLoaded(int id) {
         return entities.containsKey(id);
     }
-    
+
     public void loadEntity(Entity entity) {
         entities.put(entity.getId(), entity);
     }

@@ -1,9 +1,6 @@
 package nl.tudelft.opencraft.yardstick.bot;
 
-import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import java.util.UUID;
-import nl.tudelft.opencraft.yardstick.bot.world.World;
-import nl.tudelft.opencraft.yardstick.bot.world.Chunk;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
@@ -15,7 +12,10 @@ import nl.tudelft.opencraft.yardstick.bot.entity.ObjectEntity;
 import nl.tudelft.opencraft.yardstick.bot.entity.Painting;
 import nl.tudelft.opencraft.yardstick.bot.entity.Player;
 import nl.tudelft.opencraft.yardstick.bot.world.Block;
+import nl.tudelft.opencraft.yardstick.bot.world.Chunk;
 import nl.tudelft.opencraft.yardstick.bot.world.Dimension;
+import nl.tudelft.opencraft.yardstick.bot.world.World;
+import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import org.spacehq.mc.protocol.MinecraftProtocol;
 import org.spacehq.mc.protocol.data.SubProtocol;
 import org.spacehq.mc.protocol.data.game.entity.metadata.Position;
@@ -80,13 +80,13 @@ public class BotListener implements SessionListener {
             obj.setVelocity(new Vector3d(p.getMotionX(), p.getMotionY(), p.getMotionZ()));
             obj.setData(0); // TODO: Figure out how to get the raw data
             obj.setType(p.getType());
-            
+
             world.loadEntity(obj);
 
         } else if (packet instanceof ServerSpawnExpOrbPacket) {
             // 0x01 Spawn Experience Orb
             ServerSpawnExpOrbPacket p = (ServerSpawnExpOrbPacket) packet;
-            
+
             // TODO: Aaah! XP orbs have no UUID! :O
             ExperienceOrb orb = new ExperienceOrb(p.getEntityId(), UUID.randomUUID());
             orb.setLocation(new Vector3d(p.getX(), p.getY(), p.getZ()));
@@ -96,19 +96,18 @@ public class BotListener implements SessionListener {
         } else if (packet instanceof ServerSpawnGlobalEntityPacket) {
             // 0x02 Spawn Global Entity
             ServerSpawnGlobalEntityPacket p = (ServerSpawnGlobalEntityPacket) packet;
-            
+
             if (p.getType() != GlobalEntityType.LIGHTNING_BOLT) {
                 logger.warning("Received spawn global entity for non-lightning strike");
                 return;
             }
-            
+
             // TODO: Aaah! Lightning strikes have no UUID! :O
             LightningStrike ls = new LightningStrike(p.getEntityId(), UUID.randomUUID());
             ls.setLocation(new Vector3d(p.getX(), p.getY(), p.getZ()));
             world.loadEntity(ls);
-            
-            // TODO: Remove entity?
 
+            // TODO: Remove entity?
         } else if (packet instanceof ServerSpawnMobPacket) {
             // 0x03 Spawn Mob
             ServerSpawnMobPacket p = (ServerSpawnMobPacket) packet;

@@ -1,12 +1,11 @@
 package nl.tudelft.opencraft.yardstick.bot;
 
 import java.util.logging.Logger;
-import nl.tudelft.opencraft.yardstick.bot.ai.TaskManager;
-import nl.tudelft.opencraft.yardstick.bot.ai.activity.Activity;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.EuclideanHeuristic;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.PathSearchProvider;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.SimpleWorldPhysics;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.AStarPathSearchProvider;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
 import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
@@ -20,21 +19,19 @@ public class Bot {
     private final MinecraftProtocol protocol;
     private final String name;
     private final BotTicker ticker;
-    private final TaskManager tasks;
     //
     private Client client;
     private World world;
     private Server server;
     private BotPlayer player;
     private PathSearchProvider pathFinder;
-    private Activity activity;
+    private Task task;
 
     public Bot(MinecraftProtocol protocol) {
         this.name = protocol.getProfile().getName();
         this.logger = GlobalLogger.getLogger().newSubLogger("Bot").newSubLogger(name);
         this.protocol = protocol;
         this.ticker = new BotTicker(this);
-        this.tasks = new TaskManager(this);
     }
 
     public void connect(String host, int port) {
@@ -58,16 +55,12 @@ public class Bot {
         client.getSession().disconnect(reason);
     }
 
-    public void setActivity(Activity activity) {
-        this.activity = activity;
+    public void setTask(Task activity) {
+        this.task = activity;
     }
 
-    public Activity getActivity() {
-        return this.activity;
-    }
-
-    public TaskManager getTasks() {
-        return tasks;
+    public Task getTask() {
+        return this.task;
     }
 
     public Logger getLogger() {

@@ -74,7 +74,7 @@ public class Block {
     public Block getRelative(int x, int y, int z) {
         return getWorld().getBlockAt(this.x + x, this.y + y, this.z + z);
     }
-    
+
     public Block getRelative(Vector3i offset) {
         return getRelative(offset.getX(), offset.getY(), offset.getZ());
     }

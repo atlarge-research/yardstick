@@ -71,7 +71,7 @@ public class Vector3d {
         double length = length();
         return new Vector3d(x / length, y / length, z / length);
     }
-    
+
     public Vector3i intVector() {
         return new Vector3i((int) x, (int) y, (int) z);
     }

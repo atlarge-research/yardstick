@@ -1,12 +1,13 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import java.util.Random;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
-import nl.tudelft.opencraft.yardstick.bot.ai.activity.WalkActivity;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTask;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import org.spacehq.mc.protocol.MinecraftProtocol;
-
-import java.util.Random;
 
 public class Experiment3WalkAround extends Experiment {
 
@@ -22,16 +23,19 @@ public class Experiment3WalkAround extends Experiment {
     @Override
     protected void before() {
         this.bot = new Bot(new MinecraftProtocol("YSBot-1"));
+
         bot.getClient().getSession().addListener(stats);
         bot.connect(options.host, options.port);
-        originalLocation = bot.getPlayer().getLocation();
+
+        this.originalLocation = bot.getPlayer().getLocation();
 
     }
 
     @Override
     protected void tick() {
-        if (!bot.getActivity().isActive()) {
-            bot.setActivity(new WalkActivity(bot, getNewFieldLocation(originalLocation)));
+        Task t = bot.getTask();
+        if (t == null || t.getStatus().getType() != TaskStatus.StatusType.IN_PROGRESS) {
+            bot.setTask(new WalkTask(bot, getNewFieldLocation(originalLocation)));
         }
     }
 
@@ -39,7 +43,8 @@ public class Experiment3WalkAround extends Experiment {
      * Function to make bot walk in a specific area.
      *
      * @param originalLocation Original location of bot
-     * @return New random location in a field that has the original location at its center.
+     * @return New random location in a field that has the original location at
+     * its center.
      */
     private Vector3i getNewFieldLocation(Vector3d originalLocation) {
         int side = 100;

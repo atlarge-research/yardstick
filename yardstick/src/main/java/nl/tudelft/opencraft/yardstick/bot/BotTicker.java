@@ -31,7 +31,7 @@ public class BotTicker implements Runnable {
         Scheduler sched = new Scheduler(50); // 50ms per tick
         sched.start();
         while (running.get()) {
-            bot.getActivity().tick();
+            bot.getTask().tick();
             sched.sleepTick();
         }
     }
