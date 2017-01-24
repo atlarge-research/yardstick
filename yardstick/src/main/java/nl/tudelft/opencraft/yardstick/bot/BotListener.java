@@ -11,10 +11,7 @@ import nl.tudelft.opencraft.yardstick.bot.entity.Mob;
 import nl.tudelft.opencraft.yardstick.bot.entity.ObjectEntity;
 import nl.tudelft.opencraft.yardstick.bot.entity.Painting;
 import nl.tudelft.opencraft.yardstick.bot.entity.Player;
-import nl.tudelft.opencraft.yardstick.bot.world.Block;
-import nl.tudelft.opencraft.yardstick.bot.world.Chunk;
-import nl.tudelft.opencraft.yardstick.bot.world.Dimension;
-import nl.tudelft.opencraft.yardstick.bot.world.World;
+import nl.tudelft.opencraft.yardstick.bot.world.*;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import org.spacehq.mc.protocol.MinecraftProtocol;
 import org.spacehq.mc.protocol.data.SubProtocol;
@@ -173,7 +170,13 @@ public class BotListener implements SessionListener {
 
             BlockChangeRecord r = p.getRecord();
             Position pos = r.getPosition();
-            Block b = bot.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
+            Block b = null;
+            try {
+                b = bot.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
+            } catch (ChunkNotLoadedException e) {
+                // FIXME we should not ignore an update to an unloaded block.
+                return;
+            }
 
             b.setInternalState(r.getBlock());
 
@@ -207,7 +210,13 @@ public class BotListener implements SessionListener {
 
                 logger.info("MultiBlockChange: (" + pos.getX() + "," + pos.getY() + "," + pos.getZ() + ")");
 
-                Block b = bot.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
+                Block b = null;
+                try {
+                    b = bot.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
+                } catch (ChunkNotLoadedException e) {
+                    // FIXME we should not ignore a block change even when not loaded.
+                    return;
+                }
 
                 b.setInternalState(r.getBlock());
             }

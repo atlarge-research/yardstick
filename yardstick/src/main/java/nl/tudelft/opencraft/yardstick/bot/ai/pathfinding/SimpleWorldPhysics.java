@@ -24,6 +24,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package nl.tudelft.opencraft.yardstick.bot.ai.pathfinding;
 
+import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.bot.world.Material;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
@@ -77,7 +78,7 @@ public class SimpleWorldPhysics implements WorldPhysics {
     }
 
     @Override
-    public boolean canWalk(Vector3i location, Vector3i location2) {
+    public boolean canWalk(Vector3i location, Vector3i location2) throws ChunkNotLoadedException {
         int x = location.getX(), y = location.getY(), z = location.getZ();
         int x2 = location2.getX(), y2 = location2.getY(), z2 = location2.getZ();
         if (y2 < 0) {
@@ -142,7 +143,7 @@ public class SimpleWorldPhysics implements WorldPhysics {
     }
 
     @Override
-    public boolean canClimb(Vector3i location) {
+    public boolean canClimb(Vector3i location) throws ChunkNotLoadedException {
         int id = world.getBlockAt(location).getTypeId();
         if (id == 8 || id == 9 || id == 65) // Water / Moving Water / Ladder
         {
@@ -157,7 +158,7 @@ public class SimpleWorldPhysics implements WorldPhysics {
         return false;
     }
 
-    private boolean isEmpty(int x, int y, int z) {
+    private boolean isEmpty(int x, int y, int z) throws ChunkNotLoadedException {
         int id = world.getBlockAt(x, y, z).getTypeId();
         // TODO let bot also walk through other non-blocking objects.
         return id == Material.AIR.getId();

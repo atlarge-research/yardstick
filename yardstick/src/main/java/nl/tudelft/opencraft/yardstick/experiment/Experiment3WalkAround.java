@@ -51,7 +51,9 @@ public class Experiment3WalkAround extends Experiment {
     protected void tick() {
         Task t = bot.getTask();
         if (t == null || t.getStatus().getType() != TaskStatus.StatusType.IN_PROGRESS) {
-            bot.setTask(new WalkTask(bot, getNewFieldLocation(originalLocation)));
+            Vector3i newLocation = getNewFieldLocation(originalLocation);
+            logger.info(String.format("Setting task for bot to walk to %s", newLocation));
+            bot.setTask(new WalkTask(bot, newLocation));
         }
     }
 
@@ -70,7 +72,7 @@ public class Experiment3WalkAround extends Experiment {
         int minz = ((int) originalLocation.getZ()) - side / 2;
         int newx = random.nextInt(maxx - minx) + minx;
         int newz = random.nextInt(maxz - minz) + minz;
-        return new Vector3i(newx, ((int) this.originalLocation.getY()), newz);
+        return new Vector3i(newx, 4, newz);
     }
 
     @Override

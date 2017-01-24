@@ -1,6 +1,7 @@
 package nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar;
 
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.*;
+import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 import java.util.*;
@@ -18,7 +19,7 @@ public class SaneAStar {
         this.worldPhysics = physics;
     }
 
-    public PathNode provideSearch(Vector3i start, Vector3i end) {
+    public PathNode provideSearch(Vector3i start, Vector3i end) throws ChunkNotLoadedException {
         Map<PathNode, Integer> visited = new HashMap<>();
         PriorityQueue<PathNode> locations = new PriorityQueue<>();
         PathNode startNode = new BlockPathNode(start, 0);

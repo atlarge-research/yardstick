@@ -24,21 +24,24 @@
  */
 package nl.tudelft.opencraft.yardstick.bot.ai.task;
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
-import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.BlockPathNode;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.PathNode;
-import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.PathSearch;
 import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
+import nl.tudelft.opencraft.yardstick.bot.world.Block;
+import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.bot.world.Material;
-import nl.tudelft.opencraft.yardstick.bot.world.World;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.logging.Logger;
+
 public class WalkTask implements Task {
+
+    private static Logger logger = Logger.getLogger(WalkTask.class.getName());
 
     private static double defaultSpeed = 0.15, defaultJumpFactor = 3, defaultFallFactor = 4, defaultLiquidFactor = 0.5;
     private static int defaultTimeout = 10000;
@@ -62,16 +65,10 @@ public class WalkTask implements Task {
         this.target = target;
 
         pathFuture = service.submit(() -> {
-            World world = bot.getWorld();
             BotPlayer player = bot.getPlayer();
+            logger.info("Calculating path ...");
             PathNode start = bot.getPathFinder().provideSearch(player.getLocation().intVector(), target);
-            // Half the step size to make sure bot can track path.
-//            for(PathNode node = start; node.getNext() != null; node = node.getNext()) {
-//                PathNode nextNode = node.getNext();
-//                PathNode halfNode = new BlockPathNode(Vector3i.average(node.getLocation(), nextNode.getLocation()), 0);
-//                node.setNext(halfNode);
-//                halfNode.setNext(nextNode);
-//            }
+            logger.info("Calculating path done!");
             return start;
         });
 
@@ -134,16 +131,20 @@ public class WalkTask implements Task {
                 pathFuture = null;
                 nextStep = null;
                 return status = TaskStatus.forFailure("Path search timed out");
+            } else {
+                return status = TaskStatus.forInProgress();
             }
         } else if (pathFuture != null && pathFuture.isDone() && !pathFuture.isCancelled()) {
             try {
                 nextStep = pathFuture.get();
-                System.out.println("Path found, walking...");
                 ticksSinceStepChange = 0;
-            } catch (Exception exception) {
-                exception.printStackTrace();
-                nextStep = null;
-                return status = TaskStatus.forFailure("Could not get path!");
+            } catch (InterruptedException e) {
+                return status = TaskStatus.forFailure(e.getMessage());
+            } catch (ExecutionException e) {
+                if (e.getCause() instanceof ChunkNotLoadedException) {
+                    return status = TaskStatus.forInProgress();
+                }
+                return status = TaskStatus.forFailure(e.getMessage());
             } finally {
                 pathFuture = null;
             }
@@ -154,7 +155,6 @@ public class WalkTask implements Task {
         }
 
         BotPlayer player = bot.getPlayer();
-        System.out.println(" -> Moving from " + player.getLocation() + " to " + nextStep);
         if (nextStep.getNext() != null && player.getLocation().distanceSquared(nextStep.getNext().getLocation().doubleVector()) < 0.2) {
             nextStep = nextStep.getNext();
             ticksSinceStepChange = 0;
@@ -175,9 +175,20 @@ public class WalkTask implements Task {
 
         double x = location.getX() + 0.5, y = location.getY(), z = location.getZ() + 0.5;
         boolean inLiquid = false; // TODO: player.isInLiquid();
-        if (Material.getById(bot.getWorld().getBlockAt(block.add(new Vector3i(0, -1, 0))).getTypeId())
-                == Material.SOUL_SAND) {
-            if (Material.getById(bot.getWorld().getBlockAt(location.add(new Vector3i(0, -1, 0))).getTypeId()) == Material.SOUL_SAND) {
+        Vector3i blockPosition = block.add(new Vector3i(0, -1, 0));
+        Block thisBlock;
+        try {
+            thisBlock = bot.getWorld().getBlockAt(blockPosition);
+        } catch (ChunkNotLoadedException e) {
+            // Wait until chunk is loaded.
+            return status = TaskStatus.forInProgress();
+        }
+        if (thisBlock == null) {
+            logger.warning(String.format("Could not get block at %s", blockPosition));
+            return TaskStatus.forInProgress();
+        }
+        if (Material.getById(thisBlock.getTypeId()) == Material.SOUL_SAND) {
+            if (Material.getById(thisBlock.getTypeId()) == Material.SOUL_SAND) {
                 y -= 0.12;
             }
             speed *= liquidFactor;
@@ -185,7 +196,13 @@ public class WalkTask implements Task {
             speed *= liquidFactor;
         }
         if (playerLoc.getY() != y) {
-            if (!inLiquid && !bot.getPathFinder().getWorldPhysics().canClimb(block)) {
+            boolean canClimbBlock = false;
+            try {
+                canClimbBlock = bot.getPathFinder().getWorldPhysics().canClimb(block);
+            } catch (ChunkNotLoadedException e) {
+                return status = TaskStatus.forInProgress();
+            }
+            if (!inLiquid && !canClimbBlock) {
                 if (playerLoc.getY() < y) {
                     speed *= jumpFactor;
                 } else {

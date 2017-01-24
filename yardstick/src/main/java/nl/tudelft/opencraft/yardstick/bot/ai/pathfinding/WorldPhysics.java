@@ -24,6 +24,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package nl.tudelft.opencraft.yardstick.bot.ai.pathfinding;
 
+import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
 
@@ -31,9 +32,9 @@ public interface WorldPhysics {
 
     public Vector3i[] findAdjacent(Vector3i location);
 
-    public boolean canWalk(Vector3i from, Vector3i to);
+    public boolean canWalk(Vector3i from, Vector3i to) throws ChunkNotLoadedException;
 
-    public boolean canClimb(Vector3i location);
+    public boolean canClimb(Vector3i location) throws ChunkNotLoadedException;
 
     public World getWorld();
 }

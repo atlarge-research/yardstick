@@ -71,11 +71,11 @@ public class Block {
                 newState);
     }
 
-    public Block getRelative(int x, int y, int z) {
+    public Block getRelative(int x, int y, int z) throws ChunkNotLoadedException {
         return getWorld().getBlockAt(this.x + x, this.y + y, this.z + z);
     }
 
-    public Block getRelative(Vector3i offset) {
+    public Block getRelative(Vector3i offset) throws ChunkNotLoadedException {
         return getRelative(offset.getX(), offset.getY(), offset.getZ());
     }
 

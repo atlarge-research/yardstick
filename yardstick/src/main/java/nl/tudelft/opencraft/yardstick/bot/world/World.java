@@ -46,17 +46,18 @@ public class World {
         chunks.remove(new ChunkLocation(x, z));
     }
 
-    public Block getBlockAt(Vector3i v) {
+    public Block getBlockAt(Vector3i v) throws ChunkNotLoadedException {
         return getBlockAt(v.getX(), v.getY(), v.getZ());
     }
 
-    public Block getBlockAt(int x, int y, int z) {
+    public Block getBlockAt(int x, int y, int z) throws ChunkNotLoadedException {
         int chunkX = Math.floorDiv(x, 16);
         int chunkZ = Math.floorDiv(z, 16);
 
-        Chunk chunk = chunks.get(new ChunkLocation(chunkX, chunkZ));
+        ChunkLocation location = new ChunkLocation(chunkX, chunkZ);
+        Chunk chunk = chunks.get(location);
         if (chunk == null) {
-            return null; // Block not loaded
+            throw new ChunkNotLoadedException(location.toString());
         }
 
         return new Block(x, y, z, chunk);
