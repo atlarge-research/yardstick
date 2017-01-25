@@ -74,7 +74,7 @@ public class Experiment2ScheduledJoin extends Experiment {
         String name = "YSBot-" + node + "-" + botsJoined;
         Client client = new Client(options.host, options.port, new MinecraftProtocol(name), new TcpSessionFactory());
         client.getSession().addListener(new ExperimentLogger(logger.newSubLogger(name)));
-        client.getSession().addListener(stats);
+        client.getSession().addListener(this.getStats());
         client.getSession().connect();
 
         if (!client.getSession().isConnected()) {

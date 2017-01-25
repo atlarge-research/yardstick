@@ -1,11 +1,11 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import java.util.logging.Level;
 import nl.tudelft.opencraft.yardstick.Options;
 import nl.tudelft.opencraft.yardstick.Yardstick;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 import nl.tudelft.opencraft.yardstick.statistic.Statistics;
+import nl.tudelft.opencraft.yardstick.util.Scheduler;
 
 public abstract class Experiment implements Runnable {
 
@@ -15,15 +15,14 @@ public abstract class Experiment implements Runnable {
     protected final String description;
     protected final Options options = Yardstick.OPTIONS;
     protected final SubLogger logger;
-    protected final Statistics stats;
-    //
+
     protected long tick = 0;
+    private Statistics stats;
 
     public Experiment(int number, String desc) {
         this.number = number;
         this.description = desc;
         this.logger = GlobalLogger.getLogger().newSubLogger("Experiment " + number);
-        this.stats = new Statistics(options.prometheusHost, options.prometheusPort);
     }
 
     @Override
@@ -34,27 +33,26 @@ public abstract class Experiment implements Runnable {
             logger.info("Parameter - " + key + ": " + options.experimentParams.get(key));
         }
 
-        stats.startPushing();
+        if (stats != null) {
+            stats.startPushing();
+        }
+
+        Scheduler sched = new Scheduler(TICK_MS);
+        sched.start();
 
         before();
 
         do {
             tick();
-
-            // TODO: Proper scheduler
-            try {
-                Thread.sleep(TICK_MS);
-            } catch (InterruptedException ex) {
-                logger.log(Level.SEVERE, "Ticker interrupted", ex);
-            }
-            tick += TICK_MS;
-
+            sched.sleepTick();
         } while (!isDone());
 
         after();
 
         logger.info("Experiment complete, exiting");
-        stats.stopPushing();
+        if (stats != null) {
+            stats.stopPushing();
+        }
     }
 
     protected abstract void before();
@@ -65,4 +63,11 @@ public abstract class Experiment implements Runnable {
 
     protected abstract void after();
 
+    public Statistics getStats() {
+        return stats;
+    }
+
+    public void setStats(Statistics stats) {
+        this.stats = stats;
+    }
 }

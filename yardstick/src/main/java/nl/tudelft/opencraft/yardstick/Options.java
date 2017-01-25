@@ -29,7 +29,7 @@ public class Options {
     public String prometheusHost;
 
     @Parameter(names = {"--prometheus-port", "-pp"}, description = "The port of the Prometheus server")
-    public int prometheusPort;
+    public int prometheusPort = 9091;
 
     @Parameter(names = {"--start", "-s"}, converter = DateConverter.class, description = "The start time of the experiment - HH:mm[:ss]")
     public LocalTime start;
