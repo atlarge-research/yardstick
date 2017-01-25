@@ -33,10 +33,7 @@ import nl.tudelft.opencraft.yardstick.bot.world.Material;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 import java.util.logging.Logger;
 
 public class WalkTask implements Task {
@@ -60,18 +57,22 @@ public class WalkTask implements Task {
 
     private TaskStatus status = TaskStatus.forInProgress();
 
-    public WalkTask(final Bot bot, final Vector3i target) {
-        this.bot = bot;
-        this.target = target;
-
-        pathFuture = service.submit(() -> {
+    private Callable<PathNode> task = new Callable<PathNode>() {
+        @Override
+        public PathNode call() throws Exception {
             BotPlayer player = bot.getPlayer();
             logger.info("Calculating path ...");
             PathNode start = bot.getPathFinder().provideSearch(player.getLocation().intVector(), target);
             logger.info("Calculating path done!");
             return start;
-        });
+        }
+    };
 
+    public WalkTask(final Bot bot, final Vector3i target) {
+        this.bot = bot;
+        this.target = target;
+
+        pathFuture = service.submit(task);
         startTime = System.currentTimeMillis();
     }
 
@@ -137,6 +138,7 @@ public class WalkTask implements Task {
         } else if (pathFuture != null && pathFuture.isDone() && !pathFuture.isCancelled()) {
             try {
                 nextStep = pathFuture.get();
+                logger.info(String.format("First step of path: %s", nextStep));
                 ticksSinceStepChange = 0;
             } catch (InterruptedException e) {
                 return status = TaskStatus.forFailure(e.getMessage());
@@ -160,8 +162,10 @@ public class WalkTask implements Task {
             ticksSinceStepChange = 0;
         }
         if (player.getLocation().distanceSquared(nextStep.getLocation().doubleVector()) > 4) {
-            nextStep = null;
-            return status = TaskStatus.forFailure("Step too far away!");
+            logger.info(String.format("Strayed from path. %s -> %s", player.getLocation(), nextStep.getLocation()));
+            TaskStatus status = TaskStatus.forInProgress();
+            pathFuture = service.submit(task);
+            return status;
         }
         ticksSinceStepChange++;
         if (ticksSinceStepChange > 80) {
@@ -173,7 +177,7 @@ public class WalkTask implements Task {
         Vector3i block = player.getLocation().intVector();
         Vector3d playerLoc = player.getLocation();
 
-        double x = location.getX() + 0.5, y = location.getY(), z = location.getZ() + 0.5;
+        double x = location.getX(), y = location.getY(), z = location.getZ();
         boolean inLiquid = false; // TODO: player.isInLiquid();
         Vector3i blockPosition = block.add(new Vector3i(0, -1, 0));
         Block thisBlock;

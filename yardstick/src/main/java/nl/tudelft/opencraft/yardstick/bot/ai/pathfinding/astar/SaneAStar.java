@@ -40,6 +40,7 @@ public class SaneAStar {
                     } else {
                         BlockPathNode node = new BlockPathNode(vec);
                         node.setCost(current.getCost() + 1);
+                        node.setPrevious(current);
                         neigborNodes.add(node);
                         nodeMap.put(vec, node);
                     }
@@ -56,6 +57,7 @@ public class SaneAStar {
                     } else if (toVisit.contains(neighbor) && neighbor.getCost() > current.getCost() + 1) {
                         toVisit.remove(neighbor);
                         neighbor.setCost(current.getCost() + 1);
+                        neighbor.setPrevious(current);
                         toVisit.add(neighbor);
                     }
                 }
