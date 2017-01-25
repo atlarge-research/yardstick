@@ -17,6 +17,7 @@ public class Experiment4MultiWalkAround extends Experiment {
 
     private Random random;
     private List<Bot> botList;
+    private int botsTotal = 0;
 
     public Experiment4MultiWalkAround() {
         super(3, "A simple test demonstrating A* movement");
@@ -26,7 +27,8 @@ public class Experiment4MultiWalkAround extends Experiment {
 
     @Override
     protected void before() {
-        for (int i = 0; i < 100; i++) {
+        this.botsTotal = Integer.parseInt(options.experimentParams.get("bots"));
+        for (int i = 0; i < this.botsTotal; i++) {
             botList.add(createBot());
         }
     }
