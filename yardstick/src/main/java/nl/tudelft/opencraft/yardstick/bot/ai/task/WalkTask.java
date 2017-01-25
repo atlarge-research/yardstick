@@ -247,6 +247,7 @@ public class WalkTask implements Task {
             pathFuture.cancel(true);
         }
         nextStep = null;
+        this.service.shutdown();
     }
 
     @Override

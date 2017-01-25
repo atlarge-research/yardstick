@@ -52,10 +52,14 @@ public class Bot {
             return;
         }
 
+        this.task.stop();
         client.getSession().disconnect(reason);
     }
 
     public void setTask(Task activity) {
+        if (this.task != null) {
+            this.task.stop();
+        }
         this.task = activity;
     }
 
