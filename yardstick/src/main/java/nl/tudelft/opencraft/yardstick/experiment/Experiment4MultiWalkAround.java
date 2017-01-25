@@ -8,57 +8,33 @@ import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import org.spacehq.mc.protocol.MinecraftProtocol;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
+import java.util.UUID;
 
-public class Experiment3WalkAround extends Experiment {
+public class Experiment4MultiWalkAround extends Experiment {
 
     private Random random;
-    private Bot bot;
-    private Vector3d originalLocation;
+    private List<Bot> botList;
 
-    public Experiment3WalkAround() {
+    public Experiment4MultiWalkAround() {
         super(3, "A simple test demonstrating A* movement");
         this.random = new Random();
+        this.botList = new ArrayList<>();
     }
 
     @Override
     protected void before() {
-        this.bot = new Bot(new MinecraftProtocol("YSBot-1"));
-        this.bot.connect(options.host, options.port);
-        if (this.getStats() != null) {
-            this.bot.getClient().getSession().addListener(this.getStats());
+        for (int i = 0; i < 100; i++) {
+            botList.add(createBot());
         }
-        while (this.bot.getPlayer() == null) {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                return;
-            }
-        }
-        while (this.bot.getPlayer().getLocation() == null) {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                return;
-            }
-        }
-        this.originalLocation = this.bot.getPlayer().getLocation();
     }
 
     @Override
     protected void tick() {
-        Task t = bot.getTask();
-        if (t == null || t.getStatus().getType() != TaskStatus.StatusType.IN_PROGRESS) {
-            Vector3i newLocation;
-            if (random.nextDouble() < 0.1) {
-                newLocation = getNewLongDistanceTarget(originalLocation);
-            } else {
-                newLocation = getNewFieldLocation(originalLocation);
-            }
-            logger.info(String.format("Setting task for bot to walk to %s", newLocation));
-            bot.setTask(new WalkTask(bot, newLocation));
+        for (Bot bot : botList) {
+            botTick(bot);
         }
     }
 
@@ -90,6 +66,40 @@ public class Experiment3WalkAround extends Experiment {
         return new Vector3i(newX, 4, newZ);
     }
 
+    private void botTick(Bot bot) {
+        Task t = bot.getTask();
+        if (t == null || t.getStatus().getType() != TaskStatus.StatusType.IN_PROGRESS) {
+            Vector3i newLocation;
+            if (random.nextDouble() < 0.1) {
+                newLocation = getNewLongDistanceTarget(bot.getPlayer().getLocation());
+            } else {
+                newLocation = getNewFieldLocation(bot.getPlayer().getLocation());
+            }
+            logger.info(String.format("Setting task for bot to walk to %s", newLocation));
+            bot.setTask(new WalkTask(bot, newLocation));
+        }
+    }
+
+    private Bot createBot() {
+        Bot bot = new Bot(new MinecraftProtocol(UUID.randomUUID().toString().substring(0, 6)));
+        bot.connect(options.host, options.port);
+        if (this.getStats() != null) {
+            bot.getClient().getSession().addListener(this.getStats());
+        }
+        while (bot.getPlayer() == null || bot.getPlayer().getLocation() == null) {
+            if (!bot.getClient().getSession().isConnected()) {
+                return null;
+            }
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
+        return bot;
+    }
+
     @Override
     protected boolean isDone() {
         return false;
@@ -97,6 +107,8 @@ public class Experiment3WalkAround extends Experiment {
 
     @Override
     protected void after() {
-        bot.disconnect("disconnect");
+        for (Bot bot : botList) {
+            bot.disconnect("disconnect");
+        }
     }
 }

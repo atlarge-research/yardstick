@@ -5,10 +5,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.logging.Level;
 import com.beust.jcommander.JCommander;
-import nl.tudelft.opencraft.yardstick.experiment.Experiment;
-import nl.tudelft.opencraft.yardstick.experiment.Experiment1SimpleJoin;
-import nl.tudelft.opencraft.yardstick.experiment.Experiment2ScheduledJoin;
-import nl.tudelft.opencraft.yardstick.experiment.Experiment3WalkAround;
+import nl.tudelft.opencraft.yardstick.experiment.*;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SimpleTimeFormatter;
 import nl.tudelft.opencraft.yardstick.statistic.Statistics;
@@ -65,6 +62,9 @@ public class Yardstick {
                 break;
             case 3:
                 ex = new Experiment3WalkAround();
+                break;
+            case 4:
+                ex = new Experiment4MultiWalkAround();
                 break;
             default:
                 System.out.println("Invalid experiment: " + OPTIONS.experiment);

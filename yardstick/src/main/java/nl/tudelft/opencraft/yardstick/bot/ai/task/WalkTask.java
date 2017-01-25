@@ -177,6 +177,7 @@ public class WalkTask implements Task {
         Vector3i block = player.getLocation().intVector();
         Vector3d playerLoc = player.getLocation();
 
+        // TODO Fix such that bot is able to avoid obstacles. Involves adding 0.5 to x and z to make sure bot walks along the center of the blocks.
         double x = location.getX(), y = location.getY(), z = location.getZ();
         boolean inLiquid = false; // TODO: player.isInLiquid();
         Vector3i blockPosition = block.add(new Vector3i(0, -1, 0));
