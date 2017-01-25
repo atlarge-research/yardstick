@@ -18,11 +18,13 @@ public class Experiment4MultiWalkAround extends Experiment {
     private Random random;
     private List<Bot> botList;
     private int botsTotal = 0;
+    private long startMillis;
 
     public Experiment4MultiWalkAround() {
         super(3, "A simple test demonstrating A* movement");
         this.random = new Random();
         this.botList = new ArrayList<>();
+        this.startMillis = System.currentTimeMillis();
     }
 
     @Override
@@ -104,7 +106,7 @@ public class Experiment4MultiWalkAround extends Experiment {
 
     @Override
     protected boolean isDone() {
-        return false;
+        return System.currentTimeMillis() - this.startMillis > 5 * 60 * 1_000;
     }
 
     @Override
