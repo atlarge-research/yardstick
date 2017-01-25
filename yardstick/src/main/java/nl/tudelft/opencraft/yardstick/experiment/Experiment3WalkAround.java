@@ -1,14 +1,14 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import java.util.Random;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
-import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.PathNode;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTask;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import org.spacehq.mc.protocol.MinecraftProtocol;
+
+import java.util.Random;
 
 public class Experiment3WalkAround extends Experiment {
 

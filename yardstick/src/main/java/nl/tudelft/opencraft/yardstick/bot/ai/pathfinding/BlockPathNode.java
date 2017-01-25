@@ -44,9 +44,8 @@ public class BlockPathNode implements PathNode {
         this.next = next;
     }
 
-    public BlockPathNode(Vector3i location, int cost) {
+    public BlockPathNode(Vector3i location) {
         this.location = location;
-        this.cost = cost;
     }
 
     @Override

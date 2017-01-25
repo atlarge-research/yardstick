@@ -20,29 +20,43 @@ public class SaneAStar {
     }
 
     public PathNode provideSearch(Vector3i start, Vector3i end) throws ChunkNotLoadedException {
-        Map<PathNode, Integer> visited = new HashMap<>();
-        PriorityQueue<PathNode> locations = new PriorityQueue<>();
-        PathNode startNode = new BlockPathNode(start, 0);
-        locations.add(startNode);
-        while (!locations.isEmpty() && !Thread.interrupted()) {
-            PathNode current = locations.poll();
-            visited.put(current, current.getCost());
+        Map<Vector3i, PathNode> nodeMap = new HashMap<>();
+        Set<PathNode> visited = new HashSet<>();
+        PriorityQueue<PathNode> toVisit = new PriorityQueue<>(Comparator.comparingInt(thisNode -> thisNode.getCost() + heuristic.calculateCost(thisNode.getLocation(), end)));
+        PathNode startNode = new BlockPathNode(start);
+        startNode.setCost(0);
+        nodeMap.put(start, startNode);
+        toVisit.add(startNode);
+        while (!toVisit.isEmpty() && !Thread.interrupted()) {
+            PathNode current = toVisit.poll();
+            visited.add(current);
             if (current.getLocation().equals(end)) {
                 return buildPath(current);
             } else {
-                for (Vector3i neighbor : worldPhysics.findAdjacent(current.getLocation())) {
-                    if (worldPhysics.canWalk(current.getLocation(), neighbor)) {
-                        int expectedCost = current.getCost() + 1 + heuristic.calculateCost(neighbor, end);
-                        PathNode node = new BlockPathNode(neighbor, expectedCost);
-                        if (!visited.containsKey(node)
-                                || (visited.containsKey(node) && expectedCost < visited.get(node))) {
-                            visited.put(node, expectedCost);
-                            if (locations.contains(node)) {
-                                locations.remove(node);
-                            }
-                            locations.add(node);
-                            node.setPrevious(current);
-                        }
+                Set<PathNode> neigborNodes = new HashSet<>();
+                for (Vector3i vec : worldPhysics.findAdjacent(current.getLocation())) {
+                    if (nodeMap.containsKey(vec)) {
+                        neigborNodes.add(nodeMap.get(vec));
+                    } else {
+                        BlockPathNode node = new BlockPathNode(vec);
+                        node.setCost(current.getCost() + 1);
+                        neigborNodes.add(node);
+                        nodeMap.put(vec, node);
+                    }
+                }
+                for (PathNode neighbor : neigborNodes) {
+                    if (visited.contains(neighbor)) {
+                        continue;
+                    }
+                    if (!worldPhysics.canWalk(current.getLocation(), neighbor.getLocation())) {
+                        continue;
+                    }
+                    if (!toVisit.contains(neighbor)) {
+                        toVisit.add(neighbor);
+                    } else if (toVisit.contains(neighbor) && neighbor.getCost() > current.getCost() + 1) {
+                        toVisit.remove(neighbor);
+                        neighbor.setCost(current.getCost() + 1);
+                        toVisit.add(neighbor);
                     }
                 }
             }
