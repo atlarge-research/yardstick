@@ -52,14 +52,11 @@ public class Bot {
     }
 
     public void disconnect(String reason) {
-        ticker.stop();
-
-        if (client == null || !client.getSession().isConnected()) {
-            return;
-        }
-
+        this.ticker.stop();
         this.task.stop();
-        client.getSession().disconnect(reason);
+        if (client != null && !client.getSession().isConnected()) {
+            client.getSession().disconnect(reason);
+        }
     }
 
     public void setTask(Task activity) {
