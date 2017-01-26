@@ -39,7 +39,12 @@ public class Experiment4MultiWalkAround extends Experiment {
         if (System.currentTimeMillis() - this.lastJoin > secondsBetweenJoin * 1000
                 && botList.size() < this.botsTotal) {
             lastJoin = System.currentTimeMillis();
-            new Thread(() -> botList.add(createBot())).start();
+            new Thread(() -> {
+                Bot bot = createBot();
+                if (bot != null) {
+                    botList.add(bot);
+                }
+            }).start();
         }
         synchronized (botList) {
             for (Bot bot : botList) {

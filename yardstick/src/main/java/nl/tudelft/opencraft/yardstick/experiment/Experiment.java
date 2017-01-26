@@ -37,21 +37,20 @@ public abstract class Experiment implements Runnable {
             stats.startPushing();
         }
 
-        Scheduler sched = new Scheduler(TICK_MS);
-        sched.start();
-
-        before();
-
-        do {
-            tick();
-            sched.sleepTick();
-        } while (!isDone());
-
-        after();
-
-        logger.info("Experiment complete, exiting");
-        if (stats != null) {
-            stats.stopPushing();
+        try {
+            Scheduler sched = new Scheduler(TICK_MS);
+            sched.start();
+            before();
+            do {
+                tick();
+                sched.sleepTick();
+            } while (!isDone());
+            after();
+            logger.info("Experiment complete, exiting");
+        } finally {
+            if (stats != null) {
+                stats.stopPushing();
+            }
         }
     }
 
