@@ -9,6 +9,7 @@ import nl.tudelft.opencraft.yardstick.bot.world.World;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import org.spacehq.mc.protocol.MinecraftProtocol;
 import org.spacehq.packetlib.Client;
+import org.spacehq.packetlib.event.session.SessionListener;
 import org.spacehq.packetlib.tcp.TcpSessionFactory;
 
 import java.util.logging.Logger;
@@ -27,20 +28,25 @@ public class Bot {
     private SaneAStar pathFinder;
     private Task task;
 
-    public Bot(MinecraftProtocol protocol) {
+    public Bot(MinecraftProtocol protocol, String host, int port) {
         this.name = protocol.getProfile().getName();
         this.logger = GlobalLogger.getLogger().newSubLogger("Bot").newSubLogger(name);
         this.protocol = protocol;
         this.ticker = new BotTicker(this);
+        this.client = new Client(host, port, protocol, new TcpSessionFactory());
+        this.client.getSession().addListener(new BotListener(this));
     }
 
-    public void connect(String host, int port) {
+    public void addSessionListener(SessionListener... listeners) {
+        for (SessionListener listener : listeners) {
+            this.client.getSession().addListener(listener);
+        }
+    }
+
+    public void connect() {
         if (client != null && client.getSession().isConnected()) {
             throw new IllegalStateException("Can not start connection. Bot already connected!");
         }
-
-        client = new Client(host, port, protocol, new TcpSessionFactory());
-        client.getSession().addListener(new BotListener(this));
         client.getSession().connect();
         ticker.start();
     }

@@ -96,11 +96,11 @@ public class Experiment4MultiWalkAround extends Experiment {
     }
 
     private Bot createBot() {
-        Bot bot = new Bot(new MinecraftProtocol(UUID.randomUUID().toString().substring(0, 6)));
-        bot.connect(options.host, options.port);
+        Bot bot = new Bot(new MinecraftProtocol(UUID.randomUUID().toString().substring(0, 6)), options.host, options.port);
         if (this.getStats() != null) {
-            bot.getClient().getSession().addListener(this.getStats());
+            bot.addSessionListener(this.getStats());
         }
+        bot.connect();
         while (bot.getPlayer() == null || bot.getPlayer().getLocation() == null) {
             if (!bot.getClient().getSession().isConnected()) {
                 return null;
