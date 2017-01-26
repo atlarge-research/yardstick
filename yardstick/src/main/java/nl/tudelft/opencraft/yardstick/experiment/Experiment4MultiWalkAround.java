@@ -8,10 +8,7 @@ import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import org.spacehq.mc.protocol.MinecraftProtocol;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 
 public class Experiment4MultiWalkAround extends Experiment {
 
@@ -19,28 +16,35 @@ public class Experiment4MultiWalkAround extends Experiment {
     private List<Bot> botList;
     private int botsTotal = 0;
     private long startMillis;
-    private int durationInSeconds = 10 * 60;
+    private int durationInSeconds;
+    private int secondsBetweenJoin;
+    private long lastJoin = System.currentTimeMillis();
 
     public Experiment4MultiWalkAround() {
         super(3, "A simple test demonstrating A* movement");
         this.random = new Random();
-        this.botList = new ArrayList<>();
+        this.botList = Collections.synchronizedList(new ArrayList<>());
         this.startMillis = System.currentTimeMillis();
     }
 
     @Override
     protected void before() {
         this.botsTotal = Integer.parseInt(options.experimentParams.get("bots"));
-        this.durationInSeconds = Integer.parseInt(options.experimentParams.get("duration"));
-        for (int i = 0; i < this.botsTotal; i++) {
-            botList.add(createBot());
-        }
+        this.durationInSeconds = Integer.parseInt(options.experimentParams.getOrDefault("duration", "600"));
+        this.secondsBetweenJoin = Integer.parseInt(options.experimentParams.getOrDefault("joininterval", "1"));
     }
 
     @Override
     protected void tick() {
-        for (Bot bot : botList) {
-            botTick(bot);
+        if (System.currentTimeMillis() - this.lastJoin > secondsBetweenJoin * 1000
+                && botList.size() < this.botsTotal) {
+            lastJoin = System.currentTimeMillis();
+            new Thread(() -> botList.add(createBot())).start();
+        }
+        synchronized (botList) {
+            for (Bot bot : botList) {
+                botTick(bot);
+            }
         }
     }
 
