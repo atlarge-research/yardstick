@@ -1,16 +1,6 @@
 package nl.tudelft.opencraft.yardstick.bot;
 
-import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
-import nl.tudelft.opencraft.yardstick.bot.entity.Entity;
-import nl.tudelft.opencraft.yardstick.bot.entity.ExperienceOrb;
-import nl.tudelft.opencraft.yardstick.bot.entity.LightningStrike;
-import nl.tudelft.opencraft.yardstick.bot.entity.Mob;
-import nl.tudelft.opencraft.yardstick.bot.entity.ObjectEntity;
-import nl.tudelft.opencraft.yardstick.bot.entity.Painting;
-import nl.tudelft.opencraft.yardstick.bot.entity.Player;
+import nl.tudelft.opencraft.yardstick.bot.entity.*;
 import nl.tudelft.opencraft.yardstick.bot.world.*;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import org.spacehq.mc.protocol.MinecraftProtocol;
@@ -23,17 +13,19 @@ import org.spacehq.mc.protocol.packet.ingame.server.*;
 import org.spacehq.mc.protocol.packet.ingame.server.entity.*;
 import org.spacehq.mc.protocol.packet.ingame.server.entity.player.*;
 import org.spacehq.mc.protocol.packet.ingame.server.entity.spawn.*;
-import org.spacehq.mc.protocol.packet.ingame.server.scoreboard.*;
+import org.spacehq.mc.protocol.packet.ingame.server.scoreboard.ServerDisplayScoreboardPacket;
+import org.spacehq.mc.protocol.packet.ingame.server.scoreboard.ServerScoreboardObjectivePacket;
+import org.spacehq.mc.protocol.packet.ingame.server.scoreboard.ServerTeamPacket;
+import org.spacehq.mc.protocol.packet.ingame.server.scoreboard.ServerUpdateScorePacket;
 import org.spacehq.mc.protocol.packet.ingame.server.window.*;
 import org.spacehq.mc.protocol.packet.ingame.server.world.*;
 import org.spacehq.packetlib.Session;
-import org.spacehq.packetlib.event.session.ConnectedEvent;
-import org.spacehq.packetlib.event.session.DisconnectedEvent;
-import org.spacehq.packetlib.event.session.DisconnectingEvent;
-import org.spacehq.packetlib.event.session.PacketReceivedEvent;
-import org.spacehq.packetlib.event.session.PacketSentEvent;
-import org.spacehq.packetlib.event.session.SessionListener;
+import org.spacehq.packetlib.event.session.*;
 import org.spacehq.packetlib.packet.Packet;
+
+import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class BotListener implements SessionListener {
 
@@ -586,7 +578,6 @@ public class BotListener implements SessionListener {
             // 0x4B Entity Effect
             ServerEntityEffectPacket p = (ServerEntityEffectPacket) packet;
             // TODO
-
         } else {
             logger.warning("Received unhandled packet: " + packet.getClass().getName());
         }
