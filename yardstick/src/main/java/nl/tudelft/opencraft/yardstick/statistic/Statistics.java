@@ -8,6 +8,7 @@ import io.prometheus.client.Gauge;
 import io.prometheus.client.Summary;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
+import org.spacehq.mc.protocol.packet.ingame.server.ServerKeepAlivePacket;
 import org.spacehq.packetlib.event.session.ConnectedEvent;
 import org.spacehq.packetlib.event.session.DisconnectedEvent;
 import org.spacehq.packetlib.event.session.DisconnectingEvent;
@@ -16,6 +17,7 @@ import org.spacehq.packetlib.event.session.PacketSentEvent;
 import org.spacehq.packetlib.event.session.SessionListener;
 import org.spacehq.packetlib.io.NetOutput;
 import org.spacehq.packetlib.io.stream.StreamNetOutput;
+import org.spacehq.packetlib.packet.Packet;
 
 public class Statistics implements SessionListener {
 
@@ -30,6 +32,7 @@ public class Statistics implements SessionListener {
     private final Summary bytesIn;
     private final Summary bytesOut;
     private final Counter errors;
+    private final Counter keepAliveIn;
 
     public Statistics(String host, int port) {
         this.logger = GlobalLogger.getLogger().newSubLogger("Statistics");
@@ -72,6 +75,11 @@ public class Statistics implements SessionListener {
                 .help("Amount of disconnects due to errors")
                 .register(registry);
 
+        keepAliveIn = Counter.build()
+                .namespace("yardstick")
+                .name("keep_alive_packets_in")
+                .help("The amount of Keep Alive packets received from the server.")
+                .register(registry);
     }
 
     public void startPushing() {
@@ -88,10 +96,16 @@ public class Statistics implements SessionListener {
     public void packetReceived(PacketReceivedEvent pre) {
         packIn.inc();
 
+        Packet packet = pre.getPacket();
+
+        if (packet instanceof ServerKeepAlivePacket) {
+            keepAliveIn.inc();
+        }
+
         // Count bytes
         cos.reset();
         try {
-            pre.getPacket().write(cno);
+            packet.write(cno);
             cno.flush();
         } catch (IOException ex) {
             logger.log(Level.SEVERE, "Exception counting received packet bytes", ex);
