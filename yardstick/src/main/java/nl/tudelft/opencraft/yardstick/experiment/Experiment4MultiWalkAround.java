@@ -13,7 +13,7 @@ import java.util.*;
 public class Experiment4MultiWalkAround extends Experiment {
 
     private Random random;
-    private List<Bot> botList;
+    private final List<Bot> botList;
     private int botsTotal = 0;
     private long startMillis;
     private int durationInSeconds;
@@ -119,7 +119,14 @@ public class Experiment4MultiWalkAround extends Experiment {
 
     @Override
     protected boolean isDone() {
-        return System.currentTimeMillis() - this.startMillis > this.durationInSeconds * 1_000;
+        boolean timeUp = System.currentTimeMillis() - this.startMillis > this.durationInSeconds * 1_000;
+        if (botList.size() > 0) {
+            synchronized (botList) {
+                return botList.stream().noneMatch(bot -> bot.getClient().getSession().isConnected());
+            }
+        } else {
+            return timeUp;
+        }
     }
 
     @Override
