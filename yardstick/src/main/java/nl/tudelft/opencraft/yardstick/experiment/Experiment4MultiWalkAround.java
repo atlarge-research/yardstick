@@ -43,6 +43,8 @@ public class Experiment4MultiWalkAround extends Experiment {
                 Bot bot = createBot();
                 if (bot != null) {
                     botList.add(bot);
+                } else {
+                    logger.warning(String.format("Could not connect bot %s on part %d.", options.host, options.port));
                 }
             }).start();
         }
