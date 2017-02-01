@@ -31,7 +31,7 @@ public class StatisticsPusher implements Runnable {
         while (run.get()) {
 
             try {
-                gateway.pushAdd(registry, "yardstick");
+                gateway.pushAdd(registry, "yardstick", PushGateway.instanceIPGroupingKey());
             } catch (IOException ex) {
                 Yardstick.LOGGER.log(Level.SEVERE, "Could not push statistics", ex);
             }
