@@ -52,7 +52,7 @@ public class Bot {
     }
 
     public boolean isConnected() {
-        return this.getClient() != null && this.getClient().getSession() != null && this.getClient().getSession().isConnected();
+        return this.getClient() != null && this.getClient().getSession() != null && this.getClient().getSession().isConnected() && this.getPlayer().getLocation() != null;
     }
 
     public void disconnect(String reason) {

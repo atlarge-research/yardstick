@@ -599,8 +599,9 @@ public class BotListener implements SessionListener {
     @Override
     public void disconnected(DisconnectedEvent de) {
         logger.info("Disconnected: " + de.getReason());
+        this.bot.disconnect(de.getReason());
         if (de.getCause() != null) {
-            logger.log(Level.SEVERE, "Connection closed unexpectedly!", de.getCause());
+            logger.log(Level.WARNING, "Connection closed unexpectedly!", de.getCause());
         }
     }
 
