@@ -44,17 +44,21 @@ public class Bot {
     }
 
     public void connect() {
-        if (client != null && client.getSession().isConnected()) {
+        if (this.isConnected()) {
             throw new IllegalStateException("Can not start connection. Bot already connected!");
         }
         client.getSession().connect();
         ticker.start();
     }
 
+    public boolean isConnected() {
+        return this.getClient() != null && this.getClient().getSession() != null && this.getClient().getSession().isConnected();
+    }
+
     public void disconnect(String reason) {
         this.ticker.stop();
         this.task.stop();
-        if (client != null && !client.getSession().isConnected()) {
+        if (this.isConnected()) {
             client.getSession().disconnect(reason);
         }
     }

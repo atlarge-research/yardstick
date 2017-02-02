@@ -9,6 +9,7 @@ import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import org.spacehq.mc.protocol.MinecraftProtocol;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Experiment4MultiWalkAround extends Experiment {
 
@@ -36,6 +37,13 @@ public class Experiment4MultiWalkAround extends Experiment {
 
     @Override
     protected void tick() {
+        synchronized (botList) {
+            List<Bot> disconnectedBots = botList.stream()
+                    .filter(bot -> !bot.isConnected())
+                    .collect(Collectors.toList());
+            disconnectedBots.forEach(bot -> bot.disconnect("Bot is not connected"));
+            botList.removeAll(disconnectedBots);
+        }
         if (System.currentTimeMillis() - this.lastJoin > secondsBetweenJoin * 1000
                 && botList.size() < this.botsTotal) {
             lastJoin = System.currentTimeMillis();
@@ -103,15 +111,14 @@ public class Experiment4MultiWalkAround extends Experiment {
             bot.addSessionListener(this.getStats());
         }
         bot.connect();
-        while (bot.getPlayer() == null || bot.getPlayer().getLocation() == null) {
-            if (!bot.getClient().getSession().isConnected()) {
-                return null;
-            }
+        int sleep = 1000;
+        int tries = 10;
+        while (tries-- > 0 && (bot.getPlayer() == null || !bot.isConnected())) {
             try {
-                Thread.sleep(1000);
+                Thread.sleep(sleep);
             } catch (InterruptedException e) {
                 e.printStackTrace();
-                return null;
+                break;
             }
         }
         return bot;
@@ -122,7 +129,7 @@ public class Experiment4MultiWalkAround extends Experiment {
         boolean timeUp = System.currentTimeMillis() - this.startMillis > this.durationInSeconds * 1_000;
         if (botList.size() > 0) {
             synchronized (botList) {
-                return botList.stream().noneMatch(bot -> bot.getClient().getSession().isConnected());
+                return botList.stream().noneMatch(Bot::isConnected);
             }
         } else {
             return timeUp;
