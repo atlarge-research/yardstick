@@ -1,5 +1,8 @@
 package nl.tudelft.opencraft.yardstick.bot;
 
+import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import nl.tudelft.opencraft.yardstick.bot.entity.*;
 import nl.tudelft.opencraft.yardstick.bot.world.*;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
@@ -22,10 +25,6 @@ import org.spacehq.mc.protocol.packet.ingame.server.world.*;
 import org.spacehq.packetlib.Session;
 import org.spacehq.packetlib.event.session.*;
 import org.spacehq.packetlib.packet.Packet;
-
-import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class BotListener implements SessionListener {
 
@@ -599,7 +598,6 @@ public class BotListener implements SessionListener {
     @Override
     public void disconnected(DisconnectedEvent de) {
         logger.info("Disconnected: " + de.getReason());
-        this.bot.disconnect(de.getReason());
         if (de.getCause() != null) {
             logger.log(Level.WARNING, "Connection closed unexpectedly!", de.getCause());
         }
