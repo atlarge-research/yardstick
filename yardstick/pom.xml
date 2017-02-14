@@ -54,7 +54,7 @@
         <dependency>
             <groupId>org.spacehq</groupId>
             <artifactId>mcprotocollib</artifactId>
-            <version>1.11.2-SNAPSHOT</version>
+            <version>1.11-SNAPSHOT</version>
         </dependency>
 
         <!-- Prometheus -->
