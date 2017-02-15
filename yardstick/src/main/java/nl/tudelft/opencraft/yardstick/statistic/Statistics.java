@@ -9,6 +9,7 @@ import io.prometheus.client.Summary;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 import org.spacehq.mc.protocol.packet.ingame.server.ServerKeepAlivePacket;
+import org.spacehq.mc.protocol.packet.ingame.server.entity.*;
 import org.spacehq.packetlib.event.session.ConnectedEvent;
 import org.spacehq.packetlib.event.session.DisconnectedEvent;
 import org.spacehq.packetlib.event.session.DisconnectingEvent;
@@ -33,6 +34,7 @@ public class Statistics implements SessionListener {
     private final Summary bytesOut;
     private final Counter errors;
     private final Counter keepAliveIn;
+    private final Counter entityPositionUpdate;
 
     public Statistics(String host, int port) {
         this.logger = GlobalLogger.getLogger().newSubLogger("Statistics");
@@ -80,6 +82,12 @@ public class Statistics implements SessionListener {
                 .name("keep_alive_packets_in")
                 .help("The amount of Keep Alive packets received from the server.")
                 .register(registry);
+
+        entityPositionUpdate = Counter.build()
+                .namespace("yardstick")
+                .name("entity_position_updates")
+                .help("Number of packets received that update the location or rotation of an entity.")
+                .register(registry);
     }
 
     public void startPushing() {
@@ -100,6 +108,8 @@ public class Statistics implements SessionListener {
 
         if (packet instanceof ServerKeepAlivePacket) {
             keepAliveIn.inc();
+        } else if (packet instanceof ServerEntityMovementPacket || packet instanceof ServerEntityHeadLookPacket || packet instanceof ServerEntityTeleportPacket) {
+            entityPositionUpdate.inc();
         }
 
         // Count bytes
