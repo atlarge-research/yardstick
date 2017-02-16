@@ -103,6 +103,11 @@ public class Experiment4MultiWalkAround extends Experiment {
     private void botTick(Bot bot) {
         Task t = bot.getTask();
         if (t == null || t.getStatus().getType() != TaskStatus.StatusType.IN_PROGRESS) {
+            Vector3d spawnLocation = botSpawnLocations.get(bot);
+            if (spawnLocation == null) {
+                logger.warning(String.format("Bot {0} has unknown spawn location.", bot.getName()));
+                return;
+            }
             Vector3i newLocation;
             if (random.nextDouble() < 0.1) {
                 newLocation = getNewLongDistanceTarget(botSpawnLocations.get(bot));
