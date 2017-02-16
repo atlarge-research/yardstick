@@ -4,6 +4,7 @@ import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTask;
+import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import org.spacehq.mc.protocol.MinecraftProtocol;
@@ -53,13 +54,15 @@ public class Experiment4MultiWalkAround extends Experiment {
             int botsToConnect = Math.min(this.numberOfBotsPerJoin, this.botsTotal - botList.size());
             for (int i = 0; i < botsToConnect; i++) {
                 new Thread(() -> {
-                    Bot bot = createBot();
-                    if (bot != null) {
-                        botList.add(bot);
-                        botSpawnLocations.put(bot, bot.getPlayer().getLocation());
-                    } else {
+                    Bot bot = null;
+                    try {
+                        bot = createBot();
+                    } catch (ConnectException e) {
                         logger.warning(String.format("Could not connect bot %s on part %d.", options.host, options.port));
+                        return;
                     }
+                    botList.add(bot);
+                    botSpawnLocations.put(bot, bot.getPlayer().getLocation());
                 }).start();
             }
         }
@@ -111,7 +114,7 @@ public class Experiment4MultiWalkAround extends Experiment {
         }
     }
 
-    private Bot createBot() {
+    private Bot createBot() throws ConnectException {
         Bot bot = new Bot(new MinecraftProtocol(UUID.randomUUID().toString().substring(0, 6)), options.host, options.port);
         if (this.getStats() != null) {
             bot.addSessionListener(this.getStats());
@@ -126,6 +129,10 @@ public class Experiment4MultiWalkAround extends Experiment {
                 e.printStackTrace();
                 break;
             }
+        }
+        if (!bot.isConnected()) {
+            bot.disconnect("Make sure to close all connections.");
+            throw new ConnectException();
         }
         return bot;
     }

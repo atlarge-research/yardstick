@@ -52,12 +52,16 @@ public class Bot {
     }
 
     public boolean isConnected() {
-        return this.getClient() != null && this.getClient().getSession() != null && this.getClient().getSession().isConnected() && this.getPlayer().getLocation() != null;
+        return this.getClient() != null && this.getClient().getSession() != null && this.getClient().getSession().isConnected() && this.getPlayer() != null && this.getPlayer().getLocation() != null;
     }
 
     public void disconnect(String reason) {
-        this.ticker.stop();
-        this.task.stop();
+        if (this.ticker != null) {
+            this.ticker.stop();
+        }
+        if (this.task != null) {
+            this.task.stop();
+        }
         if (this.isConnected()) {
             client.getSession().disconnect(reason);
         }
