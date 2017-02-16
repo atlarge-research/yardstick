@@ -19,6 +19,7 @@ public class Experiment4MultiWalkAround extends Experiment {
     private long startMillis;
     private int durationInSeconds;
     private int secondsBetweenJoin;
+    private int numberOfBotsPerJoin;
     private long lastJoin = System.currentTimeMillis();
 
     public Experiment4MultiWalkAround() {
@@ -33,6 +34,7 @@ public class Experiment4MultiWalkAround extends Experiment {
         this.botsTotal = Integer.parseInt(options.experimentParams.get("bots"));
         this.durationInSeconds = Integer.parseInt(options.experimentParams.getOrDefault("duration", "600"));
         this.secondsBetweenJoin = Integer.parseInt(options.experimentParams.getOrDefault("joininterval", "1"));
+        this.numberOfBotsPerJoin = Integer.parseInt(options.experimentParams.getOrDefault("numbotsperjoin", "1"));
     }
 
     @Override
@@ -47,14 +49,17 @@ public class Experiment4MultiWalkAround extends Experiment {
         if (System.currentTimeMillis() - this.lastJoin > secondsBetweenJoin * 1000
                 && botList.size() < this.botsTotal) {
             lastJoin = System.currentTimeMillis();
-            new Thread(() -> {
-                Bot bot = createBot();
-                if (bot != null) {
-                    botList.add(bot);
-                } else {
-                    logger.warning(String.format("Could not connect bot %s on part %d.", options.host, options.port));
-                }
-            }).start();
+            int botsToConnect = Math.min(this.numberOfBotsPerJoin, this.botsTotal - botList.size());
+            for (int i = 0; i < botsToConnect; i++) {
+                new Thread(() -> {
+                    Bot bot = createBot();
+                    if (bot != null) {
+                        botList.add(bot);
+                    } else {
+                        logger.warning(String.format("Could not connect bot %s on part %d.", options.host, options.port));
+                    }
+                }).start();
+            }
         }
         synchronized (botList) {
             for (Bot bot : botList) {
@@ -127,13 +132,18 @@ public class Experiment4MultiWalkAround extends Experiment {
     @Override
     protected boolean isDone() {
         boolean timeUp = System.currentTimeMillis() - this.startMillis > this.durationInSeconds * 1_000;
-        if (botList.size() > 0) {
+        if (timeUp) {
+            return true;
+        } else if (botList.size() > 0) {
+            boolean allBotsDisconnected;
             synchronized (botList) {
-                return botList.stream().noneMatch(Bot::isConnected);
+                allBotsDisconnected = botList.stream().noneMatch(Bot::isConnected);
             }
-        } else {
-            return timeUp;
+            if (allBotsDisconnected) {
+                return true;
+            }
         }
+        return false;
     }
 
     @Override
