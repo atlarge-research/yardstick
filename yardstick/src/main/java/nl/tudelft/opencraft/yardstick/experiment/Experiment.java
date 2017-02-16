@@ -52,6 +52,8 @@ public abstract class Experiment implements Runnable {
                 stats.stopPushing();
             }
         }
+        System.out.println("Goodbye.");
+        System.exit(0);
     }
 
     protected abstract void before();
