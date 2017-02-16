@@ -105,7 +105,7 @@ public class Experiment4MultiWalkAround extends Experiment {
         if (t == null || t.getStatus().getType() != TaskStatus.StatusType.IN_PROGRESS) {
             Vector3d spawnLocation = botSpawnLocations.get(bot);
             if (spawnLocation == null) {
-                logger.warning(String.format("Bot {0} has unknown spawn location.", bot.getName()));
+                logger.warning(String.format("Bot %s has unknown spawn location.", bot.getName()));
                 return;
             }
             Vector3i newLocation;
