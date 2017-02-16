@@ -106,6 +106,7 @@ public class Experiment4MultiWalkAround extends Experiment {
             Vector3d spawnLocation = botSpawnLocations.get(bot);
             if (spawnLocation == null) {
                 logger.warning(String.format("Bot %s has unknown spawn location.", bot.getName()));
+                // TODO How did we get here?
                 bot.disconnect("Could not find spawn location.");
                 return;
             }
