@@ -20,6 +20,7 @@ public class Experiment4MultiWalkAround extends Experiment {
     private int durationInSeconds;
     private int secondsBetweenJoin;
     private int numberOfBotsPerJoin;
+    private Map<Bot, Vector3d> botSpawnLocations = new HashMap<>();
     private long lastJoin = System.currentTimeMillis();
 
     public Experiment4MultiWalkAround() {
@@ -55,6 +56,7 @@ public class Experiment4MultiWalkAround extends Experiment {
                     Bot bot = createBot();
                     if (bot != null) {
                         botList.add(bot);
+                        botSpawnLocations.put(bot, bot.getPlayer().getLocation());
                     } else {
                         logger.warning(String.format("Could not connect bot %s on part %d.", options.host, options.port));
                     }
@@ -76,14 +78,13 @@ public class Experiment4MultiWalkAround extends Experiment {
      * its center.
      */
     private Vector3i getNewFieldLocation(Vector3d originalLocation) {
-        int side = 64;
-        int maxx = ((int) originalLocation.getX()) + side / 2;
-        int minx = ((int) originalLocation.getX()) - side / 2;
-        int maxz = ((int) originalLocation.getZ()) + side / 2;
-        int minz = ((int) originalLocation.getZ()) - side / 2;
-        int newx = random.nextInt(maxx - minx) + minx;
-        int newz = random.nextInt(maxz - minz) + minz;
-        return new Vector3i(newx, 4, newz);
+        int maxDist = 64;
+        int minDist = 0;
+        int distance = random.nextInt(maxDist - minDist) + minDist;
+        int angle = random.nextInt(360);
+        int newX = (int) (originalLocation.getX() + (distance * Math.cos(angle)));
+        int newZ = (int) (originalLocation.getZ() + (distance * Math.sin(angle)));
+        return new Vector3i(newX, 4, newZ);
     }
 
     private Vector3i getNewLongDistanceTarget(Vector3d originalLocation) {
@@ -101,9 +102,9 @@ public class Experiment4MultiWalkAround extends Experiment {
         if (t == null || t.getStatus().getType() != TaskStatus.StatusType.IN_PROGRESS) {
             Vector3i newLocation;
             if (random.nextDouble() < 0.1) {
-                newLocation = getNewLongDistanceTarget(bot.getPlayer().getLocation());
+                newLocation = getNewLongDistanceTarget(botSpawnLocations.get(bot));
             } else {
-                newLocation = getNewFieldLocation(bot.getPlayer().getLocation());
+                newLocation = getNewFieldLocation(botSpawnLocations.get(bot));
             }
             logger.info(String.format("Setting task for bot to walk to %s", newLocation));
             bot.setTask(new WalkTask(bot, newLocation));
