@@ -1,0 +1,31 @@
+# Netbeans excludes
+/nbproject/private
+/dist
+/build
+manifest.mf
+nb-configuration.xml
+nbactions.xml
+
+# Eclipse excludes
+.project
+.classpath
+/bin
+.settings
+.checkstyle
+
+# IntelliJ excludes
+*.iml
+*.ipr
+*.iws
+.idea
+
+# Maven excludes
+/target
+
+# OS generated files
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
