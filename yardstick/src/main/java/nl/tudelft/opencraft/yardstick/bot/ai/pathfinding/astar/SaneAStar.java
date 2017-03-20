@@ -1,10 +1,9 @@
 package nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar;
 
+import java.util.*;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.*;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
-
-import java.util.*;
 
 /**
  * Created by jesse on 1/24/17.
@@ -45,13 +44,21 @@ public class SaneAStar {
                         nodeMap.put(vec, node);
                     }
                 }
+
                 for (PathNode neighbor : neigborNodes) {
                     if (visited.contains(neighbor)) {
                         continue;
                     }
-                    if (!worldPhysics.canWalk(current.getLocation(), neighbor.getLocation())) {
+
+                    try {
+                        if (!worldPhysics.canWalk(current.getLocation(), neighbor.getLocation())) {
+                            continue;
+                        }
+                    } catch (ChunkNotLoadedException ex) {
+                        // TODO: This is not right
                         continue;
                     }
+
                     if (!toVisit.contains(neighbor)) {
                         toVisit.add(neighbor);
                     } else if (toVisit.contains(neighbor) && neighbor.getCost() > current.getCost() + 1) {

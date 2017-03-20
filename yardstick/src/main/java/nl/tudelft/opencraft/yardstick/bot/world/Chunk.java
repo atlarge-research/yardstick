@@ -1,7 +1,7 @@
 package nl.tudelft.opencraft.yardstick.bot.world;
 
 import java.util.Objects;
-import org.spacehq.mc.protocol.data.game.chunk.Column;
+import com.github.steveice10.mc.protocol.data.game.chunk.Column;
 
 /**
  * Represents a vertical column of 16x16x16 chunks.

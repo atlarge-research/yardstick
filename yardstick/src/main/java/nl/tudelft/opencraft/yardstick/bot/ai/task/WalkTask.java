@@ -24,6 +24,8 @@
  */
 package nl.tudelft.opencraft.yardstick.bot.ai.task;
 
+import java.util.concurrent.*;
+import java.util.logging.Logger;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.PathNode;
 import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
@@ -33,17 +35,13 @@ import nl.tudelft.opencraft.yardstick.bot.world.Material;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
-import java.util.concurrent.*;
-import java.util.logging.Logger;
-
 public class WalkTask implements Task {
-
-    private static Logger logger = Logger.getLogger(WalkTask.class.getName());
 
     private static double defaultSpeed = 0.15, defaultJumpFactor = 3, defaultFallFactor = 4, defaultLiquidFactor = 0.5;
     private static int defaultTimeout = 10000;
 
     private final Bot bot;
+    private final Logger logger;
     private final ExecutorService service = Executors.newSingleThreadExecutor();
     private final Vector3i target;
 
@@ -71,6 +69,7 @@ public class WalkTask implements Task {
     public WalkTask(final Bot bot, final Vector3i target) {
         this.bot = bot;
         this.target = target;
+        this.logger = bot.getLogger().newSubLogger("WalkTask{" + target.toString() + "}");
 
         pathFuture = service.submit(task);
         startTime = System.currentTimeMillis();
@@ -131,7 +130,7 @@ public class WalkTask implements Task {
                 pathFuture.cancel(true);
                 pathFuture = null;
                 nextStep = null;
-                return status = TaskStatus.forFailure("Path search timed out");
+                return status = TaskStatus.forFailure("Path search timed out (" + timeout + " ms)");
             } else {
                 return status = TaskStatus.forInProgress();
             }

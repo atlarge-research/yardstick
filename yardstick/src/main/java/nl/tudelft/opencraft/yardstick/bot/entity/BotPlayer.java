@@ -4,9 +4,9 @@ import java.nio.charset.Charset;
 import java.util.UUID;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
-import org.spacehq.mc.protocol.data.game.entity.player.GameMode;
-import org.spacehq.mc.protocol.packet.ingame.client.player.ClientPlayerPositionPacket;
-import org.spacehq.packetlib.Session;
+import com.github.steveice10.mc.protocol.data.game.entity.player.GameMode;
+import com.github.steveice10.mc.protocol.packet.ingame.client.player.ClientPlayerPositionPacket;
+import com.github.steveice10.packetlib.Session;
 
 public class BotPlayer extends Player {
 

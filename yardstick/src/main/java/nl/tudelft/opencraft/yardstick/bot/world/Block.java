@@ -2,9 +2,9 @@ package nl.tudelft.opencraft.yardstick.bot.world;
 
 import java.util.Objects;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
-import org.spacehq.mc.protocol.data.game.chunk.BlockStorage;
-import org.spacehq.mc.protocol.data.game.chunk.Column;
-import org.spacehq.mc.protocol.data.game.world.block.BlockState;
+import com.github.steveice10.mc.protocol.data.game.chunk.BlockStorage;
+import com.github.steveice10.mc.protocol.data.game.chunk.Column;
+import com.github.steveice10.mc.protocol.data.game.world.block.BlockState;
 
 public class Block {
 
@@ -86,11 +86,11 @@ public class Block {
         int chunkIndex = Math.floorDiv(y, 16);
         //GlobalLogger.getLogger().info("Get Internal Storage - index: " + chunkIndex);
 
-        org.spacehq.mc.protocol.data.game.chunk.Chunk[] c = handle.getChunks();
+        com.github.steveice10.mc.protocol.data.game.chunk.Chunk[] c = handle.getChunks();
 
         if (c[chunkIndex] == null) {
             //GlobalLogger.getLogger().info("Making new chunk section for air chunk section: (" + chunk.getX() + "," + chunkIndex + "," + chunk.getZ() + ")");
-            c[chunkIndex] = new org.spacehq.mc.protocol.data.game.chunk.Chunk(handle.hasSkylight());
+            c[chunkIndex] = new com.github.steveice10.mc.protocol.data.game.chunk.Chunk(handle.hasSkylight());
         }
 
         return c[chunkIndex].getBlocks();

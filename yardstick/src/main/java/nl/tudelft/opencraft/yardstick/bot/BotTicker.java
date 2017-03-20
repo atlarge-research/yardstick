@@ -2,7 +2,6 @@ package nl.tudelft.opencraft.yardstick.bot;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
-
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
 import nl.tudelft.opencraft.yardstick.util.Scheduler;
 
@@ -34,12 +33,13 @@ public class BotTicker implements Runnable {
     public void run() {
         Scheduler sched = new Scheduler(50); // 50ms per tick
         sched.start();
+
         while (running.get()) {
             if (bot.getTask() != null
                     && bot.getTask().getStatus().getType() == TaskStatus.StatusType.IN_PROGRESS) {
                 TaskStatus status = bot.getTask().tick();
                 if (status.getType() == TaskStatus.StatusType.FAILURE) {
-                    logger.warning(status.getMessage());
+                    logger.warning("Task Failure: " + status.getMessage());
                     bot.setTask(null);
                 }
             }

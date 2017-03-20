@@ -1,6 +1,6 @@
 package nl.tudelft.opencraft.yardstick.bot;
 
-import org.spacehq.mc.protocol.data.game.setting.Difficulty;
+import com.github.steveice10.mc.protocol.data.game.setting.Difficulty;
 
 public class Server {
 

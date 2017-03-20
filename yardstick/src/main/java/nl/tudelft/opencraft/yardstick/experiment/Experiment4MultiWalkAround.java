@@ -7,7 +7,7 @@ import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTask;
 import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
-import org.spacehq.mc.protocol.MinecraftProtocol;
+import com.github.steveice10.mc.protocol.MinecraftProtocol;
 
 import java.util.*;
 import java.util.stream.Collectors;

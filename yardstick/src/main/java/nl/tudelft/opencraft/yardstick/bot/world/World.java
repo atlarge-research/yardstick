@@ -4,11 +4,10 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
-
+import com.github.steveice10.mc.protocol.data.game.entity.metadata.Position;
+import com.github.steveice10.mc.protocol.data.game.world.WorldType;
 import nl.tudelft.opencraft.yardstick.bot.entity.Entity;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
-import org.spacehq.mc.protocol.data.game.entity.metadata.Position;
-import org.spacehq.mc.protocol.data.game.world.WorldType;
 
 public class World {
 
@@ -143,10 +142,10 @@ public class World {
 
         @Override
         public String toString() {
-            return "ChunkLocation{" +
-                    "x=" + x +
-                    ", z=" + z +
-                    '}';
+            return "ChunkLocation{"
+                    + "x=" + x
+                    + ", z=" + z
+                    + '}';
         }
     }
 

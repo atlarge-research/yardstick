@@ -8,17 +8,17 @@ import io.prometheus.client.Gauge;
 import io.prometheus.client.Summary;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
-import org.spacehq.mc.protocol.packet.ingame.server.ServerKeepAlivePacket;
-import org.spacehq.mc.protocol.packet.ingame.server.entity.*;
-import org.spacehq.packetlib.event.session.ConnectedEvent;
-import org.spacehq.packetlib.event.session.DisconnectedEvent;
-import org.spacehq.packetlib.event.session.DisconnectingEvent;
-import org.spacehq.packetlib.event.session.PacketReceivedEvent;
-import org.spacehq.packetlib.event.session.PacketSentEvent;
-import org.spacehq.packetlib.event.session.SessionListener;
-import org.spacehq.packetlib.io.NetOutput;
-import org.spacehq.packetlib.io.stream.StreamNetOutput;
-import org.spacehq.packetlib.packet.Packet;
+import com.github.steveice10.mc.protocol.packet.ingame.server.ServerKeepAlivePacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.*;
+import com.github.steveice10.packetlib.event.session.ConnectedEvent;
+import com.github.steveice10.packetlib.event.session.DisconnectedEvent;
+import com.github.steveice10.packetlib.event.session.DisconnectingEvent;
+import com.github.steveice10.packetlib.event.session.PacketReceivedEvent;
+import com.github.steveice10.packetlib.event.session.PacketSentEvent;
+import com.github.steveice10.packetlib.event.session.SessionListener;
+import com.github.steveice10.packetlib.io.NetOutput;
+import com.github.steveice10.packetlib.io.stream.StreamNetOutput;
+import com.github.steveice10.packetlib.packet.Packet;
 
 public class Statistics implements SessionListener {
 
