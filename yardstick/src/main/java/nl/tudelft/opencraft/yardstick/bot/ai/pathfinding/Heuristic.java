@@ -24,9 +24,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package nl.tudelft.opencraft.yardstick.bot.ai.pathfinding;
 
-import nl.tudelft.opencraft.yardstick.util.Vector3i;
+import nl.tudelft.opencraft.yardstick.util.Vector3d;
 
 public interface Heuristic {
-
-    int calculateCost(Vector3i from, Vector3i to);
+    double calculateCost(Vector3d from, Vector3d to);
 }

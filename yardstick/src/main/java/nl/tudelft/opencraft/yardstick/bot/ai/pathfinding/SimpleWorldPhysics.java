@@ -24,10 +24,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package nl.tudelft.opencraft.yardstick.bot.ai.pathfinding;
 
-import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
-import nl.tudelft.opencraft.yardstick.bot.world.Material;
+import nl.tudelft.opencraft.yardstick.bot.world.*;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
-import nl.tudelft.opencraft.yardstick.bot.world.World;
 
 public class SimpleWorldPhysics implements WorldPhysics {
 
@@ -158,10 +156,21 @@ public class SimpleWorldPhysics implements WorldPhysics {
         return false;
     }
 
-    private boolean isEmpty(int x, int y, int z) throws ChunkNotLoadedException {
-        int id = world.getBlockAt(x, y, z).getTypeId();
-        // TODO let bot also walk through other non-blocking objects.
-        return id == Material.AIR.getId();
+    public boolean isEmpty(int x, int y, int z) throws ChunkNotLoadedException {
+        Material mat = world.getBlockAt(x, y, z).getMaterial();
+
+        return mat == Material.AIR;
+    }
+
+    public boolean isSolid(int x, int y, int z) throws ChunkNotLoadedException {
+        return world.getBlockAt(x, y, z).getMaterial().isSolid();
+    }
+
+    public boolean canStand(Vector3i location) throws ChunkNotLoadedException {
+        int x = location.getX();
+        int y = location.getY();
+        int z = location.getZ();
+        return isSolid(x, y, z) && !isSolid(x, y + 1, z) && !isSolid(x, y + 2, z);
     }
 
     @Override

@@ -24,12 +24,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package nl.tudelft.opencraft.yardstick.bot.ai.pathfinding;
 
-import nl.tudelft.opencraft.yardstick.util.Vector3i;
+import nl.tudelft.opencraft.yardstick.util.Vector3d;
 
 public class ManhattanHeuristic implements Heuristic {
 
     @Override
-    public int calculateCost(Vector3i from, Vector3i to) {
+    public double calculateCost(Vector3d from, Vector3d to) {
         return Math.abs(from.getX() - to.getX()) + Math.abs(from.getY() - to.getY()) + Math.abs(from.getZ() - to.getZ());
     }
 }

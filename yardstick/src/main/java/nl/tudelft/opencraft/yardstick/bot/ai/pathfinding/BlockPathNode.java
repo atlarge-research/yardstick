@@ -26,90 +26,13 @@ package nl.tudelft.opencraft.yardstick.bot.ai.pathfinding;
 
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
-public class BlockPathNode implements PathNode {
-
-    private final Vector3i location;
-
-    private PathNode previous, next;
-
-    private int cost = Integer.MAX_VALUE;
-
-    public BlockPathNode(PathSearch source, Vector3i location) {
-        this(source, location, null, null);
-    }
+public class BlockPathNode extends PathNode {
 
     public BlockPathNode(PathSearch source, Vector3i location, PathNode previous, PathNode next) {
-        this.location = location;
-        this.previous = previous;
-        this.next = next;
+        super(location, previous, next);
     }
 
     public BlockPathNode(Vector3i location) {
-        this.location = location;
-    }
-
-    @Override
-    public Vector3i getLocation() {
-        return location;
-    }
-
-    @Override
-    public PathNode getNext() {
-        return next;
-    }
-
-    @Override
-    public PathNode getPrevious() {
-        return previous;
-    }
-
-    @Override
-    public void setNext(PathNode next) {
-        this.next = next;
-    }
-
-    @Override
-    public void setPrevious(PathNode previous) {
-        this.previous = previous;
-    }
-
-    @Override
-    public boolean isStart() {
-        return previous == null;
-    }
-
-    @Override
-    public boolean isEnd() {
-        return next == null;
-    }
-
-    @Override
-    public int getCost() {
-        return cost;
-    }
-
-    @Override
-    public void setCost(int cost) {
-        this.cost = cost;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return obj instanceof PathNode && location.equals(((PathNode) obj).getLocation());
-    }
-
-    @Override
-    public String toString() {
-        return location.toString() + " Cost=" + cost ;
-    }
-
-    @Override
-    public int compareTo(PathNode pathNode) {
-        return this.cost - pathNode.getCost();
-    }
-
-    @Override
-    public int hashCode() {
-        return location.hashCode();
+        super(location);
     }
 }

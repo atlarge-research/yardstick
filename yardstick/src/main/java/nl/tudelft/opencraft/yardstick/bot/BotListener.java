@@ -3,9 +3,6 @@ package nl.tudelft.opencraft.yardstick.bot;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import nl.tudelft.opencraft.yardstick.bot.entity.*;
-import nl.tudelft.opencraft.yardstick.bot.world.*;
-import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import com.github.steveice10.mc.protocol.MinecraftProtocol;
 import com.github.steveice10.mc.protocol.data.SubProtocol;
 import com.github.steveice10.mc.protocol.data.game.entity.metadata.Position;
@@ -25,6 +22,9 @@ import com.github.steveice10.mc.protocol.packet.ingame.server.world.*;
 import com.github.steveice10.packetlib.Session;
 import com.github.steveice10.packetlib.event.session.*;
 import com.github.steveice10.packetlib.packet.Packet;
+import nl.tudelft.opencraft.yardstick.bot.entity.*;
+import nl.tudelft.opencraft.yardstick.bot.world.*;
+import nl.tudelft.opencraft.yardstick.util.Vector3d;
 
 public class BotListener implements SessionListener {
 
@@ -199,13 +199,12 @@ public class BotListener implements SessionListener {
             for (BlockChangeRecord r : p.getRecords()) {
                 Position pos = r.getPosition();
 
-                logger.info("MultiBlockChange: (" + pos.getX() + "," + pos.getY() + "," + pos.getZ() + ")");
-
+                //logger.info("MultiBlockChange: (" + pos.getX() + "," + pos.getY() + "," + pos.getZ() + ")");
                 Block b = null;
                 try {
                     b = bot.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
                 } catch (ChunkNotLoadedException e) {
-                    // FIXME we should not ignore a block change even when not loaded.
+                    logger.warning("Received MultiBlockChange for block in unloaded chunk: " + pos);
                     return;
                 }
 

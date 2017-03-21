@@ -43,8 +43,8 @@ public class Bot {
     }
 
     public void connect() {
-        if (this.isConnected()) {
-            throw new IllegalStateException("Can not start connection. Bot already connected!");
+        if (client != null && client.getSession().isConnected()) {
+            throw new IllegalStateException("Can not start connection. Bot already isConnected!");
         }
         client.getSession().connect();
         ticker.start();
@@ -124,5 +124,4 @@ public class Bot {
     public void setPlayer(BotPlayer player) {
         this.player = player;
     }
-
 }

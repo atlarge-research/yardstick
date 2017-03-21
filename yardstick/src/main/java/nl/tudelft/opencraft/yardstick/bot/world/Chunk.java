@@ -1,6 +1,5 @@
 package nl.tudelft.opencraft.yardstick.bot.world;
 
-import java.util.Objects;
 import com.github.steveice10.mc.protocol.data.game.chunk.Column;
 
 /**
@@ -9,19 +8,18 @@ import com.github.steveice10.mc.protocol.data.game.chunk.Column;
 public class Chunk {
 
     private final World world;
-    private final int x, z;
+    private final ChunkLocation location;
     private final Column column;
 
     public Chunk(World world, Column column) {
         this.world = world;
-        this.x = column.getX();
-        this.z = column.getZ();
         this.column = column;
+        this.location = new ChunkLocation(column.getX(), column.getZ());
 
         // TODO: Tile entities, biome data
     }
 
-    public Column getHandle() {
+    public Column getColumn() {
         return column;
     }
 
@@ -29,12 +27,8 @@ public class Chunk {
         return world;
     }
 
-    public int getX() {
-        return x;
-    }
-
-    public int getZ() {
-        return z;
+    public ChunkLocation getLocation() {
+        return this.location;
     }
 
     // TODO block operations
@@ -45,24 +39,22 @@ public class Chunk {
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (obj == null) {
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final Chunk other = (Chunk) obj;
-        if (!Objects.equals(this.world, other.world)) {
-            return false;
-        }
-        if (this.x != other.x) {
-            return false;
-        }
-        if (this.z != other.z) {
-            return false;
-        }
-        return true;
-    }
 
+        Chunk chunk = (Chunk) o;
+
+        if (!world.equals(chunk.world)) {
+            return false;
+        }
+        if (!location.equals(chunk.location)) {
+            return false;
+        }
+        return column.equals(chunk.column);
+    }
 }

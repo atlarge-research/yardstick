@@ -44,7 +44,7 @@ public class Statistics implements SessionListener {
         connected = Gauge.build()
                 .namespace("yardstick")
                 .name("bots_connected")
-                .help("Amount of connected bots")
+                .help("Amount of isConnected bots")
                 .register(registry);
 
         packIn = Counter.build()

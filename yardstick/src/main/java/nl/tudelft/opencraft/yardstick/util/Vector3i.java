@@ -1,7 +1,5 @@
 package nl.tudelft.opencraft.yardstick.util;
 
-import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.PathNode;
-
 /**
  * Represents an immutable 3 dimensional vector of ints.
  */
@@ -15,6 +13,10 @@ public class Vector3i {
         this.x = x;
         this.y = y;
         this.z = z;
+    }
+
+    public Vector3i(double newX, int i, double newZ) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     public int getX() {
@@ -84,11 +86,11 @@ public class Vector3i {
 
     @Override
     public String toString() {
-        return "Vector3i{" +
-                "x=" + x +
-                ", y=" + y +
-                ", z=" + z +
-                '}';
+        return "Vector3i{"
+                + "x=" + x
+                + ", y=" + y
+                + ", z=" + z
+                + '}';
     }
 
     @Override

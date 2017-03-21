@@ -71,6 +71,10 @@ public class Block {
                 newState);
     }
 
+    public Material getMaterial() {
+        return Material.getById(this.getTypeId());
+    }
+
     public Block getRelative(int x, int y, int z) throws ChunkNotLoadedException {
         return getWorld().getBlockAt(this.x + x, this.y + y, this.z + z);
     }
@@ -80,7 +84,7 @@ public class Block {
     }
 
     private BlockStorage getInternalStorage() {
-        Column handle = chunk.getHandle();
+        Column handle = chunk.getColumn();
 
         // TODO: Test this
         int chunkIndex = Math.floorDiv(y, 16);

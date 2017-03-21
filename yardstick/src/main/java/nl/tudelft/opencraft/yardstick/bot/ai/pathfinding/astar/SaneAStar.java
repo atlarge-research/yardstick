@@ -5,9 +5,6 @@ import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.*;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
-/**
- * Created by jesse on 1/24/17.
- */
 public class SaneAStar {
 
     private final Heuristic heuristic;
@@ -21,16 +18,19 @@ public class SaneAStar {
     public PathNode provideSearch(Vector3i start, Vector3i end) throws ChunkNotLoadedException {
         Map<Vector3i, PathNode> nodeMap = new HashMap<>();
         Set<PathNode> visited = new HashSet<>();
-        PriorityQueue<PathNode> toVisit = new PriorityQueue<>(Comparator.comparingInt(thisNode -> thisNode.getCost() + heuristic.calculateCost(thisNode.getLocation(), end)));
-        PathNode startNode = new BlockPathNode(start);
+        PriorityQueue<PathNode> toVisit = new PriorityQueue<>(Comparator.comparingDouble(thisNode
+                -> thisNode.getCost() + heuristic.calculateCost(thisNode.getLocation().doubleVector(), end.doubleVector())
+        ));
+        PathNode startNode = new PathNode(start);
         startNode.setCost(0);
         nodeMap.put(start, startNode);
         toVisit.add(startNode);
         while (!toVisit.isEmpty() && !Thread.interrupted()) {
             PathNode current = toVisit.poll();
             visited.add(current);
-            if (current.getLocation().equals(end)) {
-                return buildPath(current);
+            if (current.getLocation().distance(end) < 1 && worldPhysics.canWalk(current.getLocation(), end)) {
+                PathNode endNode = new PathNode(end, current, null);
+                return buildPath(endNode);
             } else {
                 Set<PathNode> neigborNodes = new HashSet<>();
                 for (Vector3i vec : worldPhysics.findAdjacent(current.getLocation())) {

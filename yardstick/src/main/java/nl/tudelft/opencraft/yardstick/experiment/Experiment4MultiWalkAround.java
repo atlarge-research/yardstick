@@ -1,5 +1,8 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import java.util.*;
+import java.util.stream.Collectors;
+import com.github.steveice10.mc.protocol.MinecraftProtocol;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
@@ -7,15 +10,12 @@ import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTask;
 import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
-import com.github.steveice10.mc.protocol.MinecraftProtocol;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 public class Experiment4MultiWalkAround extends Experiment {
 
-    private Random random;
-    private final List<Bot> botList;
+    private final List<Bot> botList = Collections.synchronizedList(new ArrayList<>());
+    private final MovementModel movement = new MovementModel();
+
     private int botsTotal = 0;
     private long startMillis;
     private int durationInSeconds;
@@ -26,8 +26,6 @@ public class Experiment4MultiWalkAround extends Experiment {
 
     public Experiment4MultiWalkAround() {
         super(3, "A simple test demonstrating A* movement");
-        this.random = new Random();
-        this.botList = Collections.synchronizedList(new ArrayList<>());
         this.startMillis = System.currentTimeMillis();
     }
 
@@ -73,49 +71,10 @@ public class Experiment4MultiWalkAround extends Experiment {
         }
     }
 
-    /**
-     * Function to make bot walk in a specific area.
-     *
-     * @param originalLocation Original location of bot
-     * @return New random location in a field that has the original location at
-     * its center.
-     */
-    private Vector3i getNewFieldLocation(Vector3d originalLocation) {
-        int maxDist = 64;
-        int minDist = 0;
-        int distance = random.nextInt(maxDist - minDist) + minDist;
-        int angle = random.nextInt(360);
-        int newX = (int) (originalLocation.getX() + (distance * Math.cos(angle)));
-        int newZ = (int) (originalLocation.getZ() + (distance * Math.sin(angle)));
-        return new Vector3i(newX, 4, newZ);
-    }
-
-    private Vector3i getNewLongDistanceTarget(Vector3d originalLocation) {
-        int maxDist = 64 * 5;
-        int minDist = 64 * 1;
-        int distance = random.nextInt(maxDist - minDist) + minDist;
-        int angle = random.nextInt(360);
-        int newX = (int) (originalLocation.getX() + (distance * Math.cos(angle)));
-        int newZ = (int) (originalLocation.getZ() + (distance * Math.sin(angle)));
-        return new Vector3i(newX, 4, newZ);
-    }
-
     private void botTick(Bot bot) {
         Task t = bot.getTask();
         if (t == null || t.getStatus().getType() != TaskStatus.StatusType.IN_PROGRESS) {
-            Vector3d spawnLocation = botSpawnLocations.get(bot);
-            if (spawnLocation == null) {
-                logger.warning(String.format("Bot %s has unknown spawn location.", bot.getName()));
-                // TODO How did we get here?
-                bot.disconnect("Could not find spawn location.");
-                return;
-            }
-            Vector3i newLocation;
-            if (random.nextDouble() < 0.1) {
-                newLocation = getNewLongDistanceTarget(botSpawnLocations.get(bot));
-            } else {
-                newLocation = getNewFieldLocation(botSpawnLocations.get(bot));
-            }
+            Vector3i newLocation = movement.newTargetLocation(bot);
             logger.info(String.format("Setting task for bot to walk to %s", newLocation));
             bot.setTask(new WalkTask(bot, newLocation));
         }
@@ -146,6 +105,7 @@ public class Experiment4MultiWalkAround extends Experiment {
 
     @Override
     protected boolean isDone() {
+
         boolean timeUp = System.currentTimeMillis() - this.startMillis > this.durationInSeconds * 1_000;
         if (timeUp) {
             return true;

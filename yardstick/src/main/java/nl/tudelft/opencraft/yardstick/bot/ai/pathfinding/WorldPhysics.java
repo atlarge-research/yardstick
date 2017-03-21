@@ -36,5 +36,7 @@ public interface WorldPhysics {
 
     public boolean canClimb(Vector3i location) throws ChunkNotLoadedException;
 
+    public boolean canStand(Vector3i location) throws ChunkNotLoadedException;
+
     public World getWorld();
 }

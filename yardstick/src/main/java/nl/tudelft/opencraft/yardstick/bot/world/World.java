@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.logging.Logger;
 import com.github.steveice10.mc.protocol.data.game.entity.metadata.Position;
 import com.github.steveice10.mc.protocol.data.game.world.WorldType;
+import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.SimpleWorldPhysics;
+import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.WorldPhysics;
 import nl.tudelft.opencraft.yardstick.bot.entity.Entity;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
@@ -37,11 +39,12 @@ public class World {
     }
 
     public void loadChunk(Chunk chunk) {
-        chunks.put(new ChunkLocation(chunk.getX(), chunk.getZ()), chunk);
+        chunks.put(chunk.getLocation(), chunk);
     }
 
     public void unloadChunk(Chunk chunk) {
-        unloadChunk(chunk.getX(), chunk.getZ());
+        ChunkLocation location = chunk.getLocation();
+        unloadChunk(location.getX(), location.getZ());
     }
 
     public void unloadChunk(int x, int z) {
@@ -53,18 +56,33 @@ public class World {
     }
 
     public Block getBlockAt(int x, int y, int z) throws ChunkNotLoadedException {
+        Chunk chunk = getChunk(x, z);
+        if (chunk == null) {
+            throw new ChunkNotLoadedException(String.format("x: %d, z: %d", x, z));
+        }
+
+        return new Block(x, y, z, chunk);
+    }
+
+    private Chunk getChunk(int x, int z) {
         int chunkX = Math.floorDiv(x, 16);
         int chunkZ = Math.floorDiv(z, 16);
 
         ChunkLocation location = new ChunkLocation(chunkX, chunkZ);
-        Chunk chunk = chunks.get(location);
-        if (chunk == null) {
-            logger.warning(String.format("Could not load chunk at %s", location));
-            Thread.dumpStack();
-            throw new ChunkNotLoadedException(location.toString());
+        return chunks.get(location);
+    }
+
+    public Vector3i getHighestBlockAt(int x, int z) throws ChunkNotLoadedException {
+        WorldPhysics physics = new SimpleWorldPhysics(this);
+        for (int y = 200; y > 0; y--) {
+            if (physics.canStand(new Vector3i(x, y, z))) {
+                return new Vector3i(x, y, z);
+            }
         }
 
-        return new Block(x, y, z, chunk);
+        logger.warning("getHighestBlockAt(" + x + ", " + z + "): returning zero");
+
+        return Vector3i.ZERO;
     }
 
     public Collection<Entity> getVisibleEntities() {
@@ -98,55 +116,4 @@ public class World {
     public void setSpawnPoint(Position spawnPoint) {
         this.spawnPoint = spawnPoint;
     }
-
-    public static class ChunkLocation {
-
-        private final int x, z;
-
-        public ChunkLocation(int x, int z) {
-            this.x = x;
-            this.z = z;
-        }
-
-        public int getX() {
-            return x;
-        }
-
-        public int getZ() {
-            return z;
-        }
-
-        @Override
-        public int hashCode() {
-            int hash = 3;
-            return hash;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj == null) {
-                return false;
-            }
-            if (getClass() != obj.getClass()) {
-                return false;
-            }
-            final ChunkLocation other = (ChunkLocation) obj;
-            if (this.x != other.x) {
-                return false;
-            }
-            if (this.z != other.z) {
-                return false;
-            }
-            return true;
-        }
-
-        @Override
-        public String toString() {
-            return "ChunkLocation{"
-                    + "x=" + x
-                    + ", z=" + z
-                    + '}';
-        }
-    }
-
 }
