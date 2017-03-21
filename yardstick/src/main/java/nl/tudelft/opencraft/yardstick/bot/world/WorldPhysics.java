@@ -22,14 +22,21 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package nl.tudelft.opencraft.yardstick.bot.ai.pathfinding;
+package nl.tudelft.opencraft.yardstick.bot.world;
 
-import nl.tudelft.opencraft.yardstick.util.Vector3d;
+import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
+import nl.tudelft.opencraft.yardstick.util.Vector3i;
+import nl.tudelft.opencraft.yardstick.bot.world.World;
 
-public class EuclideanHeuristic implements Heuristic {
+public interface WorldPhysics {
 
-    @Override
-    public double calculateCost(Vector3d from, Vector3d to) {
-        return Math.round(from.distance(to));
-    }
+    public Vector3i[] findAdjacent(Vector3i location);
+
+    public boolean canWalk(Vector3i from, Vector3i to) throws ChunkNotLoadedException;
+
+    public boolean canClimb(Vector3i location) throws ChunkNotLoadedException;
+
+    public boolean canStand(Vector3i location) throws ChunkNotLoadedException;
+
+    public World getWorld();
 }

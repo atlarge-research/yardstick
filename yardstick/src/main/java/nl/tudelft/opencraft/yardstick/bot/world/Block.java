@@ -30,12 +30,20 @@ public class Block {
         return z;
     }
 
+    public Vector3i getLocation() {
+        return new Vector3i(x, y, z);
+    }
+
     public Chunk getChunk() {
         return chunk;
     }
 
     public World getWorld() {
         return chunk.getWorld();
+    }
+
+    public Block getRelative(BlockFace face) throws ChunkNotLoadedException {
+        return getWorld().getBlockAt(face.getOffset().add(new Vector3i(x, y, z)));
     }
 
     public int getTypeId() {

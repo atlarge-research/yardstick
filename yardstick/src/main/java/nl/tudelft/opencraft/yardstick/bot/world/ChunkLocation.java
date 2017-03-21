@@ -1,8 +1,5 @@
 package nl.tudelft.opencraft.yardstick.bot.world;
 
-/**
- * Created by jesse on 1/30/17.
- */
 public class ChunkLocation {
 
     private final int x, z;
@@ -46,10 +43,9 @@ public class ChunkLocation {
 
     @Override
     public String toString() {
-        return "ChunkLocation{" +
-                "x=" + x +
-                ", z=" + z +
-                '}';
+        return "ChunkLocation{"
+                + "x=" + x
+                + ", z=" + z
+                + '}';
     }
 }
-

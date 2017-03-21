@@ -59,9 +59,7 @@ public class WalkTask implements Task {
         @Override
         public PathNode call() throws Exception {
             BotPlayer player = bot.getPlayer();
-            logger.info("Calculating path ...");
-            PathNode start = bot.getPathFinder().provideSearch(player.getLocation().intVector(), target);
-            logger.info("Calculating path done!");
+            PathNode start = bot.getPathFinder().search(player.getLocation().intVector(), target);
             return start;
         }
     };
@@ -160,7 +158,8 @@ public class WalkTask implements Task {
             nextStep = nextStep.getNext();
             ticksSinceStepChange = 0;
         }
-        if (player.getLocation().distanceSquared(nextStep.getLocation().doubleVector()) > 4) {
+
+        if (player.getLocation().distanceSquared(nextStep.getLocation().doubleVector()) > 4.0) {
             logger.info(String.format("Strayed from path. %s -> %s", player.getLocation(), nextStep.getLocation()));
             TaskStatus status = TaskStatus.forInProgress();
             pathFuture = service.submit(task);

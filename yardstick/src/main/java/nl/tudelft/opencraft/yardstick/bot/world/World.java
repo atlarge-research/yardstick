@@ -3,19 +3,16 @@ package nl.tudelft.opencraft.yardstick.bot.world;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Logger;
 import com.github.steveice10.mc.protocol.data.game.entity.metadata.Position;
 import com.github.steveice10.mc.protocol.data.game.world.WorldType;
-import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.SimpleWorldPhysics;
-import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.WorldPhysics;
 import nl.tudelft.opencraft.yardstick.bot.entity.Entity;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public class World {
 
-    private final Logger logger = Logger.getLogger(World.class.getName());
     private final Dimension dimension;
     private final WorldType type;
+    private final WorldPhysics physics;
     //
     private final Map<ChunkLocation, Chunk> chunks = new HashMap<>();
     private final Map<Integer, Entity> entities = new HashMap<>();
@@ -24,6 +21,7 @@ public class World {
     public World(Dimension dimension, WorldType type) {
         this.dimension = dimension;
         this.type = type;
+        this.physics = new SimpleWorldPhysics(this);
     }
 
     public Dimension getDimension() {
@@ -34,7 +32,11 @@ public class World {
         return type;
     }
 
-    public Collection<Chunk> getChunks() {
+    public WorldPhysics getPhysics() {
+        return physics;
+    }
+
+    public Collection<Chunk> getLoadedChunks() {
         return chunks.values();
     }
 
@@ -51,38 +53,37 @@ public class World {
         chunks.remove(new ChunkLocation(x, z));
     }
 
+    public ChunkLocation getChunkLocation(int x, int z) {
+        int chunkX = Math.floorDiv(x, 16);
+        int chunkZ = Math.floorDiv(z, 16);
+
+        return new ChunkLocation(chunkX, chunkZ);
+    }
+
+    public Chunk getChunk(ChunkLocation location) throws ChunkNotLoadedException {
+        if (chunks.containsKey(location)) {
+            return chunks.get(location);
+        } else {
+            throw new ChunkNotLoadedException(location);
+        }
+    }
+
     public Block getBlockAt(Vector3i v) throws ChunkNotLoadedException {
         return getBlockAt(v.getX(), v.getY(), v.getZ());
     }
 
     public Block getBlockAt(int x, int y, int z) throws ChunkNotLoadedException {
-        Chunk chunk = getChunk(x, z);
-        if (chunk == null) {
-            throw new ChunkNotLoadedException(String.format("x: %d, z: %d", x, z));
-        }
-
+        Chunk chunk = getChunk(getChunkLocation(x, z));
         return new Block(x, y, z, chunk);
     }
 
-    private Chunk getChunk(int x, int z) {
-        int chunkX = Math.floorDiv(x, 16);
-        int chunkZ = Math.floorDiv(z, 16);
-
-        ChunkLocation location = new ChunkLocation(chunkX, chunkZ);
-        return chunks.get(location);
-    }
-
-    public Vector3i getHighestBlockAt(int x, int z) throws ChunkNotLoadedException {
-        WorldPhysics physics = new SimpleWorldPhysics(this);
-        for (int y = 200; y > 0; y--) {
+    public Block getHighestBlockAt(int x, int z) throws ChunkNotLoadedException {
+        for (int y = 255; y > 0; y--) {
             if (physics.canStand(new Vector3i(x, y, z))) {
-                return new Vector3i(x, y, z);
+                return getBlockAt(x, y, z);
             }
         }
-
-        logger.warning("getHighestBlockAt(" + x + ", " + z + "): returning zero");
-
-        return Vector3i.ZERO;
+        return null;
     }
 
     public Collection<Entity> getVisibleEntities() {

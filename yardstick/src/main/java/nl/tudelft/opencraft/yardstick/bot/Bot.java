@@ -4,11 +4,11 @@ import com.github.steveice10.mc.protocol.MinecraftProtocol;
 import com.github.steveice10.packetlib.Client;
 import com.github.steveice10.packetlib.event.session.SessionListener;
 import com.github.steveice10.packetlib.tcp.TcpSessionFactory;
-import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.EuclideanHeuristic;
-import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.SimpleWorldPhysics;
-import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.SaneAStar;
+import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.SimpleAStar;
+import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.heuristic.EuclideanHeuristic;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
 import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
+import nl.tudelft.opencraft.yardstick.bot.world.SimpleWorldPhysics;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
@@ -24,7 +24,7 @@ public class Bot {
     private World world;
     private Server server;
     private BotPlayer player;
-    private SaneAStar pathFinder;
+    private SimpleAStar pathFinder;
     private Task task;
 
     public Bot(MinecraftProtocol protocol, String host, int port) {
@@ -81,7 +81,7 @@ public class Bot {
         return logger;
     }
 
-    public SaneAStar getPathFinder() {
+    public SimpleAStar getPathFinder() {
         return pathFinder;
     }
 
@@ -113,7 +113,7 @@ public class Bot {
         this.world = world;
         // TODO: This shouldn't go here
         if (this.pathFinder == null) {
-            this.pathFinder = new SaneAStar(new EuclideanHeuristic(), new SimpleWorldPhysics(world));
+            this.pathFinder = new SimpleAStar(new EuclideanHeuristic(), new SimpleWorldPhysics(world));
         }
     }
 

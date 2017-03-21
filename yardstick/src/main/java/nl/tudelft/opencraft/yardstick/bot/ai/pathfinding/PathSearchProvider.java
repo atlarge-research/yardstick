@@ -24,6 +24,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package nl.tudelft.opencraft.yardstick.bot.ai.pathfinding;
 
+import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.heuristic.Heuristic;
+import nl.tudelft.opencraft.yardstick.bot.world.WorldPhysics;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
 

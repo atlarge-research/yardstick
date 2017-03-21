@@ -87,11 +87,11 @@ public class Vector3d {
 
     @Override
     public String toString() {
-        return "Vector3d{" +
-                "x=" + x +
-                ", y=" + y +
-                ", z=" + z +
-                '}';
+        return "Vector3d{"
+                + "x=" + x
+                + ", y=" + y
+                + ", z=" + z
+                + '}';
     }
 
     @Override

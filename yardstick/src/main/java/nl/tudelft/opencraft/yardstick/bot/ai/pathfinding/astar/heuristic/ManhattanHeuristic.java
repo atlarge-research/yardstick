@@ -22,10 +22,14 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package nl.tudelft.opencraft.yardstick.bot.ai.pathfinding;
+package nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.heuristic;
 
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 
-public interface Heuristic {
-    double calculateCost(Vector3d from, Vector3d to);
+public class ManhattanHeuristic implements Heuristic {
+
+    @Override
+    public double calculateCost(Vector3d from, Vector3d to) {
+        return Math.abs(from.getX() - to.getX()) + Math.abs(from.getY() - to.getY()) + Math.abs(from.getZ() - to.getZ());
+    }
 }

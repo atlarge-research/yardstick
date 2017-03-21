@@ -52,17 +52,17 @@
         
         <!-- PacketLib -->
         <dependency>
-	    <groupId>com.github.Steveice10</groupId>
-	    <artifactId>PacketLib</artifactId>
-	    <version>1.0</version>
-	</dependency>
+            <groupId>com.github.Steveice10</groupId>
+            <artifactId>PacketLib</artifactId>
+            <version>1.0</version>
+        </dependency>
         
         <!-- MCProtocolLib -->
         <dependency>
-	    <groupId>com.github.Steveice10</groupId>
-	    <artifactId>MCProtocolLib</artifactId>
-	    <version>1.11.2-1</version>
-	</dependency>
+            <groupId>com.github.Steveice10</groupId>
+            <artifactId>MCProtocolLib</artifactId>
+            <version>1.11.2-1</version>
+        </dependency>
 
         <!-- Prometheus -->
         <dependency>
