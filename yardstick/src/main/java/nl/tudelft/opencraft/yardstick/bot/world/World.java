@@ -3,6 +3,7 @@ package nl.tudelft.opencraft.yardstick.bot.world;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Logger;
 import com.github.steveice10.mc.protocol.data.game.entity.metadata.Position;
 import com.github.steveice10.mc.protocol.data.game.world.WorldType;
 import nl.tudelft.opencraft.yardstick.bot.entity.Entity;
@@ -78,12 +79,13 @@ public class World {
     }
 
     public Block getHighestBlockAt(int x, int z) throws ChunkNotLoadedException {
-        for (int y = 255; y > 0; y--) {
+        for (int y = 200; y > 0; y--) { // TODO: Fix world height
             if (physics.canStand(new Vector3i(x, y, z))) {
+                Logger.getGlobal().info("Highest block: " + new Vector3i(x, y, z).toString());
                 return getBlockAt(x, y, z);
             }
         }
-        return null;
+        return getBlockAt(x, 0, z);
     }
 
     public Collection<Entity> getVisibleEntities() {

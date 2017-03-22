@@ -74,66 +74,98 @@ public class SimpleWorldPhysics implements WorldPhysics {
         return locations;
     }
 
+    /**
+     * Determines if a player is able to traverse adjacent locations: from
+     * location A to location B.
+     *
+     * @param locA The origin location.
+     * @param locB The destination location.
+     * @return True if the player can traverse.
+     * @throws ChunkNotLoadedException If there is not enough information in the
+     * system to determine traversal.
+     */
     @Override
-    public boolean canWalk(Vector3i location, Vector3i location2) throws ChunkNotLoadedException {
-        int x = location.getX(), y = location.getY(), z = location.getZ();
-        int x2 = location2.getX(), y2 = location2.getY(), z2 = location2.getZ();
-        if (y2 < 0) {
+    public boolean canWalk(Vector3i locA, Vector3i locB) throws ChunkNotLoadedException {
+        int x = locA.getX(), y = locA.getY(), z = locA.getZ();
+        int x2 = locB.getX(), y2 = locB.getY(), z2 = locB.getZ();
+        if (y2 <= 0) {
             return false;
         }
 
+        //
+        // Check destination
+        //
         boolean valid = true;
-        valid = valid && isEmpty(x2, y2, z2); // Block at must be non-solid
-        valid = valid && isEmpty(x2, y2 + 1, z2); // Block above must be non-solid
+        valid = valid && isTraversable(x2, y2, z2); // Block at must be non-solid
+        valid = valid && isTraversable(x2, y2 + 1, z2); // Block above must be non-solid
 
-        int lowerBlock = world.getBlockAt(x2, y2 - 1, z2).getTypeId();
-        valid = valid && lowerBlock != 10;
-        valid = valid && lowerBlock != 11;
+        // Avoid lava
+        Material lowerMat = world.getBlockAt(x2, y2 - 1, z2).getMaterial();
+        valid = valid && lowerMat != Material.LAVA;
+        valid = valid && lowerMat != Material.STATIONARY_LAVA;
 
-        if (isEmpty(x, y - 1, z)) {
+        //
+        // Check origin
+        //
+        // If there is an empty block under the origin
+        if (isTraversable(x, y - 1, z)) {
             valid = valid
                     && ((y2 < y && x2 == x && z2 == z)
-                    || ((canClimb(location) && canClimb(location2)) || (!canClimb(location) && canClimb(location2)) || (canClimb(location)
-                    && !canClimb(location2) && (x2 == x && z2 == z ? true : !isEmpty(x2, y2 - 1, z2)))) || !isEmpty(x2, y2 - 1, z2));
+                    || ((canClimb(locA) && canClimb(locB)) || (!canClimb(locA) && canClimb(locB)) || (canClimb(locA)
+                    && !canClimb(locB) && (x2 == x && z2 == z ? true : !isTraversable(x2, y2 - 1, z2))))
+                    || !isTraversable(x2, y2 - 1, z2));
+
+            /* // TODO: Further investigate this:
+            boolean vertical = x2 == x && z2 == z;
+            boolean downWards = vertical && y2 < y;
+            boolean bothClimbable = canClimb(locA) && canClimb(locB);
+            boolean bClimbable = !canClimb(locA) && canClimb(locB);
+            boolean aClimbable = canClimb(locA) && !canClimb(locB);
+            boolean solidUnderLocB = !isTraversable(x2, y2 - 1, z2);
+
+            valid = valid
+                    && (downWards
+                    || (bothClimbable || bClimbable || (aClimbable && (vertical ? true : solidUnderLocB)))
+                    || solidUnderLocB);
+             */
         }
+
         if (y != y2 && (x != x2 || z != z2)) {
             return false;
         }
+
         if (x != x2 && z != z2) {
-            valid = valid && isEmpty(x2, y, z);
-            valid = valid && isEmpty(x, y, z2);
-            valid = valid && isEmpty(x2, y + 1, z);
-            valid = valid && isEmpty(x, y + 1, z2);
+            // TODO: Investigate this
+            valid = valid && isTraversable(x2, y, z);
+            valid = valid && isTraversable(x, y, z2);
+            valid = valid && isTraversable(x2, y + 1, z);
+            valid = valid && isTraversable(x, y + 1, z2);
             if (y != y2) {
-                valid = valid && isEmpty(x2, y2, z);
-                valid = valid && isEmpty(x, y2, z2);
-                valid = valid && isEmpty(x, y2, z);
-                valid = valid && isEmpty(x2, y, z2);
-                valid = valid && isEmpty(x2, y + 1, z2);
-                valid = valid && isEmpty(x, y2 + 1, z);
+                valid = valid && isTraversable(x2, y2, z);
+                valid = valid && isTraversable(x, y2, z2);
+                valid = valid && isTraversable(x, y2, z);
+                valid = valid && isTraversable(x2, y, z2);
+                valid = valid && isTraversable(x2, y + 1, z2);
+                valid = valid && isTraversable(x, y2 + 1, z);
                 valid = false;
             }
         } else if (x != x2 && y != y2) {
-            valid = valid && isEmpty(x2, y, z);
-            valid = valid && isEmpty(x, y2, z);
+            valid = valid && isTraversable(x2, y, z);
+            valid = valid && isTraversable(x, y2, z);
             if (y > y2) {
-                valid = valid && isEmpty(x2, y + 1, z);
+                valid = valid && isTraversable(x2, y + 1, z);
             } else {
-                valid = valid && isEmpty(x, y2 + 1, z);
+                valid = valid && isTraversable(x, y2 + 1, z);
             }
             valid = false;
         } else if (z != z2 && y != y2) {
-            valid = valid && isEmpty(x, y, z2);
-            valid = valid && isEmpty(x, y2, z);
+            valid = valid && isTraversable(x, y, z2);
+            valid = valid && isTraversable(x, y2, z);
             if (y > y2) {
-                valid = valid && isEmpty(x, y + 1, z2);
+                valid = valid && isTraversable(x, y + 1, z2);
             } else {
-                valid = valid && isEmpty(x, y2 + 1, z);
+                valid = valid && isTraversable(x, y2 + 1, z);
             }
-            valid = false;
-        }
-        int nodeBlockUnder = world.getBlockAt(x2, y2 - 1, z2).getTypeId();
-        if (nodeBlockUnder == 85 || nodeBlockUnder == 107 || nodeBlockUnder == 113) {
             valid = false;
         }
         return valid;
@@ -147,29 +179,32 @@ public class SimpleWorldPhysics implements WorldPhysics {
             return true;
         }
         if (id == 106) { // Vines (which require an adjacent solid block)
-            if (!isEmpty(location.getX(), location.getY(), location.getZ() + 1) || !isEmpty(location.getX(), location.getY(), location.getZ() - 1)
-                    || !isEmpty(location.getX() + 1, location.getY(), location.getZ()) || !isEmpty(location.getX() - 1, location.getY(), location.getZ())) {
+            if (!isTraversable(location.getX(), location.getY(), location.getZ() + 1) || !isTraversable(location.getX(), location.getY(), location.getZ() - 1)
+                    || !isTraversable(location.getX() + 1, location.getY(), location.getZ()) || !isTraversable(location.getX() - 1, location.getY(), location.getZ())) {
                 return true;
             }
         }
         return false;
     }
 
-    public boolean isEmpty(int x, int y, int z) throws ChunkNotLoadedException {
-        Material mat = world.getBlockAt(x, y, z).getMaterial();
-
-        return mat == Material.AIR;
-    }
-
-    public boolean isSolid(int x, int y, int z) throws ChunkNotLoadedException {
-        return world.getBlockAt(x, y, z).getMaterial().isSolid();
+    /**
+     * Returns true if the block at (x,y,z) can be traversed through.
+     *
+     * @param x The x location of the block.
+     * @param y The y location of the block.
+     * @param z The z location of the block.
+     * @return True if the block is traversable.
+     * @throws ChunkNotLoadedException If the block is outside viewing range.
+     */
+    public boolean isTraversable(int x, int y, int z) throws ChunkNotLoadedException {
+        return world.getBlockAt(x, y, z).getMaterial().isTraversable();
     }
 
     public boolean canStand(Vector3i location) throws ChunkNotLoadedException {
         int x = location.getX();
         int y = location.getY();
         int z = location.getZ();
-        return isSolid(x, y, z) && !isSolid(x, y + 1, z) && !isSolid(x, y + 2, z);
+        return !isTraversable(x, y, z) && isTraversable(x, y + 1, z) && isTraversable(x, y + 2, z);
     }
 
     @Override

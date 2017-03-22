@@ -67,10 +67,165 @@ public class WalkTask implements Task {
     public WalkTask(final Bot bot, final Vector3i target) {
         this.bot = bot;
         this.target = target;
-        this.logger = bot.getLogger().newSubLogger("WalkTask{" + target.toString() + "}");
+        this.logger = bot.getLogger().newSubLogger("WalkTask[" + target.toString() + "]");
 
         pathFuture = service.submit(task);
         startTime = System.currentTimeMillis();
+    }
+
+    @Override
+    public TaskStatus tick() {
+
+        if (pathFuture != null && !pathFuture.isDone()) {
+            // If we're still calculating the path:
+            // Check timeout
+            if (timeout > 0 && System.currentTimeMillis() - startTime > timeout) {
+                pathFuture.cancel(true);
+                nextStep = null;
+                return status = TaskStatus.forFailure("Path search timed out (" + timeout + " ms)");
+            } else {
+                return status = TaskStatus.forInProgress();
+            }
+
+        } else if (pathFuture != null && pathFuture.isDone() && !pathFuture.isCancelled()) {
+            // If we've found a path successfully
+            try {
+                nextStep = pathFuture.get();
+                ticksSinceStepChange = 0;
+            } catch (InterruptedException e) {
+                return status = TaskStatus.forFailure(e.getMessage());
+            } catch (ExecutionException e) {
+                /*
+                if (e.getCause() instanceof ChunkNotLoadedException) {
+                    return status = TaskStatus.forInProgress();
+                }*/
+                return status = TaskStatus.forFailure(e.getMessage());
+            } finally {
+                pathFuture = null;
+            }
+        }
+
+        // If we have no more steps to do, we're done
+        if (nextStep == null) {
+            return status = TaskStatus.forSuccess();
+        }
+
+        BotPlayer player = bot.getPlayer();
+
+        // Skip the step if the next step is close by
+        if (nextStep.getNext() != null && player.getLocation().distanceSquared(nextStep.getNext().getLocation().doubleVector()) < 0.2) {
+            nextStep = nextStep.getNext();
+            ticksSinceStepChange = 0;
+        }
+
+        // If the playeris too far away from the next step
+        // Abort for now
+        if (player.getLocation().distanceSquared(nextStep.getLocation().doubleVector()) > 4.0) {
+            logger.info(String.format("Strayed from path. %s -> %s", player.getLocation(), nextStep.getLocation()));
+            // TODO: Fix later
+            //TaskStatus status = TaskStatus.forInProgress();
+            //pathFuture = service.submit(task);
+            return TaskStatus.forFailure("Strayed from path. %s -> %s");
+        }
+
+        // Keep track of how many ticks a step takes
+        // If a step takes too many ticks, abort
+        ticksSinceStepChange++;
+        if (ticksSinceStepChange > 80) {
+            nextStep = null;
+            return status = TaskStatus.forFailure("Too many ticks since step change");
+        }
+
+        // Get locations
+        Vector3d walkLoc = player.getLocation();
+        Vector3i blockLoc = walkLoc.intVector().add(new Vector3i(0, -1, 0));
+        Block thisBlock;
+
+        try {
+            thisBlock = bot.getWorld().getBlockAt(blockLoc);
+        } catch (ChunkNotLoadedException e) {
+            // TODO: Fix: Wait until chunk is loaded.
+            logger.warning(String.format("Block under player: %s", blockLoc));
+            logger.warning(String.format("Player at %s", walkLoc));
+            return status = TaskStatus.forFailure(e.getMessage());
+        }
+
+        // Step locations
+        Vector3d step = nextStep.getLocation().doubleVector();
+        double stepX = step.getX(), stepY = step.getY(), stepZ = step.getZ();
+
+        // Calculate speed
+        double walkSpeed = this.speed;
+        boolean inLiquid = false; // TODO: player.isInLiquid();
+        if (Material.getById(thisBlock.getTypeId()) == Material.SOUL_SAND) {
+            if (Material.getById(thisBlock.getTypeId()) == Material.SOUL_SAND) {
+                stepY -= 0.12; // Soulsand makes us shorter 8D
+            }
+            walkSpeed *= liquidFactor;
+        } else if (inLiquid) {
+            walkSpeed *= liquidFactor;
+        }
+
+        // See if we're climbing, or jumping
+        if (walkLoc.getY() != stepY) {
+            boolean canClimbBlock = false;
+            try {
+                canClimbBlock = bot.getPathFinder().getWorldPhysics().canClimb(walkLoc.intVector());
+            } catch (ChunkNotLoadedException e) {
+                return status = TaskStatus.forInProgress();
+            }
+            if (!inLiquid && !canClimbBlock) {
+                if (walkLoc.getY() < stepY) {
+                    walkSpeed *= jumpFactor;
+                } else {
+                    walkSpeed *= fallFactor;
+                }
+            }
+
+            // Set new Y-coord
+            double offsetY = walkLoc.getY() < stepY ? Math.min(walkSpeed, stepY - walkLoc.getY()) : Math.max(-walkSpeed, stepY - walkLoc.getY());
+            walkLoc = walkLoc.add(new Vector3d(0, offsetY, 0));
+        }
+
+        if (walkLoc.getX() != stepX) {
+            double offsetX = walkLoc.getX() < stepX ? Math.min(walkSpeed, stepX - walkLoc.getX()) : Math.max(-walkSpeed, stepX - walkLoc.getX());
+            walkLoc = walkLoc.add(new Vector3d(offsetX, 0, 0));
+        }
+
+        if (walkLoc.getZ() != stepZ) {
+            double offsetZ = walkLoc.getZ() < stepZ ? Math.min(walkSpeed, stepZ - walkLoc.getZ()) : Math.max(-walkSpeed, stepZ - walkLoc.getZ());
+            walkLoc = walkLoc.add(new Vector3d(0, 0, offsetZ));
+        }
+
+        // Send new player location to server
+        player.updateLocation(walkLoc);
+
+        // Next step?
+        Vector3i stepTarget = new Vector3d(stepX, stepY, stepZ).intVector();
+        Vector3i current = walkLoc.intVector();
+        if (current.equals(stepTarget)) {
+            nextStep = nextStep.getNext();
+            ticksSinceStepChange = 0;
+            logger.info("Moving: " + current + " (step)");
+        } else {
+            logger.info("Moving: " + current + " -> " + stepTarget + "");
+        }
+
+        return status = TaskStatus.forInProgress();
+    }
+
+    @Override
+    public void stop() {
+        if (pathFuture != null && !pathFuture.isDone()) {
+            pathFuture.cancel(true);
+        }
+        nextStep = null;
+        this.service.shutdown();
+    }
+
+    @Override
+    public TaskStatus getStatus() {
+        return status;
     }
 
     public Vector3i getTarget() {
@@ -119,137 +274,6 @@ public class WalkTask implements Task {
 
     public void setLiquidFactor(double liquidFactor) {
         this.liquidFactor = liquidFactor;
-    }
-
-    @Override
-    public TaskStatus tick() {
-        if (pathFuture != null && !pathFuture.isDone()) {
-            if (timeout > 0 && System.currentTimeMillis() - startTime > timeout) {
-                pathFuture.cancel(true);
-                pathFuture = null;
-                nextStep = null;
-                return status = TaskStatus.forFailure("Path search timed out (" + timeout + " ms)");
-            } else {
-                return status = TaskStatus.forInProgress();
-            }
-        } else if (pathFuture != null && pathFuture.isDone() && !pathFuture.isCancelled()) {
-            try {
-                nextStep = pathFuture.get();
-                logger.info(String.format("First step of path: %s", nextStep));
-                ticksSinceStepChange = 0;
-            } catch (InterruptedException e) {
-                return status = TaskStatus.forFailure(e.getMessage());
-            } catch (ExecutionException e) {
-                if (e.getCause() instanceof ChunkNotLoadedException) {
-                    return status = TaskStatus.forInProgress();
-                }
-                return status = TaskStatus.forFailure(e.getMessage());
-            } finally {
-                pathFuture = null;
-            }
-        }
-
-        if (nextStep == null) {
-            return status = TaskStatus.forSuccess();
-        }
-
-        BotPlayer player = bot.getPlayer();
-        if (nextStep.getNext() != null && player.getLocation().distanceSquared(nextStep.getNext().getLocation().doubleVector()) < 0.2) {
-            nextStep = nextStep.getNext();
-            ticksSinceStepChange = 0;
-        }
-
-        if (player.getLocation().distanceSquared(nextStep.getLocation().doubleVector()) > 4.0) {
-            logger.info(String.format("Strayed from path. %s -> %s", player.getLocation(), nextStep.getLocation()));
-            TaskStatus status = TaskStatus.forInProgress();
-            pathFuture = service.submit(task);
-            return status;
-        }
-        ticksSinceStepChange++;
-        if (ticksSinceStepChange > 80) {
-            nextStep = null;
-            return status = TaskStatus.forFailure("Too many ticks since step change");
-        }
-        double speed = this.speed;
-        Vector3i location = nextStep.getLocation();
-        Vector3i block = player.getLocation().intVector();
-        Vector3d playerLoc = player.getLocation();
-
-        double x = location.getX(), y = location.getY(), z = location.getZ();
-        boolean inLiquid = false; // TODO: player.isInLiquid();
-        Vector3i blockPosition = block.add(new Vector3i(0, -1, 0));
-        Block thisBlock;
-        try {
-            thisBlock = bot.getWorld().getBlockAt(blockPosition);
-        } catch (ChunkNotLoadedException e) {
-            // Wait until chunk is loaded.
-            logger.warning(String.format("Block under player: %s", blockPosition));
-            logger.warning(String.format("Player at %s", playerLoc));
-            return status = TaskStatus.forInProgress();
-        }
-        if (thisBlock == null) {
-            logger.warning(String.format("Could not get block at %s", blockPosition));
-            return TaskStatus.forInProgress();
-        }
-        if (Material.getById(thisBlock.getTypeId()) == Material.SOUL_SAND) {
-            if (Material.getById(thisBlock.getTypeId()) == Material.SOUL_SAND) {
-                y -= 0.12;
-            }
-            speed *= liquidFactor;
-        } else if (inLiquid) {
-            speed *= liquidFactor;
-        }
-        if (playerLoc.getY() != y) {
-            boolean canClimbBlock = false;
-            try {
-                canClimbBlock = bot.getPathFinder().getWorldPhysics().canClimb(block);
-            } catch (ChunkNotLoadedException e) {
-                return status = TaskStatus.forInProgress();
-            }
-            if (!inLiquid && !canClimbBlock) {
-                if (playerLoc.getY() < y) {
-                    speed *= jumpFactor;
-                } else {
-                    speed *= fallFactor;
-                }
-            }
-            double offsetY = playerLoc.getY() < y ? Math.min(speed, y - playerLoc.getY()) : Math.max(-speed, y - playerLoc.getY());
-            playerLoc = playerLoc.add(new Vector3d(0, offsetY, 0));
-        }
-
-        if (playerLoc.getX() != x) {
-            double offsetX = playerLoc.getX() < x ? Math.min(speed, x - playerLoc.getX()) : Math.max(-speed, x - playerLoc.getX());
-            playerLoc = playerLoc.add(new Vector3d(offsetX, 0, 0));
-        }
-
-        if (playerLoc.getZ() != z) {
-            double offsetZ = playerLoc.getZ() < z ? Math.min(speed, z - playerLoc.getZ()) : Math.max(-speed, z - playerLoc.getZ());
-            playerLoc = playerLoc.add(new Vector3d(0, 0, offsetZ));
-        }
-
-        // Set new player location
-        player.updateLocation(playerLoc);
-
-        if (playerLoc.getX() == x && playerLoc.getY() == y && playerLoc.getZ() == z) {
-            nextStep = nextStep.getNext();
-            ticksSinceStepChange = 0;
-        }
-
-        return status = TaskStatus.forInProgress();
-    }
-
-    @Override
-    public void stop() {
-        if (pathFuture != null && !pathFuture.isDone()) {
-            pathFuture.cancel(true);
-        }
-        nextStep = null;
-        this.service.shutdown();
-    }
-
-    @Override
-    public TaskStatus getStatus() {
-        return status;
     }
 
     public boolean isMoving() {

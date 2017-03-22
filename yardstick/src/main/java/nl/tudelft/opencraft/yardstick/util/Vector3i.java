@@ -86,11 +86,7 @@ public class Vector3i {
 
     @Override
     public String toString() {
-        return "Vector3i{"
-                + "x=" + x
-                + ", y=" + y
-                + ", z=" + z
-                + '}';
+        return "(" + x + ", " + y + ", " + z + ")";
     }
 
     @Override

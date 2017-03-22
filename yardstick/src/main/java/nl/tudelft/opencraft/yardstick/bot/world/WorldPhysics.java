@@ -24,9 +24,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package nl.tudelft.opencraft.yardstick.bot.world;
 
-import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
-import nl.tudelft.opencraft.yardstick.bot.world.World;
 
 public interface WorldPhysics {
 
