@@ -74,6 +74,21 @@ public class SimpleWorldPhysics implements WorldPhysics {
         return locations;
     }
 
+    public Vector3i[] findWalkable(Vector3i from) throws ChunkNotLoadedException {
+
+        Vector3i[] walkable = new Vector3i[SURROUNDING.length];
+
+        int i = 0;
+        for (Vector3i offset : SURROUNDING) {
+            Vector3i target = from.add(offset);
+            if (canWalk(from, target)) {
+                walkable[i++] = target;
+            }
+        }
+
+        return walkable;
+    }
+
     /**
      * Determines if a player is able to traverse adjacent locations: from
      * location A to location B.
@@ -86,88 +101,95 @@ public class SimpleWorldPhysics implements WorldPhysics {
      */
     @Override
     public boolean canWalk(Vector3i locA, Vector3i locB) throws ChunkNotLoadedException {
-        int x = locA.getX(), y = locA.getY(), z = locA.getZ();
-        int x2 = locB.getX(), y2 = locB.getY(), z2 = locB.getZ();
-        if (y2 <= 0) {
+        int origX = locA.getX(), origY = locA.getY(), origZ = locA.getZ();
+        int destX = locB.getX(), destY = locB.getY(), destZ = locB.getZ();
+
+        //
+        // Validity checks
+        //
+        // Destination and origin must be 1 apart at most
+        boolean valid = true;
+        if (Math.abs(origX - destX) > 1) {
+            valid = false;
+        }
+        if (Math.abs(origY - destY) > 1) {
+            valid = false;
+        }
+        if (Math.abs(origZ - destZ) > 1) {
+            valid = false;
+        }
+
+        // Origin must be traversable
+        valid = valid && isTraversable(origX, origY, origZ);
+        valid = valid && isTraversable(origX, origY + 1, origZ);
+
+        if (!valid) {
+            throw new IllegalArgumentException("Invalid move: " + locA + " -> " + locB);
+        }
+
+        //
+        // Path checking
+        //
+        // Destination must have Y > 0
+        if (destY <= 0) {
             return false;
         }
 
         //
-        // Check destination
-        //
-        boolean valid = true;
-        valid = valid && isTraversable(x2, y2, z2); // Block at must be non-solid
-        valid = valid && isTraversable(x2, y2 + 1, z2); // Block above must be non-solid
+        // Destination must be traversable
+        valid = valid && isTraversable(destX, destY, destZ);
+        valid = valid && isTraversable(destX, destY + 1, destZ);
 
         // Avoid lava
-        Material lowerMat = world.getBlockAt(x2, y2 - 1, z2).getMaterial();
+        Material lowerMat = world.getBlockAt(destX, destY - 1, destZ).getMaterial();
         valid = valid && lowerMat != Material.LAVA;
         valid = valid && lowerMat != Material.STATIONARY_LAVA;
 
-        //
-        // Check origin
-        //
-        // If there is an empty block under the origin
-        if (isTraversable(x, y - 1, z)) {
+        // Only one coord at a time
+        boolean movingX = origX != destX;
+        boolean movingY = origY != destY;
+        boolean movingZ = origZ != destZ;
+
+        // Only allow single axis movement for now
+        valid = valid
+                && ((movingX && !movingY && !movingZ)
+                || (!movingX && movingY && !movingZ)
+                || (!movingX && !movingY && movingZ));
+
+        // If we're staying level
+        if (destY == origY) {
+            // Origin or dest must have a block
+            boolean origUnder = !isTraversable(origX, origY - 1, origZ);
+            boolean destUnder = !isTraversable(destX, destY - 1, destZ);
+
+            valid = valid && (origUnder || destUnder);
+
+            // Destination must have a solid block at least 3 blocks under
+            valid = valid && (!isTraversable(destX, destY - 1, destZ)
+                    || !isTraversable(destX, destY - 2, destZ)
+                    || !isTraversable(destX, destY - 3, destZ));
+        }
+
+        // If we're jumping
+        if (destY > origY) {
+            // There must be a block below the origin
+            valid = valid && !isTraversable(origX, origY - 1, origZ);
+
+            // There must be a block next to us (efficiency)
             valid = valid
-                    && ((y2 < y && x2 == x && z2 == z)
-                    || ((canClimb(locA) && canClimb(locB)) || (!canClimb(locA) && canClimb(locB)) || (canClimb(locA)
-                    && !canClimb(locB) && (x2 == x && z2 == z ? true : !isTraversable(x2, y2 - 1, z2))))
-                    || !isTraversable(x2, y2 - 1, z2));
-
-            /* // TODO: Further investigate this:
-            boolean vertical = x2 == x && z2 == z;
-            boolean downWards = vertical && y2 < y;
-            boolean bothClimbable = canClimb(locA) && canClimb(locB);
-            boolean bClimbable = !canClimb(locA) && canClimb(locB);
-            boolean aClimbable = canClimb(locA) && !canClimb(locB);
-            boolean solidUnderLocB = !isTraversable(x2, y2 - 1, z2);
-
-            valid = valid
-                    && (downWards
-                    || (bothClimbable || bClimbable || (aClimbable && (vertical ? true : solidUnderLocB)))
-                    || solidUnderLocB);
-             */
+                    && (!isTraversable(origX + 1, origY, origZ)
+                    || !isTraversable(origX - 1, destY, origZ)
+                    || !isTraversable(origX, origY, origZ + 1)
+                    || !isTraversable(origX, origY, origZ - 1));
         }
 
-        if (y != y2 && (x != x2 || z != z2)) {
-            return false;
+        // If we're falling
+        if (destY < origY) {
+            // Origin block may not be fluid (drowning)
+            Material mat = world.getBlockAt(origX, origY, origZ).getMaterial();
+            valid = valid && !mat.isFluid();
         }
 
-        if (x != x2 && z != z2) {
-            // TODO: Investigate this
-            valid = valid && isTraversable(x2, y, z);
-            valid = valid && isTraversable(x, y, z2);
-            valid = valid && isTraversable(x2, y + 1, z);
-            valid = valid && isTraversable(x, y + 1, z2);
-            if (y != y2) {
-                valid = valid && isTraversable(x2, y2, z);
-                valid = valid && isTraversable(x, y2, z2);
-                valid = valid && isTraversable(x, y2, z);
-                valid = valid && isTraversable(x2, y, z2);
-                valid = valid && isTraversable(x2, y + 1, z2);
-                valid = valid && isTraversable(x, y2 + 1, z);
-                valid = false;
-            }
-        } else if (x != x2 && y != y2) {
-            valid = valid && isTraversable(x2, y, z);
-            valid = valid && isTraversable(x, y2, z);
-            if (y > y2) {
-                valid = valid && isTraversable(x2, y + 1, z);
-            } else {
-                valid = valid && isTraversable(x, y2 + 1, z);
-            }
-            valid = false;
-        } else if (z != z2 && y != y2) {
-            valid = valid && isTraversable(x, y, z2);
-            valid = valid && isTraversable(x, y2, z);
-            if (y > y2) {
-                valid = valid && isTraversable(x, y + 1, z2);
-            } else {
-                valid = valid && isTraversable(x, y2 + 1, z);
-            }
-            valid = false;
-        }
         return valid;
     }
 

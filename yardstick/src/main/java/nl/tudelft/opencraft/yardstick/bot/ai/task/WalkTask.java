@@ -37,8 +37,8 @@ import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public class WalkTask implements Task {
 
-    private static double defaultSpeed = 0.15, defaultJumpFactor = 3, defaultFallFactor = 4, defaultLiquidFactor = 0.5;
-    private static int defaultTimeout = 10000;
+    private static double speed = 0.15, jumpFactor = 3, fallFactor = 4, liquidFactor = 0.5;
+    private static int defaultTimeout = 6000;
 
     private final Bot bot;
     private final Logger logger;
@@ -51,7 +51,6 @@ public class WalkTask implements Task {
     private PathNode nextStep;
     private int ticksSinceStepChange = 0;
     private int timeout = defaultTimeout;
-    private double speed = defaultSpeed, jumpFactor = defaultJumpFactor, fallFactor = defaultFallFactor, liquidFactor = defaultLiquidFactor;
 
     private TaskStatus status = TaskStatus.forInProgress();
 
@@ -92,14 +91,22 @@ public class WalkTask implements Task {
             try {
                 nextStep = pathFuture.get();
                 ticksSinceStepChange = 0;
+
+                // DEBUG START
+                PathNode l = nextStep;
+                do {
+                    logger.info("Path -> " + l.getLocation());
+                } while ((l = l.getNext()) != null);
+                // DEBUG STOP
+
             } catch (InterruptedException e) {
-                return status = TaskStatus.forFailure(e.getMessage());
+                return status = TaskStatus.forFailure(e.getMessage(), e);
             } catch (ExecutionException e) {
                 /*
                 if (e.getCause() instanceof ChunkNotLoadedException) {
                     return status = TaskStatus.forInProgress();
                 }*/
-                return status = TaskStatus.forFailure(e.getMessage());
+                return status = TaskStatus.forFailure(e.getMessage(), e.getCause());
             } finally {
                 pathFuture = null;
             }
@@ -113,14 +120,14 @@ public class WalkTask implements Task {
         BotPlayer player = bot.getPlayer();
 
         // Skip the step if the next step is close by
-        if (nextStep.getNext() != null && player.getLocation().distanceSquared(nextStep.getNext().getLocation().doubleVector()) < 0.2) {
+        if (nextStep.getNext() != null && player.getLocation().distanceSquared(nextStep.getNext().getLocation().doubleVector()) < 0.05) {
             nextStep = nextStep.getNext();
             ticksSinceStepChange = 0;
         }
 
-        // If the playeris too far away from the next step
+        // If the player is too far away from the next step
         // Abort for now
-        if (player.getLocation().distanceSquared(nextStep.getLocation().doubleVector()) > 4.0) {
+        if (player.getLocation().distanceSquared(nextStep.getLocation().doubleVector()) > 5.0) {
             logger.info(String.format("Strayed from path. %s -> %s", player.getLocation(), nextStep.getLocation()));
             // TODO: Fix later
             //TaskStatus status = TaskStatus.forInProgress();
@@ -137,8 +144,8 @@ public class WalkTask implements Task {
         }
 
         // Get locations
-        Vector3d walkLoc = player.getLocation();
-        Vector3i blockLoc = walkLoc.intVector().add(new Vector3i(0, -1, 0));
+        Vector3d moveLoc = player.getLocation();
+        Vector3i blockLoc = moveLoc.intVector().add(new Vector3i(0, -1, 0));
         Block thisBlock;
 
         try {
@@ -146,69 +153,71 @@ public class WalkTask implements Task {
         } catch (ChunkNotLoadedException e) {
             // TODO: Fix: Wait until chunk is loaded.
             logger.warning(String.format("Block under player: %s", blockLoc));
-            logger.warning(String.format("Player at %s", walkLoc));
+            logger.warning(String.format("Player at %s", moveLoc));
             return status = TaskStatus.forFailure(e.getMessage());
         }
 
-        // Step locations
-        Vector3d step = nextStep.getLocation().doubleVector();
-        double stepX = step.getX(), stepY = step.getY(), stepZ = step.getZ();
+        // Step
+        Vector3d stepTarget = nextStep.getLocation().doubleVector();
+
+        // Stand on the center of a block
+        stepTarget = stepTarget.add(0.5, 0, 0.5);
 
         // Calculate speed
-        double walkSpeed = this.speed;
+        double moveSpeed = this.speed;
         boolean inLiquid = false; // TODO: player.isInLiquid();
         if (Material.getById(thisBlock.getTypeId()) == Material.SOUL_SAND) {
             if (Material.getById(thisBlock.getTypeId()) == Material.SOUL_SAND) {
-                stepY -= 0.12; // Soulsand makes us shorter 8D
+                // Soulsand makes us shorter 8D
+                stepTarget = stepTarget.add(0, -0.12, 0);
             }
-            walkSpeed *= liquidFactor;
+            moveSpeed *= liquidFactor;
         } else if (inLiquid) {
-            walkSpeed *= liquidFactor;
+            moveSpeed *= liquidFactor;
         }
 
+        double stepX = stepTarget.getX(), stepY = stepTarget.getY(), stepZ = stepTarget.getZ();
+
         // See if we're climbing, or jumping
-        if (walkLoc.getY() != stepY) {
+        if (moveLoc.getY() != stepY) {
             boolean canClimbBlock = false;
             try {
-                canClimbBlock = bot.getPathFinder().getWorldPhysics().canClimb(walkLoc.intVector());
+                canClimbBlock = bot.getPathFinder().getWorldPhysics().canClimb(moveLoc.intVector());
             } catch (ChunkNotLoadedException e) {
                 return status = TaskStatus.forInProgress();
             }
             if (!inLiquid && !canClimbBlock) {
-                if (walkLoc.getY() < stepY) {
-                    walkSpeed *= jumpFactor;
+                if (moveLoc.getY() < stepY) {
+                    moveSpeed *= jumpFactor;
                 } else {
-                    walkSpeed *= fallFactor;
+                    moveSpeed *= fallFactor;
                 }
             }
 
             // Set new Y-coord
-            double offsetY = walkLoc.getY() < stepY ? Math.min(walkSpeed, stepY - walkLoc.getY()) : Math.max(-walkSpeed, stepY - walkLoc.getY());
-            walkLoc = walkLoc.add(new Vector3d(0, offsetY, 0));
+            double offsetY = moveLoc.getY() < stepY ? Math.min(moveSpeed, stepY - moveLoc.getY()) : Math.max(-moveSpeed, stepY - moveLoc.getY());
+            moveLoc = moveLoc.add(new Vector3d(0, offsetY, 0));
         }
 
-        if (walkLoc.getX() != stepX) {
-            double offsetX = walkLoc.getX() < stepX ? Math.min(walkSpeed, stepX - walkLoc.getX()) : Math.max(-walkSpeed, stepX - walkLoc.getX());
-            walkLoc = walkLoc.add(new Vector3d(offsetX, 0, 0));
+        if (moveLoc.getX() != stepX) {
+            double offsetX = moveLoc.getX() < stepX ? Math.min(moveSpeed, stepX - moveLoc.getX()) : Math.max(-moveSpeed, stepX - moveLoc.getX());
+            moveLoc = moveLoc.add(new Vector3d(offsetX, 0, 0));
         }
 
-        if (walkLoc.getZ() != stepZ) {
-            double offsetZ = walkLoc.getZ() < stepZ ? Math.min(walkSpeed, stepZ - walkLoc.getZ()) : Math.max(-walkSpeed, stepZ - walkLoc.getZ());
-            walkLoc = walkLoc.add(new Vector3d(0, 0, offsetZ));
+        if (moveLoc.getZ() != stepZ) {
+            double offsetZ = moveLoc.getZ() < stepZ ? Math.min(moveSpeed, stepZ - moveLoc.getZ()) : Math.max(-moveSpeed, stepZ - moveLoc.getZ());
+            moveLoc = moveLoc.add(new Vector3d(0, 0, offsetZ));
         }
 
         // Send new player location to server
-        player.updateLocation(walkLoc);
+        player.updateLocation(moveLoc);
 
-        // Next step?
-        Vector3i stepTarget = new Vector3d(stepX, stepY, stepZ).intVector();
-        Vector3i current = walkLoc.intVector();
-        if (current.equals(stepTarget)) {
+        if (moveLoc.equals(stepTarget)) {
             nextStep = nextStep.getNext();
             ticksSinceStepChange = 0;
-            logger.info("Moving: " + current + " (step)");
+            logger.info("Moving: " + moveLoc + " (step)");
         } else {
-            logger.info("Moving: " + current + " -> " + stepTarget + "");
+            //logger.info("Moving: " + oldLoc + " -> " + moveLoc + ", step: " + stepTarget);
         }
 
         return status = TaskStatus.forInProgress();
@@ -281,35 +290,35 @@ public class WalkTask implements Task {
     }
 
     public static double getDefaultSpeed() {
-        return defaultSpeed;
+        return speed;
     }
 
     public static void setDefaultSpeed(double defaultSpeed) {
-        WalkTask.defaultSpeed = defaultSpeed;
+        WalkTask.speed = defaultSpeed;
     }
 
     public static double getDefaultJumpFactor() {
-        return defaultJumpFactor;
+        return jumpFactor;
     }
 
     public static void setDefaultJumpFactor(double defaultJumpFactor) {
-        WalkTask.defaultJumpFactor = defaultJumpFactor;
+        WalkTask.jumpFactor = defaultJumpFactor;
     }
 
     public static double getDefaultFallFactor() {
-        return defaultFallFactor;
+        return fallFactor;
     }
 
     public static void setDefaultFallFactor(double defaultFallFactor) {
-        WalkTask.defaultFallFactor = defaultFallFactor;
+        WalkTask.fallFactor = defaultFallFactor;
     }
 
     public static double getDefaultLiquidFactor() {
-        return defaultLiquidFactor;
+        return liquidFactor;
     }
 
     public static void setDefaultLiquidFactor(double defaultLiquidFactor) {
-        WalkTask.defaultLiquidFactor = defaultLiquidFactor;
+        WalkTask.liquidFactor = defaultLiquidFactor;
     }
 
     public static int getDefaultTimeout() {

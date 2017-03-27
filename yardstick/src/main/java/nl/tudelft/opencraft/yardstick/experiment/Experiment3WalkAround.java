@@ -5,14 +5,12 @@ import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTask;
-import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public class Experiment3WalkAround extends Experiment {
 
     private Bot bot;
     private MovementModel movement = new MovementModel();
-    private Vector3d originalLocation;
 
     public Experiment3WalkAround() {
         super(3, "A simple test demonstrating A* movement");
@@ -43,7 +41,6 @@ public class Experiment3WalkAround extends Experiment {
                 return;
             }
         }
-        this.originalLocation = this.bot.getPlayer().getLocation();
     }
 
     @Override

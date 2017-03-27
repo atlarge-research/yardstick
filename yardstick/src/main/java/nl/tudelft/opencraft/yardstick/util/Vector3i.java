@@ -15,10 +15,6 @@ public class Vector3i {
         this.z = z;
     }
 
-    public Vector3i(double newX, int i, double newZ) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
     public int getX() {
         return x;
     }

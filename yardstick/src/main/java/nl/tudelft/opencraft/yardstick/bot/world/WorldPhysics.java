@@ -28,6 +28,8 @@ import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public interface WorldPhysics {
 
+    public Vector3i[] findWalkable(Vector3i from) throws ChunkNotLoadedException;
+
     public Vector3i[] findAdjacent(Vector3i location);
 
     public boolean canWalk(Vector3i from, Vector3i to) throws ChunkNotLoadedException;

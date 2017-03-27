@@ -4,10 +4,16 @@ public class TaskStatus {
 
     private final StatusType type;
     private final String message;
+    private final Throwable throwable;
 
     private TaskStatus(StatusType status, String message) {
+        this(status, message, null);
+    }
+
+    private TaskStatus(StatusType status, String message, Throwable throwable) {
         this.type = status;
         this.message = message;
+        this.throwable = throwable;
     }
 
     public StatusType getType() {
@@ -18,8 +24,16 @@ public class TaskStatus {
         return message;
     }
 
+    public Throwable getThrowable() {
+        return throwable;
+    }
+
     public static TaskStatus forFailure(String message) {
         return new TaskStatus(StatusType.FAILURE, message);
+    }
+
+    public static TaskStatus forFailure(String message, Throwable throwable) {
+        return new TaskStatus(StatusType.FAILURE, message, throwable);
     }
 
     public static TaskStatus forSuccess() {

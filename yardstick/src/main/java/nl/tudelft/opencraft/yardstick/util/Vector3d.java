@@ -31,6 +31,10 @@ public class Vector3d {
         return new Vector3d(x + a.x, y + a.y, z + a.z);
     }
 
+    public Vector3d add(double x, double y, double z) {
+        return new Vector3d(this.x + x, this.y + y, this.z + z);
+    }
+
     public Vector3d subtract(Vector3d a) {
         return new Vector3d(x - a.x, y - a.y, z - a.z);
     }
@@ -73,7 +77,7 @@ public class Vector3d {
     }
 
     public Vector3i intVector() {
-        return new Vector3i((int) x, (int) y, (int) z);
+        return new Vector3i((int) Math.floor(x), (int) Math.floor(y), (int) (int) Math.floor(z));
     }
 
     @Override
@@ -95,20 +99,14 @@ public class Vector3d {
         if (obj == null) {
             return false;
         }
-        if (getClass() != obj.getClass()) {
+
+        if (!(obj instanceof Vector3d)) {
             return false;
         }
-        final Vector3d other = (Vector3d) obj;
-        if (Double.doubleToLongBits(this.x) != Double.doubleToLongBits(other.x)) {
-            return false;
-        }
-        if (Double.doubleToLongBits(this.y) != Double.doubleToLongBits(other.y)) {
-            return false;
-        }
-        if (Double.doubleToLongBits(this.z) != Double.doubleToLongBits(other.z)) {
-            return false;
-        }
-        return true;
+
+        Vector3d other = (Vector3d) obj;
+
+        return x == other.x && y == other.y && z == other.z;
     }
 
 }

@@ -25,7 +25,7 @@ public class MovementModel {
      * its center.
      */
     private Vector3i getNewFieldLocation(Bot bot) {
-        int side = 16;
+        int side = 32;
         Vector3d originalLocation = bot.getPlayer().getLocation();
         int maxx = ((int) originalLocation.getX()) + side / 2;
         int minx = ((int) originalLocation.getX()) - side / 2;

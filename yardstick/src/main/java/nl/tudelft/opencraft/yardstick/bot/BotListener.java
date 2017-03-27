@@ -403,6 +403,8 @@ public class BotListener implements SessionListener {
             Session session = bot.getClient().getSession();
             session.send(new ClientTeleportConfirmPacket(p.getTeleportId()));
 
+            logger.info("Received new Player position: " + player.getLocation());
+
         } else if (packet instanceof ServerPlayerUseBedPacket) {
             // 0x2F Use Bed
             ServerPlayerUseBedPacket p = (ServerPlayerUseBedPacket) packet;

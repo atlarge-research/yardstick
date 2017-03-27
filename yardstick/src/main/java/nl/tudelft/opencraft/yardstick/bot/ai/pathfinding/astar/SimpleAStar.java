@@ -26,9 +26,11 @@ public class SimpleAStar {
     public PathNode search(Vector3i start, Vector3i end) throws ChunkNotLoadedException {
         Map<Vector3i, PathNode> nodeMap = new HashMap<>();
         Set<PathNode> visited = new HashSet<>();
+
         PriorityQueue<PathNode> toVisit = new PriorityQueue<>(Comparator.comparingDouble(thisNode
                 -> thisNode.getCost() + heuristic.calculateCost(thisNode.getLocation().doubleVector(), end.doubleVector())
         ));
+
         PathNode startNode = new PathNode(start);
         startNode.setCost(0);
         nodeMap.put(start, startNode);
@@ -37,44 +39,42 @@ public class SimpleAStar {
         while (!toVisit.isEmpty() && !Thread.interrupted()) {
             PathNode current = toVisit.poll();
             visited.add(current);
-            if (current.getLocation().distance(end) < 1 && worldPhysics.canWalk(current.getLocation(), end)) {
+
+            if (current.getLocation().distanceSquared(end) <= 1 && worldPhysics.canWalk(current.getLocation(), end)) {
                 PathNode endNode = new PathNode(end, current, null);
                 return buildPath(endNode);
-            } else {
-                Set<PathNode> neigborNodes = new HashSet<>();
-                for (Vector3i vec : worldPhysics.findAdjacent(current.getLocation())) {
-                    if (nodeMap.containsKey(vec)) {
-                        neigborNodes.add(nodeMap.get(vec));
-                    } else {
-                        BlockPathNode node = new BlockPathNode(vec);
-                        node.setCost(current.getCost() + 1);
-                        node.setPrevious(current);
-                        neigborNodes.add(node);
-                        nodeMap.put(vec, node);
-                    }
+            }
+
+            Set<PathNode> neigborNodes = new HashSet<>();
+            for (Vector3i vec : worldPhysics.findWalkable(current.getLocation())) {
+                if (vec == null) {
+                    continue;
                 }
 
-                for (PathNode neighbor : neigborNodes) {
-                    if (visited.contains(neighbor)) {
-                        continue;
-                    }
-                    try {
-                        if (!worldPhysics.canWalk(current.getLocation(), neighbor.getLocation())) {
-                            continue;
-                        }
-                    } catch (ChunkNotLoadedException ex) {
-                        // TODO: This is not right
-                        continue;
-                    }
+                // Discover neighbour
+                if (nodeMap.containsKey(vec)) {
+                    neigborNodes.add(nodeMap.get(vec));
+                } else {
+                    BlockPathNode node = new BlockPathNode(vec);
+                    node.setCost(current.getCost() + 1);
+                    node.setPrevious(current);
+                    neigborNodes.add(node);
+                    nodeMap.put(vec, node);
+                }
+            }
 
-                    if (!toVisit.contains(neighbor)) {
-                        toVisit.add(neighbor);
-                    } else if (toVisit.contains(neighbor) && neighbor.getCost() > current.getCost() + 1) {
-                        toVisit.remove(neighbor);
-                        neighbor.setCost(current.getCost() + 1);
-                        neighbor.setPrevious(current);
-                        toVisit.add(neighbor);
-                    }
+            for (PathNode neighbor : neigborNodes) {
+                if (visited.contains(neighbor)) {
+                    continue;
+                }
+
+                if (!toVisit.contains(neighbor)) {
+                    toVisit.add(neighbor);
+                } else if (toVisit.contains(neighbor) && neighbor.getCost() > current.getCost() + 1) {
+                    toVisit.remove(neighbor);
+                    neighbor.setCost(current.getCost() + 1);
+                    neighbor.setPrevious(current);
+                    toVisit.add(neighbor);
                 }
             }
         }
