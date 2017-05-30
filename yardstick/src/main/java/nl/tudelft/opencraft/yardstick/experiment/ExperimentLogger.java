@@ -1,11 +1,11 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import com.github.steveice10.packetlib.event.session.ConnectedEvent;
 import com.github.steveice10.packetlib.event.session.DisconnectedEvent;
 import com.github.steveice10.packetlib.event.session.DisconnectingEvent;
 import com.github.steveice10.packetlib.event.session.SessionAdapter;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ExperimentLogger extends SessionAdapter {
 

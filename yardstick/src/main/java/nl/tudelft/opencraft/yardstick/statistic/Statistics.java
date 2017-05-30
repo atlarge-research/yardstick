@@ -1,5 +1,6 @@
 package nl.tudelft.opencraft.yardstick.statistic;
 
+import nl.tudelft.opencraft.yardstick.util.CountingOutputStream;
 import java.io.IOException;
 import java.util.logging.Level;
 import io.prometheus.client.CollectorRegistry;

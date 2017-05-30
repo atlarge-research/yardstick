@@ -16,14 +16,17 @@ public class Options {
     @Parameter(names = {"--help"}, help = true, description = "Shows help")
     public boolean help;
 
-    @Parameter(names = {"--experiment", "-e"}, required = true, description = "The experiment ID - int")
+    @Parameter(names = {"--host", "-h"}, description = "The host of the Minecraft server")
+    public String host = "127.0.0.1";
+
+    @Parameter(names = {"--port", "-p"}, description = "The port of the Minecraft server")
+    public int port = 25565;
+
+    @Parameter(names = {"--experiment", "-e"}, required = true, description = "The experiment ID")
     public int experiment;
 
-    @Parameter(names = {"--host", "-h"}, required = true, description = "The host of the Minecraft server")
-    public String host;
-
-    @Parameter(names = {"--port", "-p"}, required = true, description = "The port of the Minecraft server")
-    public int port;
+    @Parameter(names = {"--dump-workload", "-d"}, description = "Indicates whether to dump the workload traces to the 'workload' folder")
+    public boolean dumpWorkload;
 
     @Parameter(names = {"--prometheus-host", "-ph"}, description = "The host of the Prometheus server")
     public String prometheusHost;

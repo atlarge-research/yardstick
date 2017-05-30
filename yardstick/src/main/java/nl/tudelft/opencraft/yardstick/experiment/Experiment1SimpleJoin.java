@@ -20,14 +20,8 @@ public class Experiment1SimpleJoin extends Experiment {
 
     @Override
     protected void before() {
-        String name = "YSBot-1";
-        client = new Client(options.host, options.port, new MinecraftProtocol(name), new TcpSessionFactory());
-        Session s = client.getSession();
-        s.addListener(new ExperimentLogger(logger.newSubLogger(name)));
-        if (this.getStats() != null) {
-            s.addListener(this.getStats());
-        }
-        s.connect();
+        client = newClient("YSBot-1");
+        client.getSession().connect();
     }
 
     @Override

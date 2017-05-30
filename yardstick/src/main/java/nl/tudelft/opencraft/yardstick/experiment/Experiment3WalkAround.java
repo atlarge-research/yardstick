@@ -10,7 +10,7 @@ import nl.tudelft.opencraft.yardstick.util.Vector3i;
 public class Experiment3WalkAround extends Experiment {
 
     private Bot bot;
-    private MovementModel movement = new MovementModel();
+    private final MovementModel movement = new MovementModel();
 
     public Experiment3WalkAround() {
         super(3, "A simple test demonstrating A* movement");
@@ -18,11 +18,8 @@ public class Experiment3WalkAround extends Experiment {
 
     @Override
     protected void before() {
-        this.bot = new Bot(new MinecraftProtocol("YSBot-1"), options.host, options.port);
+        this.bot = newBot("YSBot-1");
         this.bot.connect();
-        if (this.getStats() != null) {
-            this.bot.getClient().getSession().addListener(this.getStats());
-        }
 
         // TODO: Do something about this
         while (this.bot.getPlayer() == null) {

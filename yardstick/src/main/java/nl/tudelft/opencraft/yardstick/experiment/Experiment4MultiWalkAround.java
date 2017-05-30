@@ -2,7 +2,6 @@ package nl.tudelft.opencraft.yardstick.experiment;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import com.github.steveice10.mc.protocol.MinecraftProtocol;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
@@ -21,12 +20,11 @@ public class Experiment4MultiWalkAround extends Experiment {
     private int durationInSeconds;
     private int secondsBetweenJoin;
     private int numberOfBotsPerJoin;
-    private Map<Bot, Vector3d> botSpawnLocations = new HashMap<>();
+    private final Map<Bot, Vector3d> botSpawnLocations = new HashMap<>();
     private long lastJoin = System.currentTimeMillis();
 
     public Experiment4MultiWalkAround() {
         super(3, "A simple test demonstrating A* movement");
-        this.startMillis = System.currentTimeMillis();
     }
 
     @Override
@@ -35,6 +33,7 @@ public class Experiment4MultiWalkAround extends Experiment {
         this.durationInSeconds = Integer.parseInt(options.experimentParams.getOrDefault("duration", "600"));
         this.secondsBetweenJoin = Integer.parseInt(options.experimentParams.getOrDefault("joininterval", "1"));
         this.numberOfBotsPerJoin = Integer.parseInt(options.experimentParams.getOrDefault("numbotsperjoin", "1"));
+        this.startMillis = System.currentTimeMillis();
     }
 
     @Override
@@ -81,10 +80,7 @@ public class Experiment4MultiWalkAround extends Experiment {
     }
 
     private Bot createBot() throws ConnectException {
-        Bot bot = new Bot(new MinecraftProtocol(UUID.randomUUID().toString().substring(0, 6)), options.host, options.port);
-        if (this.getStats() != null) {
-            bot.addSessionListener(this.getStats());
-        }
+        Bot bot = newBot(UUID.randomUUID().toString().substring(0, 6));
         bot.connect();
         int sleep = 1000;
         int tries = 10;

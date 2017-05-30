@@ -1,10 +1,10 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import java.util.ArrayList;
-import java.util.List;
 import com.github.steveice10.mc.protocol.MinecraftProtocol;
 import com.github.steveice10.packetlib.Client;
 import com.github.steveice10.packetlib.tcp.TcpSessionFactory;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Experiment2ScheduledJoin extends Experiment {
 
@@ -71,10 +71,7 @@ public class Experiment2ScheduledJoin extends Experiment {
         logger.info("Bot " + botsJoined + " joining on node " + node + " (this node)");
 
         // Connect
-        String name = "YSBot-" + node + "-" + botsJoined;
-        Client client = new Client(options.host, options.port, new MinecraftProtocol(name), new TcpSessionFactory());
-        client.getSession().addListener(new ExperimentLogger(logger.newSubLogger(name)));
-        client.getSession().addListener(this.getStats());
+        Client client = newClient("YSBot-" + node + "-" + botsJoined);
         client.getSession().connect();
 
         if (!client.getSession().isConnected()) {

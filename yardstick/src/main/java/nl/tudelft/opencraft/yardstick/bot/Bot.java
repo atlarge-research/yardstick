@@ -4,6 +4,7 @@ import com.github.steveice10.mc.protocol.MinecraftProtocol;
 import com.github.steveice10.packetlib.Client;
 import com.github.steveice10.packetlib.event.session.SessionListener;
 import com.github.steveice10.packetlib.tcp.TcpSessionFactory;
+import java.util.concurrent.Future;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.SimpleAStar;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.heuristic.EuclideanHeuristic;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
@@ -19,8 +20,8 @@ public class Bot {
     private final MinecraftProtocol protocol;
     private final String name;
     private final BotTicker ticker;
+    private final Client client;
     //
-    private Client client;
     private World world;
     private Server server;
     private BotPlayer player;

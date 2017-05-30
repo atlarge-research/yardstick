@@ -10,6 +10,7 @@ import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SimpleTimeFormatter;
 import nl.tudelft.opencraft.yardstick.statistic.Statistics;
 import nl.tudelft.opencraft.yardstick.statistic.StatisticsPusher;
+import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
 
 public class Yardstick {
 
@@ -73,6 +74,10 @@ public class Yardstick {
 
         if (OPTIONS.prometheusHost != null) {
             ex.setStats(new Statistics(OPTIONS.prometheusHost, OPTIONS.prometheusPort));
+        }
+        
+        if (OPTIONS.dumpWorkload) {
+            ex.setWorkloadDumper(new WorkloadDumper());
         }
 
         Thread t = new Thread(ex);
