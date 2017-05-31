@@ -589,7 +589,6 @@ public class BotListener implements SessionListener {
 
     @Override
     public void connected(ConnectedEvent ce) {
-        logger.info("Connected");
     }
 
     @Override

@@ -10,6 +10,7 @@ import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SimpleTimeFormatter;
 import nl.tudelft.opencraft.yardstick.statistic.Statistics;
 import nl.tudelft.opencraft.yardstick.statistic.StatisticsPusher;
+import nl.tudelft.opencraft.yardstick.workload.CsvConverter;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
 
 public class Yardstick {
@@ -32,6 +33,21 @@ public class Yardstick {
 
         if (OPTIONS.help) {
             optParser.usage();
+            return;
+        }
+
+        if (OPTIONS.csvDump) {
+            if (OPTIONS.inFile == null || OPTIONS.outFile == null) {
+                LOGGER.severe("CSV conversion requires both input and output files to be set.");
+                return;
+            }
+
+            CsvConverter.convertCsv(OPTIONS.inFile, OPTIONS.outFile);
+            return;
+        }
+
+        if (OPTIONS.experiment < 1) {
+            LOGGER.severe("You must specify the experiment ID.");
             return;
         }
 
@@ -75,7 +91,7 @@ public class Yardstick {
         if (OPTIONS.prometheusHost != null) {
             ex.setStats(new Statistics(OPTIONS.prometheusHost, OPTIONS.prometheusPort));
         }
-        
+
         if (OPTIONS.dumpWorkload) {
             ex.setWorkloadDumper(new WorkloadDumper());
         }

@@ -1,3 +1,6 @@
+# Yardstick excludes
+/workload
+
 # Netbeans excludes
 /nbproject/private
 /dist

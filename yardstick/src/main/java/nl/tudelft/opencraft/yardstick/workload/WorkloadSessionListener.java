@@ -11,12 +11,12 @@ public class WorkloadSessionListener implements SessionListener {
 
     private final WorkloadDumper dumper;
     private final String botName;
-    
+
     public WorkloadSessionListener(WorkloadDumper dumper, String botName) {
         this.dumper = dumper;
         this.botName = botName;
     }
-    
+
     @Override
     public void packetReceived(PacketReceivedEvent pre) {
         dumper.packetReceived(botName, pre);

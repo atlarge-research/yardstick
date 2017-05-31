@@ -1,18 +1,5 @@
 package nl.tudelft.opencraft.yardstick.workload;
 
-import com.github.steveice10.mc.protocol.MinecraftProtocol;
-import com.github.steveice10.packetlib.Session;
-import com.github.steveice10.packetlib.event.session.PacketReceivedEvent;
-import com.github.steveice10.packetlib.event.session.PacketSentEvent;
-import com.github.steveice10.packetlib.io.NetOutput;
-import com.github.steveice10.packetlib.io.stream.StreamNetInput;
-import com.github.steveice10.packetlib.io.stream.StreamNetOutput;
-import com.github.steveice10.packetlib.packet.Packet;
-import com.github.steveice10.packetlib.packet.PacketHeader;
-import com.github.steveice10.packetlib.tcp.io.ByteBufNetInput;
-import com.github.steveice10.packetlib.tcp.io.ByteBufNetOutput;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -21,9 +8,16 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
+import com.github.steveice10.packetlib.Session;
+import com.github.steveice10.packetlib.event.session.PacketReceivedEvent;
+import com.github.steveice10.packetlib.event.session.PacketSentEvent;
+import com.github.steveice10.packetlib.io.NetOutput;
+import com.github.steveice10.packetlib.io.stream.StreamNetOutput;
+import com.github.steveice10.packetlib.packet.Packet;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 import nl.tudelft.opencraft.yardstick.util.CountingOutputStream;
+import nl.tudelft.opencraft.yardstick.util.PacketUtil;
 
 public class WorkloadDumper implements AutoCloseable {
 
@@ -34,23 +28,22 @@ public class WorkloadDumper implements AutoCloseable {
     private final CountingOutputStream cos = new CountingOutputStream();
     private final NetOutput cno = new StreamNetOutput(cos);
 
-    private DataOutputStream createDos(String botName) {
-        if (dumpFolder.exists()) {
-            // Clear the previous dumps
-            for (File file : dumpFolder.listFiles()) {
-                if (!file.delete()) {
-                    LOGGER.warning("Could not delete file: " + file.getPath());
-                }
-            }
-
-        } else {
-            // Create the workload folder
-            if (!dumpFolder.mkdirs()) {
-                LOGGER.severe("Could not create folder: " + dumpFolder.getPath());
-                return null;
-            }
+    public WorkloadDumper() {
+        if (!dumpFolder.exists() && !dumpFolder.mkdirs()) {
+            LOGGER.severe("Could not create folder: " + dumpFolder.getPath());
+            throw new RuntimeException(new IOException("Could not create folder: " + dumpFolder.getPath()));
         }
 
+        // Clear the previous dumps
+        for (File file : dumpFolder.listFiles()) {
+            LOGGER.info("Deleting previous dump: " + file.getName());
+            if (!file.delete()) {
+                LOGGER.warning("Could not delete file: " + file.getPath());
+            }
+        }
+    }
+
+    private DataOutputStream createDos(String botName) {
         File dumpFile = new File(dumpFolder, botName + ".bin");
         try {
             return new DataOutputStream(new BufferedOutputStream(new FileOutputStream(dumpFile)));
@@ -85,7 +78,7 @@ public class WorkloadDumper implements AutoCloseable {
 
         try {
             serializeWrite(pse.getPacket(), pse.getSession(), dos, true);
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             LOGGER.log(Level.SEVERE, "Could not write packet for: " + botName, ex);
         }
     }
@@ -99,40 +92,23 @@ public class WorkloadDumper implements AutoCloseable {
 
         try {
             serializeWrite(pre.getPacket(), pre.getSession(), dos, false);
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             LOGGER.log(Level.SEVERE, "Could not write packet for: " + botName, ex);
         }
     }
 
-    private void serializeWrite(Packet pack, Session session, DataOutputStream dos, boolean sent) throws IOException {
-        if (sent)
-        
-        // Read the packet length
+    private void serializeWrite(Packet pack, Session session, DataOutputStream dos, boolean outgoing) throws Exception {
         cos.reset();
         pack.write(cno);
         long length = cos.getCount();
 
-        // Hack to read the packet ID
-        MinecraftProtocol prot = (MinecraftProtocol) session.getPacketProtocol();
-        PacketHeader ph = prot.getPacketHeader();
-
-        ByteBuf buf = Unpooled.buffer((int) length);
-        ByteBufNetOutput bufOut = new ByteBufNetOutput(buf);
-
-        pack.write(bufOut);
-        bufOut.flush();
-        LOGGER.info("Packet: " + buf.readableBytes() + " " + pack.getClass().getSimpleName());
-
-        ByteBufNetInput bufIn = new ByteBufNetInput(buf);
-        ph.readLength(bufIn, buf.readableBytes());
-        int packId = prot.getPacketHeader().readPacketId(bufIn);
-
-        buf.release();
+        int packId = PacketUtil.getPacketId(session.getPacketProtocol(), pack, outgoing);
 
         // Write the data to the dump
         dos.writeLong(System.currentTimeMillis());
-        dos.writeByte(sent ? 1 : 2);
-        dos.writeInt(packId);
+        dos.writeByte(outgoing ? 1 : 2);
+        //dos.writeInt(packId);
+        dos.writeUTF(pack.getClass().getSimpleName());
         dos.writeLong(length);
     }
 

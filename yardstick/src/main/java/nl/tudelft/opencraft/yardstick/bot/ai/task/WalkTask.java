@@ -91,14 +91,6 @@ public class WalkTask implements Task {
             try {
                 nextStep = pathFuture.get();
                 ticksSinceStepChange = 0;
-
-                // DEBUG START
-                PathNode l = nextStep;
-                do {
-                    logger.info("Path -> " + l.getLocation());
-                } while ((l = l.getNext()) != null);
-                // DEBUG STOP
-
             } catch (InterruptedException e) {
                 return status = TaskStatus.forFailure(e.getMessage(), e);
             } catch (ExecutionException e) {
@@ -215,9 +207,6 @@ public class WalkTask implements Task {
         if (moveLoc.equals(stepTarget)) {
             nextStep = nextStep.getNext();
             ticksSinceStepChange = 0;
-            logger.info("Moving: " + moveLoc + " (step)");
-        } else {
-            //logger.info("Moving: " + oldLoc + " -> " + moveLoc + ", step: " + stepTarget);
         }
 
         return status = TaskStatus.forInProgress();

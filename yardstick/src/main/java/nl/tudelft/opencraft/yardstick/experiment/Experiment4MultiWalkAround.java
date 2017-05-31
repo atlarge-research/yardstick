@@ -74,7 +74,7 @@ public class Experiment4MultiWalkAround extends Experiment {
         Task t = bot.getTask();
         if (t == null || t.getStatus().getType() != TaskStatus.StatusType.IN_PROGRESS) {
             Vector3i newLocation = movement.newTargetLocation(bot);
-            logger.info(String.format("Setting task for bot to walk to %s", newLocation));
+            bot.getLogger().info(String.format("Setting task for bot to walk to %s", newLocation));
             bot.setTask(new WalkTask(bot, newLocation));
         }
     }
