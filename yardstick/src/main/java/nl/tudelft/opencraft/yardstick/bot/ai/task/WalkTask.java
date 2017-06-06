@@ -150,7 +150,11 @@ public class WalkTask implements Task {
         }
 
         // Step
-        Vector3d stepTarget = nextStep.getLocation().doubleVector();
+        Vector3i stepTargetBlock = nextStep.getLocation();
+        if (stepTargetBlock == null) {
+            return status = TaskStatus.forFailure("No next step");
+        }
+        Vector3d stepTarget = stepTargetBlock.doubleVector();
 
         // Stand on the center of a block
         stepTarget = stepTarget.add(0.5, 0, 0.5);

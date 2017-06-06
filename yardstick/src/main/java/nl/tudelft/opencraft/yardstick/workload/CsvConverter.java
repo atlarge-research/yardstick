@@ -1,13 +1,16 @@
 package nl.tudelft.opencraft.yardstick.workload;
 
+import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.zip.GZIPInputStream;
 import nl.tudelft.opencraft.yardstick.Yardstick;
 
 public class CsvConverter {
@@ -17,7 +20,7 @@ public class CsvConverter {
     private CsvConverter() {
     }
 
-    public static void convertCsv(String inFileName, String outFileName) {
+    public static void convertCsv(String inFileName, String outFileName) throws IOException {
         File inFile = new File(inFileName);
         File outFile = new File(outFileName);
 
@@ -38,12 +41,17 @@ public class CsvConverter {
 
         DataInputStream in;
         try {
-            in = new DataInputStream(new FileInputStream(inFile));
+            FileInputStream fos = new FileInputStream(inFile);
+            BufferedInputStream bos = new BufferedInputStream(fos);
+            //GZIPInputStream gos = new GZIPInputStream(in);
+
+            in = new DataInputStream(bos);
         } catch (FileNotFoundException ex) {
             LOGGER.log(Level.SEVERE, "Could not read from file: " + inFileName, ex);
             return;
         }
 
+        LOGGER.info("Converting: " + inFileName);
         try {
             out.write("timestamp,outgoing,name,length\n");
 
@@ -59,8 +67,13 @@ public class CsvConverter {
                 sb.append(outgoing).append(',');
 
                 // Packet Name
-                String packetName = in.readUTF();
-                sb.append(packetName).append(',');
+                int nameLength = in.readInt();
+                if (nameLength > 100) {
+                    LOGGER.warning("Long packet name: " + nameLength);
+                }
+                byte[] name = new byte[nameLength];
+                in.readFully(name);
+                sb.append(new String(name, StandardCharsets.UTF_8)).append(',');
 
                 // Packet length
                 sb.append(in.readLong());
@@ -72,16 +85,16 @@ public class CsvConverter {
 
             LOGGER.info("Converted " + packets + " packets");
         } catch (Exception ex) {
-            LOGGER.log(Level.SEVERE, "Could not convert to CSV", ex);
-            return;
+            LOGGER.log(Level.SEVERE, "Could not convert to CSV: " + outFileName, ex);
+        } finally {
+            try {
+                in.close();
+            } catch (IOException ex) {
+            }
+            out.flush();
+            out.close();
         }
 
-        try {
-            in.close();
-        } catch (IOException ex) {
-        }
-        out.flush();
-        out.close();
     }
 
 }

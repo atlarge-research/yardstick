@@ -1,32 +1,21 @@
 package nl.tudelft.opencraft.yardstick.workload;
 
-import java.io.BufferedOutputStream;
-import java.io.DataOutputStream;
+import com.github.steveice10.packetlib.event.session.PacketReceivedEvent;
+import com.github.steveice10.packetlib.event.session.PacketSentEvent;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
-import com.github.steveice10.packetlib.Session;
-import com.github.steveice10.packetlib.event.session.PacketReceivedEvent;
-import com.github.steveice10.packetlib.event.session.PacketSentEvent;
-import com.github.steveice10.packetlib.io.NetOutput;
-import com.github.steveice10.packetlib.io.stream.StreamNetOutput;
-import com.github.steveice10.packetlib.packet.Packet;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
-import nl.tudelft.opencraft.yardstick.util.CountingOutputStream;
-import nl.tudelft.opencraft.yardstick.util.PacketUtil;
 
 public class WorkloadDumper implements AutoCloseable {
 
     private static final SubLogger LOGGER = GlobalLogger.getLogger().newSubLogger("WorkloadDumper");
     private final File dumpFolder = new File("workload");
-    private final Map<String, DataOutputStream> writers = new HashMap<>();
+    private final Map<String, FilePacketDumper> dumpers = new HashMap<>();
     //
-    private final CountingOutputStream cos = new CountingOutputStream();
-    private final NetOutput cno = new StreamNetOutput(cos);
 
     public WorkloadDumper() {
         if (!dumpFolder.exists() && !dumpFolder.mkdirs()) {
@@ -43,83 +32,62 @@ public class WorkloadDumper implements AutoCloseable {
         }
     }
 
-    private DataOutputStream createDos(String botName) {
+    private FilePacketDumper getDumper(String botName) {
+        FilePacketDumper dumper = dumpers.get(botName);
+
+        if (dumper != null) {
+            return dumper;
+        }
+
         File dumpFile = new File(dumpFolder, botName + ".bin");
+
         try {
-            return new DataOutputStream(new BufferedOutputStream(new FileOutputStream(dumpFile)));
+            dumper = new FilePacketDumper(dumpFile);
         } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, "Could not create file stream: " + dumpFile.getPath(), ex);
             return null;
         }
-    }
 
-    private DataOutputStream getDos(String botName) {
-        DataOutputStream dos = writers.get(botName);
+        dumpers.put(botName, dumper);
 
-        if (dos == null) {
-            dos = createDos(botName);
-
-            if (dos == null) {
-                return null;
-            }
-
-            writers.put(botName, dos);
-        }
-
-        return dos;
+        return dumper;
     }
 
     public void packetSent(String botName, PacketSentEvent pse) {
-        DataOutputStream dos = getDos(botName);
+        FilePacketDumper dumper = getDumper(botName);
 
-        if (dos == null) {
+        if (dumper == null) {
             return;
         }
 
         try {
-            serializeWrite(pse.getPacket(), pse.getSession(), dos, true);
+            dumper.dump(pse.getPacket(), true);
         } catch (Exception ex) {
             LOGGER.log(Level.SEVERE, "Could not write packet for: " + botName, ex);
         }
     }
 
     public void packetReceived(String botName, PacketReceivedEvent pre) {
-        DataOutputStream dos = getDos(botName);
+        FilePacketDumper dumper = getDumper(botName);
 
-        if (dos == null) {
+        if (dumper == null) {
             return;
         }
 
         try {
-            serializeWrite(pre.getPacket(), pre.getSession(), dos, false);
+            dumper.dump(pre.getPacket(), false);
         } catch (Exception ex) {
             LOGGER.log(Level.SEVERE, "Could not write packet for: " + botName, ex);
         }
     }
 
-    private void serializeWrite(Packet pack, Session session, DataOutputStream dos, boolean outgoing) throws Exception {
-        cos.reset();
-        pack.write(cno);
-        long length = cos.getCount();
-
-        int packId = PacketUtil.getPacketId(session.getPacketProtocol(), pack, outgoing);
-
-        // Write the data to the dump
-        dos.writeLong(System.currentTimeMillis());
-        dos.writeByte(outgoing ? 1 : 2);
-        //dos.writeInt(packId);
-        dos.writeUTF(pack.getClass().getSimpleName());
-        dos.writeLong(length);
-    }
-
     @Override
     public void close() throws Exception {
-        for (DataOutputStream dos : writers.values()) {
-            dos.flush();
+        for (FilePacketDumper dos : dumpers.values()) {
             dos.close();
         }
 
-        writers.clear();
+        dumpers.clear();
     }
 
 }
