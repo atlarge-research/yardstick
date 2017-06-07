@@ -7,10 +7,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.zip.GZIPInputStream;
 import nl.tudelft.opencraft.yardstick.Yardstick;
 
 public class CsvConverter {
@@ -20,7 +18,7 @@ public class CsvConverter {
     private CsvConverter() {
     }
 
-    public static void convertCsv(String inFileName, String outFileName) throws IOException {
+    public static void convertCsv(String inFileName, String outFileName) {
         File inFile = new File(inFileName);
         File outFile = new File(outFileName);
 
@@ -52,40 +50,19 @@ public class CsvConverter {
         }
 
         LOGGER.info("Converting: " + inFileName);
+        int packets = 0;
         try {
             out.write("timestamp,outgoing,name,length\n");
 
-            int packets = 0;
             while (in.available() > 0) {
-                StringBuilder sb = new StringBuilder();
-
-                // Timestamp
-                sb.append(in.readLong()).append(',');
-
-                // Incoming/outgoing
-                boolean outgoing = in.readByte() == 1;
-                sb.append(outgoing).append(',');
-
-                // Packet Name
-                int nameLength = in.readInt();
-                if (nameLength > 100) {
-                    LOGGER.warning("Long packet name: " + nameLength);
-                }
-                byte[] name = new byte[nameLength];
-                in.readFully(name);
-                sb.append(new String(name, StandardCharsets.UTF_8)).append(',');
-
-                // Packet length
-                sb.append(in.readLong());
-
-                sb.append('\n');
-                out.write(sb.toString());
+                PacketEntry entry = PacketEntry.readFrom(in);
+                out.write(entry.toCsv());
                 packets++;
             }
 
             LOGGER.info("Converted " + packets + " packets");
         } catch (Exception ex) {
-            LOGGER.log(Level.SEVERE, "Could not convert to CSV: " + outFileName, ex);
+            LOGGER.log(Level.SEVERE, "Could not convert to CSV: " + outFileName + ". At packet: " + packets, ex);
         } finally {
             try {
                 in.close();

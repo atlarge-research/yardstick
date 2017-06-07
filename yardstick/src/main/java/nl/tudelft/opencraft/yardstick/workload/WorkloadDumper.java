@@ -1,21 +1,25 @@
 package nl.tudelft.opencraft.yardstick.workload;
 
-import com.github.steveice10.packetlib.event.session.PacketReceivedEvent;
-import com.github.steveice10.packetlib.event.session.PacketSentEvent;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
+import com.github.steveice10.packetlib.event.session.PacketReceivedEvent;
+import com.github.steveice10.packetlib.event.session.PacketSentEvent;
+import com.github.steveice10.packetlib.packet.Packet;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 
-public class WorkloadDumper implements AutoCloseable {
+public class WorkloadDumper {
 
     private static final SubLogger LOGGER = GlobalLogger.getLogger().newSubLogger("WorkloadDumper");
     private final File dumpFolder = new File("workload");
-    private final Map<String, FilePacketDumper> dumpers = new HashMap<>();
+    private final Map<String, PacketEntryWriter> queues = new HashMap<>();
     //
+    private final AtomicBoolean running = new AtomicBoolean(false);
+    private Thread writerThread;
 
     public WorkloadDumper() {
         if (!dumpFolder.exists() && !dumpFolder.mkdirs()) {
@@ -32,8 +36,8 @@ public class WorkloadDumper implements AutoCloseable {
         }
     }
 
-    private FilePacketDumper getDumper(String botName) {
-        FilePacketDumper dumper = dumpers.get(botName);
+    private PacketEntryWriter getQueue(String botName) {
+        PacketEntryWriter dumper = queues.get(botName);
 
         if (dumper != null) {
             return dumper;
@@ -42,52 +46,88 @@ public class WorkloadDumper implements AutoCloseable {
         File dumpFile = new File(dumpFolder, botName + ".bin");
 
         try {
-            dumper = new FilePacketDumper(dumpFile);
+            dumper = new PacketEntryWriter(dumpFile);
         } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, "Could not create file stream: " + dumpFile.getPath(), ex);
             return null;
         }
 
-        dumpers.put(botName, dumper);
-
+        queues.put(botName, dumper);
         return dumper;
     }
 
     public void packetSent(String botName, PacketSentEvent pse) {
-        FilePacketDumper dumper = getDumper(botName);
-
-        if (dumper == null) {
-            return;
-        }
-
-        try {
-            dumper.dump(pse.getPacket(), true);
-        } catch (Exception ex) {
-            LOGGER.log(Level.SEVERE, "Could not write packet for: " + botName, ex);
-        }
+        handlePacket(botName, pse.getPacket(), true);
     }
 
     public void packetReceived(String botName, PacketReceivedEvent pre) {
-        FilePacketDumper dumper = getDumper(botName);
+        handlePacket(botName, pre.getPacket(), false);
+    }
+
+    public void start() {
+        if (running.getAndSet(true)) {
+            throw new IllegalStateException("Dumper already started.");
+        }
+
+        writerThread = new Thread(new WriteRunnable(), "WorkloadDumper");
+        writerThread.setDaemon(false);
+        writerThread.start();
+    }
+
+    public void stop() {
+        if (!running.getAndSet(false)) {
+            throw new IllegalStateException("Dumper not started.");
+        }
+
+        try {
+            writerThread.join(2000);
+
+        } catch (InterruptedException ex) {
+            LOGGER.log(Level.SEVERE, null, ex);
+        }
+
+        if (writerThread.isAlive()) {
+            throw new IllegalThreadStateException("Writer thread took too long to stop");
+        }
+
+        for (PacketEntryWriter dos : queues.values()) {
+            try {
+                dos.close();
+            } catch (Exception ex) {
+                LOGGER.log(Level.SEVERE, null, ex);
+            }
+        }
+
+        queues.clear();
+    }
+
+    private void handlePacket(String botName, Packet packet, boolean outgoing) {
+        PacketEntryWriter dumper = getQueue(botName);
 
         if (dumper == null) {
             return;
         }
 
-        try {
-            dumper.dump(pre.getPacket(), false);
-        } catch (Exception ex) {
-            LOGGER.log(Level.SEVERE, "Could not write packet for: " + botName, ex);
-        }
+        dumper.queue(PacketEntry.forPacket(packet, outgoing));
     }
 
-    @Override
-    public void close() throws Exception {
-        for (FilePacketDumper dos : dumpers.values()) {
-            dos.close();
+    private class WriteRunnable implements Runnable {
+
+        @Override
+        public void run() {
+            running.set(true);
+
+            while (running.get()) {
+                for (PacketEntryWriter peq : queues.values()) {
+                    peq.writeQueued();
+                }
+
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ex) {
+                    LOGGER.log(Level.SEVERE, null, ex);
+                }
+            }
         }
-
-        dumpers.clear();
     }
-
 }

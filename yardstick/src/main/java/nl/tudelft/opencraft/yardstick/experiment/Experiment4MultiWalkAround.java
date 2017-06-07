@@ -46,7 +46,7 @@ public class Experiment4MultiWalkAround extends Experiment {
             botList.removeAll(disconnectedBots);
         }
         if (System.currentTimeMillis() - this.lastJoin > secondsBetweenJoin * 1000
-                && botList.size() < this.botsTotal) {
+                && botList.size() <= this.botsTotal) {
             lastJoin = System.currentTimeMillis();
             int botsToConnect = Math.min(this.numberOfBotsPerJoin, this.botsTotal - botList.size());
             for (int i = 0; i < botsToConnect; i++) {

@@ -4,7 +4,6 @@ import com.github.steveice10.mc.protocol.MinecraftProtocol;
 import com.github.steveice10.packetlib.Client;
 import com.github.steveice10.packetlib.Session;
 import com.github.steveice10.packetlib.tcp.TcpSessionFactory;
-import java.util.logging.Level;
 import nl.tudelft.opencraft.yardstick.Options;
 import nl.tudelft.opencraft.yardstick.Yardstick;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
@@ -42,8 +41,12 @@ public abstract class Experiment implements Runnable {
             logger.info("Parameter - " + key + ": " + options.experimentParams.get(key));
         }
 
+        if (dumper != null) {
+            dumper.start();
+        }
+
         if (stats != null) {
-            stats.startPushing();
+            stats.start();
         }
 
         try {
@@ -57,14 +60,12 @@ public abstract class Experiment implements Runnable {
             after();
             logger.info("Experiment complete, exiting");
         } finally {
-            try {
-                dumper.close();
-            } catch (Exception ex) {
-                logger.log(Level.SEVERE, "Exception closing workload dumper.", ex);
+            if (dumper != null) {
+                dumper.stop();
             }
 
             if (stats != null) {
-                stats.stopPushing();
+                stats.stop();
             }
         }
         System.out.println("Goodbye.");

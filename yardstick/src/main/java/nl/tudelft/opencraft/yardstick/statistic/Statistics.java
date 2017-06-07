@@ -91,13 +91,13 @@ public class Statistics implements SessionListener {
                 .register(registry);
     }
 
-    public void startPushing() {
+    public void start() {
         Thread pushThread = new Thread(pusher);
         pushThread.setName("Statistics Pusher");
         pushThread.start();
     }
 
-    public void stopPushing() {
+    public void stop() {
         pusher.stop();
     }
 

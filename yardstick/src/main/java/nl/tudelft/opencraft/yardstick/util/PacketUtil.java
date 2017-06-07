@@ -1,13 +1,13 @@
 package nl.tudelft.opencraft.yardstick.util;
 
-import com.github.steveice10.packetlib.io.NetOutput;
-import com.github.steveice10.packetlib.io.stream.StreamNetOutput;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.Map.Entry;
+import com.github.steveice10.packetlib.io.NetOutput;
+import com.github.steveice10.packetlib.io.stream.StreamNetOutput;
 import com.github.steveice10.packetlib.packet.Packet;
 import com.github.steveice10.packetlib.packet.PacketProtocol;
-import java.io.IOException;
 
 public class PacketUtil {
 
@@ -17,14 +17,14 @@ public class PacketUtil {
     private PacketUtil() {
     }
 
-    public static long packetLength(Packet packet) {
+    public static int packetLength(Packet packet) {
         cos.reset();
         try {
             packet.write(cno);
         } catch (IOException ex) {
             return -1;
         }
-        return cos.getCount();
+        return (int) cos.getCount();
     }
 
     //private final Map<Class<? extends Packet>, Integer> outgoing;
