@@ -1,14 +1,21 @@
 package nl.tudelft.opencraft.yardstick.workload;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.zip.GZIPInputStream;
+import com.google.common.io.CountingInputStream;
+import com.google.common.io.CountingOutputStream;
 import nl.tudelft.opencraft.yardstick.Yardstick;
 
 public class CsvConverter {
@@ -18,7 +25,7 @@ public class CsvConverter {
     private CsvConverter() {
     }
 
-    public static void convertCsv(String inFileName, String outFileName) {
+    public static void convertCsv(String inFileName, String outFileName) throws IOException {
         File inFile = new File(inFileName);
         File outFile = new File(outFileName);
 
@@ -27,40 +34,61 @@ public class CsvConverter {
             return;
         }
 
-        outFile.getParentFile().mkdirs();
-
-        PrintWriter out;
+        // In
+        DataInputStream in;
+        CountingInputStream inCos;
         try {
-            out = new PrintWriter(outFile);
+            FileInputStream fos = new FileInputStream(inFile);
+            inCos = new CountingInputStream(fos);
+            GZIPInputStream gos = new GZIPInputStream(inCos);
+            BufferedInputStream bos2 = new BufferedInputStream(gos);
+            in = new DataInputStream(bos2);
         } catch (FileNotFoundException ex) {
-            LOGGER.log(Level.SEVERE, "Could not write to file: " + outFileName, ex);
+            LOGGER.log(Level.SEVERE, "Could not read from file: " + inFileName, ex);
             return;
         }
 
-        DataInputStream in;
+        // Out
+        BufferedOutputStream out;
+        CountingOutputStream outCos;
+        outFile.getParentFile().mkdirs();
         try {
-            FileInputStream fos = new FileInputStream(inFile);
-            BufferedInputStream bos = new BufferedInputStream(fos);
-            //GZIPInputStream gos = new GZIPInputStream(in);
-
-            in = new DataInputStream(bos);
+            FileOutputStream fos = new FileOutputStream(outFile);
+            outCos = new CountingOutputStream(fos);
+            out = new BufferedOutputStream(outCos);
         } catch (FileNotFoundException ex) {
-            LOGGER.log(Level.SEVERE, "Could not read from file: " + inFileName, ex);
+            LOGGER.log(Level.SEVERE, "Could not write to file: " + outFileName, ex);
             return;
         }
 
         LOGGER.info("Converting: " + inFileName);
         int packets = 0;
         try {
-            out.write("timestamp,outgoing,name,length\n");
+            writeString(out, "timestamp,outgoing,name,length\n");
 
             while (in.available() > 0) {
+
+                // Handle GZIPInputStream not accurately returning in.available() == 0
+                // when the end of the stream has been reached.
+                in.mark(1);
+                try {
+                    in.readByte();
+                    in.reset();
+                } catch (EOFException ex) {
+                    break;
+                }
+
+                // Read
                 PacketEntry entry = PacketEntry.readFrom(in);
-                out.write(entry.toCsv());
+
+                // Write
+                String csv = entry.toCsv();
+                writeString(out, csv);
                 packets++;
             }
 
-            LOGGER.info("Converted " + packets + " packets");
+            String compression = String.format("%.1f", ((double) outCos.getCount()) / inCos.getCount());
+            LOGGER.info("Converted " + packets + " packets. Compression ratio: " + compression);
         } catch (Exception ex) {
             LOGGER.log(Level.SEVERE, "Could not convert to CSV: " + outFileName + ". At packet: " + packets, ex);
         } finally {
@@ -72,6 +100,10 @@ public class CsvConverter {
             out.close();
         }
 
+    }
+
+    private static void writeString(OutputStream out, String string) throws IOException {
+        out.write(string.getBytes(StandardCharsets.UTF_8));
     }
 
 }

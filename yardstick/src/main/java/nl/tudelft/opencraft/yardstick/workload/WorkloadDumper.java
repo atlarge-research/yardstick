@@ -66,7 +66,7 @@ public class WorkloadDumper {
 
     public void start() {
         if (running.getAndSet(true)) {
-            throw new IllegalStateException("Dumper already started.");
+            throw new IllegalStateException("Write thread already started.");
         }
 
         writerThread = new Thread(new WriteRunnable(), "WorkloadDumper");
@@ -76,12 +76,11 @@ public class WorkloadDumper {
 
     public void stop() {
         if (!running.getAndSet(false)) {
-            throw new IllegalStateException("Dumper not started.");
+            throw new IllegalStateException("Write thread not started.");
         }
 
         try {
             writerThread.join(2000);
-
         } catch (InterruptedException ex) {
             LOGGER.log(Level.SEVERE, null, ex);
         }
@@ -113,9 +112,12 @@ public class WorkloadDumper {
 
     private class WriteRunnable implements Runnable {
 
+        private final SubLogger logger = WorkloadDumper.LOGGER.newSubLogger("WriteThread");
+
         @Override
         public void run() {
             running.set(true);
+            logger.info("Started write thread");
 
             while (running.get()) {
                 for (PacketEntryWriter peq : queues.values()) {
@@ -125,9 +127,11 @@ public class WorkloadDumper {
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException ex) {
-                    LOGGER.log(Level.SEVERE, null, ex);
+                    logger.log(Level.SEVERE, null, ex);
                 }
             }
+
+            logger.info("Stopped write thread");
         }
     }
 }
