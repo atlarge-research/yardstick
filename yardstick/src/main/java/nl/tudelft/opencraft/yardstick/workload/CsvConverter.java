@@ -25,7 +25,7 @@ public class CsvConverter {
     private CsvConverter() {
     }
 
-    public static void convertCsv(String inFileName, String outFileName) throws IOException {
+    public static void convertCsv(String inFileName, String outFileName) {
         File inFile = new File(inFileName);
         File outFile = new File(outFileName);
 
@@ -43,7 +43,7 @@ public class CsvConverter {
             GZIPInputStream gos = new GZIPInputStream(inCos);
             BufferedInputStream bos2 = new BufferedInputStream(gos);
             in = new DataInputStream(bos2);
-        } catch (FileNotFoundException ex) {
+        } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, "Could not read from file: " + inFileName, ex);
             return;
         }
@@ -96,8 +96,10 @@ public class CsvConverter {
                 in.close();
             } catch (IOException ex) {
             }
-            out.flush();
-            out.close();
+            try {
+                out.close();
+            } catch (IOException ex) {
+            }
         }
 
     }
