@@ -51,7 +51,7 @@ public class CsvConverter {
         // Out
         BufferedOutputStream out;
         CountingOutputStream outCos;
-        outFile.getCanonicalPath().getParentFile().mkdirs();
+        outFile.getCanonicalFile().getParentFile().mkdirs();
         try {
             FileOutputStream fos = new FileOutputStream(outFile);
             outCos = new CountingOutputStream(fos);
