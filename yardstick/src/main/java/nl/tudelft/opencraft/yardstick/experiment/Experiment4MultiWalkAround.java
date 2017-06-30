@@ -24,7 +24,7 @@ public class Experiment4MultiWalkAround extends Experiment {
     private long lastJoin = System.currentTimeMillis();
 
     public Experiment4MultiWalkAround() {
-        super(3, "A simple test demonstrating A* movement");
+        super(4, "Bots walking around based on Second Life model.");
     }
 
     @Override
