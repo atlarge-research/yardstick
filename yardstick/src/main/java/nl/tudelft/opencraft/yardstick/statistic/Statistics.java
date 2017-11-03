@@ -1,25 +1,26 @@
 package nl.tudelft.opencraft.yardstick.statistic;
 
-import nl.tudelft.opencraft.yardstick.util.CountingOutputStream;
-import java.io.IOException;
-import java.util.logging.Level;
+import com.github.steveice10.mc.protocol.packet.ingame.server.ServerJoinGamePacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.ServerKeepAlivePacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntityHeadLookPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntityMovementPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntityTeleportPacket;
+import com.github.steveice10.packetlib.Session;
+import com.github.steveice10.packetlib.event.session.*;
+import com.github.steveice10.packetlib.io.NetOutput;
+import com.github.steveice10.packetlib.io.stream.StreamNetOutput;
+import com.github.steveice10.packetlib.packet.Packet;
 import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.Summary;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
-import com.github.steveice10.mc.protocol.packet.ingame.server.ServerKeepAlivePacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.entity.*;
-import com.github.steveice10.packetlib.event.session.ConnectedEvent;
-import com.github.steveice10.packetlib.event.session.DisconnectedEvent;
-import com.github.steveice10.packetlib.event.session.DisconnectingEvent;
-import com.github.steveice10.packetlib.event.session.PacketReceivedEvent;
-import com.github.steveice10.packetlib.event.session.PacketSentEvent;
-import com.github.steveice10.packetlib.event.session.SessionListener;
-import com.github.steveice10.packetlib.io.NetOutput;
-import com.github.steveice10.packetlib.io.stream.StreamNetOutput;
-import com.github.steveice10.packetlib.packet.Packet;
+import nl.tudelft.opencraft.yardstick.util.CountingOutputStream;
+
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.logging.Level;
 
 public class Statistics implements SessionListener {
 
@@ -36,6 +37,8 @@ public class Statistics implements SessionListener {
     private final Counter errors;
     private final Counter keepAliveIn;
     private final Counter entityPositionUpdate;
+
+    private final HashSet<Session> connectedClientSessions = new HashSet<>();
 
     public Statistics(String host, int port) {
         this.logger = GlobalLogger.getLogger().newSubLogger("Statistics");
@@ -111,6 +114,9 @@ public class Statistics implements SessionListener {
             keepAliveIn.inc();
         } else if (packet instanceof ServerEntityMovementPacket || packet instanceof ServerEntityHeadLookPacket || packet instanceof ServerEntityTeleportPacket) {
             entityPositionUpdate.inc();
+        } else if (packet instanceof ServerJoinGamePacket) {
+            connectedClientSessions.add(pre.getSession());
+            connected.inc();
         }
 
         // Count bytes
@@ -143,7 +149,7 @@ public class Statistics implements SessionListener {
 
     @Override
     public void connected(ConnectedEvent ce) {
-        connected.inc();
+        //Ignore. We increment the connections when we receive the JoinGame packet. Then we know the player is ready.
     }
 
     @Override
@@ -152,7 +158,9 @@ public class Statistics implements SessionListener {
 
     @Override
     public void disconnected(DisconnectedEvent de) {
-        connected.dec();
+        if (connectedClientSessions.remove(de.getSession())) {
+            connected.dec();
+        }
         if (de.getCause() != null) {
             errors.inc();
         }
