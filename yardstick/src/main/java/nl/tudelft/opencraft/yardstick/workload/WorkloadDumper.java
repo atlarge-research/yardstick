@@ -1,16 +1,17 @@
 package nl.tudelft.opencraft.yardstick.workload;
 
+import com.github.steveice10.packetlib.event.session.PacketReceivedEvent;
+import com.github.steveice10.packetlib.event.session.PacketSentEvent;
+import com.github.steveice10.packetlib.packet.Packet;
+import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
+import nl.tudelft.opencraft.yardstick.logging.SubLogger;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
-import com.github.steveice10.packetlib.event.session.PacketReceivedEvent;
-import com.github.steveice10.packetlib.event.session.PacketSentEvent;
-import com.github.steveice10.packetlib.packet.Packet;
-import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
-import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 
 public class WorkloadDumper {
 
@@ -120,8 +121,10 @@ public class WorkloadDumper {
             logger.info("Started write thread");
 
             while (running.get()) {
-                for (PacketEntryWriter peq : queues.values()) {
-                    peq.writeQueued();
+                synchronized (queues) {
+                    for (PacketEntryWriter peq : queues.values()) {
+                        peq.writeQueued();
+                    }
                 }
 
                 try {
