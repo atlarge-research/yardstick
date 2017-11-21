@@ -1,6 +1,5 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import com.github.steveice10.mc.protocol.MinecraftProtocol;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
@@ -13,7 +12,7 @@ public class Experiment3WalkAround extends Experiment {
     private final MovementModel movement = new MovementModel();
 
     public Experiment3WalkAround() {
-        super(3, "A simple test demonstrating A* movement");
+        super(3, "A simple test demonstrating A* movement.");
     }
 
     @Override

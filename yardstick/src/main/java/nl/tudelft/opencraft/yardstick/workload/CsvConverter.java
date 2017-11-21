@@ -51,12 +51,12 @@ public class CsvConverter {
         // Out
         BufferedOutputStream out;
         CountingOutputStream outCos;
-        outFile.getParentFile().mkdirs();
         try {
+            outFile.getCanonicalFile().getParentFile().mkdirs();
             FileOutputStream fos = new FileOutputStream(outFile);
             outCos = new CountingOutputStream(fos);
             out = new BufferedOutputStream(outCos);
-        } catch (FileNotFoundException ex) {
+        } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, "Could not write to file: " + outFileName, ex);
             return;
         }

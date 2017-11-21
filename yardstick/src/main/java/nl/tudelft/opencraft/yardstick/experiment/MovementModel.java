@@ -39,7 +39,7 @@ public class MovementModel {
             int newY = bot.getWorld().getHighestBlockAt(newX, newZ).getY() + 1;
             return new Vector3i(newX, newY, newZ);
         } catch (ChunkNotLoadedException ex) {
-            return getNewFieldLocation(bot);
+            return originalLocation.intVector();
         }
     }
 
@@ -57,8 +57,7 @@ public class MovementModel {
             int newY = bot.getWorld().getHighestBlockAt(newX, newZ).getY() + 1;
             return new Vector3i(newX, newY, newZ);
         } catch (ChunkNotLoadedException ex) {
-            // TODO: We should do something else here...
-            return getNewFieldLocation(bot);
+            return location.intVector();
         }
     }
 

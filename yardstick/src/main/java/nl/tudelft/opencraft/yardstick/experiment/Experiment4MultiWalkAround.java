@@ -24,7 +24,7 @@ public class Experiment4MultiWalkAround extends Experiment {
     private long lastJoin = System.currentTimeMillis();
 
     public Experiment4MultiWalkAround() {
-        super(4, "A simple test demonstrating A* movement for multiple bots");
+        super(4, "Bots walking around based on a movement model for Second Life.");
     }
 
     @Override
@@ -51,15 +51,14 @@ public class Experiment4MultiWalkAround extends Experiment {
             int botsToConnect = Math.min(this.numberOfBotsPerJoin, this.botsTotal - botList.size());
             for (int i = 0; i < botsToConnect; i++) {
                 new Thread(() -> {
-                    Bot bot;
+                    long startTime = System.currentTimeMillis();
                     try {
-                        bot = createBot();
+                        Bot bot = createBot();
+                        botSpawnLocations.put(bot, bot.getPlayer().getLocation());
+                        botList.add(bot);
                     } catch (ConnectException e) {
-                        logger.warning(String.format("Could not connect bot %s on part %d.", options.host, options.port));
-                        return;
+                        logger.warning(String.format("Could not connect bot on %s:%d after %d ms.", options.host, options.port, System.currentTimeMillis() - startTime));
                     }
-                    botSpawnLocations.put(bot, bot.getPlayer().getLocation());
-                    botList.add(bot);
                 }).start();
             }
         }
@@ -84,7 +83,7 @@ public class Experiment4MultiWalkAround extends Experiment {
         bot.connect();
         int sleep = 1000;
         int tries = 10;
-        while (tries-- > 0 && (bot.getPlayer() == null || !bot.isConnected())) {
+        while (tries-- > 0 && !bot.isConnected()) {
             try {
                 Thread.sleep(sleep);
             } catch (InterruptedException e) {

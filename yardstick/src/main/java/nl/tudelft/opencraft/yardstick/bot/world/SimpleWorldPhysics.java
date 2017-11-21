@@ -219,7 +219,11 @@ public class SimpleWorldPhysics implements WorldPhysics {
      * @throws ChunkNotLoadedException If the block is outside viewing range.
      */
     public boolean isTraversable(int x, int y, int z) throws ChunkNotLoadedException {
-        return world.getBlockAt(x, y, z).getMaterial().isTraversable();
+        Block block = world.getBlockAt(x, y, z);
+        if (block.getChunk() == null) {
+            throw new ChunkNotLoadedException(new ChunkLocation(x, z));
+        }
+        return block.getMaterial().isTraversable();
     }
 
     public boolean canStand(Vector3i location) throws ChunkNotLoadedException {
