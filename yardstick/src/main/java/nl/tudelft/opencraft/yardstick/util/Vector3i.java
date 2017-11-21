@@ -31,6 +31,10 @@ public class Vector3i {
         return new Vector3i(x + a.x, y + a.y, z + a.z);
     }
 
+    public Vector3i add(int x, int y, int z) {
+        return new Vector3i(this.x + x, this.y + y, this.z + z);
+    }
+
     public Vector3i subtract(Vector3i a) {
         return new Vector3i(x - a.x, y - a.y, z - a.z);
     }

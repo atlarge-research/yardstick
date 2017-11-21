@@ -8,10 +8,10 @@ import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public class MovementModel {
 
-    private static final Random random = new Random(System.currentTimeMillis());
+    private static final Random RANDOM = new Random(System.nanoTime());
 
     public Vector3i newTargetLocation(Bot bot) {
-        if (random.nextDouble() < 0.1) {
+        if (RANDOM.nextDouble() < 0.1) {
             return getNewLongDistanceTarget(bot);
         } else {
             return getNewFieldLocation(bot);
@@ -32,8 +32,8 @@ public class MovementModel {
         int maxz = ((int) originalLocation.getZ()) + side / 2;
         int minz = ((int) originalLocation.getZ()) - side / 2;
 
-        int newX = (int) (Math.floor(random.nextInt(maxx - minx) + minx) + 0.5);
-        int newZ = (int) (Math.floor(random.nextInt(maxz - minz) + minz) + 0.5);
+        int newX = (int) (Math.floor(RANDOM.nextInt(maxx - minx) + minx) + 0.5);
+        int newZ = (int) (Math.floor(RANDOM.nextInt(maxz - minz) + minz) + 0.5);
 
         try {
             int newY = bot.getWorld().getHighestBlockAt(newX, newZ).getY() + 1;
@@ -46,8 +46,8 @@ public class MovementModel {
     private Vector3i getNewLongDistanceTarget(Bot bot) {
         int maxDist = 64 * 5;
         int minDist = 64 * 1;
-        int distance = random.nextInt(maxDist - minDist) + minDist;
-        int angle = random.nextInt(360);
+        int distance = RANDOM.nextInt(maxDist - minDist) + minDist;
+        int angle = RANDOM.nextInt(360);
 
         Vector3d location = bot.getPlayer().getLocation();
         int newX = (int) (Math.floor(location.getX() + (distance * Math.cos(angle))) + 0.5);

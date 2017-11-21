@@ -10,7 +10,7 @@ import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
-public class Experiment4MultiWalkAround extends Experiment {
+public class Experiment5BreakBlock extends Experiment {
 
     private final List<Bot> botList = Collections.synchronizedList(new ArrayList<>());
     private final MovementModel movement = new MovementModel();
@@ -23,8 +23,8 @@ public class Experiment4MultiWalkAround extends Experiment {
     private final Map<Bot, Vector3d> botSpawnLocations = new HashMap<>();
     private long lastJoin = System.currentTimeMillis();
 
-    public Experiment4MultiWalkAround() {
-        super(4, "A simple test demonstrating A* movement for multiple bots");
+    public Experiment5BreakBlock() {
+        super(5, "Bots join at a regular interval, walk around, and have a chance of breaking a couple of blocks.");
     }
 
     @Override
