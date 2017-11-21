@@ -1,10 +1,10 @@
 package nl.tudelft.opencraft.yardstick.bot.world;
 
 import java.util.Objects;
-import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import com.github.steveice10.mc.protocol.data.game.chunk.BlockStorage;
 import com.github.steveice10.mc.protocol.data.game.chunk.Column;
 import com.github.steveice10.mc.protocol.data.game.world.block.BlockState;
+import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public class Block {
 

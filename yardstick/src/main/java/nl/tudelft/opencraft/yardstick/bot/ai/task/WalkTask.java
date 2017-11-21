@@ -206,7 +206,7 @@ public class WalkTask implements Task {
         }
 
         // Send new player location to server
-        player.updateLocation(moveLoc);
+        bot.getController().updateLocation(moveLoc);
 
         if (moveLoc.equals(stepTarget)) {
             nextStep = nextStep.getNext();

@@ -4,7 +4,6 @@ import com.github.steveice10.mc.protocol.MinecraftProtocol;
 import com.github.steveice10.packetlib.Client;
 import com.github.steveice10.packetlib.event.session.SessionListener;
 import com.github.steveice10.packetlib.tcp.TcpSessionFactory;
-import java.util.concurrent.Future;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.SimpleAStar;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.heuristic.EuclideanHeuristic;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
@@ -21,6 +20,7 @@ public class Bot {
     private final String name;
     private final BotTicker ticker;
     private final Client client;
+    private final BotController controller;
     //
     private World world;
     private Server server;
@@ -35,6 +35,7 @@ public class Bot {
         this.ticker = new BotTicker(this);
         this.client = new Client(host, port, protocol, new TcpSessionFactory());
         this.client.getSession().addListener(new BotListener(this));
+        this.controller = new BotController(this);
     }
 
     public void addSessionListener(SessionListener... listeners) {
@@ -96,6 +97,10 @@ public class Bot {
 
     public Client getClient() {
         return client;
+    }
+
+    public BotController getController() {
+        return controller;
     }
 
     public World getWorld() {
