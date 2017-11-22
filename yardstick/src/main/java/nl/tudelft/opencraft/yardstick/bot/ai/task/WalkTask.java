@@ -40,6 +40,7 @@ public class WalkTask implements Task {
     private static double speed = 0.15, jumpFactor = 3, fallFactor = 4, liquidFactor = 0.5;
     private static int defaultTimeout = 6000;
 
+    private final String shortName;
     private final Bot bot;
     private final Logger logger;
     private final ExecutorService service = Executors.newSingleThreadExecutor();
@@ -66,10 +67,16 @@ public class WalkTask implements Task {
     public WalkTask(final Bot bot, final Vector3i target) {
         this.bot = bot;
         this.target = target;
-        this.logger = bot.getLogger().newSubLogger("WalkTask[" + target.toString() + "]");
+        this.shortName = "WalkTask[" + target.toString() + "]";
+        this.logger = bot.getLogger().newSubLogger(shortName);
 
         pathFuture = service.submit(task);
         startTime = System.currentTimeMillis();
+    }
+
+    @Override
+    public String getShortName() {
+        return shortName;
     }
 
     @Override

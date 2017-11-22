@@ -5,15 +5,13 @@ import java.util.stream.Collectors;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTask;
 import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
-import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public class Experiment5BreakBlock extends Experiment {
 
     private final List<Bot> botList = Collections.synchronizedList(new ArrayList<>());
-    private final MovementModel movement = new MovementModel();
+    private final BotModel model = new BotModel();
 
     private int botsTotal = 0;
     private long startMillis;
@@ -45,6 +43,7 @@ public class Experiment5BreakBlock extends Experiment {
             disconnectedBots.forEach(bot -> bot.disconnect("Bot is not connected"));
             botList.removeAll(disconnectedBots);
         }
+
         if (System.currentTimeMillis() - this.lastJoin > secondsBetweenJoin * 1000
                 && botList.size() <= this.botsTotal) {
             lastJoin = System.currentTimeMillis();
@@ -73,9 +72,7 @@ public class Experiment5BreakBlock extends Experiment {
     private void botTick(Bot bot) {
         Task t = bot.getTask();
         if (t == null || t.getStatus().getType() != TaskStatus.StatusType.IN_PROGRESS) {
-            Vector3i newLocation = movement.newTargetLocation(bot);
-            bot.getLogger().info(String.format("Setting task for bot to walk to %s", newLocation));
-            bot.setTask(new WalkTask(bot, newLocation));
+            bot.setTask(model.nextTask(bot));
         }
     }
 
@@ -84,7 +81,7 @@ public class Experiment5BreakBlock extends Experiment {
         bot.connect();
         int sleep = 1000;
         int tries = 10;
-        while (tries-- > 0 && (bot.getPlayer() == null || !bot.isConnected())) {
+        while (tries-- > 0 && (bot.getPlayer() == null || !bot.isJoined())) {
             try {
                 Thread.sleep(sleep);
             } catch (InterruptedException e) {
@@ -92,7 +89,7 @@ public class Experiment5BreakBlock extends Experiment {
                 break;
             }
         }
-        if (!bot.isConnected()) {
+        if (!bot.isJoined()) {
             bot.disconnect("Make sure to close all connections.");
             throw new ConnectException();
         }
@@ -108,7 +105,7 @@ public class Experiment5BreakBlock extends Experiment {
         } else if (botList.size() > 0) {
             boolean allBotsDisconnected;
             synchronized (botList) {
-                allBotsDisconnected = botList.stream().noneMatch(Bot::isConnected);
+                allBotsDisconnected = botList.stream().noneMatch(Bot::isJoined);
             }
             if (allBotsDisconnected) {
                 return true;

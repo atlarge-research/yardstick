@@ -12,9 +12,11 @@ import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.bot.world.Material;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
+import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public class BreakBlocksTask implements Task {
 
+    private final String shortName;
     private final Bot bot;
     private final SubLogger logger;
     private final Iterator<Block> blocks;
@@ -28,23 +30,32 @@ public class BreakBlocksTask implements Task {
         this.blocks = Lists.newArrayList(blocks).iterator();
 
         // Get a format like: BreakBlocksTask[(21,64,3), (21,65,4), (21,64,3)]
-        StringBuilder loggerName = new StringBuilder("BreakBlocksTask[");
+        StringBuilder sb = new StringBuilder("BreakBlocksTask[");
         if (blocks.size() > 0) {
-            loggerName.append(blocks.get(0).getLocation().toString());
+            sb.append(blocks.get(0).getLocation().toString());
         }
 
         if (blocks.size() > 1) {
             for (int i = 1; i < blocks.size(); i++) {
-                loggerName.append(", ").append(blocks.get(i).getLocation().toString());
+                sb.append(", ").append(blocks.get(i).getLocation().toString());
             }
         }
-        loggerName.append(']');
+        sb.append(']');
 
-        this.logger = bot.getLogger().newSubLogger(loggerName.toString());
+        this.shortName = sb.toString();
+        this.logger = bot.getLogger().newSubLogger(shortName);
+    }
+
+    public String getShortName() {
+        return shortName;
     }
 
     @Override
     public TaskStatus getStatus() {
+        if (current != null) {
+            return TaskStatus.forInProgress();
+        }
+
         return blocks.hasNext() ? TaskStatus.forInProgress() : TaskStatus.forSuccess();
     }
 
@@ -100,7 +111,7 @@ public class BreakBlocksTask implements Task {
      * @param block The block the player is observing.
      * @return An arbitrary block face that is visible, or null, if none exists.
      */
-    private BlockFace getVisibleBlockFace(Player player, Block block) {
+    public static BlockFace getVisibleBlockFace(Player player, Block block) {
         BlockFace[] directed = getDirectedBlockFaces(player, block);
 
         for (int i = 0; i < directed.length; i++) {
@@ -132,19 +143,24 @@ public class BreakBlocksTask implements Task {
      * @param block The block the player is observing.
      * @return An array of three block faces.
      */
-    private BlockFace[] getDirectedBlockFaces(Player player, Block block) {
+    public static BlockFace[] getDirectedBlockFaces(Player player, Block block) {
         // Determine the block face
-        Vector3d playerLoc = bot.getPlayer().getLocation();
-        Vector3d blockLoc = current.getLocation().doubleVector().add(0.5, 0.5, 0.5);
+        Vector3d playerLoc = player.getLocation();
+        Vector3d blockLoc = block.getLocation().doubleVector().add(0.5, 0.5, 0.5);
 
         // Calculate unit vector from the center of the block pointing at the player
         Vector3d diff = playerLoc.subtract(blockLoc).unit();
 
         // Now, the three faces are computed by rounding two components down, and one component up
         BlockFace[] faces = new BlockFace[3];
-        faces[0] = BlockFace.forUnitVector(diff.add(0.5, 0, 0).intVector());
-        faces[1] = BlockFace.forUnitVector(diff.add(0, 0.5, 0).intVector());
-        faces[2] = BlockFace.forUnitVector(diff.add(0, 0, 0.5).intVector());
+
+        int x = diff.getX() > 0 ? 1 : -1;
+        faces[0] = BlockFace.forUnitVector(new Vector3i(x, 0, 0));
+        int y = diff.getY() > 0 ? 1 : -1;
+        faces[1] = BlockFace.forUnitVector(new Vector3i(0, y, 0));
+        int z = diff.getY() > 0 ? 1 : -1;
+        faces[2] = BlockFace.forUnitVector(new Vector3i(0, 0, z));
+
         return faces;
     }
 

@@ -40,7 +40,7 @@ public class Experiment4MultiWalkAround extends Experiment {
     protected void tick() {
         synchronized (botList) {
             List<Bot> disconnectedBots = botList.stream()
-                    .filter(bot -> !bot.isConnected())
+                    .filter(bot -> !bot.isJoined())
                     .collect(Collectors.toList());
             disconnectedBots.forEach(bot -> bot.disconnect("Bot is not connected"));
             botList.removeAll(disconnectedBots);
@@ -83,7 +83,7 @@ public class Experiment4MultiWalkAround extends Experiment {
         bot.connect();
         int sleep = 1000;
         int tries = 10;
-        while (tries-- > 0 && !bot.isConnected()) {
+        while (tries-- > 0 && !bot.isJoined()) {
             try {
                 Thread.sleep(sleep);
             } catch (InterruptedException e) {
@@ -91,7 +91,7 @@ public class Experiment4MultiWalkAround extends Experiment {
                 break;
             }
         }
-        if (!bot.isConnected()) {
+        if (!bot.isJoined()) {
             bot.disconnect("Make sure to close all connections.");
             throw new ConnectException();
         }
@@ -107,7 +107,7 @@ public class Experiment4MultiWalkAround extends Experiment {
         } else if (botList.size() > 0) {
             boolean allBotsDisconnected;
             synchronized (botList) {
-                allBotsDisconnected = botList.stream().noneMatch(Bot::isConnected);
+                allBotsDisconnected = botList.stream().noneMatch(Bot::isJoined);
             }
             if (allBotsDisconnected) {
                 return true;

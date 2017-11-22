@@ -53,7 +53,15 @@ public class Bot {
     }
 
     public boolean isConnected() {
-        return this.getClient() != null && this.getClient().getSession() != null && this.getClient().getSession().isConnected() && this.getPlayer() != null && this.getPlayer().getLocation() != null;
+        return this.client != null
+                && this.getClient().getSession() != null
+                && this.getClient().getSession().isConnected();
+    }
+
+    public boolean isJoined() {
+        return isConnected()
+                && this.getPlayer() != null
+                && this.getPlayer().getLocation() != null;
     }
 
     public void disconnect(String reason) {
@@ -63,7 +71,7 @@ public class Bot {
         if (this.task != null) {
             this.task.stop();
         }
-        if (this.isConnected()) {
+        if (this.isJoined()) {
             client.getSession().disconnect(reason);
         }
     }

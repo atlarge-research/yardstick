@@ -26,6 +26,8 @@ package nl.tudelft.opencraft.yardstick.bot.ai.task;
 
 public interface Task {
 
+    public String getShortName();
+
     public TaskStatus getStatus();
 
     public TaskStatus tick();

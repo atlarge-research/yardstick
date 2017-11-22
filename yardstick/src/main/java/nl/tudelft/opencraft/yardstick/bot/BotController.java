@@ -14,20 +14,24 @@ import nl.tudelft.opencraft.yardstick.util.Vector3d;
 public class BotController {
 
     private final Bot bot;
-    private final BotPlayer player;
-    private final Session session;
 
     public BotController(Bot bot) {
         this.bot = bot;
-        this.player = bot.getPlayer();
-        this.session = bot.getClient().getSession();
+    }
+
+    private BotPlayer getPlayer() {
+        return bot.getPlayer();
+    }
+
+    private Session getSession() {
+        return bot.getClient().getSession();
     }
 
     public void updateLocation(Vector3d vector) {
         // TODO: fix onGround calculation
         boolean onGround = vector.getY() - Math.floor(vector.getY()) < 0.1;
-        player.setLocation(vector);
-        session.send(new ClientPlayerPositionPacket(onGround, vector.getX(), vector.getY(), vector.getZ()));
+        getPlayer().setLocation(vector);
+        getSession().send(new ClientPlayerPositionPacket(onGround, vector.getX(), vector.getY(), vector.getZ()));
     }
 
     public void updateDigging(Block block, BlockFace face, DiggingState state) {
@@ -42,11 +46,11 @@ public class BotController {
                 break;
             case FINISHED_DIGGING:
                 p = new ClientPlayerActionPacket(PlayerAction.FINISH_DIGGING, pos, face.getInternalFace());
+                break;
             default:
                 throw new UnsupportedOperationException("Unsupported digging state");
-
         }
-        session.send(p);
+        getSession().send(p);
     }
 
     public static enum DiggingState {
