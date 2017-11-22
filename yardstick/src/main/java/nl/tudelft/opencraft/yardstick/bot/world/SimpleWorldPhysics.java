@@ -145,6 +145,22 @@ public class SimpleWorldPhysics implements WorldPhysics {
         valid = valid && lowerMat != Material.LAVA;
         valid = valid && lowerMat != Material.STATIONARY_LAVA;
 
+        // Avoid fences
+        valid = valid && lowerMat != Material.FENCE;
+        valid = valid && lowerMat != Material.FENCE_GATE;
+        valid = valid && lowerMat != Material.ACADIA_FENCE;
+        valid = valid && lowerMat != Material.ACADIA_FENCE_GATE;
+        valid = valid && lowerMat != Material.BIRCH_FENCE;
+        valid = valid && lowerMat != Material.BIRCH_FENCE_GATE;
+        valid = valid && lowerMat != Material.DARK_OAK_FENCE;
+        valid = valid && lowerMat != Material.DARK_OAK_FENCE_GATE;
+        valid = valid && lowerMat != Material.JUNGLE_FENCE;
+        valid = valid && lowerMat != Material.JUNGLE_FENCE_GATE;
+        valid = valid && lowerMat != Material.NETHER_FENCE;
+        //valid = valid && lowerMat != Material.NETHER_FENCE_GATE; // Doesn't exist
+        valid = valid && lowerMat != Material.SPRUCE_FENCE;
+        valid = valid && lowerMat != Material.SPRUCE_FENCE_GATE;
+
         // Only one coord at a time
         boolean movingX = origX != destX;
         boolean movingY = origY != destY;
