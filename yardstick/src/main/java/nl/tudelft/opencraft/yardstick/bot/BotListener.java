@@ -162,6 +162,13 @@ public class BotListener implements SessionListener {
 
             BlockChangeRecord r = p.getRecord();
             Position pos = r.getPosition();
+
+            if (pos.getY() > 255) {
+                // https://github.com/Steveice10/MCProtocolLib/issues/347
+                logger.warning("Ignoring BlockChange with coordinates (" + pos.getX() + "," + pos.getY() + "," + pos.getZ());
+                return;
+            }
+
             Block b = null;
             try {
                 b = bot.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
@@ -293,23 +300,27 @@ public class BotListener implements SessionListener {
             Column newCol = p.getColumn();
             try {
                 Chunk chunk = world.getChunk(new ChunkLocation(newCol.getX(), newCol.getZ()));
-                logger.info("Updating pre-existing chunk: " + new ChunkLocation(newCol.getX(), newCol.getZ()));
 
                 // col.hasBiomeData() is currently the only way to determine the 'ground-up contrinous' property.
                 // See http://wiki.vg/Chunk_Format#Ground-up_continuous for more details
                 if (newCol.hasBiomeData()) {
                     // Replace the previous chunk
+                    //logger.info("Replacing pre-existing chunk: " + new ChunkLocation(newCol.getX(), newCol.getZ()));
                     world.loadChunk(new Chunk(world, p.getColumn()));
                 } else {
                     // Only update the new chunk sections
+                    String s = "";
                     for (int i = 0; i < newCol.getChunks().length; i++) {
                         if (newCol.getChunks()[i] == null) {
                             // Chunk not updated
                             continue;
                         }
 
+                        s += "" + i + " ";
+
                         chunk.getHandle().getChunks()[i] = newCol.getChunks()[i];
                     }
+                    //logger.info("Updating pre-existing chunk: " + new ChunkLocation(newCol.getX(), newCol.getZ()) + ", sections: " + s);
                 }
             } catch (ChunkNotLoadedException ex) {
                 // New chunk

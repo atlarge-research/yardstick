@@ -4,6 +4,8 @@ import java.util.Objects;
 import com.github.steveice10.mc.protocol.data.game.chunk.BlockStorage;
 import com.github.steveice10.mc.protocol.data.game.chunk.Column;
 import com.github.steveice10.mc.protocol.data.game.world.block.BlockState;
+import com.google.common.base.Preconditions;
+import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public class Block {
@@ -12,6 +14,8 @@ public class Block {
     private final Chunk chunk;
 
     public Block(int x, int y, int z, Chunk chunk) {
+        Preconditions.checkArgument(y >= 0, "Argument was %s but expected nonnegative", y);
+        Preconditions.checkArgument(y < 256, "Argument was %s but expected lower than 256", y);
         this.x = x;
         this.y = y;
         this.z = z;
@@ -95,17 +99,20 @@ public class Block {
         Column handle = chunk.getHandle();
 
         // TODO: Test this
-        int chunkIndex = Math.floorDiv(y, 16);
-        //GlobalLogger.getLogger().info("Get Internal Storage - index: " + chunkIndex);
-
-        com.github.steveice10.mc.protocol.data.game.chunk.Chunk[] c = handle.getChunks();
-
-        if (c[chunkIndex] == null) {
-            //GlobalLogger.getLogger().info("Making new chunk section for air chunk section: (" + chunk.getX() + "," + chunkIndex + "," + chunk.getZ() + ")");
-            c[chunkIndex] = new com.github.steveice10.mc.protocol.data.game.chunk.Chunk(handle.hasSkylight());
+        int index = Math.floorDiv(y, 16);
+        //GlobalLogger.getLogger().info("Get Internal Storage - y: " + y + ", index: " + index);
+        if (index > 15) {
+            GlobalLogger.getLogger().warning("How did this happen: (" + x + "," + y + "," + z + ")");
         }
 
-        return c[chunkIndex].getBlocks();
+        com.github.steveice10.mc.protocol.data.game.chunk.Chunk[] sections = handle.getChunks();
+
+        if (sections[index] == null) {
+            //GlobalLogger.getLogger().info("Making new chunk section for air chunk section: (" + handle.getX() + "," + index + "," + handle.getZ() + ")");
+            sections[index] = new com.github.steveice10.mc.protocol.data.game.chunk.Chunk(handle.hasSkylight());
+        }
+
+        return sections[index].getBlocks();
 
     }
 

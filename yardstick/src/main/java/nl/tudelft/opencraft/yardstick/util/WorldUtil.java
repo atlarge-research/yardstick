@@ -67,7 +67,7 @@ public class WorldUtil {
         faces[0] = BlockFace.forUnitVector(new Vector3i(x, 0, 0));
         int y = diff.getY() > 0 ? 1 : -1;
         faces[1] = BlockFace.forUnitVector(new Vector3i(0, y, 0));
-        int z = diff.getY() > 0 ? 1 : -1;
+        int z = diff.getZ() > 0 ? 1 : -1;
         faces[2] = BlockFace.forUnitVector(new Vector3i(0, 0, z));
 
         return faces;

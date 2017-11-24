@@ -34,7 +34,7 @@ public class PlaceBlocksTask extends AbstractTask {
 
         // Get the item in the inventory
         if (!inventoryAction) {
-            bot.getController().creativeInventoryAction(Material.STONE, 1);
+            bot.getController().creativeInventoryAction(material, 1);
             inventoryAction = true;
             return TaskStatus.forInProgress();
         }
@@ -56,7 +56,7 @@ public class PlaceBlocksTask extends AbstractTask {
 
         Hitpoint hit = tryGetHitpoint(bot.getPlayer().getEyeLocation(), toPlace);
         if (hit == null) {
-            logger.warning("Could not place block. Block is obstructed: " + location);
+            logger.warning("Could not place block -- player: " + bot.getPlayer().getLocation() + ", block: " + location);
             return onTick();
         }
 
@@ -69,8 +69,8 @@ public class PlaceBlocksTask extends AbstractTask {
     protected void onStop() {
     }
 
-    private Hitpoint tryGetHitpoint(Vector3d from, Block toPlace) {
-        BlockFace[] directed = WorldUtil.getDirectedBlockFaces(bot.getPlayer(), toPlace);
+    private Hitpoint tryGetHitpoint(Vector3d from, Block placeAt) {
+        BlockFace[] directed = WorldUtil.getDirectedBlockFaces(bot.getPlayer(), placeAt);
 
         // Invert all the faces to get the faces in the direction of the blocks we're actually targetting
         for (int i = 0; i < directed.length; i++) {
@@ -78,23 +78,25 @@ public class PlaceBlocksTask extends AbstractTask {
         }
 
         for (BlockFace face : directed) {
-            Block placeAt;
+            Block supporting;
             try {
-                placeAt = toPlace.getRelative(face);
+                supporting = placeAt.getRelative(face);
             } catch (ChunkNotLoadedException ex) {
-                logger.warning("Could not get block: " + toPlace.getLocation().add(face.getOffset()));
+                logger.warning("Could not get block: " + placeAt.getLocation().add(face.getOffset()));
                 continue;
             }
 
-            if (placeAt.getMaterial().isTraversable()) {
+            if (supporting.getMaterial().isTraversable()) {
                 // We can't place at this block
+                logger.info("Traversable: " + supporting.getLocation() + ", relative face: " + face.name());
                 continue;
             }
 
             // We've found a block/blockface combination
-            Vector3d hitpoint = raytrace(from, placeAt, face);
+            Vector3d hitpoint = raytrace(from, supporting, face);
             if (hitpoint == null) {
                 // A block is obstructing
+                logger.info("  -> obstruction -- from: " + from + ", supporting: " + supporting.getLocation() + ", face: " + face.name());
                 continue;
             }
 
@@ -127,10 +129,7 @@ public class PlaceBlocksTask extends AbstractTask {
         Set<Vector3i> intersections = cubeIntersections(from, toVector);
         for (Vector3i hit : intersections) {
             if (target.getLocation().equals(hit)) {
-                continue;
-            }
-
-            if (from.distanceSquared(hit.doubleVector()) < 1.5) {
+                // Intersection is the supporting block
                 continue;
             }
 
@@ -144,6 +143,7 @@ public class PlaceBlocksTask extends AbstractTask {
 
             if (hitBlock.getMaterial() != Material.AIR) {
                 // Something hit, we can't place here
+                logger.info("Raytrace hit: " + hitBlock.getLocation());
                 return null;
             }
         }

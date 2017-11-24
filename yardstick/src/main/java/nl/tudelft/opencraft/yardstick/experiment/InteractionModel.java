@@ -13,6 +13,7 @@ import nl.tudelft.opencraft.yardstick.bot.world.Block;
 import nl.tudelft.opencraft.yardstick.bot.world.BlockFace;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.bot.world.Material;
+import nl.tudelft.opencraft.yardstick.bot.world.World;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import nl.tudelft.opencraft.yardstick.util.WorldUtil;
 
@@ -103,6 +104,9 @@ public class InteractionModel {
     private static List<Vector3i> selectPlaceBlocks(Bot bot) {
         List<Vector3i> possibilities = Lists.newArrayList();
 
+        World world = bot.getWorld();
+        Vector3i playerLoc = bot.getPlayer().getLocation().intVector();
+
         for (int x = -PLACE_BLOCK_RADIUS; x <= PLACE_BLOCK_RADIUS; x++) {
             for (int z = -PLACE_BLOCK_RADIUS; z <= PLACE_BLOCK_RADIUS; z++) {
                 if (x == 0 && z == 0) {
@@ -110,35 +114,37 @@ public class InteractionModel {
                     continue;
                 }
 
-                Vector3i at = bot.getPlayer().getLocation().intVector().add(x, 0, z);
-                Block topBlock;
-                try {
-                    topBlock = bot.getWorld().getHighestBlockAt(at.getX(), at.getZ());
-                } catch (ChunkNotLoadedException ex) {
-                    // Can't place blocks at unloaded chunks
-                    continue;
+                // Find a block we can place on the floor
+                for (int y = -2; y <= 1; y++) {
+                    // Find a supporting block below
+                    Block support;
+                    try {
+                        support = world.getBlockAt(playerLoc.add(0, y, 0));
+                    } catch (ChunkNotLoadedException ex) {
+                        continue;
+                    }
+
+                    if (support.getMaterial().isTraversable()) {
+                        continue;
+                    }
+
+                    // Find an empty (air) block above
+                    Block at;
+                    try {
+                        at = support.getRelative(BlockFace.TOP);
+                    } catch (ChunkNotLoadedException ex) {
+                        continue;
+                    }
+
+                    if (at.getMaterial() != Material.AIR) {
+                        continue;
+                    }
+
+                    // Found a block
+                    possibilities.add(at.getLocation());
+                    break;
                 }
 
-                if (topBlock.getMaterial().isFluid()
-                        || topBlock.getMaterial().isTraversable()) {
-                    // We need a surface to place at
-                    // Currently, we're restricted to just blocks we place on the ground
-                    continue;
-                }
-
-                Block toPlace;
-                try {
-                    toPlace = topBlock.getRelative(BlockFace.TOP);
-                } catch (ChunkNotLoadedException ex) {
-                    continue;
-                }
-
-                if (toPlace.getMaterial() != Material.AIR) {
-                    // This shouldn't happen, but just to be sure.
-                    continue;
-                }
-
-                possibilities.add(toPlace.getLocation());
             }
         }
 
