@@ -5,6 +5,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.github.steveice10.mc.protocol.MinecraftProtocol;
 import com.github.steveice10.mc.protocol.data.SubProtocol;
+import com.github.steveice10.mc.protocol.data.game.chunk.Column;
 import com.github.steveice10.mc.protocol.data.game.entity.metadata.Position;
 import com.github.steveice10.mc.protocol.data.game.entity.type.GlobalEntityType;
 import com.github.steveice10.mc.protocol.data.game.world.block.BlockChangeRecord;
@@ -165,7 +166,7 @@ public class BotListener implements SessionListener {
             try {
                 b = bot.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
             } catch (ChunkNotLoadedException e) {
-                // FIXME we should not ignore an update to an unloaded block.
+                logger.warning("Received BlockChange for block in unloaded chunk: " + pos);
                 return;
             }
 
@@ -289,7 +290,31 @@ public class BotListener implements SessionListener {
             // 0x20 Chunk Data
             ServerChunkDataPacket p = (ServerChunkDataPacket) packet;
 
-            world.loadChunk(new Chunk(world, p.getColumn()));
+            Column newCol = p.getColumn();
+            try {
+                Chunk chunk = world.getChunk(new ChunkLocation(newCol.getX(), newCol.getZ()));
+                logger.info("Updating pre-existing chunk: " + new ChunkLocation(newCol.getX(), newCol.getZ()));
+
+                // col.hasBiomeData() is currently the only way to determine the 'ground-up contrinous' property.
+                // See http://wiki.vg/Chunk_Format#Ground-up_continuous for more details
+                if (newCol.hasBiomeData()) {
+                    // Replace the previous chunk
+                    world.loadChunk(new Chunk(world, p.getColumn()));
+                } else {
+                    // Only update the new chunk sections
+                    for (int i = 0; i < newCol.getChunks().length; i++) {
+                        if (newCol.getChunks()[i] == null) {
+                            // Chunk not updated
+                            continue;
+                        }
+
+                        chunk.getHandle().getChunks()[i] = newCol.getChunks()[i];
+                    }
+                }
+            } catch (ChunkNotLoadedException ex) {
+                // New chunk
+                world.loadChunk(new Chunk(world, p.getColumn()));
+            }
 
         } else if (packet instanceof ServerPlayEffectPacket) {
             // 0x21 Effect
@@ -573,11 +598,13 @@ public class BotListener implements SessionListener {
         } else if (packet instanceof ServerEntityPropertiesPacket) {
             // 0x4A Entity Properties
             ServerEntityPropertiesPacket p = (ServerEntityPropertiesPacket) packet;
+            // TODO
 
         } else if (packet instanceof ServerEntityEffectPacket) {
             // 0x4B Entity Effect
             ServerEntityEffectPacket p = (ServerEntityEffectPacket) packet;
             // TODO
+
         } else {
             logger.warning("Received unhandled packet: " + packet.getClass().getName());
         }

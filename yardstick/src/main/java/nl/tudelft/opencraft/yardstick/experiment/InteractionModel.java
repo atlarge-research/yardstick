@@ -1,79 +1,152 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import com.google.common.collect.Lists;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.BreakBlocksTask;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.PlaceBlocksTask;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
 import nl.tudelft.opencraft.yardstick.bot.world.Block;
+import nl.tudelft.opencraft.yardstick.bot.world.BlockFace;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.bot.world.Material;
-import nl.tudelft.opencraft.yardstick.bot.world.World;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
+import nl.tudelft.opencraft.yardstick.util.WorldUtil;
 
 public class InteractionModel {
 
-    private static final Random RANDOM = new Random(System.nanoTime());
-    public static int BREAK_MAX = 5;
-    public static int BREAK_MIN = 2;
-    public static int BREAK_SEARCH_DISTANCE = 2;
+    private static final int INTERACT_BLOCK_AMOUNT = 3;
+    private static final int BREAK_BLOCK_RADIUS = 1;
+    private static final int PLACE_BLOCK_RADIUS = 3;
+    private static final Material PLACE_BLOCK_MATERIAL = Material.STONE;
 
-    public List<Block> newBreakBlocks(Bot bot) {
-        // Get all reachable blocks
-        List<Block> b = reachable(bot);
+    public Task newInteractTask(Bot bot) {
+        if (Math.random() < 0.5) {
+            // Break blocks
+            List<Block> selection = selectBreakBlocks(bot);
+            if (selection.isEmpty()) {
+                bot.getLogger().warning("Could not find breakable blocks!");
+                return null;
+            }
 
-        // Shuffle
-        Collections.shuffle(b);
+            return new BreakBlocksTask(bot, selection);
+        }
 
-        // See how many we need
-        int breakAmt = BREAK_MIN + RANDOM.nextInt(BREAK_MAX + 1);
-        int lastIndex = Math.min(breakAmt, b.size());
-
-        return b.subList(0, lastIndex);
+        // Place blocks
+        List<Vector3i> selection = selectPlaceBlocks(bot);
+        if (selection.isEmpty()) {
+            bot.getLogger().warning("Could not find placable blocks!");
+            return null;
+        }
+        return new PlaceBlocksTask(bot, selection, PLACE_BLOCK_MATERIAL);
     }
 
-    private List<Block> reachable(Bot bot) {
-        List<Block> blocks = Lists.newArrayList();
+    private static List<Block> selectBreakBlocks(Bot bot) {
+        List<Block> possibilities = new ArrayList<>();
 
-        Vector3i loc = bot.getPlayer().getLocation().intVector();
-        World world = bot.getWorld();
+        Block playerBlock;
+        try {
+            playerBlock = bot.getWorld().getBlockAt(bot.getPlayer().getLocation().intVector());
+        } catch (ChunkNotLoadedException ex) {
+            return possibilities;
+        }
 
-        for (int x = -BREAK_SEARCH_DISTANCE; x <= BREAK_SEARCH_DISTANCE; x++) {
-            for (int y = -BREAK_SEARCH_DISTANCE; y <= BREAK_SEARCH_DISTANCE; y++) {
-                for (int z = -BREAK_SEARCH_DISTANCE; z <= BREAK_SEARCH_DISTANCE; z++) {
-
-                    Vector3i loopLoc = loc.add(x, y, z);
-                    if (loc.distance(loopLoc) > 4) {
-                        // Don't break faraway blocks
+        int radius = BREAK_BLOCK_RADIUS;
+        for (int x = -radius; x <= radius; x++) {
+            for (int y = -radius; y <= radius; y++) {
+                for (int z = -radius; z <= radius; z++) {
+                    // Can't break blocks under on in the player
+                    if (x == 0 && z == 0 && y < 2) {
                         continue;
                     }
 
-                    if (x == 0 && z == 0 && y <= 0) {
-                        // Don't break blocks under the player
-                        continue;
-                    }
-
-                    Block b;
+                    // Get the relative block
+                    Block block;
                     try {
-                        b = world.getBlockAt(loopLoc);
+                        block = playerBlock.getRelative(x, y, z);
                     } catch (ChunkNotLoadedException ex) {
                         continue;
                     }
 
-                    if (b.getMaterial() == Material.AIR
-                            || b.getMaterial() == Material.UNKNOWN
-                            || b.getMaterial().isFluid()
-                            || b.getMaterial().isIndestructable()) {
+                    // Can't break AIR
+                    if (block.getMaterial() == Material.AIR) {
                         continue;
                     }
 
-                    // TODO: Is there a block in the way?
-                    blocks.add(b);
+                    int absX = Math.abs(x);
+                    int absZ = Math.abs(z);
+
+                    // Skip corners, we need to be able to see them to break them
+                    // and implementing that logic is too complicated for now.
+                    if (absX == 1 && absZ == 1) {
+                        continue;
+                    }
+
+                    if (WorldUtil.getVisibleBlockFace(bot.getPlayer(), block) != null) {
+                        possibilities.add(block);
+                    }
                 }
             }
         }
 
-        return blocks;
+        Collections.shuffle(possibilities, ThreadLocalRandom.current());
+        if (possibilities.size() < INTERACT_BLOCK_AMOUNT) {
+            return possibilities;
+        } else {
+            return possibilities.subList(0, INTERACT_BLOCK_AMOUNT - 1);
+        }
     }
 
+    private static List<Vector3i> selectPlaceBlocks(Bot bot) {
+        List<Vector3i> possibilities = Lists.newArrayList();
+
+        for (int x = -PLACE_BLOCK_RADIUS; x <= PLACE_BLOCK_RADIUS; x++) {
+            for (int z = -PLACE_BLOCK_RADIUS; z <= PLACE_BLOCK_RADIUS; z++) {
+                if (x == 0 && z == 0) {
+                    // Can't place a block in the player
+                    continue;
+                }
+
+                Vector3i at = bot.getPlayer().getLocation().intVector().add(x, 0, z);
+                Block topBlock;
+                try {
+                    topBlock = bot.getWorld().getHighestBlockAt(at.getX(), at.getZ());
+                } catch (ChunkNotLoadedException ex) {
+                    // Can't place blocks at unloaded chunks
+                    continue;
+                }
+
+                if (topBlock.getMaterial().isFluid()
+                        || topBlock.getMaterial().isTraversable()) {
+                    // We need a surface to place at
+                    // Currently, we're restricted to just blocks we place on the ground
+                    continue;
+                }
+
+                Block toPlace;
+                try {
+                    toPlace = topBlock.getRelative(BlockFace.TOP);
+                } catch (ChunkNotLoadedException ex) {
+                    continue;
+                }
+
+                if (toPlace.getMaterial() != Material.AIR) {
+                    // This shouldn't happen, but just to be sure.
+                    continue;
+                }
+
+                possibilities.add(toPlace.getLocation());
+            }
+        }
+
+        Collections.shuffle(possibilities, ThreadLocalRandom.current());
+        if (possibilities.size() < INTERACT_BLOCK_AMOUNT) {
+            return possibilities;
+        } else {
+            return possibilities.subList(0, INTERACT_BLOCK_AMOUNT - 1);
+        }
+    }
 }

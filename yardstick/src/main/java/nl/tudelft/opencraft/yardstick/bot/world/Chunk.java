@@ -9,18 +9,18 @@ public class Chunk {
 
     private final World world;
     private final ChunkLocation location;
-    private final Column column;
+    private final Column handle;
 
     public Chunk(World world, Column column) {
         this.world = world;
-        this.column = column;
+        this.handle = column;
         this.location = new ChunkLocation(column.getX(), column.getZ());
 
         // TODO: Tile entities, biome data
     }
 
-    public Column getColumn() {
-        return column;
+    public Column getHandle() {
+        return handle;
     }
 
     public World getWorld() {
@@ -55,6 +55,6 @@ public class Chunk {
         if (!location.equals(chunk.location)) {
             return false;
         }
-        return column.equals(chunk.column);
+        return handle.equals(chunk.handle);
     }
 }

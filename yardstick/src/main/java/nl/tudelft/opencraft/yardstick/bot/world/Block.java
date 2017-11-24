@@ -92,7 +92,7 @@ public class Block {
     }
 
     private BlockStorage getInternalStorage() {
-        Column handle = chunk.getColumn();
+        Column handle = chunk.getHandle();
 
         // TODO: Test this
         int chunkIndex = Math.floorDiv(y, 16);
