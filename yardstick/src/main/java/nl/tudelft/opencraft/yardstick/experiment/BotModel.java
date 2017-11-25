@@ -92,8 +92,11 @@ public class BotModel {
         }
 
         Collections.shuffle(possibilities, ThreadLocalRandom.current());
-        int idx = Math.min(possibilities.size() - 1, INTERACT_BLOCK_AMOUNT - 1);
-        return possibilities.subList(0, idx);
+        if (possibilities.size() <= INTERACT_BLOCK_AMOUNT) {
+            return possibilities;
+        } else {
+            return possibilities.subList(0, INTERACT_BLOCK_AMOUNT - 1);
+        }
     }
 
 }
