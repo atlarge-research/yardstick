@@ -47,7 +47,7 @@ public class Block {
     }
 
     public Block getRelative(BlockFace face) throws ChunkNotLoadedException {
-        return getWorld().getBlockAt(face.getOffset().add(new Vector3i(x, y, z)));
+        return getWorld().getBlockAt(getLocation().add(face.getOffset()));
     }
 
     public int getTypeId() {

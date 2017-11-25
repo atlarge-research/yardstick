@@ -24,9 +24,14 @@ public class SubLogger extends Logger {
     }
 
     public SubLogger newSubLogger(String name) {
-        SubLogger subLogger = new SubLogger(name);
-        subLogger.setParent(this);
-        return subLogger;
+        SubLogger logger;
+        if (getName() == null) {
+            logger = new SubLogger(name);
+        } else {
+            logger = new SubLogger(getName() + '.' + name);
+        }
+        logger.setParent(this);
+        return logger;
     }
 
 }

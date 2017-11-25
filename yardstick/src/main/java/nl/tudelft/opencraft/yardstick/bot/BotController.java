@@ -19,6 +19,9 @@ import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public class BotController {
 
+    // http://wiki.vg/Inventory
+    public static final int PLAYER_INVENTORY_HOTBAR_0 = 36;
+
     private final Bot bot;
 
     public BotController(Bot bot) {
@@ -61,7 +64,7 @@ public class BotController {
 
     public void placeBlock(Vector3i block, BlockFace face, Vector3d hitpoint) {
         getSession().send(new ClientPlayerPlaceBlockPacket(
-                new Position(block.getX(), block.getX(), block.getZ()),
+                new Position(block.getX(), block.getY(), block.getZ()),
                 face.getInternalFace(),
                 Hand.MAIN_HAND,
                 (float) hitpoint.getX(),
@@ -70,7 +73,7 @@ public class BotController {
     }
 
     public void creativeInventoryAction(Material mat, int amt) {
-        getSession().send(new ClientCreativeInventoryActionPacket(0, new ItemStack(mat.getId(), amt)));
+        getSession().send(new ClientCreativeInventoryActionPacket(PLAYER_INVENTORY_HOTBAR_0, new ItemStack(mat.getId(), amt)));
     }
 
     public static enum DiggingState {

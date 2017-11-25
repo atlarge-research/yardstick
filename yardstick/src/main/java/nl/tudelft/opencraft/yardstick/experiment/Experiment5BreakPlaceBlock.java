@@ -8,7 +8,7 @@ import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
 import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 
-public class Experiment5BreakBlock extends Experiment {
+public class Experiment5BreakPlaceBlock extends Experiment {
 
     private final List<Bot> botList = Collections.synchronizedList(new ArrayList<>());
     private final BotModel model = new BotModel();
@@ -21,8 +21,8 @@ public class Experiment5BreakBlock extends Experiment {
     private final Map<Bot, Vector3d> botSpawnLocations = new HashMap<>();
     private long lastJoin = System.currentTimeMillis();
 
-    public Experiment5BreakBlock() {
-        super(5, "Bots join at a regular interval, walk around, and have a chance of breaking a couple of blocks.");
+    public Experiment5BreakPlaceBlock() {
+        super(5, "Bots join at a regular interval, walk around, and have a chance of breaking or placing a couple of blocks.");
     }
 
     @Override

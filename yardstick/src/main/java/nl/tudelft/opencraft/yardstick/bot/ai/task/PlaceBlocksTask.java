@@ -39,28 +39,29 @@ public class PlaceBlocksTask extends AbstractTask {
             return TaskStatus.forInProgress();
         }
 
-        Vector3i location = locations.next();
+        Vector3i placeAt = locations.next();
 
         Block toPlace;
         try {
-            toPlace = bot.getWorld().getBlockAt(location);
+            toPlace = bot.getWorld().getBlockAt(placeAt);
         } catch (ChunkNotLoadedException ex) {
-            logger.warning("Could not get block: " + location);
+            logger.warning("Could not get block: " + placeAt);
             return onTick();
         }
 
         if (toPlace.getMaterial() != Material.AIR) {
-            logger.warning("Block not air: " + location);
+            logger.warning("Block not air: " + placeAt);
             return onTick();
         }
 
         Hitpoint hit = tryGetHitpoint(bot.getPlayer().getEyeLocation(), toPlace);
         if (hit == null) {
-            logger.warning("Could not place block -- player: " + bot.getPlayer().getLocation() + ", block: " + location);
+            logger.warning("Could not place block -- player: " + bot.getPlayer().getLocation() + ", block: " + placeAt);
             return onTick();
         }
 
-        bot.getController().placeBlock(location, hit.face, hit.hit);
+        logger.info("Placing -- block: " + placeAt + ", face: " + hit.face + ", hit: " + hit.hit + ", player: " + bot.getPlayer().getLocation());
+        bot.getController().placeBlock(placeAt, hit.face, hit.hit);
 
         return TaskStatus.forInProgress();
     }
@@ -74,36 +75,46 @@ public class PlaceBlocksTask extends AbstractTask {
 
         // Invert all the faces to get the faces in the direction of the blocks we're actually targetting
         for (int i = 0; i < directed.length; i++) {
-            directed[i] = directed[i].getOpposite();
+            // TODO: this doesn't seem right?
+            //directed[i] = directed[i].getOpposite();
         }
 
-        for (BlockFace face : directed) {
-            Block supporting;
+        for (BlockFace placeFace : directed) {
+            Block support;
             try {
-                supporting = placeAt.getRelative(face);
+                support = placeAt.getRelative(placeFace);
             } catch (ChunkNotLoadedException ex) {
-                logger.warning("Could not get block: " + placeAt.getLocation().add(face.getOffset()));
+                logger.warning("Could not get block: " + placeAt.getLocation().add(placeFace.getOffset()));
                 continue;
             }
 
-            if (supporting.getMaterial().isTraversable()) {
+            if (support.getMaterial().isTraversable()) {
                 // We can't place at this block
-                logger.info("Traversable: " + supporting.getLocation() + ", relative face: " + face.name());
+                logger.info("Traversable: " + support.getLocation() + ", relative face: " + placeFace.name());
                 continue;
             }
+
+            // The face we will be intersecting with
+            BlockFace supportFace = placeFace.getOpposite();
 
             // We've found a block/blockface combination
-            Vector3d hitpoint = raytrace(from, supporting, face);
+            Vector3d hitpoint = raytrace(from, support, supportFace);
             if (hitpoint == null) {
                 // A block is obstructing
-                logger.info("  -> obstruction -- from: " + from + ", supporting: " + supporting.getLocation() + ", face: " + face.name());
+                logger.info("  -> obstruction -- from: " + from + ", supporting: " + support.getLocation() + ", face: " + supportFace);
                 continue;
             }
+
+            // Calculation per http://wiki.vg/Protocol#Player_Block_Placement
+            Vector3d relativeHitpoint = supportFace
+                    .getOffset().doubleVector()
+                    .multiply(0.5)
+                    .add(0.5, 0.5, 0.5);
 
             // We've found a hit!
             Hitpoint hp = new Hitpoint();
-            hp.hit = hitpoint;
-            hp.face = face;
+            hp.hit = relativeHitpoint;
+            hp.face = supportFace;
             return hp;
         }
 
@@ -115,12 +126,13 @@ public class PlaceBlocksTask extends AbstractTask {
      * block.
      *
      * @param from The viewpoint or origin of the ray trace.
-     * @param target The block to ray trace to.
+     * @param support The block to ray trace to.
      * @param face The face of the block.
-     * @return The hit point if
+     * @return The hit point if the ray trace was succesfull, null if a
+     * occluding block was found.
      */
-    private Vector3d raytrace(Vector3d from, Block target, BlockFace face) {
-        Vector3d toVector = target.getLocation()
+    private Vector3d raytrace(Vector3d from, Block support, BlockFace face) {
+        Vector3d toVector = support.getLocation()
                 .doubleVector()
                 .add(0.5, 0.5, 0.5)
                 .add(face.getOffset().doubleVector().multiply(0.5));
@@ -128,14 +140,14 @@ public class PlaceBlocksTask extends AbstractTask {
         // We've got the destination, now find out if any blocks are in the way
         Set<Vector3i> intersections = cubeIntersections(from, toVector);
         for (Vector3i hit : intersections) {
-            if (target.getLocation().equals(hit)) {
+            if (support.getLocation().equals(hit)) {
                 // Intersection is the supporting block
                 continue;
             }
 
             Block hitBlock;
             try {
-                hitBlock = target.getWorld().getBlockAt(hit);
+                hitBlock = support.getWorld().getBlockAt(hit);
             } catch (ChunkNotLoadedException ex) {
                 // If this ever throws, assume it's okay
                 continue;

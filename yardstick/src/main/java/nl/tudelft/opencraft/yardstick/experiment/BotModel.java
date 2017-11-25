@@ -7,7 +7,7 @@ import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public class BotModel {
 
-    private static final double INTERACT_TO_MOVEMENT = 1f / 3f;
+    private static final double INTERACT_TO_MOVEMENT = 1f / 2f;
     //
     private final InteractionModel interact = new InteractionModel();
     private final MovementModel movement = new MovementModel();

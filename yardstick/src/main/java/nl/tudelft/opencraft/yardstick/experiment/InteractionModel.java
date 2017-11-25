@@ -107,8 +107,9 @@ public class InteractionModel {
         World world = bot.getWorld();
         Vector3i playerLoc = bot.getPlayer().getLocation().intVector();
 
-        for (int x = -PLACE_BLOCK_RADIUS; x <= PLACE_BLOCK_RADIUS; x++) {
-            for (int z = -PLACE_BLOCK_RADIUS; z <= PLACE_BLOCK_RADIUS; z++) {
+        int radius = PLACE_BLOCK_RADIUS;
+        for (int x = -radius; x <= radius; x++) {
+            for (int z = -radius; z <= radius; z++) {
                 if (x == 0 && z == 0) {
                     // Can't place a block in the player
                     continue;
@@ -119,7 +120,7 @@ public class InteractionModel {
                     // Find a supporting block below
                     Block support;
                     try {
-                        support = world.getBlockAt(playerLoc.add(0, y, 0));
+                        support = world.getBlockAt(playerLoc.add(x, y, z));
                     } catch (ChunkNotLoadedException ex) {
                         continue;
                     }

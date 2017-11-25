@@ -44,9 +44,9 @@ public class WorldUtil {
 
     /**
      * Geometrically calculates the three block faces (potentially) visible to a
-     * player looking at a block from. This does not take into account the
-     * distance (is the player inside the block, or is the block even rendered?)
-     * and the surroundings (is there a block or entity occluding the face?).
+     * player looking at a block. This does not take into account the distance
+     * (is the player inside the block, or is the block even rendered?) and the
+     * surroundings (is there a block or entity occluding the face?).
      *
      * @param player The player.
      * @param block The block the player is observing.
@@ -60,7 +60,8 @@ public class WorldUtil {
         // Calculate unit vector from the center of the block pointing at the player
         Vector3d diff = playerLoc.subtract(blockLoc).unit();
 
-        // Now, the three faces are computed by rounding two components down, and one component up
+        // Now, the three faces are computed by rounding two components towards zero,
+        // and one away from zero.
         BlockFace[] faces = new BlockFace[3];
 
         int x = diff.getX() > 0 ? 1 : -1;

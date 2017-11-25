@@ -165,7 +165,7 @@ public class BotListener implements SessionListener {
 
             if (pos.getY() > 255) {
                 // https://github.com/Steveice10/MCProtocolLib/issues/347
-                logger.warning("Ignoring BlockChange with coordinates (" + pos.getX() + "," + pos.getY() + "," + pos.getZ());
+                logger.warning("Ignoring BlockChange: (" + pos.getX() + "," + pos.getY() + "," + pos.getZ() + ")");
                 return;
             }
 

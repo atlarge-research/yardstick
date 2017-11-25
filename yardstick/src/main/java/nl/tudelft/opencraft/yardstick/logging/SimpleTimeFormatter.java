@@ -37,9 +37,12 @@ public class SimpleTimeFormatter extends Formatter {
                 .append("]");
 
         if (!record.getLoggerName().equals(GlobalLogger.getLogger().getName())) {
-            builder.append("[")
-                    .append(record.getLoggerName())
-                    .append("]");
+            String[] parts = record.getLoggerName().split("\\.");
+            for (String part : parts) {
+                builder.append("[")
+                        .append(part)
+                        .append("]");
+            }
         }
 
         builder.append(" ")
