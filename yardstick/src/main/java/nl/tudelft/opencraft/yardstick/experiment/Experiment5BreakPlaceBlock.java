@@ -90,7 +90,7 @@ public class Experiment5BreakPlaceBlock extends Experiment {
                 }
             }
             if (!bot.isJoined()) {
-                logger.warning(String.format("Could not connect bot %s on part %d.", options.host, options.port));
+                logger.warning(String.format("Could not connect bot %s:%d.", options.host, options.port));
                 bot.disconnect("Make sure to close all connections.");
             }
         };
