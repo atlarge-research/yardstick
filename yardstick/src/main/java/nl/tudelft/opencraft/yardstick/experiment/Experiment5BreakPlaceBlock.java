@@ -5,8 +5,6 @@ import java.util.stream.Collectors;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
-import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
-import nl.tudelft.opencraft.yardstick.util.Vector3d;
 
 public class Experiment5BreakPlaceBlock extends Experiment {
 
@@ -18,7 +16,6 @@ public class Experiment5BreakPlaceBlock extends Experiment {
     private int durationInSeconds;
     private int secondsBetweenJoin;
     private int numberOfBotsPerJoin;
-    private final Map<Bot, Vector3d> botSpawnLocations = new HashMap<>();
     private long lastJoin = System.currentTimeMillis();
 
     public Experiment5BreakPlaceBlock() {
@@ -38,10 +35,14 @@ public class Experiment5BreakPlaceBlock extends Experiment {
     protected void tick() {
         synchronized (botList) {
             List<Bot> disconnectedBots = botList.stream()
-                    .filter(bot -> !bot.isConnected())
+                    .filter(bot -> bot.hasBeenDisconnected())
                     .collect(Collectors.toList());
             disconnectedBots.forEach(bot -> bot.disconnect("Bot is not connected"));
-            botList.removeAll(disconnectedBots);
+            if (disconnectedBots.size() > 0) {
+                logger.warning("Bots disconnected: "
+                        + disconnectedBots.stream().map(Bot::getName).reduce("", (a, b) -> a + ", " + b));
+                botList.removeAll(disconnectedBots);
+            }
         }
 
         if (System.currentTimeMillis() - this.lastJoin > secondsBetweenJoin * 1000
@@ -49,17 +50,12 @@ public class Experiment5BreakPlaceBlock extends Experiment {
             lastJoin = System.currentTimeMillis();
             int botsToConnect = Math.min(this.numberOfBotsPerJoin, this.botsTotal - botList.size());
             for (int i = 0; i < botsToConnect; i++) {
-                new Thread(() -> {
-                    Bot bot;
-                    try {
-                        bot = createBot();
-                    } catch (ConnectException e) {
-                        logger.warning(String.format("Could not connect bot %s on part %d.", options.host, options.port));
-                        return;
-                    }
-                    botSpawnLocations.put(bot, bot.getPlayer().getLocation());
-                    botList.add(bot);
-                }).start();
+                Bot bot = createBot();
+                Thread connector = new Thread(newBotConnector(bot));
+                connector.setName("Connector-" + bot.getName());
+                connector.setDaemon(false);
+                connector.start();
+                botList.add(bot);
             }
         }
         synchronized (botList) {
@@ -70,30 +66,38 @@ public class Experiment5BreakPlaceBlock extends Experiment {
     }
 
     private void botTick(Bot bot) {
+        if (!bot.isJoined()) {
+            return;
+        }
+
         Task t = bot.getTask();
         if (t == null || t.getStatus().getType() != TaskStatus.StatusType.IN_PROGRESS) {
             bot.setTask(model.nextTask(bot));
         }
     }
 
-    private Bot createBot() throws ConnectException {
-        Bot bot = newBot(UUID.randomUUID().toString().substring(0, 6));
-        bot.connect();
-        int sleep = 1000;
-        int tries = 10;
-        while (tries-- > 0 && (bot.getPlayer() == null || !bot.isJoined())) {
-            try {
-                Thread.sleep(sleep);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                break;
+    private Runnable newBotConnector(Bot bot) {
+        return () -> {
+            bot.connect();
+            int sleep = 1000;
+            int tries = 3;
+            while (tries-- > 0 && (bot.getPlayer() == null || !bot.isJoined())) {
+                try {
+                    Thread.sleep(sleep);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                    break;
+                }
             }
-        }
-        if (!bot.isJoined()) {
-            bot.disconnect("Make sure to close all connections.");
-            throw new ConnectException();
-        }
-        return bot;
+            if (!bot.isJoined()) {
+                logger.warning(String.format("Could not connect bot %s on part %d.", options.host, options.port));
+                bot.disconnect("Make sure to close all connections.");
+            }
+        };
+    }
+
+    private Bot createBot() {
+        return newBot(UUID.randomUUID().toString().substring(0, 6));
     }
 
     @Override
@@ -105,7 +109,7 @@ public class Experiment5BreakPlaceBlock extends Experiment {
         } else if (botList.size() > 0) {
             boolean allBotsDisconnected;
             synchronized (botList) {
-                allBotsDisconnected = botList.stream().noneMatch(Bot::isJoined);
+                allBotsDisconnected = botList.stream().allMatch(Bot::hasBeenDisconnected);
             }
             if (allBotsDisconnected) {
                 return true;

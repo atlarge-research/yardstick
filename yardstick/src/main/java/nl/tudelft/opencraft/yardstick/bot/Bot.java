@@ -2,6 +2,8 @@ package nl.tudelft.opencraft.yardstick.bot;
 
 import com.github.steveice10.mc.protocol.MinecraftProtocol;
 import com.github.steveice10.packetlib.Client;
+import com.github.steveice10.packetlib.event.session.DisconnectedEvent;
+import com.github.steveice10.packetlib.event.session.SessionAdapter;
 import com.github.steveice10.packetlib.event.session.SessionListener;
 import com.github.steveice10.packetlib.tcp.TcpSessionFactory;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.SimpleAStar;
@@ -22,6 +24,7 @@ public class Bot {
     private final Client client;
     private final BotController controller;
     //
+    private boolean disconnected = false;
     private World world;
     private Server server;
     private BotPlayer player;
@@ -36,6 +39,14 @@ public class Bot {
         this.client = new Client(host, port, protocol, new TcpSessionFactory());
         this.client.getSession().addListener(new BotListener(this));
         this.controller = new BotController(this);
+
+        // Set disconnected field
+        this.client.getSession().addListener(new SessionAdapter() {
+            @Override
+            public void disconnected(DisconnectedEvent event) {
+                disconnected = true;
+            }
+        });
     }
 
     public void addSessionListener(SessionListener... listeners) {
@@ -45,7 +56,7 @@ public class Bot {
     }
 
     public void connect() {
-        if (client != null && client.getSession().isConnected()) {
+        if (client.getSession().isConnected()) {
             throw new IllegalStateException("Can not start connection. Bot already isConnected!");
         }
         client.getSession().connect();
@@ -56,6 +67,10 @@ public class Bot {
         return this.client != null
                 && this.getClient().getSession() != null
                 && this.getClient().getSession().isConnected();
+    }
+
+    public boolean hasBeenDisconnected() {
+        return disconnected;
     }
 
     public boolean isJoined() {
@@ -74,6 +89,7 @@ public class Bot {
         if (this.isJoined()) {
             client.getSession().disconnect(reason);
         }
+        disconnected = true;
     }
 
     public void setTask(Task activity) {

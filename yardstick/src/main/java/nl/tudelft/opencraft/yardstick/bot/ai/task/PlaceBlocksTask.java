@@ -157,7 +157,7 @@ public class PlaceBlocksTask extends AbstractTask {
 
             if (hitBlock.getMaterial() != Material.AIR) {
                 // Something hit, we can't place here
-                logger.info("Raytrace hit: " + hitBlock.getLocation());
+                //logger.info("Raytrace hit: " + hitBlock.getLocation());
                 return null;
             }
         }
