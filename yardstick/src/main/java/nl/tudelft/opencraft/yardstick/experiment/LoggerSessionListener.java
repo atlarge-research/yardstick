@@ -7,11 +7,11 @@ import com.github.steveice10.packetlib.event.session.DisconnectedEvent;
 import com.github.steveice10.packetlib.event.session.DisconnectingEvent;
 import com.github.steveice10.packetlib.event.session.SessionAdapter;
 
-public class ExperimentLogger extends SessionAdapter {
+public class LoggerSessionListener extends SessionAdapter {
 
     private final Logger logger;
 
-    public ExperimentLogger(Logger logger) {
+    public LoggerSessionListener(Logger logger) {
         this.logger = logger;
     }
 

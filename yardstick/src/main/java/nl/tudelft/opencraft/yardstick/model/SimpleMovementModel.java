@@ -1,14 +1,21 @@
-package nl.tudelft.opencraft.yardstick.experiment;
+package nl.tudelft.opencraft.yardstick.model;
 
 import java.util.Random;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTask;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
-public class MovementModel {
+public class SimpleMovementModel implements BotModel {
 
     private static final Random RANDOM = new Random(System.nanoTime());
+
+    @Override
+    public Task newTask(Bot bot) {
+        return new WalkTask(bot, newTargetLocation(bot));
+    }
 
     public Vector3i newTargetLocation(Bot bot) {
         if (RANDOM.nextDouble() < 0.1) {

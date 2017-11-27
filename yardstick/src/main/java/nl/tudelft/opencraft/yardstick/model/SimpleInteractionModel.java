@@ -1,4 +1,4 @@
-package nl.tudelft.opencraft.yardstick.experiment;
+package nl.tudelft.opencraft.yardstick.model;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -17,14 +17,15 @@ import nl.tudelft.opencraft.yardstick.bot.world.World;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import nl.tudelft.opencraft.yardstick.util.WorldUtil;
 
-public class InteractionModel {
+public class SimpleInteractionModel implements BotModel {
 
     private static final int INTERACT_BLOCK_AMOUNT = 3;
     private static final int BREAK_BLOCK_RADIUS = 1;
     private static final int PLACE_BLOCK_RADIUS = 3;
     private static final Material PLACE_BLOCK_MATERIAL = Material.STONE;
 
-    public Task newInteractTask(Bot bot) {
+    @Override
+    public Task newTask(Bot bot) {
         if (Math.random() < 0.5) {
             // Break blocks
             List<Block> selection = selectBreakBlocks(bot);

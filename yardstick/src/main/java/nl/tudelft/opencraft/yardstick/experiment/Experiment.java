@@ -104,7 +104,7 @@ public abstract class Experiment implements Runnable {
         Session s = client.getSession();
 
         // Logger
-        s.addListener(new ExperimentLogger(logger.newSubLogger(name)));
+        s.addListener(new LoggerSessionListener(logger.newSubLogger(name)));
 
         // Statistics
         if (stats != null) {

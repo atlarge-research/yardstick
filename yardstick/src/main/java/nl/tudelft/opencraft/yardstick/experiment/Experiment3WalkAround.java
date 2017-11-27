@@ -1,5 +1,6 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
@@ -9,7 +10,7 @@ import nl.tudelft.opencraft.yardstick.util.Vector3i;
 public class Experiment3WalkAround extends Experiment {
 
     private Bot bot;
-    private final MovementModel movement = new MovementModel();
+    private final SimpleMovementModel movement = new SimpleMovementModel();
 
     public Experiment3WalkAround() {
         super(3, "A simple test demonstrating A* movement.");

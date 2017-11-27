@@ -5,11 +5,12 @@ import java.util.stream.Collectors;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
+import nl.tudelft.opencraft.yardstick.model.BotModel;
 
-public class Experiment5BreakPlaceBlock extends Experiment {
+public abstract class AbstractModelExperiment extends Experiment {
 
     private final List<Bot> botList = Collections.synchronizedList(new ArrayList<>());
-    private final BotModel model = new BotModel();
+    private final BotModel model;
 
     private int botsTotal = 0;
     private long startMillis;
@@ -18,8 +19,9 @@ public class Experiment5BreakPlaceBlock extends Experiment {
     private int numberOfBotsPerJoin;
     private long lastJoin = System.currentTimeMillis();
 
-    public Experiment5BreakPlaceBlock() {
-        super(5, "Bots join at a regular interval, walk around, and have a chance of breaking or placing a couple of blocks.");
+    public AbstractModelExperiment(int id, String description, BotModel model) {
+        super(id, description);
+        this.model = model;
     }
 
     @Override
@@ -72,7 +74,7 @@ public class Experiment5BreakPlaceBlock extends Experiment {
 
         Task t = bot.getTask();
         if (t == null || t.getStatus().getType() != TaskStatus.StatusType.IN_PROGRESS) {
-            bot.setTask(model.nextTask(bot));
+            bot.setTask(model.newTask(bot));
         }
     }
 

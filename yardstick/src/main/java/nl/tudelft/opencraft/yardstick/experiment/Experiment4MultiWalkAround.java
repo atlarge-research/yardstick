@@ -1,5 +1,6 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
 import java.util.*;
 import java.util.stream.Collectors;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
@@ -13,7 +14,7 @@ import nl.tudelft.opencraft.yardstick.util.Vector3i;
 public class Experiment4MultiWalkAround extends Experiment {
 
     private final List<Bot> botList = Collections.synchronizedList(new ArrayList<>());
-    private final MovementModel movement = new MovementModel();
+    private final SimpleMovementModel movement = new SimpleMovementModel();
 
     private int botsTotal = 0;
     private long startMillis;
