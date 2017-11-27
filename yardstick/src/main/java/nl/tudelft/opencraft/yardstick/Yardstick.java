@@ -84,7 +84,7 @@ public class Yardstick {
                 ex = new Experiment4MultiWalkAround();
                 break;
             case 5:
-                ex = new Experiment5BreakBlock();
+                ex = new Experiment5BreakPlaceBlock();
                 break;
             default:
                 System.out.println("Invalid experiment: " + OPTIONS.experiment);

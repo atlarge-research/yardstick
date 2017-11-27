@@ -2,18 +2,19 @@ package nl.tudelft.opencraft.yardstick.bot;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
+import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 import nl.tudelft.opencraft.yardstick.util.Scheduler;
 
 public class BotTicker implements Runnable {
 
-    private final Logger logger = Logger.getLogger(this.getClass().getName());
+    private final SubLogger logger;
     private final Bot bot;
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     public BotTicker(Bot bot) {
         this.bot = bot;
+        this.logger = bot.getLogger().newSubLogger("BotTicker");
     }
 
     public void start() {

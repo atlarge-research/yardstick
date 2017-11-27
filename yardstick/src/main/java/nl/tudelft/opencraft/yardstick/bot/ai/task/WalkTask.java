@@ -25,7 +25,6 @@
 package nl.tudelft.opencraft.yardstick.bot.ai.task;
 
 import java.util.concurrent.*;
-import java.util.logging.Logger;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.PathNode;
 import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
@@ -35,14 +34,11 @@ import nl.tudelft.opencraft.yardstick.bot.world.Material;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
-public class WalkTask implements Task {
+public class WalkTask extends AbstractTask {
 
     private static double speed = 0.15, jumpFactor = 3, fallFactor = 4, liquidFactor = 0.5;
     private static int defaultTimeout = 6000;
 
-    private final String shortName;
-    private final Bot bot;
-    private final Logger logger;
     private final ExecutorService service = Executors.newSingleThreadExecutor();
     private final Vector3i target;
 
@@ -52,8 +48,6 @@ public class WalkTask implements Task {
     private PathNode nextStep;
     private int ticksSinceStepChange = 0;
     private int timeout = defaultTimeout;
-
-    private TaskStatus status = TaskStatus.forInProgress();
 
     private Callable<PathNode> task = new Callable<PathNode>() {
         @Override
@@ -65,22 +59,15 @@ public class WalkTask implements Task {
     };
 
     public WalkTask(final Bot bot, final Vector3i target) {
-        this.bot = bot;
+        super(bot);
         this.target = target;
-        this.shortName = "WalkTask[" + target.toString() + "]";
-        this.logger = bot.getLogger().newSubLogger(shortName);
 
         pathFuture = service.submit(task);
         startTime = System.currentTimeMillis();
     }
 
     @Override
-    public String getShortName() {
-        return shortName;
-    }
-
-    @Override
-    public TaskStatus tick() {
+    protected TaskStatus onTick() {
 
         if (pathFuture != null && !pathFuture.isDone()) {
             // If we're still calculating the path:
@@ -88,9 +75,9 @@ public class WalkTask implements Task {
             if (timeout > 0 && System.currentTimeMillis() - startTime > timeout) {
                 pathFuture.cancel(true);
                 nextStep = null;
-                return status = TaskStatus.forFailure("Path search timed out (" + timeout + " ms)");
+                return TaskStatus.forFailure("Path search timed out (" + timeout + " ms)");
             } else {
-                return status = TaskStatus.forInProgress();
+                return TaskStatus.forInProgress();
             }
 
         } else if (pathFuture != null && pathFuture.isDone() && !pathFuture.isCancelled()) {
@@ -99,13 +86,13 @@ public class WalkTask implements Task {
                 nextStep = pathFuture.get();
                 ticksSinceStepChange = 0;
             } catch (InterruptedException e) {
-                return status = TaskStatus.forFailure(e.getMessage(), e);
+                return TaskStatus.forFailure(e.getMessage(), e);
             } catch (ExecutionException e) {
                 /*
                 if (e.getCause() instanceof ChunkNotLoadedException) {
                     return status = TaskStatus.forInProgress();
                 }*/
-                return status = TaskStatus.forFailure(e.getMessage(), e.getCause());
+                return TaskStatus.forFailure(e.getMessage(), e.getCause());
             } finally {
                 pathFuture = null;
             }
@@ -113,7 +100,7 @@ public class WalkTask implements Task {
 
         // If we have no more steps to do, we're done
         if (nextStep == null) {
-            return status = TaskStatus.forSuccess();
+            return TaskStatus.forSuccess();
         }
 
         BotPlayer player = bot.getPlayer();
@@ -139,7 +126,7 @@ public class WalkTask implements Task {
         ticksSinceStepChange++;
         if (ticksSinceStepChange > 80) {
             nextStep = null;
-            return status = TaskStatus.forFailure("Too many ticks since step change");
+            return TaskStatus.forFailure("Too many ticks since step change");
         }
 
         // Get locations
@@ -153,13 +140,13 @@ public class WalkTask implements Task {
             // TODO: Fix: Wait until chunk is loaded.
             logger.warning(String.format("Block under player: %s", blockLoc));
             logger.warning(String.format("Player at %s", moveLoc));
-            return status = TaskStatus.forFailure(e.getMessage());
+            return TaskStatus.forFailure(e.getMessage());
         }
 
         // Step
         Vector3i stepTargetBlock = nextStep.getLocation();
         if (stepTargetBlock == null) {
-            return status = TaskStatus.forFailure("No next step");
+            return TaskStatus.forFailure("No next step");
         }
         Vector3d stepTarget = stepTargetBlock.doubleVector();
 
@@ -187,7 +174,7 @@ public class WalkTask implements Task {
             try {
                 canClimbBlock = bot.getPathFinder().getWorldPhysics().canClimb(moveLoc.intVector());
             } catch (ChunkNotLoadedException e) {
-                return status = TaskStatus.forInProgress();
+                return TaskStatus.forInProgress();
             }
             if (!inLiquid && !canClimbBlock) {
                 if (moveLoc.getY() < stepY) {
@@ -220,21 +207,16 @@ public class WalkTask implements Task {
             ticksSinceStepChange = 0;
         }
 
-        return status = TaskStatus.forInProgress();
+        return TaskStatus.forInProgress();
     }
 
     @Override
-    public void stop() {
+    protected void onStop() {
         if (pathFuture != null && !pathFuture.isDone()) {
             pathFuture.cancel(true);
         }
         nextStep = null;
         this.service.shutdown();
-    }
-
-    @Override
-    public TaskStatus getStatus() {
-        return status;
     }
 
     public Vector3i getTarget() {

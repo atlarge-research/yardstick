@@ -28,6 +28,9 @@ public class Scheduler {
     /**
      * Sleeps until the next tick should occur. Should be called after a tick
      * has completely processed.
+     *
+     * @return True if sleeping has occurred. False if this method was called to
+     * late, and thus a delay was experienced.
      */
     public boolean sleepTick() {
         tickNumber++;

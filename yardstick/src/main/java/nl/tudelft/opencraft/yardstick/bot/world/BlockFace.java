@@ -1,5 +1,6 @@
 package nl.tudelft.opencraft.yardstick.bot.world;
 
+import java.util.EnumMap;
 import java.util.HashMap;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
@@ -14,12 +15,21 @@ public enum BlockFace {
     SPECIAL(0, 0, 0);
 
     private static final HashMap<Vector3i, BlockFace> VECTOR3I_TO_BLOCKFACE = new HashMap<>();
+    private static final EnumMap<BlockFace, BlockFace> OPPOSITE = new EnumMap<>(BlockFace.class);
+    //
     private final Vector3i offset;
 
     static {
         for (BlockFace face : values()) {
             VECTOR3I_TO_BLOCKFACE.put(face.offset, face);
         }
+        OPPOSITE.put(BOTTOM, TOP);
+        OPPOSITE.put(TOP, BOTTOM);
+        OPPOSITE.put(NORTH, SOUTH);
+        OPPOSITE.put(SOUTH, NORTH);
+        OPPOSITE.put(WEST, EAST);
+        OPPOSITE.put(EAST, WEST);
+        OPPOSITE.put(SPECIAL, SPECIAL);
     }
 
     private BlockFace(int modX, int modY, int modZ) {
@@ -28,6 +38,10 @@ public enum BlockFace {
 
     public Vector3i getOffset() {
         return offset;
+    }
+
+    public BlockFace getOpposite() {
+        return OPPOSITE.get(this);
     }
 
     public static BlockFace forUnitVector(Vector3i vec) {
