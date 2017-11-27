@@ -39,6 +39,7 @@ public class PlaceBlocksTask extends AbstractTask {
             return TaskStatus.forInProgress();
         }
 
+        //logger.info("=== START BlockPlace ===");
         Vector3i placeAt = locations.next();
 
         Block toPlace;
@@ -60,9 +61,10 @@ public class PlaceBlocksTask extends AbstractTask {
             return onTick();
         }
 
-        logger.info("Placing -- block: " + placeAt + ", face: " + hit.face + ", hit: " + hit.hit + ", player: " + bot.getPlayer().getLocation());
+        //logger.info("Placing -- block: " + placeAt + ", face: " + hit.face + ", hit: " + hit.hit + ", player: " + bot.getPlayer().getLocation());
         bot.getController().placeBlock(placeAt, hit.face, hit.hit);
 
+        //logger.info("=== END BlockPlace ===");
         return TaskStatus.forInProgress();
     }
 
@@ -90,7 +92,7 @@ public class PlaceBlocksTask extends AbstractTask {
 
             if (support.getMaterial().isTraversable()) {
                 // We can't place at this block
-                logger.info("Traversable: " + support.getLocation() + ", relative face: " + placeFace.name());
+                //logger.info("Traversable: " + support.getLocation() + ", relative face: " + placeFace.name());
                 continue;
             }
 
@@ -101,7 +103,7 @@ public class PlaceBlocksTask extends AbstractTask {
             Vector3d hitpoint = raytrace(from, support, supportFace);
             if (hitpoint == null) {
                 // A block is obstructing
-                logger.info("  -> obstruction -- from: " + from + ", supporting: " + support.getLocation() + ", face: " + supportFace);
+                //logger.info("  -> obstruction -- from: " + from + ", supporting: " + support.getLocation() + ", face: " + supportFace);
                 continue;
             }
 
@@ -128,7 +130,7 @@ public class PlaceBlocksTask extends AbstractTask {
      * @param from The viewpoint or origin of the ray trace.
      * @param support The block to ray trace to.
      * @param face The face of the block.
-     * @return The hit point if the ray trace was succesfull, null if a
+     * @return The hit point if the ray trace was successful, null if a
      * occluding block was found.
      */
     private Vector3d raytrace(Vector3d from, Block support, BlockFace face) {
