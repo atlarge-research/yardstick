@@ -118,13 +118,16 @@ public class SimpleWorldPhysics implements WorldPhysics {
         if (Math.abs(origZ - destZ) > 1) {
             valid = false;
         }
+        if (!valid) {
+            throw new IllegalArgumentException("Invalid move: " + locA + " -> " + locB + ". Origin and destination too far apart!");
+        }
 
         // Origin must be traversable
         valid = valid && isTraversable(origX, origY, origZ);
         valid = valid && isTraversable(origX, origY + 1, origZ);
 
         if (!valid) {
-            throw new IllegalArgumentException("Invalid move: " + locA + " -> " + locB);
+            throw new IllegalArgumentException("Invalid move: " + locA + " -> " + locB + ". Origin not walkable!");
         }
 
         //

@@ -1,13 +1,10 @@
 package nl.tudelft.opencraft.yardstick.workload;
 
-import com.github.steveice10.packetlib.event.session.ConnectedEvent;
-import com.github.steveice10.packetlib.event.session.DisconnectedEvent;
-import com.github.steveice10.packetlib.event.session.DisconnectingEvent;
 import com.github.steveice10.packetlib.event.session.PacketReceivedEvent;
 import com.github.steveice10.packetlib.event.session.PacketSentEvent;
-import com.github.steveice10.packetlib.event.session.SessionListener;
+import com.github.steveice10.packetlib.event.session.SessionAdapter;
 
-public class WorkloadSessionListener implements SessionListener {
+public class WorkloadSessionListener extends SessionAdapter {
 
     private final WorkloadDumper dumper;
     private final String botName;
@@ -25,18 +22,6 @@ public class WorkloadSessionListener implements SessionListener {
     @Override
     public void packetSent(PacketSentEvent pse) {
         dumper.packetSent(botName, pse);
-    }
-
-    @Override
-    public void connected(ConnectedEvent ce) {
-    }
-
-    @Override
-    public void disconnecting(DisconnectingEvent de) {
-    }
-
-    @Override
-    public void disconnected(DisconnectedEvent de) {
     }
 
 }
