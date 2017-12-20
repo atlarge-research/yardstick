@@ -4,6 +4,8 @@ import java.util.Random;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTask;
+import nl.tudelft.opencraft.yardstick.bot.world.Block;
+import nl.tudelft.opencraft.yardstick.bot.world.BlockFace;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
@@ -42,12 +44,7 @@ public class SimpleMovementModel implements BotModel {
         int newX = (int) (Math.floor(RANDOM.nextInt(maxx - minx) + minx) + 0.5);
         int newZ = (int) (Math.floor(RANDOM.nextInt(maxz - minz) + minz) + 0.5);
 
-        try {
-            int newY = bot.getWorld().getHighestBlockAt(newX, newZ).getY() + 1;
-            return new Vector3i(newX, newY, newZ);
-        } catch (ChunkNotLoadedException ex) {
-            return originalLocation.intVector();
-        }
+        return getTargetAt(bot, newX, newZ);
     }
 
     private Vector3i getNewLongDistanceTarget(Bot bot) {
@@ -60,11 +57,33 @@ public class SimpleMovementModel implements BotModel {
         int newX = (int) (Math.floor(location.getX() + (distance * Math.cos(angle))) + 0.5);
         int newZ = (int) (Math.floor(location.getZ() + (distance * Math.sin(angle))) + 0.5);
 
+        return getTargetAt(bot, newX, newZ);
+    }
+
+    private Vector3i getTargetAt(Bot bot, int x, int z) {
+        Vector3d botLoc = bot.getPlayer().getLocation();
+
+        int startY = Math.max(botLoc.intVector().getY(), 5);
+        int y = -1;
         try {
-            int newY = bot.getWorld().getHighestBlockAt(newX, newZ).getY() + 1;
-            return new Vector3i(newX, newY, newZ);
+            Block b = bot.getWorld().getBlockAt(x, startY, z);
+            for (int i = -5; i <= 5; i++) {
+                Block test = b.getRelative(0, i, 0);
+                if (test.getMaterial().isTraversable()
+                        && !test.getRelative(BlockFace.BOTTOM).getMaterial().isTraversable()) {
+                    y = startY + i;
+                    break;
+                }
+            }
+
+            if (y < 0 || y > 255) {
+                return botLoc.intVector();
+            }
+
+            return new Vector3i(x, y, z);
         } catch (ChunkNotLoadedException ex) {
-            return location.intVector();
+            bot.getLogger().warning("Bot target not loaded: (" + x + "," + startY + "," + z + ")");
+            return botLoc.intVector();
         }
     }
 
