@@ -65,6 +65,10 @@ public class SimpleInteractionModel implements BotModel {
                         continue;
                     }
 
+                    if (bot.getPlayer().getLocation().getY() + y <= 1) {
+                        continue;
+                    }
+
                     // Get the relative block
                     Block block;
                     try {
@@ -118,6 +122,10 @@ public class SimpleInteractionModel implements BotModel {
 
                 // Find a block we can place on the floor
                 for (int y = -2; y <= 1; y++) {
+                    if (playerLoc.getY() + y <= 1) {
+                        continue;
+                    }
+
                     // Find a supporting block below
                     Block support;
                     try {

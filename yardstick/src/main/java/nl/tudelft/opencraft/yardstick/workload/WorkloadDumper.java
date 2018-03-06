@@ -1,23 +1,22 @@
 package nl.tudelft.opencraft.yardstick.workload;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Level;
 import com.github.steveice10.packetlib.event.session.PacketReceivedEvent;
 import com.github.steveice10.packetlib.event.session.PacketSentEvent;
 import com.github.steveice10.packetlib.packet.Packet;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.Level;
-
 public class WorkloadDumper {
 
     private static final SubLogger LOGGER = GlobalLogger.getLogger().newSubLogger("WorkloadDumper");
     private final File dumpFolder = new File("workload");
-    private final Map<String, PacketEntryWriter> queues = new HashMap<>();
+    private final Map<String, PacketEntryWriter> queues = new ConcurrentHashMap<>();
     //
     private final AtomicBoolean running = new AtomicBoolean(false);
     private Thread writerThread;
@@ -121,10 +120,8 @@ public class WorkloadDumper {
             logger.info("Started write thread");
 
             while (running.get()) {
-                synchronized (queues) {
-                    for (PacketEntryWriter peq : queues.values()) {
-                        peq.writeQueued();
-                    }
+                for (PacketEntryWriter peq : queues.values()) {
+                    peq.writeQueued();
                 }
 
                 try {
