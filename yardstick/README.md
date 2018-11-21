@@ -70,9 +70,9 @@ The letter 'a', 's', or 'c' at the end indicates *how* to execute the program.
 - 's' stands for **s**ynchronous. These programs block Dastools from advancing to the next run level.
 - 'c' stands for **c**ompletion. These programs can be thought of as synchronous programs with an additional property: when all completion programs have terminated, Dastools assumes the experiment is complete and will terminate all other programs.
 
-#### Step 3: Provide instructions for each node type
+#### Step 3: Configure Minecraft-like server and emulated-player behavior
 
-Now that you have moved all necessary configuration files and executables to the DAS-5, and have created the required directory structure for the experiment, you can specify what each node type should do specifically.
+Now that you have moved all necessary configuration files and executables to the DAS-5, and have created the required directory structure for the experiment, you can specify what your node types, a Minecraft-like server and a number of player-emulation instances, should do specifically.
 
 Although the executable files in the `programs` directory can be any type of executable that can be interpreted by the shell, we will assume here that these file are BASH scripts.
 
@@ -84,6 +84,36 @@ IFS=$'\n\t'
 
 java -Xmx50G -Xms1024M -Dyardstick.gateway.host=${PROMHOST} -Dyardstick.gateway.port=${PROMPORT} -jar server.jar nogui
 ```
+
+The file `1-yardstick-c` might look like this:
+```
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+EXPNAME=$1
+
+cd /var/scratch/$USER/experiments/$EXPNAME/tmp
+
+EXPNUM=4
+MCHOST=$(cat mc-server-host)
+MCPORT=$(cat mc-server-port)
+PROMHOST=$(cat pushgatewayhost)
+PROMPORT=$(cat pushgatewayport)
+
+NUMBOTS=200
+# We trust the server to fail before this time.
+DURATION=3600
+JOINTINTERVAL=120
+BOTSPERJOIN=2
+
+cd /var/scratch/jdonkerv/benchmark-mc/yardstick/
+java -Xmx50G -jar ./target/yardstick*dependencies.jar -e $EXPNUM -h $MCHOST -p $MCPORT -ph $PROMHOST -pp $PROMPORT -Ebots=$NUMBOTS -Eduration=$DURATION -Ejoininterval=$JOINTINTERVAL -Enumbotsperjoin=$BOTSPERJOIN -d
+```
+
+The call to start the Yardstick executable JAR file is a rather long one. This single command configures how Yardstick should perform its player emulation, ranging from the behavior of individual players to the join/leave pattern over all the players.
+
+If you would like to learn more about the internals of these experiments, you can learn more [here](https://atlarge.ewi.tudelft.nl/gitlab/opencraft/benchmark-mc/tree/f393f69c30c4a45ed6b494379481ce78e7db9a50/yardstick/src/main/java/nl/tudelft/opencraft/yardstick/experiment). Unfortunately, the player behavior is hard-coded in the Yardstick source code. Making it easier to change the player behavior is important to increase the usability of the system. But that's an issue for another time.
 
 #### Step 4: Write an experiment-runner script
 
