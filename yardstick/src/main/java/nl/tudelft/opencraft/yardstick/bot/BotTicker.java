@@ -6,17 +6,30 @@ import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 import nl.tudelft.opencraft.yardstick.util.Scheduler;
 
+/**
+ * A runnable ticker for executing bot tasks for bots. The BotTicker
+ * automatically executes the bot's current task.
+ */
 public class BotTicker implements Runnable {
 
     private final SubLogger logger;
     private final Bot bot;
     private final AtomicBoolean running = new AtomicBoolean(false);
 
+    /**
+     * Creates a new BotTicker.
+     *
+     * @param bot the bot.
+     */
     public BotTicker(Bot bot) {
         this.bot = bot;
         this.logger = bot.getLogger().newSubLogger("BotTicker");
     }
 
+    /**
+     * Starts the BotTicker. The ticker starts in a new thread, which can be
+     * stopped with {@link #stop()}.
+     */
     public void start() {
         if (!running.compareAndSet(false, true)) {
             throw new IllegalStateException("Already ticking");
@@ -27,6 +40,9 @@ public class BotTicker implements Runnable {
         t.start();
     }
 
+    /**
+     * Stops the BotTicker.
+     */
     public void stop() {
         running.set(false);
     }

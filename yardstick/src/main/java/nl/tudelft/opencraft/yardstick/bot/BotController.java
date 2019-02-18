@@ -19,6 +19,9 @@ import nl.tudelft.opencraft.yardstick.bot.world.Material;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
+/**
+ * Represents actions for controlling a {@link Bot}.
+ */
 public class BotController {
 
     // http://wiki.vg/Inventory
@@ -26,18 +29,38 @@ public class BotController {
 
     private final Bot bot;
 
+    /**
+     * Creates a new controller.
+     *
+     * @param bot the bot.
+     */
     public BotController(Bot bot) {
         this.bot = bot;
     }
 
+    /**
+     * Gets the player data for the bot.
+     *
+     * @return the player data.
+     */
     private BotPlayer getPlayer() {
         return bot.getPlayer();
     }
 
+    /**
+     * Returns the session for the bot.
+     *
+     * @return the session.
+     */
     private Session getSession() {
         return bot.getClient().getSession();
     }
 
+    /**
+     * Sends a new location to the Minecraft server.
+     *
+     * @param vector the location.
+     */
     public void updateLocation(Vector3d vector) {
         // TODO: fix onGround calculation
         boolean onGround = vector.getY() - Math.floor(vector.getY()) < 0.1;
@@ -45,6 +68,13 @@ public class BotController {
         getSession().send(new ClientPlayerPositionPacket(onGround, vector.getX(), vector.getY(), vector.getZ()));
     }
 
+    /**
+     * Updates the Minecraft server of the Bot's digging status.
+     *
+     * @param block the block the bot is digging.
+     * @param face the face the bot is digging.
+     * @param state the digging state.
+     */
     public void updateDigging(Block block, BlockFace face, DiggingState state) {
         Position pos = new Position(block.getX(), block.getY(), block.getZ());
         Packet p;
@@ -64,6 +94,13 @@ public class BotController {
         getSession().send(p);
     }
 
+    /**
+     * Updates the Minecraft server of block placement.
+     *
+     * @param block The block the bot is placing.
+     * @param face The face the bot is placing at.
+     * @param hitpoint The hitpoint of the cursor.
+     */
     public void placeBlock(Vector3i block, BlockFace face, Vector3d hitpoint) {
         // Look at the block
         Vector3d absoluteHit = block.doubleVector().add(0.5, 0.5, 0.5).add(face.getOffset().doubleVector().multiply(0.5));
@@ -85,10 +122,20 @@ public class BotController {
         //bot.getLogger().info("Controller: place  -- block: " + block + ", face: " + face + ", hit: " + hitpoint);
     }
 
+    /**
+     * Updates the Minecraft server of a a creative inventory action. In
+     * particular, getting a material and setting it as the first slot.
+     *
+     * @param mat the material to set.
+     * @param amt the amount of material to set.
+     */
     public void creativeInventoryAction(Material mat, int amt) {
         getSession().send(new ClientCreativeInventoryActionPacket(PLAYER_INVENTORY_HOTBAR_0, new ItemStack(mat.getId(), amt)));
     }
 
+    /**
+     * A state of breaking blocks.
+     */
     public static enum DiggingState {
         STARTED_DIGGING,
         CANCELLED_DIGGING,

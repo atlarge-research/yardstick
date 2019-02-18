@@ -27,6 +27,9 @@ import nl.tudelft.opencraft.yardstick.bot.entity.*;
 import nl.tudelft.opencraft.yardstick.bot.world.*;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 
+/**
+ * Handles basic bot network traffic.
+ */
 public class BotListener implements SessionListener {
 
     private final Bot bot;
@@ -36,6 +39,11 @@ public class BotListener implements SessionListener {
     private Server server;
     private World world;
 
+    /**
+     * Creates a new listener.
+     *
+     * @param bot the bot to listen to.
+     */
     public BotListener(Bot bot) {
         this.bot = bot;
         this.logger = bot.getLogger();

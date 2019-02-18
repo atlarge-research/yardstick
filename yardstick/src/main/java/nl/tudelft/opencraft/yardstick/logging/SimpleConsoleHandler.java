@@ -19,11 +19,19 @@ import java.util.logging.Formatter;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 
+/**
+ * A {@link Handler} for publishing logs to the console.
+ */
 public class SimpleConsoleHandler extends Handler {
 
     public static final String LINE_SEPERATOR = System.getProperty("line.separator");
     private final Formatter formatter;
 
+    /**
+     * Creates a new SimpleConsoleHandler.
+     *
+     * @param formatter the formatter to use to format data.
+     */
     public SimpleConsoleHandler(Formatter formatter) {
         this.formatter = formatter;
     }

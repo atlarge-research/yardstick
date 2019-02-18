@@ -2,6 +2,10 @@ package nl.tudelft.opencraft.yardstick.util;
 
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Represents an accurate repeating timer (i.e., a scheduler) for repeating
+ * tasks at a fixed frequency.
+ */
 public class Scheduler {
 
     public static final long YIELD_AT_NANOS = 2_000_000; // 2 ms
@@ -10,14 +14,31 @@ public class Scheduler {
     private long startNanos = 0;
     private long tickNumber = 0;
 
+    /**
+     * Creates a new Scheduler for executing tasks.
+     *
+     * @param tickMs the desired fixed delay between task executions, in
+     * milliseconds.
+     */
     public Scheduler(long tickMs) {
         this.tickNanos = TimeUnit.MILLISECONDS.toNanos(tickMs);
     }
 
+    /**
+     * Returns the current iteration of the scheduler. The first iteration
+     * starts at zero.
+     *
+     * @return The iteration.
+     */
     public long getTick() {
         return tickNumber;
     }
 
+    /**
+     * Starts the scheduler. Note that this only sets the clock. In order to
+     * operate the scheduler, execute the tasks and call {@link #sleepTick()}
+     * after each iteration.
+     */
     public void start() {
         if (startNanos != 0) {
             throw new IllegalStateException("Scheduler already started");
@@ -29,8 +50,8 @@ public class Scheduler {
      * Sleeps until the next tick should occur. Should be called after a tick
      * has completely processed.
      *
-     * @return True if sleeping has occurred. False if this method was called to
-     * late, and thus a delay was experienced.
+     * @return true if sleeping has occurred; false if this method was called
+     * too late, and thus a delay was experienced.
      */
     public boolean sleepTick() {
         tickNumber++;

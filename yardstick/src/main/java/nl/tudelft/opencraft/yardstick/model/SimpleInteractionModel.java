@@ -17,6 +17,9 @@ import nl.tudelft.opencraft.yardstick.bot.world.World;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import nl.tudelft.opencraft.yardstick.util.WorldUtil;
 
+/**
+ * Represents a model which places and breaks blocks randomly.
+ */
 public class SimpleInteractionModel implements BotModel {
 
     private static final int INTERACT_BLOCK_AMOUNT = 3;

@@ -21,6 +21,9 @@ import java.text.SimpleDateFormat;
 import java.util.logging.Formatter;
 import java.util.logging.LogRecord;
 
+/**
+ * A formatter for prefixing log records with a date and time.
+ */
 public class SimpleTimeFormatter extends Formatter {
 
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");

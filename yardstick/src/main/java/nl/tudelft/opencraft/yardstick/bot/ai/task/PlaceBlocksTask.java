@@ -14,12 +14,23 @@ import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import nl.tudelft.opencraft.yardstick.util.WorldUtil;
 
+/**
+ * Represents a task to place blocks.
+ */
 public class PlaceBlocksTask extends AbstractTask {
 
     private final Material material;
     private final Iterator<Vector3i> locations;
     private boolean inventoryAction = false;
 
+    /**
+     * Creates a new PlaceBlocksTask. The locations must be visible and
+     * reachable to the bot.
+     *
+     * @param bot the bot for the task.
+     * @param locations the locations at which to place blocks.
+     * @param material the material type of the blocks.
+     */
     public PlaceBlocksTask(Bot bot, List<Vector3i> locations, Material material) {
         super(bot);
         this.locations = Lists.newArrayList(locations).iterator();

@@ -17,6 +17,9 @@ import com.google.common.io.CountingInputStream;
 import com.google.common.io.CountingOutputStream;
 import nl.tudelft.opencraft.yardstick.Yardstick;
 
+/**
+ * Utility class to convert binary capture files to CSV-formatted files.
+ */
 public class CsvConverter {
 
     private static final Logger LOGGER = Yardstick.LOGGER.newSubLogger("CSV Converter");
@@ -24,6 +27,13 @@ public class CsvConverter {
     private CsvConverter() {
     }
 
+    /**
+     * Convert a binary message capture file to a CSV-formatted file. The input
+     * file must exist, the output file may.
+     *
+     * @param inFileName the input filename.
+     * @param outFileName the output filename.
+     */
     public static void convertCsv(String inFileName, String outFileName) {
         File inFile = new File(inFileName);
         File outFile = new File(outFileName);

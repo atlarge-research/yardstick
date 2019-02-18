@@ -6,6 +6,9 @@ import com.github.steveice10.mc.protocol.data.game.entity.player.GameMode;
 import com.github.steveice10.packetlib.Session;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 
+/**
+ * Represents the bot as a player in the world.
+ */
 public class BotPlayer extends Player {
 
     private final Bot bot;

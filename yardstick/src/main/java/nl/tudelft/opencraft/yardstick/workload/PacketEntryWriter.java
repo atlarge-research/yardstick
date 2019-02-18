@@ -12,6 +12,10 @@ import java.util.zip.GZIPOutputStream;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 
+/**
+ * Represents a concurrent buffer for writing {@link PacketEntry} objects to a
+ * file. The PacketEntrys are GZIPed buffered.
+ */
 public class PacketEntryWriter implements AutoCloseable {
 
     private static final SubLogger LOGGER = GlobalLogger.getLogger().newSubLogger("WorkLoadFileDumper");
@@ -19,6 +23,12 @@ public class PacketEntryWriter implements AutoCloseable {
     private final DataOutputStream dos;
     private final Queue<PacketEntry> entries = new ConcurrentLinkedQueue<>();
 
+    /**
+     * Creates a new PacketEntryWriter.
+     *
+     * @param file the file to write to.
+     * @throws IOException if there was an exception making a stream.
+     */
     public PacketEntryWriter(File file) throws IOException {
         FileOutputStream fos = new FileOutputStream(file);
         BufferedOutputStream bos = new BufferedOutputStream(fos);
@@ -26,10 +36,18 @@ public class PacketEntryWriter implements AutoCloseable {
         this.dos = new DataOutputStream(gos);
     }
 
+    /**
+     * Queues a PacketEntry to be written to the file.
+     *
+     * @param entry the entry.
+     */
     public void queue(PacketEntry entry) {
         entries.add(entry);
     }
 
+    /**
+     * Writes all PacketEntry objects to the file.
+     */
     public void writeQueued() {
         while (!entries.isEmpty()) {
             PacketEntry entry = entries.poll();
@@ -41,6 +59,9 @@ public class PacketEntryWriter implements AutoCloseable {
         }
     }
 
+    /**
+     * Closes the writer.
+     */
     @Override
     public void close() throws Exception {
         dos.flush();

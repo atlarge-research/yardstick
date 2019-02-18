@@ -12,6 +12,11 @@ import com.github.steveice10.packetlib.packet.Packet;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 
+/**
+ * Handles {@link PacketSentEvent}s and {@link PacketReceivedEvent}s for
+ * multiple bots, writing the corresponding {@link Packet}s to a
+ * {@link PacketEntryWriter} concurrently per bot.
+ */
 public class WorkloadDumper {
 
     private static final SubLogger LOGGER = GlobalLogger.getLogger().newSubLogger("WorkloadDumper");
@@ -21,6 +26,9 @@ public class WorkloadDumper {
     private final AtomicBoolean running = new AtomicBoolean(false);
     private Thread writerThread;
 
+    /**
+     * Creates a new WorkloadDumper.
+     */
     public WorkloadDumper() {
         if (!dumpFolder.exists() && !dumpFolder.mkdirs()) {
             LOGGER.severe("Could not create folder: " + dumpFolder.getPath());
@@ -56,14 +64,33 @@ public class WorkloadDumper {
         return dumper;
     }
 
+    /**
+     * Handles a PacketSentEvent for a given bot.
+     *
+     * @param botName the name of the bot.
+     * @param pse the event.
+     */
     public void packetSent(String botName, PacketSentEvent pse) {
         handlePacket(botName, pse.getPacket(), true);
     }
 
+    /**
+     * Handles a PacketReceivedEvent for a given bot.
+     *
+     * @param botName the name of the bot.
+     * @param pre the event.
+     */
     public void packetReceived(String botName, PacketReceivedEvent pre) {
         handlePacket(botName, pre.getPacket(), false);
     }
 
+    /**
+     * Starts the dumper thread. The thread runs as a daemon and must be stopped
+     * prior to program termination by calling {@link #stop()}. The thread
+     * writes all queued packets to the file every second.
+     *
+     * @throws IllegalStateException if the thread has already been started.
+     */
     public void start() {
         if (running.getAndSet(true)) {
             throw new IllegalStateException("Write thread already started.");
@@ -74,6 +101,12 @@ public class WorkloadDumper {
         writerThread.start();
     }
 
+    /**
+     * Stops the dumper thread.
+     *
+     * @see #start()
+     * @throws IllegalStateException if the thread has not been started.
+     */
     public void stop() {
         if (!running.getAndSet(false)) {
             throw new IllegalStateException("Write thread not started.");

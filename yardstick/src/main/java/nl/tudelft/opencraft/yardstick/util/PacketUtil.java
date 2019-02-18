@@ -9,6 +9,9 @@ import com.github.steveice10.packetlib.io.stream.StreamNetOutput;
 import com.github.steveice10.packetlib.packet.Packet;
 import com.github.steveice10.packetlib.packet.PacketProtocol;
 
+/**
+ * Represents packet-related utilities.
+ */
 public class PacketUtil {
 
     private static final CountingOutputStream cos = new CountingOutputStream();
@@ -17,6 +20,12 @@ public class PacketUtil {
     private PacketUtil() {
     }
 
+    /**
+     * Returns, in bytes, the length of the packet.
+     *
+     * @param packet the packet.
+     * @return The length.
+     */
     public static int packetLength(Packet packet) {
         cos.reset();
         try {
@@ -27,7 +36,16 @@ public class PacketUtil {
         return (int) cos.getCount();
     }
 
-    //private final Map<Class<? extends Packet>, Integer> outgoing;
+    /**
+     * Returns the packet class corresponding to a packet integer identifier in
+     * a {@link PacketProtocol}.
+     *
+     * @param prot the packet protocol.
+     * @param id the ID of the packet.
+     * @param outgoing whether the packet is client->server.
+     * @return The packet class.
+     * @throws Exception upon failure of any sort.
+     */
     public static Class<?> getPacketClass(PacketProtocol prot, int id, boolean outgoing) throws Exception {
         if (!outgoing) {
             return prot.createIncomingPacket(id).getClass();

@@ -17,12 +17,21 @@ package nl.tudelft.opencraft.yardstick.logging;
 
 import java.util.logging.Logger;
 
+/**
+ * A logger which composes a parent logger.
+ */
 public class SubLogger extends Logger {
 
     public SubLogger(String name) {
         super(name, null);
     }
 
+    /**
+     * Creates a new child logger for this logger.
+     *
+     * @param name the name of the child logger.
+     * @return The child logger.
+     */
     public SubLogger newSubLogger(String name) {
         SubLogger logger;
         if (getName() == null) {

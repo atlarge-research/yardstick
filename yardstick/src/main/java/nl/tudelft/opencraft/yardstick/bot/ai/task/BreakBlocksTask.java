@@ -9,6 +9,9 @@ import nl.tudelft.opencraft.yardstick.bot.world.Block;
 import nl.tudelft.opencraft.yardstick.bot.world.BlockFace;
 import nl.tudelft.opencraft.yardstick.util.WorldUtil;
 
+/**
+ * Represents a task for breaking blocks.
+ */
 public class BreakBlocksTask extends AbstractTask {
 
     private final Iterator<Block> blocks;
@@ -17,6 +20,13 @@ public class BreakBlocksTask extends AbstractTask {
     private int state = 0;
     private BlockFace face;
 
+    /**
+     * Creates a new BreakBlocksTask. The blocks must be in reach and visible to
+     * the bot.
+     *
+     * @param bot the bot of the task.
+     * @param blocks the blocks that must be broken.
+     */
     public BreakBlocksTask(Bot bot, List<Block> blocks) {
         super(bot);
         this.blocks = Lists.newArrayList(blocks).iterator();

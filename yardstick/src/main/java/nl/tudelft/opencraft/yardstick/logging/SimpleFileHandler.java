@@ -22,10 +22,20 @@ import java.util.logging.Formatter;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 
+/**
+ * A handler for publishing logs to a file.
+ */
 public class SimpleFileHandler extends Handler {
 
     private final Handler handle;
 
+    /**
+     * Creates a new SimpleFileHandler for the given formatter and file. If the
+     * file exists, it will be permanently deleted.
+     *
+     * @param formatter the formatter to use.
+     * @param file the file to write to.
+     */
     public SimpleFileHandler(Formatter formatter, File file) {
         this(formatter, file.getPath());
 
@@ -34,6 +44,13 @@ public class SimpleFileHandler extends Handler {
         }
     }
 
+    /**
+     * Creates a new SimpleFileHandler for the given formatter and file name. If
+     * the file exists, it will be permanently deleted.
+     *
+     * @param formatter the formatter to use.
+     * @param name the file to write to.
+     */
     public SimpleFileHandler(Formatter formatter, String name) {
         Handler fileHandler = null;
         try {

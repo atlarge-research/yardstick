@@ -13,6 +13,9 @@ import nl.tudelft.opencraft.yardstick.statistic.StatisticsPusher;
 import nl.tudelft.opencraft.yardstick.workload.CsvConverter;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
 
+/**
+ * Entry point for the emulator.
+ */
 public class Yardstick {
 
     public static final String VERSION = "0.1";

@@ -1,5 +1,8 @@
 package nl.tudelft.opencraft.yardstick.statistic;
 
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.logging.Level;
 import com.github.steveice10.mc.protocol.packet.ingame.server.ServerJoinGamePacket;
 import com.github.steveice10.mc.protocol.packet.ingame.server.ServerKeepAlivePacket;
 import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntityHeadLookPacket;
@@ -18,10 +21,12 @@ import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 import nl.tudelft.opencraft.yardstick.util.CountingOutputStream;
 
-import java.io.IOException;
-import java.util.HashSet;
-import java.util.logging.Level;
-
+/**
+ * Represents a {@link SessionListener} for collecting Yardstick statistics and
+ * forwarding theses to a {@link StatisticsPusher}.
+ *
+ * @author Admin
+ */
 public class Statistics implements SessionListener {
 
     private final SubLogger logger;
@@ -40,6 +45,12 @@ public class Statistics implements SessionListener {
 
     private final HashSet<Session> connectedClientSessions = new HashSet<>();
 
+    /**
+     * Create a new Statistics listener.
+     *
+     * @param host the host of the Prometheus push gateway.
+     * @param port the port of the Prometheus push gateway.
+     */
     public Statistics(String host, int port) {
         this.logger = GlobalLogger.getLogger().newSubLogger("Statistics");
         this.pusher.setup(host, port);
@@ -94,12 +105,19 @@ public class Statistics implements SessionListener {
                 .register(registry);
     }
 
+    /**
+     * Starts pushing statistics. This starts a thread which must be stopped
+     * with {@link #stop()}.
+     */
     public void start() {
         Thread pushThread = new Thread(pusher);
         pushThread.setName("Statistics Pusher");
         pushThread.start();
     }
 
+    /**
+     * Stops pushing statistics.
+     */
     public void stop() {
         pusher.stop();
     }

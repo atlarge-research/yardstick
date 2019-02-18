@@ -8,6 +8,9 @@ import com.beust.jcommander.DynamicParameter;
 import com.beust.jcommander.IStringConverter;
 import com.beust.jcommander.Parameter;
 
+/**
+ * Represents command line options for the emulator.
+ */
 public class Options {
 
     @Parameter(names = {"--help"}, help = true, description = "Shows help")
@@ -46,6 +49,9 @@ public class Options {
     @DynamicParameter(names = "-E", description = "The experiment parameters. Differs per experiment")
     public Map<String, String> experimentParams = new HashMap<>();
 
+    /**
+     * A converter for parsing a String to a LocalTime.
+     */
     public static class DateConverter implements IStringConverter<LocalTime> {
 
         public static DateTimeFormatter FORMATTER = DateTimeFormatter.ISO_LOCAL_TIME;

@@ -7,10 +7,18 @@ import com.github.steveice10.packetlib.event.session.DisconnectedEvent;
 import com.github.steveice10.packetlib.event.session.DisconnectingEvent;
 import com.github.steveice10.packetlib.event.session.SessionAdapter;
 
+/**
+ * A {@link SessionAdapter} for logging bot events to a {@link Logger}.
+ */
 public class LoggerSessionListener extends SessionAdapter {
 
     private final Logger logger;
 
+    /**
+     * Creates a new LoggerSessionListener with the specified logger.
+     *
+     * @param logger the logger.
+     */
     public LoggerSessionListener(Logger logger) {
         this.logger = logger;
     }

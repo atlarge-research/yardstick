@@ -10,6 +10,10 @@ import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
+/**
+ * Represents a model which moves the bot randomly to short and long distance
+ * locations.
+ */
 public class SimpleMovementModel implements BotModel {
 
     private static final Random RANDOM = new Random(System.nanoTime());

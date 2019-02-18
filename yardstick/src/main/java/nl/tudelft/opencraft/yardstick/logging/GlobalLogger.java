@@ -19,6 +19,9 @@ import java.io.File;
 import java.util.logging.Formatter;
 import java.util.logging.Level;
 
+/**
+ * Represents a logger for logging data.
+ */
 public class GlobalLogger extends SubLogger {
 
     private static GlobalLogger logger;

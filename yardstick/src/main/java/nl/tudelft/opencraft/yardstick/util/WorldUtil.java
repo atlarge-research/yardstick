@@ -6,6 +6,9 @@ import nl.tudelft.opencraft.yardstick.bot.world.BlockFace;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.bot.world.Material;
 
+/**
+ * Represents world-related utilities.
+ */
 public class WorldUtil {
 
     private WorldUtil() {
@@ -16,9 +19,9 @@ public class WorldUtil {
      * given block if such a face exists. This takes into account the
      * environment (block occlusion).
      *
-     * @param player The player.
-     * @param block The block the player is observing.
-     * @return An arbitrary block face that is visible, or null, if none exists.
+     * @param player the player.
+     * @param block the block the player is observing.
+     * @return an arbitrary block face that is visible, or null, if none exists.
      */
     public static BlockFace getVisibleBlockFace(Player player, Block block) {
         BlockFace[] directed = getDirectedBlockFaces(player, block);
@@ -48,9 +51,9 @@ public class WorldUtil {
      * (is the player inside the block, or is the block even rendered?) and the
      * surroundings (is there a block or entity occluding the face?).
      *
-     * @param player The player.
-     * @param block The block the player is observing.
-     * @return An array of three block faces.
+     * @param player the player.
+     * @param block the block the player is observing.
+     * @return an array of three block faces.
      */
     public static BlockFace[] getDirectedBlockFaces(Player player, Block block) {
         // Determine the block face

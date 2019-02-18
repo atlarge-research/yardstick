@@ -8,6 +8,9 @@ import com.github.steveice10.mc.protocol.data.game.world.WorldType;
 import nl.tudelft.opencraft.yardstick.bot.entity.Entity;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
+/**
+ * Represents world-related data visible to the bot.
+ */
 public class World {
 
     private final Dimension dimension;
