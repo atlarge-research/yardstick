@@ -1,8 +1,15 @@
 package nl.tudelft.opencraft.yardstick;
 
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Scanner;
 import java.util.logging.Level;
 import com.beust.jcommander.JCommander;
 import nl.tudelft.opencraft.yardstick.experiment.*;
@@ -27,9 +34,20 @@ public class Yardstick {
         // Logger
         LOGGER.setupConsoleLogging(new SimpleTimeFormatter());
 
+        List<String> allArgs = new ArrayList<String>();
+        // Parse options from config file
+        try (FileReader reader = new FileReader("yardstick.properties"); Scanner scanner = new Scanner(reader);) {
+            while (scanner.hasNext()) {
+                allArgs.add(scanner.next());
+            }
+        } catch (IOException e) {
+            // Never mind
+        }
+        Collections.addAll(allArgs, args);
+
         // Parse options
         JCommander optParser = new JCommander(OPTIONS);
-        optParser.parse(args);
+        optParser.parse(allArgs.toArray(new String[0]));
 
         // Let's go!
         LOGGER.info("Yardstick v" + VERSION);
