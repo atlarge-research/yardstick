@@ -1,3 +1,5 @@
 
 # Ignore VIM backups
 *~
+
+.DS_Store
