@@ -1,7 +1,7 @@
 package nl.tudelft.opencraft.yardstick.model;
 
 import nl.tudelft.opencraft.yardstick.bot.Bot;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
+import nl.tudelft.opencraft.yardstick.playerbehavior.Task;
 
 /**
  * Represents an interaction model of a {@link Bot}.

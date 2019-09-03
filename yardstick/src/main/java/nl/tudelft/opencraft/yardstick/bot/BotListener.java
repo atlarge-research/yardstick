@@ -25,7 +25,7 @@ import com.github.steveice10.packetlib.event.session.*;
 import com.github.steveice10.packetlib.packet.Packet;
 import nl.tudelft.opencraft.yardstick.bot.entity.*;
 import nl.tudelft.opencraft.yardstick.bot.world.*;
-import nl.tudelft.opencraft.yardstick.util.Vector3d;
+import nl.tudelft.opencraft.yardstick.playerbehavior.Vector3d;
 
 /**
  * Handles basic bot network traffic.

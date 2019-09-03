@@ -10,8 +10,8 @@ import nl.tudelft.opencraft.yardstick.bot.world.Block;
 import nl.tudelft.opencraft.yardstick.bot.world.BlockFace;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.bot.world.Material;
-import nl.tudelft.opencraft.yardstick.util.Vector3d;
-import nl.tudelft.opencraft.yardstick.util.Vector3i;
+import nl.tudelft.opencraft.yardstick.playerbehavior.Vector3d;
+import nl.tudelft.opencraft.yardstick.playerbehavior.Vector3i;
 import nl.tudelft.opencraft.yardstick.util.WorldUtil;
 
 /**

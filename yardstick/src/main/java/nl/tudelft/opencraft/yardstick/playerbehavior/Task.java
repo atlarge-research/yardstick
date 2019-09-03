@@ -22,7 +22,9 @@
  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package nl.tudelft.opencraft.yardstick.bot.ai.task;
+package nl.tudelft.opencraft.yardstick.playerbehavior;
+
+import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
 
 public interface Task {
 

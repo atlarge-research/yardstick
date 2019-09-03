@@ -2,7 +2,7 @@ package nl.tudelft.opencraft.yardstick.bot.world;
 
 import java.util.EnumMap;
 import java.util.HashMap;
-import nl.tudelft.opencraft.yardstick.util.Vector3i;
+import nl.tudelft.opencraft.yardstick.playerbehavior.Vector3i;
 
 public enum BlockFace {
 

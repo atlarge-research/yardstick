@@ -26,7 +26,7 @@ package nl.tudelft.opencraft.yardstick.bot.ai.pathfinding;
 
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.heuristic.Heuristic;
 import nl.tudelft.opencraft.yardstick.bot.world.WorldPhysics;
-import nl.tudelft.opencraft.yardstick.util.Vector3i;
+import nl.tudelft.opencraft.yardstick.playerbehavior.Vector3i;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
 
 public interface PathSearchProvider {

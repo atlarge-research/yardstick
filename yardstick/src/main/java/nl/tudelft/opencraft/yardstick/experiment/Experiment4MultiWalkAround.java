@@ -4,12 +4,12 @@ import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
 import java.util.*;
 import java.util.stream.Collectors;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
+import nl.tudelft.opencraft.yardstick.playerbehavior.Task;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTask;
 import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
-import nl.tudelft.opencraft.yardstick.util.Vector3d;
-import nl.tudelft.opencraft.yardstick.util.Vector3i;
+import nl.tudelft.opencraft.yardstick.playerbehavior.Vector3d;
+import nl.tudelft.opencraft.yardstick.playerbehavior.Vector3i;
 
 public class Experiment4MultiWalkAround extends Experiment {
 

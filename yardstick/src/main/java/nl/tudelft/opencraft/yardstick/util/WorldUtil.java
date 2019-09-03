@@ -1,5 +1,7 @@
 package nl.tudelft.opencraft.yardstick.util;
 
+import nl.tudelft.opencraft.yardstick.playerbehavior.Vector3d;
+import nl.tudelft.opencraft.yardstick.playerbehavior.Vector3i;
 import nl.tudelft.opencraft.yardstick.bot.entity.Player;
 import nl.tudelft.opencraft.yardstick.bot.world.Block;
 import nl.tudelft.opencraft.yardstick.bot.world.BlockFace;

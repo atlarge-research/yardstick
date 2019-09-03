@@ -2,7 +2,7 @@ package nl.tudelft.opencraft.yardstick.bot.entity;
 
 import java.util.Objects;
 import java.util.UUID;
-import nl.tudelft.opencraft.yardstick.util.Vector3d;
+import nl.tudelft.opencraft.yardstick.playerbehavior.Vector3d;
 
 /**
  * Represents an entity.

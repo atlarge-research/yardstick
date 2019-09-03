@@ -1,5 +1,6 @@
 package nl.tudelft.opencraft.yardstick.bot.ai.task;
 
+import nl.tudelft.opencraft.yardstick.playerbehavior.Task;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 
