@@ -110,6 +110,9 @@ public class Yardstick {
             case 6:
                 ex = new Experiment6InteractWalk();
                 break;
+            case 7:
+                ex = new RemoteControlledExperiment();
+                break;
             default:
                 System.out.println("Invalid experiment: " + OPTIONS.experiment);
                 return;

@@ -79,26 +79,6 @@ public class Experiment4MultiWalkAround extends Experiment {
         }
     }
 
-    private Bot createBot() throws ConnectException {
-        Bot bot = newBot(UUID.randomUUID().toString().substring(0, 6));
-        bot.connect();
-        int sleep = 1000;
-        int tries = 10;
-        while (tries-- > 0 && !bot.isJoined()) {
-            try {
-                Thread.sleep(sleep);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                break;
-            }
-        }
-        if (!bot.isJoined()) {
-            bot.disconnect("Make sure to close all connections.");
-            throw new ConnectException();
-        }
-        return bot;
-    }
-
     @Override
     protected boolean isDone() {
 

@@ -98,7 +98,7 @@ public abstract class AbstractModelExperiment extends Experiment {
         };
     }
 
-    private Bot createBot() {
+    protected Bot createBot() {
         return newBot(UUID.randomUUID().toString().substring(0, 6));
     }
 

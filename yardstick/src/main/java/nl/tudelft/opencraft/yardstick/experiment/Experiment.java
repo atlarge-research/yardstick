@@ -7,12 +7,15 @@ import com.github.steveice10.packetlib.tcp.TcpSessionFactory;
 import nl.tudelft.opencraft.yardstick.Options;
 import nl.tudelft.opencraft.yardstick.Yardstick;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
+import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 import nl.tudelft.opencraft.yardstick.statistic.Statistics;
 import nl.tudelft.opencraft.yardstick.util.Scheduler;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadSessionListener;
+
+import java.util.UUID;
 
 /**
  * A runnable Yardstick experiment.
@@ -176,6 +179,26 @@ public abstract class Experiment implements Runnable {
      * Called during a bot tick.
      */
     protected abstract void tick();
+
+    protected Bot createBot() throws ConnectException {
+        Bot bot = newBot(UUID.randomUUID().toString().substring(0, 6));
+        bot.connect();
+        int sleep = 1000;
+        int tries = 10;
+        while (tries-- > 0 && !bot.isJoined()) {
+            try {
+                Thread.sleep(sleep);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                break;
+            }
+        }
+        if (!bot.isJoined()) {
+            bot.disconnect("Make sure to close all connections.");
+            throw new ConnectException();
+        }
+        return bot;
+    }
 
     /**
      * Should return true when the experiment is complete.
