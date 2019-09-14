@@ -3,7 +3,7 @@ package nl.tudelft.opencraft.yardstick.experiment;
 import java.util.*;
 import java.util.stream.Collectors;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
 import nl.tudelft.opencraft.yardstick.model.BotModel;
 
@@ -72,9 +72,9 @@ public abstract class AbstractModelExperiment extends Experiment {
             return;
         }
 
-        Task t = bot.getTask();
+        TaskExecutor t = bot.getTaskExecutor();
         if (t == null || t.getStatus().getType() != TaskStatus.StatusType.IN_PROGRESS) {
-            bot.setTask(model.newTask(bot));
+            bot.setTaskExecutor(model.newTask(bot));
         }
     }
 

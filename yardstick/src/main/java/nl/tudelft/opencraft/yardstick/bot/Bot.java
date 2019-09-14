@@ -1,5 +1,6 @@
 package nl.tudelft.opencraft.yardstick.bot;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.github.steveice10.mc.protocol.MinecraftProtocol;
 import com.github.steveice10.packetlib.Client;
 import com.github.steveice10.packetlib.event.session.DisconnectedEvent;
@@ -8,7 +9,7 @@ import com.github.steveice10.packetlib.event.session.SessionListener;
 import com.github.steveice10.packetlib.tcp.TcpSessionFactory;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.SimpleAStar;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.heuristic.EuclideanHeuristic;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
 import nl.tudelft.opencraft.yardstick.bot.world.SimpleWorldPhysics;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
@@ -20,19 +21,27 @@ import nl.tudelft.opencraft.yardstick.logging.SubLogger;
  */
 public class Bot {
 
+    @JsonIgnore
     private final SubLogger logger;
+    @JsonIgnore
     private final MinecraftProtocol protocol;
     private final String name;
+    @JsonIgnore
     private final BotTicker ticker;
+    @JsonIgnore
     private final Client client;
+    @JsonIgnore
     private final BotController controller;
     //
     private boolean disconnected = false;
+    @JsonIgnore
     private World world;
+    @JsonIgnore
     private Server server;
     private BotPlayer player;
+    @JsonIgnore
     private SimpleAStar pathFinder;
-    private Task task;
+    private TaskExecutor taskExecutor;
 
     /**
      * Creates a new bot with the given {@link MinecraftProtocol}.
@@ -124,8 +133,8 @@ public class Bot {
         if (this.ticker != null) {
             this.ticker.stop();
         }
-        if (this.task != null) {
-            this.task.stop();
+        if (this.taskExecutor != null) {
+            this.taskExecutor.stop();
         }
         if (this.isJoined()) {
             client.getSession().disconnect(reason);
@@ -138,11 +147,11 @@ public class Bot {
      *
      * @param activity the task.
      */
-    public void setTask(Task activity) {
-        if (this.task != null) {
-            this.task.stop();
+    public void setTaskExecutor(TaskExecutor activity) {
+        if (this.taskExecutor != null) {
+            this.taskExecutor.stop();
         }
-        this.task = activity;
+        this.taskExecutor = activity;
     }
 
     /**
@@ -150,8 +159,8 @@ public class Bot {
      *
      * @return the task.
      */
-    public Task getTask() {
-        return this.task;
+    public TaskExecutor getTaskExecutor() {
+        return this.taskExecutor;
     }
 
     /**

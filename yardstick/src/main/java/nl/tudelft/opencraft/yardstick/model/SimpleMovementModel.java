@@ -2,8 +2,8 @@ package nl.tudelft.opencraft.yardstick.model;
 
 import java.util.Random;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTask;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.world.Block;
 import nl.tudelft.opencraft.yardstick.bot.world.BlockFace;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
@@ -19,8 +19,8 @@ public class SimpleMovementModel implements BotModel {
     private static final Random RANDOM = new Random(System.nanoTime());
 
     @Override
-    public Task newTask(Bot bot) {
-        return new WalkTask(bot, newTargetLocation(bot));
+    public TaskExecutor newTask(Bot bot) {
+        return new WalkTaskExecutor(bot, newTargetLocation(bot));
     }
 
     public Vector3i newTargetLocation(Bot bot) {

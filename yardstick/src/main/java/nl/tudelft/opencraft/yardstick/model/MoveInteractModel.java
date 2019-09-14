@@ -1,7 +1,7 @@
 package nl.tudelft.opencraft.yardstick.model;
 
 import nl.tudelft.opencraft.yardstick.bot.Bot;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 
 /**
  * Represents a model which moves and interacts with the environment.
@@ -14,17 +14,17 @@ public class MoveInteractModel implements BotModel {
     private final BotModel movement = new SimpleMovementModel();
 
     @Override
-    public Task newTask(Bot bot) {
-        Task task;
+    public TaskExecutor newTask(Bot bot) {
+        TaskExecutor taskExecutor;
         if (Math.random() < INTERACT_TO_MOVEMENT) {
             // Interact
-            task = interact.newTask(bot);
+            taskExecutor = interact.newTask(bot);
         } else {
             // Movement
-            task = movement.newTask(bot);
+            taskExecutor = movement.newTask(bot);
         }
 
-        return task;
+        return taskExecutor;
     }
 
 }

@@ -53,9 +53,9 @@ public class BotTicker implements Runnable {
         sched.start();
 
         while (running.get()) {
-            if (bot.getTask() != null
-                    && bot.getTask().getStatus().getType() == TaskStatus.StatusType.IN_PROGRESS) {
-                TaskStatus status = bot.getTask().tick();
+            if (bot.getTaskExecutor() != null
+                    && bot.getTaskExecutor().getStatus().getType() == TaskStatus.StatusType.IN_PROGRESS) {
+                TaskStatus status = bot.getTaskExecutor().tick();
                 if (status.getType() == TaskStatus.StatusType.FAILURE) {
 
                     if (status.getThrowable() != null) {
@@ -64,7 +64,7 @@ public class BotTicker implements Runnable {
                         logger.warning("Task Failure: " + status.getMessage());
                     }
 
-                    bot.setTask(null);
+                    bot.setTaskExecutor(null);
                 }
             }
             sched.sleepTick();

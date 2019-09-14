@@ -4,9 +4,9 @@ import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
 import java.util.*;
 import java.util.stream.Collectors;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTask;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
@@ -71,11 +71,11 @@ public class Experiment4MultiWalkAround extends Experiment {
     }
 
     private void botTick(Bot bot) {
-        Task t = bot.getTask();
+        TaskExecutor t = bot.getTaskExecutor();
         if (t == null || t.getStatus().getType() != TaskStatus.StatusType.IN_PROGRESS) {
             Vector3i newLocation = movement.newTargetLocation(bot);
             bot.getLogger().info(String.format("Setting task for bot to walk to %s", newLocation));
-            bot.setTask(new WalkTask(bot, newLocation));
+            bot.setTaskExecutor(new WalkTaskExecutor(bot, newLocation));
         }
     }
 

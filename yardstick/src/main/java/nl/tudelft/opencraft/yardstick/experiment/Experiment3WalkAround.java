@@ -2,9 +2,9 @@ package nl.tudelft.opencraft.yardstick.experiment;
 
 import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTask;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public class Experiment3WalkAround extends Experiment {
@@ -42,12 +42,12 @@ public class Experiment3WalkAround extends Experiment {
 
     @Override
     protected void tick() {
-        Task t = bot.getTask();
+        TaskExecutor t = bot.getTaskExecutor();
 
         if (t == null || t.getStatus().getType() != TaskStatus.StatusType.IN_PROGRESS) {
             Vector3i newLocation = movement.newTargetLocation(bot);
             logger.info(String.format("Setting task for bot to walk to %s", newLocation));
-            bot.setTask(new WalkTask(bot, newLocation));
+            bot.setTaskExecutor(new WalkTaskExecutor(bot, newLocation));
         }
     }
 

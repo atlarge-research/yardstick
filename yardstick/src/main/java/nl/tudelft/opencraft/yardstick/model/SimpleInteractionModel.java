@@ -6,9 +6,9 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import com.google.common.collect.Lists;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.BreakBlocksTask;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.PlaceBlocksTask;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.BreakBlocksTaskExecutor;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.PlaceBlocksTaskExecutor;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.world.Block;
 import nl.tudelft.opencraft.yardstick.bot.world.BlockFace;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
@@ -28,7 +28,7 @@ public class SimpleInteractionModel implements BotModel {
     private static final Material PLACE_BLOCK_MATERIAL = Material.STONE;
 
     @Override
-    public Task newTask(Bot bot) {
+    public TaskExecutor newTask(Bot bot) {
         if (Math.random() < 0.5) {
             // Break blocks
             List<Block> selection = selectBreakBlocks(bot);
@@ -37,7 +37,7 @@ public class SimpleInteractionModel implements BotModel {
                 return null;
             }
 
-            return new BreakBlocksTask(bot, selection);
+            return new BreakBlocksTaskExecutor(bot, selection);
         }
 
         // Place blocks
@@ -46,7 +46,7 @@ public class SimpleInteractionModel implements BotModel {
             bot.getLogger().warning("Could not find placable blocks!");
             return null;
         }
-        return new PlaceBlocksTask(bot, selection, PLACE_BLOCK_MATERIAL);
+        return new PlaceBlocksTaskExecutor(bot, selection, PLACE_BLOCK_MATERIAL);
     }
 
     private static List<Block> selectBreakBlocks(Bot bot) {

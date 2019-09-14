@@ -1,7 +1,7 @@
 package nl.tudelft.opencraft.yardstick.model;
 
 import nl.tudelft.opencraft.yardstick.bot.Bot;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 
 /**
  * Represents an interaction model of a {@link Bot}.
@@ -14,6 +14,6 @@ public interface BotModel {
      * @param bot the bot.
      * @return the task.
      */
-    Task newTask(Bot bot);
+    TaskExecutor newTask(Bot bot);
 
 }
