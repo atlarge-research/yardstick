@@ -31,13 +31,6 @@ public class RemoteControlledExperiment extends Experiment {
 
     @Override
     protected void before() {
-        RemoteCommand remoteCommand = new RemoteCommand();
-        remoteCommand.playerName = "test";
-        WalkXZTask task = new WalkXZTask();
-        task.setTarget(new Vector3i(190, 70, 260));
-        remoteCommand.task = task;
-        logger.info(JavalinJson.toJson(remoteCommand));
-
         Javalin app = Javalin.create(config -> {
             config.defaultContentType = "application/json";
         }).routes(() -> {
