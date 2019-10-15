@@ -87,6 +87,14 @@
             <artifactId>jackson-databind</artifactId>
             <version>2.10.0.pr1</version>
         </dependency>
+
+        <!-- https://mvnrepository.com/artifact/com.moandjiezana.toml/toml4j -->
+        <dependency>
+            <groupId>com.moandjiezana.toml</groupId>
+            <artifactId>toml4j</artifactId>
+            <version>0.7.2</version>
+        </dependency>
+
     </dependencies>
 
     <build>
