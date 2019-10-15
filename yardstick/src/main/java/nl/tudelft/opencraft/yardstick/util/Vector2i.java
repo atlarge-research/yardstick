@@ -1,5 +1,6 @@
 package nl.tudelft.opencraft.yardstick.util;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
 
@@ -7,7 +8,7 @@ public class Vector2i {
     private final int x;
     private final int z;
 
-    public Vector2i(int x, int z) {
+    public Vector2i(@JsonProperty("x") int x, @JsonProperty("z") int z) {
         this.x = x;
         this.z = z;
     }
