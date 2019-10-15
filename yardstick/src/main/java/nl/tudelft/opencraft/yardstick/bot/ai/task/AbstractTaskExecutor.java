@@ -1,16 +1,19 @@
 package nl.tudelft.opencraft.yardstick.bot.ai.task;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 
-public abstract class AbstractTask implements Task {
+public abstract class AbstractTaskExecutor implements TaskExecutor {
 
+    @JsonIgnore
     protected final Bot bot;
     protected final String shortName;
+    @JsonIgnore
     protected final SubLogger logger;
     protected TaskStatus lastStatus;
 
-    public AbstractTask(Bot bot) {
+    public AbstractTaskExecutor(Bot bot) {
         this.bot = bot;
         this.shortName = getClass().getSimpleName();
         this.logger = bot.getLogger().newSubLogger(shortName);

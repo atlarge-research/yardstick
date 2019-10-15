@@ -2,6 +2,7 @@ package nl.tudelft.opencraft.yardstick.bot.entity;
 
 import java.util.Objects;
 import java.util.UUID;
+
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 
 /**
@@ -107,5 +108,4 @@ public class Entity {
         }
         return true;
     }
-
 }

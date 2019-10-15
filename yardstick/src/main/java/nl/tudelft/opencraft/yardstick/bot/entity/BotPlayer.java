@@ -2,6 +2,8 @@ package nl.tudelft.opencraft.yardstick.bot.entity;
 
 import java.nio.charset.Charset;
 import java.util.UUID;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.github.steveice10.mc.protocol.data.game.entity.player.GameMode;
 import com.github.steveice10.packetlib.Session;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
@@ -11,7 +13,9 @@ import nl.tudelft.opencraft.yardstick.bot.Bot;
  */
 public class BotPlayer extends Player {
 
+    @JsonIgnore
     private final Bot bot;
+    @JsonIgnore
     private final Session session;
     //
     private GameMode gamemode;

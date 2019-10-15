@@ -25,6 +25,7 @@
 package nl.tudelft.opencraft.yardstick.bot.ai.task;
 
 import java.util.concurrent.*;
+
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.PathNode;
 import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
@@ -34,7 +35,7 @@ import nl.tudelft.opencraft.yardstick.bot.world.Material;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
-public class WalkTask extends AbstractTask {
+public class WalkTaskExecutor extends AbstractTaskExecutor {
 
     private static double speed = 0.15, jumpFactor = 3, fallFactor = 4, liquidFactor = 0.5;
     private static int defaultTimeout = 6000;
@@ -58,10 +59,13 @@ public class WalkTask extends AbstractTask {
         }
     };
 
-    public WalkTask(final Bot bot, final Vector3i target) {
+    public WalkTaskExecutor(final Bot bot, final Vector3i target) {
         super(bot);
         this.target = target;
 
+        if (bot.getPlayer().getLocation().intVector().equals(target)) {
+            logger.warning("Useless walk task. Bot and given target location equal.");
+        }
         pathFuture = service.submit(task);
         startTime = System.currentTimeMillis();
     }
@@ -75,7 +79,7 @@ public class WalkTask extends AbstractTask {
             if (timeout > 0 && System.currentTimeMillis() - startTime > timeout) {
                 pathFuture.cancel(true);
                 nextStep = null;
-                return TaskStatus.forFailure("Path search timed out (" + timeout + " ms)");
+                return TaskStatus.forFailure(String.format("Path search from %s to %s timed out (%s ms)", bot.getPlayer().getLocation(), target, timeout));
             } else {
                 return TaskStatus.forInProgress();
             }
@@ -276,7 +280,7 @@ public class WalkTask extends AbstractTask {
     }
 
     public static void setDefaultSpeed(double defaultSpeed) {
-        WalkTask.speed = defaultSpeed;
+        WalkTaskExecutor.speed = defaultSpeed;
     }
 
     public static double getDefaultJumpFactor() {
@@ -284,7 +288,7 @@ public class WalkTask extends AbstractTask {
     }
 
     public static void setDefaultJumpFactor(double defaultJumpFactor) {
-        WalkTask.jumpFactor = defaultJumpFactor;
+        WalkTaskExecutor.jumpFactor = defaultJumpFactor;
     }
 
     public static double getDefaultFallFactor() {
@@ -292,7 +296,7 @@ public class WalkTask extends AbstractTask {
     }
 
     public static void setDefaultFallFactor(double defaultFallFactor) {
-        WalkTask.fallFactor = defaultFallFactor;
+        WalkTaskExecutor.fallFactor = defaultFallFactor;
     }
 
     public static double getDefaultLiquidFactor() {
@@ -300,7 +304,7 @@ public class WalkTask extends AbstractTask {
     }
 
     public static void setDefaultLiquidFactor(double defaultLiquidFactor) {
-        WalkTask.liquidFactor = defaultLiquidFactor;
+        WalkTaskExecutor.liquidFactor = defaultLiquidFactor;
     }
 
     public static int getDefaultTimeout() {
@@ -308,6 +312,6 @@ public class WalkTask extends AbstractTask {
     }
 
     public static void setDefaultTimeout(int defaultTimeout) {
-        WalkTask.defaultTimeout = defaultTimeout;
+        WalkTaskExecutor.defaultTimeout = defaultTimeout;
     }
 }
