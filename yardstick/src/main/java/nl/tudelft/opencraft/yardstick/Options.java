@@ -89,12 +89,14 @@ public class Options {
 
     public void readTOML(File f) {
         Toml toml = new Toml().read(f);
-        this.dumpWorkload = toml.getBoolean("dump-workload", this.dumpWorkload);
+        this.dumpWorkload = toml.getBoolean("logging.dump-workload", this.dumpWorkload);
         this.host = toml.getString("game.host", this.host);
         this.port = toml.getLong("game.port", (long) this.port).intValue();
         this.experiment = toml.getLong("experiment.id", (long) this.experiment).intValue();
-        this.experimentParams = toml.getTable("experiment.params").toMap().entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().toString()));
+        this.experimentParams = toml.getTable("experiment.params").toMap().entrySet()
+                .stream()
+                .collect(Collectors.toMap(Map.Entry::getKey,
+                        e -> e.getValue().toString()));
         this.prometheusHost = toml.getString("pushgateway.host", this.prometheusHost);
         this.prometheusPort = toml.getLong("pushgateway.port", (long) this.prometheusPort).intValue();
         this.start = toml.contains("timing.start") ? new DateConverter().convert(toml.getString("timing.start")) : this.start;
