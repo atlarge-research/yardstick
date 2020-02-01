@@ -1,25 +1,25 @@
 package nl.tudelft.opencraft.yardstick.bot.world;
 
-import java.util.Objects;
-import com.github.steveice10.mc.protocol.data.game.chunk.BlockStorage;
-import com.github.steveice10.mc.protocol.data.game.chunk.Column;
+import com.github.steveice10.mc.protocol.data.game.chunk.Chunk;
 import com.github.steveice10.mc.protocol.data.game.world.block.BlockState;
 import com.google.common.base.Preconditions;
-import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
+import java.util.Objects;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public class Block {
 
     private final int x, y, z;
     private final Chunk chunk;
+    private final World world;
 
-    public Block(int x, int y, int z, Chunk chunk) {
+    public Block(int x, int y, int z, Chunk chunk, World world) {
         Preconditions.checkArgument(y >= 0, "Argument was %s but expected nonnegative", y);
         Preconditions.checkArgument(y < 256, "Argument was %s but expected lower than 256", y);
         this.x = x;
         this.y = y;
         this.z = z;
         this.chunk = chunk;
+        this.world = world;
     }
 
     public int getX() {
@@ -43,7 +43,7 @@ public class Block {
     }
 
     public World getWorld() {
-        return chunk.getWorld();
+        return world;
     }
 
     public Block getRelative(BlockFace face) throws ChunkNotLoadedException {
@@ -58,17 +58,17 @@ public class Block {
         setInternalState(new BlockState(newType));
     }
 
+    private static int index(int x, int y, int z) {
+        return y << 8 | z << 4 | x;
+    }
+
     public void setInternalState(BlockState newState) {
         int locX = Math.floorMod(x, 16);
         int locY = Math.floorMod(y, 16);
         int locZ = Math.floorMod(z, 16);
         //GlobalLogger.getLogger().info("Set internal state: (" + x + "," + y + "," + z + ") -> (" + locX + "," + locY + "," + locZ + ")");
 
-        getInternalStorage().set(
-                locX,
-                locY,
-                locZ,
-                newState);
+        chunk.set(locX, locY, locZ, newState);
     }
 
     public Material getMaterial() {
@@ -83,37 +83,13 @@ public class Block {
         return getRelative(offset.getX(), offset.getY(), offset.getZ());
     }
 
-    private BlockStorage getInternalStorage() {
-        Column handle = chunk.getHandle();
-
-        // TODO: Test this
-        int index = Math.floorDiv(y, 16);
-        //GlobalLogger.getLogger().info("Get Internal Storage - y: " + y + ", index: " + index);
-        if (index > 15) {
-            GlobalLogger.getLogger().warning("How did this happen: (" + x + "," + y + "," + z + ")");
-        }
-
-        com.github.steveice10.mc.protocol.data.game.chunk.Chunk[] sections = handle.getChunks();
-
-        if (sections[index] == null) {
-            //GlobalLogger.getLogger().info("Making new chunk section for air chunk section: (" + handle.getX() + "," + index + "," + handle.getZ() + ")");
-            sections[index] = new com.github.steveice10.mc.protocol.data.game.chunk.Chunk(handle.hasSkylight());
-        }
-
-        return sections[index].getBlocks();
-
-    }
-
     private BlockState getInternalState() {
         int locX = Math.floorMod(x, 16);
         int locY = Math.floorMod(y, 16);
         int locZ = Math.floorMod(z, 16);
         //GlobalLogger.getLogger().info("Get internal state: (" + x + "," + y + "," + z + ") -> (" + locX + "," + locY + "," + locZ + ")");
 
-        return getInternalStorage().get(
-                locX,
-                locY,
-                locZ);
+        return chunk.get(locX, locY, locZ);
     }
 
     @Override

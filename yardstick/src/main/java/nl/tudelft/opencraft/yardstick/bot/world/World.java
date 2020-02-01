@@ -1,5 +1,7 @@
 package nl.tudelft.opencraft.yardstick.bot.world;
 
+import com.github.steveice10.mc.protocol.data.game.chunk.Chunk;
+import com.github.steveice10.mc.protocol.data.game.chunk.Column;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -17,7 +19,7 @@ public class World {
     private final WorldType type;
     private final WorldPhysics physics;
     //
-    private final Map<ChunkLocation, Chunk> chunks = new HashMap<>();
+    private final Map<ChunkLocation, Column> chunks = new HashMap<>();
     private final Map<Integer, Entity> entities = new HashMap<>();
     private Position spawnPoint;
 
@@ -39,16 +41,16 @@ public class World {
         return physics;
     }
 
-    public Collection<Chunk> getLoadedChunks() {
+    public Collection<Column> getLoadedChunks() {
         return chunks.values();
     }
 
-    public void loadChunk(Chunk chunk) {
-        chunks.put(chunk.getLocation(), chunk);
+    public void loadChunk(Column chunk) {
+        chunks.put(new ChunkLocation(chunk.getX(), chunk.getZ()), chunk);
     }
 
-    public void unloadChunk(Chunk chunk) {
-        ChunkLocation location = chunk.getLocation();
+    public void unloadChunk(Column chunk) {
+        ChunkLocation location = new ChunkLocation(chunk.getX(), chunk.getZ());
         unloadChunk(location.getX(), location.getZ());
     }
 
@@ -63,7 +65,7 @@ public class World {
         return new ChunkLocation(chunkX, chunkZ);
     }
 
-    public Chunk getChunk(ChunkLocation location) throws ChunkNotLoadedException {
+    public Column getChunk(ChunkLocation location) throws ChunkNotLoadedException {
         if (chunks.containsKey(location)) {
             return chunks.get(location);
         } else {
@@ -76,8 +78,9 @@ public class World {
     }
 
     public Block getBlockAt(int x, int y, int z) throws ChunkNotLoadedException {
-        Chunk chunk = getChunk(getChunkLocation(x, z));
-        return new Block(x, y, z, chunk);
+        Column chunk = getChunk(getChunkLocation(x, z));
+        Chunk chunkSection = chunk.getChunks()[Math.floorDiv(z, 16)];
+        return new Block(x, y, z, chunkSection, this);
     }
 
     public Block getHighestBlockAt(int x, int z) throws ChunkNotLoadedException {
