@@ -356,7 +356,6 @@ public class BotListener implements SessionListener {
 
             this.server = new Server();
             server.setMaxPlayers(p.getMaxPlayers());
-            server.setDifficulty(p.getDifficulty());
             bot.setServer(server);
 
             this.player = new BotPlayer(bot, p.getEntityId());
@@ -448,11 +447,6 @@ public class BotListener implements SessionListener {
             session.send(new ClientTeleportConfirmPacket(p.getTeleportId()));
 
             logger.info("Received new Player position: " + player.getLocation());
-
-        } else if (packet instanceof ServerPlayerUseBedPacket) {
-            // 0x2F Use Bed
-            ServerPlayerUseBedPacket p = (ServerPlayerUseBedPacket) packet;
-            // TODO
 
         } else if (packet instanceof ServerEntityDestroyPacket) {
             // 0x30 Destroy Entities
@@ -627,6 +621,11 @@ public class BotListener implements SessionListener {
         } else {
             logger.warning("Received unhandled packet: " + packet.getClass().getName());
         }
+    }
+
+    @Override
+    public void packetSending(PacketSendingEvent packetSendingEvent) {
+        // Ignore this. For now.
     }
 
     @Override

@@ -1,5 +1,6 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import com.github.steveice10.mc.auth.exception.request.RequestException;
 import java.util.*;
 import java.util.stream.Collectors;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
@@ -52,7 +53,13 @@ public abstract class AbstractModelExperiment extends Experiment {
             lastJoin = System.currentTimeMillis();
             int botsToConnect = Math.min(this.numberOfBotsPerJoin, this.botsTotal - botList.size());
             for (int i = 0; i < botsToConnect; i++) {
-                Bot bot = createBot();
+                Bot bot = null;
+                try {
+                    bot = createBot();
+                } catch (RequestException e) {
+                    logger.warning(String.format("Could not connect bot. Will try again later. Cause: %s", e));
+                    continue;
+                }
                 Thread connector = new Thread(newBotConnector(bot));
                 connector.setName("Connector-" + bot.getName());
                 connector.setDaemon(false);
@@ -98,7 +105,7 @@ public abstract class AbstractModelExperiment extends Experiment {
         };
     }
 
-    protected Bot createBot() {
+    protected Bot createBot() throws RequestException {
         return newBot(UUID.randomUUID().toString().substring(0, 6));
     }
 

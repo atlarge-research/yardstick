@@ -150,6 +150,11 @@ public class Statistics implements SessionListener {
     }
 
     @Override
+    public void packetSending(PacketSendingEvent packetSendingEvent) {
+        // Ignore
+    }
+
+    @Override
     public void packetSent(PacketSentEvent pse) {
         packOut.inc();
 

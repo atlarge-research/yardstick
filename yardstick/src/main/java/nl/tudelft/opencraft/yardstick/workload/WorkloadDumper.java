@@ -21,6 +21,7 @@ public class WorkloadDumper {
 
     private static final SubLogger LOGGER = GlobalLogger.getLogger().newSubLogger("WorkloadDumper");
     private final File dumpFolder = new File("workload");
+    private final boolean dumpContents;
     private final Map<String, PacketEntryWriter> queues = new ConcurrentHashMap<>();
     //
     private final AtomicBoolean running = new AtomicBoolean(false);
@@ -29,7 +30,7 @@ public class WorkloadDumper {
     /**
      * Creates a new WorkloadDumper.
      */
-    public WorkloadDumper() {
+    public WorkloadDumper(boolean dumpContents) {
         if (!dumpFolder.exists() && !dumpFolder.mkdirs()) {
             LOGGER.severe("Could not create folder: " + dumpFolder.getPath());
             throw new RuntimeException(new IOException("Could not create folder: " + dumpFolder.getPath()));
@@ -42,6 +43,8 @@ public class WorkloadDumper {
                 LOGGER.warning("Could not delete file: " + file.getPath());
             }
         }
+
+        this.dumpContents = dumpContents;
     }
 
     private PacketEntryWriter getQueue(String botName) {
@@ -140,7 +143,7 @@ public class WorkloadDumper {
             return;
         }
 
-        dumper.queue(PacketEntry.forPacket(packet, outgoing));
+        dumper.queue(PacketEntry.forPacket(packet, outgoing, this.dumpContents));
     }
 
     private class WriteRunnable implements Runnable {

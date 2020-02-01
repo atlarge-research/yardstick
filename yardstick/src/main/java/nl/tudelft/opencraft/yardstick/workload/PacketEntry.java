@@ -1,9 +1,13 @@
 package nl.tudelft.opencraft.yardstick.workload;
 
+import com.github.steveice10.packetlib.io.buffer.ByteBufferNetOutput;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import com.github.steveice10.packetlib.packet.Packet;
+import java.nio.ByteBuffer;
+import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
+import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 import nl.tudelft.opencraft.yardstick.util.PacketUtil;
 
 /**
@@ -12,10 +16,12 @@ import nl.tudelft.opencraft.yardstick.util.PacketUtil;
  */
 public class PacketEntry {
 
+    private static final SubLogger LOGGER = GlobalLogger.getLogger().newSubLogger("PacketEntry");
     private final long timestamp;
     private final String name;
     private final boolean outgoing;
     private final int length;
+    private final byte[] payload;
 
     /**
      * Creates a new PacketEntry.
@@ -31,6 +37,15 @@ public class PacketEntry {
         this.name = packet;
         this.outgoing = outgoing;
         this.length = length;
+        this.payload = null;
+    }
+
+    public PacketEntry(long timestamp, String packet, boolean outgoing, int length, byte[] payload) {
+        this.timestamp = timestamp;
+        this.name = packet;
+        this.outgoing = outgoing;
+        this.length = length;
+        this.payload = payload;
     }
 
     /**
@@ -44,6 +59,10 @@ public class PacketEntry {
         dos.writeBoolean(outgoing);
         dos.writeUTF(name);
         dos.writeInt(length);
+        dos.writeInt(payload != null ? payload.length : 0);
+        if (payload != null) {
+            dos.write(payload);
+        }
     }
 
     /**
@@ -58,7 +77,9 @@ public class PacketEntry {
         boolean outgoing = dis.readBoolean();
         String name = dis.readUTF();
         int length = dis.readInt();
-        return new PacketEntry(timestamp, name, outgoing, length);
+        int payloadlength = dis.readInt();
+        byte[] payload = dis.readNBytes(payloadlength);
+        return new PacketEntry(timestamp, name, outgoing, length, payload);
     }
 
     /**
@@ -68,11 +89,22 @@ public class PacketEntry {
      * @param outgoing whether the packet was client->server.
      * @return the PacketEntry.
      */
-    public static PacketEntry forPacket(Packet packet, boolean outgoing) {
+    public static PacketEntry forPacket(Packet packet, boolean outgoing, boolean dumpPacketContents) {
         long timestamp = System.currentTimeMillis();
         String packetName = packet.getClass().getSimpleName();
         int length = PacketUtil.packetLength(packet);
-        return new PacketEntry(timestamp, packetName, outgoing, length);
+        byte[] array = null;
+        if (dumpPacketContents) {
+            ByteBuffer buffer = ByteBuffer.allocate(length);
+            ByteBufferNetOutput output = new ByteBufferNetOutput(buffer);
+            try {
+                packet.write(output);
+                array = buffer.array();
+            } catch (IOException e) {
+                LOGGER.warning(String.format("Could not dump contents of packet with name %s", packetName));
+            }
+        }
+        return new PacketEntry(timestamp, packetName, outgoing, length, array);
     }
 
     /**
@@ -86,7 +118,22 @@ public class PacketEntry {
         sb.append(timestamp).append(',');
         sb.append(outgoing).append(',');
         sb.append(name).append(',');
-        sb.append(length).append('\n');
+        sb.append(length).append(',');
+        String payloadInHex = bytesToHex(payload);
+        sb.append(payloadInHex.length()).append(",");
+        sb.append(payloadInHex).append('\n');
+        return sb.toString();
+    }
+
+    // https://www.mkyong.com/java/java-how-to-convert-bytes-to-hex/
+    private String bytesToHex(byte[] hashInBytes) {
+        if (hashInBytes == null) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (byte b : hashInBytes) {
+            sb.append(String.format("%02x", b));
+        }
         return sb.toString();
     }
 

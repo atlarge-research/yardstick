@@ -1,20 +1,20 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import static io.javalin.apibuilder.ApiBuilder.get;
+import static io.javalin.apibuilder.ApiBuilder.path;
+import static io.javalin.apibuilder.ApiBuilder.post;
+
+import com.github.steveice10.mc.auth.exception.request.RequestException;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import io.javalin.Javalin;
 import io.javalin.core.validation.Validator;
 import io.javalin.http.Context;
 import io.javalin.plugin.json.JavalinJson;
+import java.util.HashMap;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkXZTask;
 import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
-import nl.tudelft.opencraft.yardstick.util.Vector3i;
-
-import java.util.HashMap;
-
-import static io.javalin.apibuilder.ApiBuilder.*;
 
 public class RemoteControlledExperiment extends Experiment {
 
@@ -35,22 +35,22 @@ public class RemoteControlledExperiment extends Experiment {
             config.defaultContentType = "application/json";
         }).routes(() -> {
             path("player",
-                    () -> {
-                        path("control", () -> {
-                            path("add", () -> get(this::addPlayer));
-                            path("list", () -> get(this::playerList));
-
-                        });
-                        path("behavior", () -> {
-                            path("command", () -> post(this::giveCommands));
-                            path("status", () -> post(this::getStatus));
-                        });
+                () -> {
+                    path("control", () -> {
+                        path("add", () -> get(this::addPlayer));
+                        path("add", () -> post(this::addAuthPlayer));
+                        path("list", () -> get(this::playerList));
                     });
+                    path("behavior", () -> {
+                        path("command", () -> post(this::giveCommands));
+                        path("status", () -> post(this::getStatus));
+                    });
+                });
             path("stop",
-                    () -> get(ctx -> {
-                        this.done = true;
-                        ctx.result("done");
-                    }));
+                () -> get(ctx -> {
+                    this.done = true;
+                    ctx.result("done");
+                }));
         }).start(7000);
         app.get("/", ctx -> ctx.result("Hello World"));
     }
@@ -89,13 +89,28 @@ public class RemoteControlledExperiment extends Experiment {
     }
 
     private void addPlayer(Context context) {
+        createBotAndReplyToClient(context, null);
+    }
+
+    private void addAuthPlayer(Context context) {
+        Validator<AddPlayerRequest> validator = context.bodyValidator(AddPlayerRequest.class);
+        AddPlayerRequest request = validator.get();
+        createBotAndReplyToClient(context, request);
+    }
+
+    private void createBotAndReplyToClient(Context context, AddPlayerRequest request) {
         try {
-            Bot bot = createBot();
+            Bot bot;
+            if (request != null) {
+                bot = createBot(request.getUsername(), request.getPassword());
+            } else {
+                bot = createBot();
+            }
             synchronized (bots) {
                 bots.put(bot.getName(), bot);
             }
             context.result(bot.getName());
-        } catch (ConnectException e) {
+        } catch (ConnectException | RequestException e) {
             e.printStackTrace();
         }
     }
@@ -132,6 +147,27 @@ public class RemoteControlledExperiment extends Experiment {
 
         public void setTask(Task task) {
             this.task = task;
+        }
+    }
+
+    public static class AddPlayerRequest {
+        private String username;
+        private String password;
+
+        public String getUsername() {
+            return username;
+        }
+
+        public void setUsername(String username) {
+            this.username = username;
+        }
+
+        public String getPassword() {
+            return password;
+        }
+
+        public void setPassword(String password) {
+            this.password = password;
         }
     }
 

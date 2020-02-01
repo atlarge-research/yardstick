@@ -26,6 +26,8 @@ public class Options {
      */
     @Parameter(names = {"--dump-workload", "-d"}, description = "Indicates whether to dump the workload traces to the 'workload' folder")
     public boolean dumpWorkload;
+    @Parameter(names = {"--dump-message-contents"}, description = "Only works in combination with '--dump-workload'. Additionally dumps the contents of every packet.")
+    public boolean dumpMessageContents = false;
 
     /**
      * Minecraft-like service
@@ -90,6 +92,7 @@ public class Options {
     public void readTOML(File f) {
         Toml toml = new Toml().read(f);
         this.dumpWorkload = toml.getBoolean("logging.dump-workload", this.dumpWorkload);
+        this.dumpMessageContents = toml.getBoolean("logging.dump-message-contents", this.dumpMessageContents);
         this.host = toml.getString("game.host", this.host);
         this.port = toml.getLong("game.port", (long) this.port).intValue();
         this.experiment = toml.getLong("experiment.id", (long) this.experiment).intValue();

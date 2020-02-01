@@ -55,19 +55,7 @@ public class Block {
     }
 
     public void setTypeId(int newType) {
-        setInternalState(new BlockState(newType, getData()));
-    }
-
-    public int getData() {
-        return getInternalState().getData();
-    }
-
-    public void setData(byte newData) {
-        setInternalState(new BlockState(getTypeId(), newData));
-    }
-
-    public void setTypeIdAndData(int newType, byte newData) {
-        setInternalState(new BlockState(newType, newData));
+        setInternalState(new BlockState(newType));
     }
 
     public void setInternalState(BlockState newState) {

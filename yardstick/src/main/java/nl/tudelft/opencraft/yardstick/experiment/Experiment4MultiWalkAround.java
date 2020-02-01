@@ -1,5 +1,6 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import com.github.steveice10.mc.auth.exception.request.RequestException;
 import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -57,7 +58,7 @@ public class Experiment4MultiWalkAround extends Experiment {
                         Bot bot = createBot();
                         botSpawnLocations.put(bot, bot.getPlayer().getLocation());
                         botList.add(bot);
-                    } catch (ConnectException e) {
+                    } catch (ConnectException | RequestException e) {
                         logger.warning(String.format("Could not connect bot on %s:%d after %d ms.", options.host, options.port, System.currentTimeMillis() - startTime));
                     }
                 }).start();

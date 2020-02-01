@@ -128,7 +128,7 @@ public class Yardstick {
         }
 
         if (OPTIONS.dumpWorkload) {
-            ex.setWorkloadDumper(new WorkloadDumper());
+            ex.setWorkloadDumper(new WorkloadDumper(OPTIONS.dumpMessageContents));
         }
 
         Thread t = new Thread(ex);

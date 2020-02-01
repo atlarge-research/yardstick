@@ -1,8 +1,9 @@
 [logging]
 dump-workload = true
+dump-message-contents = true
 
 [game]
-host = "::1"
+host = "purpleprison.net"
 port = 25565
 
 [experiment]

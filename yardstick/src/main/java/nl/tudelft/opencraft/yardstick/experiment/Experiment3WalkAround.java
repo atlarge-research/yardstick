@@ -1,5 +1,6 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import com.github.steveice10.mc.auth.exception.request.RequestException;
 import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
@@ -11,6 +12,7 @@ public class Experiment3WalkAround extends Experiment {
 
     private Bot bot;
     private final SimpleMovementModel movement = new SimpleMovementModel();
+    private boolean done = false;
 
     public Experiment3WalkAround() {
         super(3, "A simple test demonstrating A* movement.");
@@ -18,7 +20,13 @@ public class Experiment3WalkAround extends Experiment {
 
     @Override
     protected void before() {
-        this.bot = newBot("YSBot-1");
+        try {
+            this.bot = newBot("YSBot-1");
+        } catch (RequestException e) {
+            logger.severe("Could not connect bot. Stopping experiment.");
+            this.done = true;
+            return;
+        }
         this.bot.connect();
 
         // TODO: Do something about this
@@ -53,7 +61,7 @@ public class Experiment3WalkAround extends Experiment {
 
     @Override
     protected boolean isDone() {
-        return false;
+        return done;
     }
 
     @Override
