@@ -51,10 +51,10 @@ public class BotListener implements SessionListener {
 
     @Override
     public void packetReceived(PacketReceivedEvent pre) {
-
         MinecraftProtocol pro = (MinecraftProtocol) pre.getSession().getPacketProtocol();
+
         if (pro.getSubProtocol() != SubProtocol.GAME) {
-            logger.info("Received non-game packet: " + pre.getPacket().getClass().getName());
+            //logger.info("Received non-game packet: " + pre.getPacket().getClass().getName());
             return;
         }
 
@@ -65,7 +65,7 @@ public class BotListener implements SessionListener {
             // TODO
 
             if (p.getEntityId() == 0) {
-                logger.warning("Received spawn object with EID == 0: " + p.getType());
+                //logger.warning("Received spawn object with EID == 0: " + p.getType());
                 return;
             }
 
@@ -345,11 +345,10 @@ public class BotListener implements SessionListener {
             // TODO
 
         } else if (packet instanceof ServerJoinGamePacket) {
-            System.out.println("BEGIN");
             // 0x23 Join Game
             ServerJoinGamePacket p = (ServerJoinGamePacket) packet;
             // TODO: Reduced debug info field?
-            System.out.println(p);
+
             // Init the game
             this.world = new World(Dimension.forId(p.getDimension()), p.getWorldType());
             bot.setWorld(world);
@@ -362,7 +361,6 @@ public class BotListener implements SessionListener {
             this.player = new BotPlayer(bot, p.getEntityId());
             player.setGamemode(p.getGameMode());
             bot.setPlayer(player);
-            System.out.println("END");
         } else if (packet instanceof ServerMapDataPacket) {
             // 0x24 Map
             ServerMapDataPacket p = (ServerMapDataPacket) packet;
