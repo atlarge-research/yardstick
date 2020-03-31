@@ -51,15 +51,14 @@ public class BotListener implements SessionListener {
 
     @Override
     public void packetReceived(PacketReceivedEvent pre) {
-        MinecraftProtocol pro = (MinecraftProtocol) pre.getSession().getPacketProtocol();
 
+        MinecraftProtocol pro = (MinecraftProtocol) pre.getSession().getPacketProtocol();
         if (pro.getSubProtocol() != SubProtocol.GAME) {
-            //logger.info("Received non-game packet: " + pre.getPacket().getClass().getName());
+            logger.info("Received non-game packet: " + pre.getPacket().getClass().getName());
             return;
         }
 
         Packet packet = pre.getPacket();
-
         if (packet instanceof ServerSpawnObjectPacket) {
             // 0x00 Spawn Object
             ServerSpawnObjectPacket p = (ServerSpawnObjectPacket) packet;
@@ -346,10 +345,11 @@ public class BotListener implements SessionListener {
             // TODO
 
         } else if (packet instanceof ServerJoinGamePacket) {
+            System.out.println("BEGIN");
             // 0x23 Join Game
             ServerJoinGamePacket p = (ServerJoinGamePacket) packet;
             // TODO: Reduced debug info field?
-
+            System.out.println(p);
             // Init the game
             this.world = new World(Dimension.forId(p.getDimension()), p.getWorldType());
             bot.setWorld(world);
@@ -362,7 +362,7 @@ public class BotListener implements SessionListener {
             this.player = new BotPlayer(bot, p.getEntityId());
             player.setGamemode(p.getGameMode());
             bot.setPlayer(player);
-
+            System.out.println("END");
         } else if (packet instanceof ServerMapDataPacket) {
             // 0x24 Map
             ServerMapDataPacket p = (ServerMapDataPacket) packet;
@@ -413,15 +413,17 @@ public class BotListener implements SessionListener {
             // TODO
 
         } else if (packet instanceof ServerPlayerAbilitiesPacket) {
-            // 0x2B Player Abilities
-            ServerPlayerAbilitiesPacket p = (ServerPlayerAbilitiesPacket) packet;
 
-            BotPlayer player = bot.getPlayer();
-            player.setFlySpeed(p.getFlySpeed());
-            player.setWalkSpeed(p.getWalkSpeed());
-            player.setInvincible(p.getInvincible());
-            player.setFlying(p.getFlying());
-            player.setCanFly(p.getCanFly());
+            // 0x2B Player Abilities
+            //ServerPlayerAbilitiesPacket p = (ServerPlayerAbilitiesPacket) packet;
+
+            //BotPlayer player = bot.getPlayer();
+            //System.out.println(bot);
+            //player.setFlySpeed(p.getFlySpeed());
+            //player.setWalkSpeed(p.getWalkSpeed());
+            //player.setInvincible(p.getInvincible());
+            //player.setFlying(p.getFlying());
+            //player.setCanFly(p.getCanFly());
             // TODO: Creative mode?
 
         } else if (packet instanceof ServerCombatPacket) {
