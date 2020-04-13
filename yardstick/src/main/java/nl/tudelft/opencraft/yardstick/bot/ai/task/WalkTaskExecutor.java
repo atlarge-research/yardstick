@@ -54,6 +54,7 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
         @Override
         public PathNode call() throws Exception {
             BotPlayer player = bot.getPlayer();
+            logger.warning("Creating astar path");
             PathNode start = bot.getPathFinder().search(player.getLocation().intVector(), target);
             return start;
         }
@@ -63,10 +64,12 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
         super(bot);
         this.target = target;
 
+        logger.warning("My target is. x: (" + target.getX() + ", " + target.getY() + ", " + target.getZ() + ")");
         if (bot.getPlayer().getLocation().intVector().equals(target)) {
             logger.warning("Useless walk task. Bot and given target location equal.");
         }
         pathFuture = service.submit(task);
+
         startTime = System.currentTimeMillis();
     }
 
@@ -76,6 +79,7 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
         if (pathFuture != null && !pathFuture.isDone()) {
             // If we're still calculating the path:
             // Check timeout
+            logger.warning("Calculating path");
             if (timeout > 0 && System.currentTimeMillis() - startTime > timeout) {
                 pathFuture.cancel(true);
                 nextStep = null;
@@ -88,6 +92,8 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
             // If we've found a path successfully
             try {
                 nextStep = pathFuture.get();
+
+                logger.warning("nextstep = pathfuture.");
                 ticksSinceStepChange = 0;
             } catch (InterruptedException e) {
                 return TaskStatus.forFailure(e.getMessage(), e);
@@ -98,21 +104,26 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
                 }*/
                 return TaskStatus.forFailure(e.getMessage(), e.getCause());
             } finally {
-                pathFuture = null;
+                if (nextStep == null ) {
+                    logger.warning("null step");
+                }
             }
         }
 
         // If we have no more steps to do, we're done
         if (nextStep == null) {
+            logger.warning("No more steps.");
             return TaskStatus.forSuccess();
         }
 
         BotPlayer player = bot.getPlayer();
 
         // Skip the step if the next step is close by
-        if (nextStep.getNext() != null && player.getLocation().distanceSquared(nextStep.getNext().getLocation().doubleVector()) < 0.05) {
+        if (nextStep.getNext() != null && player.getLocation().distanceSquared(nextStep.getNext().getLocation().doubleVector()) < 0.5) {
             nextStep = nextStep.getNext();
             ticksSinceStepChange = 0;
+
+            logger.warning("Skipping steps.");
         }
 
         // If the player is too far away from the next step
@@ -130,6 +141,8 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
         ticksSinceStepChange++;
         if (ticksSinceStepChange > 80) {
             nextStep = null;
+
+            logger.warning("nextstep = timeout.");
             return TaskStatus.forFailure("Too many ticks since step change");
         }
 
@@ -149,6 +162,7 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
 
         // Step
         Vector3i stepTargetBlock = nextStep.getLocation();
+        logger.warning("found step! step located at: (" + nextStep.getLocation().getX() + ", " + nextStep.getLocation().getY() + ", " + nextStep.getLocation().getZ() + ")");
         if (stepTargetBlock == null) {
             return TaskStatus.forFailure("No next step");
         }
@@ -156,6 +170,7 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
 
         // Stand on the center of a block
         stepTarget = stepTarget.add(0.5, 0, 0.5);
+
 
         // Calculate speed
         double moveSpeed = this.speed;
@@ -208,6 +223,8 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
 
         if (moveLoc.equals(stepTarget)) {
             nextStep = nextStep.getNext();
+
+            logger.warning("nextstep = success");
             ticksSinceStepChange = 0;
         }
 

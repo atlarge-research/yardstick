@@ -12,18 +12,22 @@ import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.heuristic.Heurist
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.bot.world.WorldPhysics;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
+import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 
 public class SimpleAStar {
 
     private final Heuristic heuristic;
     private final WorldPhysics worldPhysics;
+    private final GlobalLogger logger;
 
     public SimpleAStar(Heuristic heuristic, WorldPhysics physics) {
         this.heuristic = heuristic;
         this.worldPhysics = physics;
+        this.logger = GlobalLogger.getLogger();
     }
 
     public PathNode search(Vector3i start, Vector3i end) throws ChunkNotLoadedException {
+        logger.warning("addign nodeasdfasds to path");
         Map<Vector3i, PathNode> nodeMap = new HashMap<>();
         Set<PathNode> visited = new HashSet<>();
 
@@ -42,6 +46,7 @@ public class SimpleAStar {
 
             if (current.getLocation().distanceSquared(end) <= 1 && worldPhysics.canWalk(current.getLocation(), end)) {
                 PathNode endNode = new PathNode(end, current, null);
+                logger.warning("addign nodes to path");
                 return buildPath(endNode);
             }
 
@@ -78,6 +83,7 @@ public class SimpleAStar {
                 }
             }
         }
+        logger.warning("null path ree");
         return null;
     }
 

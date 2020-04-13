@@ -118,7 +118,8 @@ public class BotController {
                 Hand.MAIN_HAND,
                 (float) hitpoint.getX(),
                 (float) hitpoint.getY(),
-                (float) hitpoint.getZ()));
+                (float) hitpoint.getZ(),
+                false));
         //bot.getLogger().info("Controller: place  -- block: " + block + ", face: " + face + ", hit: " + hitpoint);
     }
 

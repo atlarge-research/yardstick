@@ -1,5 +1,6 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import com.github.steveice10.mc.auth.exception.request.RequestException;
 import com.github.steveice10.mc.protocol.MinecraftProtocol;
 import com.github.steveice10.packetlib.Client;
 import com.github.steveice10.packetlib.Session;
@@ -147,10 +148,21 @@ public abstract class Experiment implements Runnable {
      * @param name the client name.
      * @return the client.
      */
-    protected Bot newBot(String name) {
-        Bot bot = new Bot(new MinecraftProtocol(name), options.host, options.port);
+    public Bot newBot(String name, String password) throws RequestException {
+        Bot bot = new Bot(getMinecraftProtocol(name, password), options.host, options.port);
         setupClient(bot.getClient(), name);
         return bot;
+    }
+
+    public Bot newBot(String name) throws RequestException {
+        return newBot(name, null);
+    }
+
+    private MinecraftProtocol getMinecraftProtocol(String username, String password) throws RequestException {
+        if (password == null || password.equals("")) {
+            return new MinecraftProtocol(username);
+        }
+        return new MinecraftProtocol(username, password);
     }
 
     private void setupClient(Client client, String name) {
@@ -180,8 +192,8 @@ public abstract class Experiment implements Runnable {
      */
     protected abstract void tick();
 
-    protected Bot createBot() throws ConnectException {
-        Bot bot = newBot(UUID.randomUUID().toString().substring(0, 6));
+    protected Bot createBot(String username, String password) throws ConnectException, RequestException {
+        Bot bot = newBot(username, password);
         bot.connect();
         int sleep = 1000;
         int tries = 10;
@@ -198,6 +210,10 @@ public abstract class Experiment implements Runnable {
             throw new ConnectException();
         }
         return bot;
+    }
+
+    protected Bot createBot() throws ConnectException, RequestException {
+        return createBot(UUID.randomUUID().toString().substring(0, 6), null);
     }
 
     /**

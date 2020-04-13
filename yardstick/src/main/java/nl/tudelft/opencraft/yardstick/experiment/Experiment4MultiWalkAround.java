@@ -1,5 +1,6 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import com.github.steveice10.mc.auth.exception.request.RequestException;
 import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -30,7 +31,7 @@ public class Experiment4MultiWalkAround extends Experiment {
 
     @Override
     protected void before() {
-        this.botsTotal = Integer.parseInt(options.experimentParams.get("bots"));
+        this.botsTotal = Integer.parseInt(options.experimentParams.getOrDefault("bots","4"));
         this.durationInSeconds = Integer.parseInt(options.experimentParams.getOrDefault("duration", "600"));
         this.secondsBetweenJoin = Integer.parseInt(options.experimentParams.getOrDefault("joininterval", "1"));
         this.numberOfBotsPerJoin = Integer.parseInt(options.experimentParams.getOrDefault("numbotsperjoin", "1"));
@@ -57,7 +58,7 @@ public class Experiment4MultiWalkAround extends Experiment {
                         Bot bot = createBot();
                         botSpawnLocations.put(bot, bot.getPlayer().getLocation());
                         botList.add(bot);
-                    } catch (ConnectException e) {
+                    } catch (ConnectException | RequestException e) {
                         logger.warning(String.format("Could not connect bot on %s:%d after %d ms.", options.host, options.port, System.currentTimeMillis() - startTime));
                     }
                 }).start();

@@ -1,5 +1,6 @@
 package nl.tudelft.opencraft.yardstick;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.logging.Level;
 import com.beust.jcommander.JCommander;
+import com.moandjiezana.toml.Toml;
 import nl.tudelft.opencraft.yardstick.experiment.*;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SimpleTimeFormatter;
@@ -45,7 +47,10 @@ public class Yardstick {
         }
         Collections.addAll(allArgs, args);
 
-        // Parse options
+        File config = new File("yardstick.toml");
+        // Parse config options
+        OPTIONS.readTOML(config);
+        // Parse command line options
         JCommander optParser = new JCommander(OPTIONS);
         optParser.parse(allArgs.toArray(new String[0]));
 
@@ -113,6 +118,9 @@ public class Yardstick {
             case 7:
                 ex = new RemoteControlledExperiment();
                 break;
+            case 8:
+                ex = new Experiment8();
+                break;
             default:
                 System.out.println("Invalid experiment: " + OPTIONS.experiment);
                 return;
@@ -123,7 +131,7 @@ public class Yardstick {
         }
 
         if (OPTIONS.dumpWorkload) {
-            ex.setWorkloadDumper(new WorkloadDumper());
+            ex.setWorkloadDumper(new WorkloadDumper(OPTIONS.dumpMessageContents));
         }
 
         Thread t = new Thread(ex);

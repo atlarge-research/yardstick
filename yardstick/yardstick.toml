@@ -1,0 +1,16 @@
+[logging]
+dump-workload = true
+dump-message-contents = true
+
+[game]
+host = "localhost"
+port = 25565
+
+[experiment]
+id = 3
+[experiment.params]
+port = "7000"
+#		{ "bots" = "1" },
+#		{ "duration" = "10m" },
+#		{ "join-interval" = "1" },
+#		{ "bots-per-join" = "2" },

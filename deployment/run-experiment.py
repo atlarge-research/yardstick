@@ -18,7 +18,7 @@ def main(args):
             if thisindex < total:
                thisrole = role 
                break
-    print thisrole
+    print (thisrole)
 
 if __name__ == "__main__":
     main(sys.argv[1:])
