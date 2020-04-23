@@ -26,7 +26,7 @@ public class PacketUtil {
      * @param packet the packet.
      * @return The length.
      */
-    public static int packetLength(Packet packet) {
+    public static synchronized int packetLength(Packet packet) {
         cos.reset();
         try {
             packet.write(cno);

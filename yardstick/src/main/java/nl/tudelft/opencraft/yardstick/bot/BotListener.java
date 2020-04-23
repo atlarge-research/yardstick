@@ -288,6 +288,7 @@ public class BotListener implements SessionListener {
         } else if (packet instanceof ServerChatPacket) {
             // 0x0F Chat Message
             ServerChatPacket p = (ServerChatPacket) packet;
+            logger.info("Chat message");
             // TODO
 
         } else if (packet instanceof ServerMultiBlockChangePacket) {
@@ -366,6 +367,7 @@ public class BotListener implements SessionListener {
         } else if (packet instanceof ServerExplosionPacket) {
             // 0x1C Explosion
             ServerExplosionPacket p = (ServerExplosionPacket) packet;
+            logger.warning("explosion");
             // TODO - help the server exploded
 
         } else if (packet instanceof ServerUnloadChunkPacket) {

@@ -31,10 +31,10 @@ public class Experiment2ScheduledJoin extends Experiment {
     @Override
     protected void before() {
         // Quick and dirty. TODO: Error handling
-        this.nodeId = Integer.parseInt(options.experimentParams.get("id"));
-        this.nodeCount = Integer.parseInt(options.experimentParams.get("nodes"));
-        this.botsTotal = Integer.parseInt(options.experimentParams.get("bots"));
-        this.interval = Integer.parseInt(options.experimentParams.get("interval"));
+        this.nodeId = Integer.parseInt(options.experimentParams.getOrDefault("id", "2"));
+        this.nodeCount = Integer.parseInt(options.experimentParams.getOrDefault("nodes", "2"));
+        this.botsTotal = Integer.parseInt(options.experimentParams.getOrDefault("bots", "2"));
+        this.interval = Integer.parseInt(options.experimentParams.getOrDefault("interval", "1"));
     }
 
     @Override
@@ -60,12 +60,13 @@ public class Experiment2ScheduledJoin extends Experiment {
         // Calculate on which machine this bot should join
         int node = botsJoined % nodeCount;
         botsJoined++; // Presume the bot will join
-
+ /*
         if (nodeId != node) {
             logger.info("Bot " + botsJoined + " joining on node " + node);
+            logger.info("kekw");
             return;
         }
-
+*/
         logger.info("Bot " + botsJoined + " joining on node " + node + " (this node)");
 
         // Connect

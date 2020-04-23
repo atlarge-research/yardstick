@@ -5,6 +5,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import com.github.steveice10.packetlib.packet.Packet;
+
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
@@ -102,6 +104,8 @@ public class PacketEntry {
                 array = buffer.array();
             } catch (IOException e) {
                 LOGGER.warning(String.format("Could not dump contents of packet with name %s", packetName));
+            } catch (BufferOverflowException a) {
+                LOGGER.warning("overflow length:" + length + " packet size: ");
             }
         }
         return new PacketEntry(timestamp, packetName, outgoing, length, array);

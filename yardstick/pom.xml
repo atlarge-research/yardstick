@@ -53,15 +53,15 @@
         <!-- PacketLib -->
         <dependency>
             <groupId>com.github.Steveice10</groupId>
-            <artifactId>PacketLib</artifactId>
-            <version>1.4</version>
+            <artifactId>packetlib</artifactId>
+            <version>1.5</version>
         </dependency>
 
         <!-- MCProtocolLib -->
         <dependency>
             <groupId>com.github.Steveice10</groupId>
             <artifactId>MCProtocolLib</artifactId>
-            <version>1.15-1</version>
+            <version>dc375f9958</version>
         </dependency>
 
         <!-- Prometheus -->

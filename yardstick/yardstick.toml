@@ -7,9 +7,10 @@ host = "localhost"
 port = 25565
 
 [experiment]
-id = 3
+id = 8
 [experiment.params]
 port = "7000"
+bots = 4
 #		{ "bots" = "1" },
 #		{ "duration" = "10m" },
 #		{ "join-interval" = "1" },
