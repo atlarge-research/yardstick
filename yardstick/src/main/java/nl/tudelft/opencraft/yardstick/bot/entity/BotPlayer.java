@@ -27,7 +27,7 @@ public class BotPlayer extends Player {
     private double saturation;
 
     public BotPlayer(Bot bot, int id) {
-        super(UUID.nameUUIDFromBytes(bot.getName().getBytes(Charset.forName("UTF-8"))), id);
+        super(id, UUID.nameUUIDFromBytes(bot.getName().getBytes(Charset.forName("UTF-8"))));
 
         this.bot = bot;
         this.session = bot.getClient().getSession();

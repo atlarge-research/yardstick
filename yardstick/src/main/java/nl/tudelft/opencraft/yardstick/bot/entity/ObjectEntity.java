@@ -1,7 +1,14 @@
 package nl.tudelft.opencraft.yardstick.bot.entity;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.util.Scanner;
 import java.util.UUID;
 import com.github.steveice10.mc.protocol.data.game.entity.type.object.ObjectType;
+import com.jayway.jsonpath.Configuration;
+import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.Option;
 
 /**
  * Represents an Object.

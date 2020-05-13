@@ -33,7 +33,8 @@ public class Options {
      * Minecraft-like service
      */
     @Parameter(names = {"--host", "-h"}, description = "The host of the Minecraft server")
-    public String host = "127.0.0.1";
+    public String host = "3.123.232.247";
+    //public String host = "127.0.0.1";
 
     @Parameter(names = {"--port", "-p"}, description = "The port of the Minecraft server")
     public int port = 25565;

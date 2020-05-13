@@ -27,7 +27,7 @@ public class SimpleAStar {
     }
 
     public PathNode search(Vector3i start, Vector3i end) throws ChunkNotLoadedException {
-        logger.warning("addign nodeasdfasds to path");
+        //logger.warning("addign nodeasdfasds to path");
         Map<Vector3i, PathNode> nodeMap = new HashMap<>();
         Set<PathNode> visited = new HashSet<>();
 
@@ -46,29 +46,31 @@ public class SimpleAStar {
 
             if (current.getLocation().distanceSquared(end) <= 1 && worldPhysics.canWalk(current.getLocation(), end)) {
                 PathNode endNode = new PathNode(end, current, null);
-                logger.warning("addign nodes to path");
+                //logger.warning("addign nodes to path");
                 return buildPath(endNode);
             }
 
-            Set<PathNode> neigborNodes = new HashSet<>();
+            Set<PathNode> neighborNodes = new HashSet<>();
             for (Vector3i vec : worldPhysics.findWalkable(current.getLocation())) {
                 if (vec == null) {
+                    //logger.warning("null vec");
                     continue;
                 }
 
                 // Discover neighbour
                 if (nodeMap.containsKey(vec)) {
-                    neigborNodes.add(nodeMap.get(vec));
+                    logger.warning("discover neighbour vec");
+                    neighborNodes.add(nodeMap.get(vec));
                 } else {
                     BlockPathNode node = new BlockPathNode(vec);
                     node.setCost(current.getCost() + 1);
                     node.setPrevious(current);
-                    neigborNodes.add(node);
+                    neighborNodes.add(node);
                     nodeMap.put(vec, node);
                 }
             }
 
-            for (PathNode neighbor : neigborNodes) {
+            for (PathNode neighbor : neighborNodes) {
                 if (visited.contains(neighbor)) {
                     continue;
                 }
@@ -83,7 +85,7 @@ public class SimpleAStar {
                 }
             }
         }
-        logger.warning("null path ree");
+        //logger.warning("null path ree");
         return null;
     }
 

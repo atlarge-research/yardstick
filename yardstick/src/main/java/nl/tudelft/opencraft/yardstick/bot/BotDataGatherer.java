@@ -1,11 +1,29 @@
 package nl.tudelft.opencraft.yardstick.bot;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Arrays;
 import com.github.steveice10.mc.protocol.MinecraftProtocol;
 import com.github.steveice10.mc.protocol.data.SubProtocol;
+import com.github.steveice10.mc.protocol.data.game.MessageType;
+import com.github.steveice10.mc.protocol.data.game.PlayerListEntry;
+import com.github.steveice10.mc.protocol.data.game.PlayerListEntryAction;
 import com.github.steveice10.mc.protocol.data.game.chunk.Column;
+import com.github.steveice10.mc.protocol.data.game.entity.EntityStatus;
+import com.github.steveice10.mc.protocol.data.game.entity.metadata.EntityMetadata;
+import com.github.steveice10.mc.protocol.data.game.entity.metadata.ItemStack;
+import com.github.steveice10.mc.protocol.data.game.entity.metadata.MetadataType;
 import com.github.steveice10.mc.protocol.data.game.entity.metadata.Position;
+import com.github.steveice10.mc.protocol.data.game.entity.player.BlockBreakStage;
 import com.github.steveice10.mc.protocol.data.game.entity.type.GlobalEntityType;
+import com.github.steveice10.mc.protocol.data.game.entity.type.object.ObjectType;
 import com.github.steveice10.mc.protocol.data.game.world.block.BlockChangeRecord;
+import com.github.steveice10.mc.protocol.data.message.TranslationMessage;
+import com.github.steveice10.mc.protocol.packet.ingame.client.player.ClientPlayerInteractEntityPacket;
 import com.github.steveice10.mc.protocol.packet.ingame.client.world.ClientTeleportConfirmPacket;
 import com.github.steveice10.mc.protocol.packet.ingame.server.ServerBossBarPacket;
 import com.github.steveice10.mc.protocol.packet.ingame.server.ServerChatPacket;
@@ -43,11 +61,7 @@ import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntit
 import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntityTeleportPacket;
 import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntityVelocityPacket;
 import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerVehicleMovePacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.entity.player.ServerPlayerAbilitiesPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.entity.player.ServerPlayerChangeHeldItemPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.entity.player.ServerPlayerHealthPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.entity.player.ServerPlayerPositionRotationPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.entity.player.ServerPlayerSetExperiencePacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.player.*;
 import com.github.steveice10.mc.protocol.packet.ingame.server.entity.spawn.ServerSpawnExpOrbPacket;
 import com.github.steveice10.mc.protocol.packet.ingame.server.entity.spawn.ServerSpawnGlobalEntityPacket;
 import com.github.steveice10.mc.protocol.packet.ingame.server.entity.spawn.ServerSpawnMobPacket;
@@ -82,6 +96,7 @@ import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerUnload
 import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerUpdateTileEntityPacket;
 import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerUpdateTimePacket;
 import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerWorldBorderPacket;
+import com.github.steveice10.mc.protocol.packet.status.server.StatusResponsePacket;
 import com.github.steveice10.packetlib.Session;
 import com.github.steveice10.packetlib.event.session.ConnectedEvent;
 import com.github.steveice10.packetlib.event.session.DisconnectedEvent;
@@ -91,9 +106,12 @@ import com.github.steveice10.packetlib.event.session.PacketSendingEvent;
 import com.github.steveice10.packetlib.event.session.PacketSentEvent;
 import com.github.steveice10.packetlib.event.session.SessionListener;
 import com.github.steveice10.packetlib.packet.Packet;
+import com.github.steveice10.mc.protocol.data.message.Message;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import io.javalin.core.util.FileUtil;
 import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
 import nl.tudelft.opencraft.yardstick.bot.entity.Entity;
 import nl.tudelft.opencraft.yardstick.bot.entity.ExperienceOrb;
@@ -109,10 +127,13 @@ import nl.tudelft.opencraft.yardstick.bot.world.Dimension;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 /**
  * Handles basic bot network traffic.
  */
-public class BotListener implements SessionListener {
+public class BotDataGatherer implements SessionListener {
 
     private final Bot bot;
     private final Logger logger;
@@ -120,17 +141,67 @@ public class BotListener implements SessionListener {
     private BotPlayer player;
     private Server server;
     private World world;
+    private byte[] salt;
 
     /**
      * Creates a new listener.
      *
      * @param bot the bot to listen to.
      */
-    public BotListener(Bot bot) {
+    public BotDataGatherer(Bot bot) {
         this.bot = bot;
         this.logger = bot.getLogger();
+        try {
+            this.salt = getSalt();
+        } catch (NoSuchAlgorithmException n){
+
+        }
     }
 
+    private static byte[] getSalt() throws NoSuchAlgorithmException
+    {
+        //to generate a salt
+//        SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
+//        byte[] salt = new byte[16];
+//        sr.nextBytes(salt);
+//        try {
+//            FileOutputStream fos = new FileOutputStream("salt");
+//            try {fos.write(salt);
+//            } catch (IOException io ){
+//
+//            }
+//        } catch (FileNotFoundException fne){
+//
+//        }
+
+        byte[] salt = null;
+        try {
+            salt = Files.readAllBytes(Paths.get("salt"));
+        } catch (IOException io){
+            System.out.println("Could not find salt file");
+        }
+        return salt;
+    }
+    private static String getHash(String string, byte[] salt)
+    {
+        String generatedString = null;
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            md.update(salt);
+            byte[] bytes = md.digest(string.getBytes());
+            StringBuilder sb = new StringBuilder();
+            for(int i=0; i< bytes.length ;i++)
+            {
+                sb.append(Integer.toString((bytes[i] & 0xff) + 0x100, 16).substring(1));
+            }
+            generatedString = sb.toString();
+        }
+        catch (NoSuchAlgorithmException e)
+        {
+            e.printStackTrace();
+        }
+        return generatedString;
+    }
     @Override
     public void packetReceived(PacketReceivedEvent pre) {
         MinecraftProtocol pro = (MinecraftProtocol) pre.getSession().getPacketProtocol();
@@ -141,7 +212,7 @@ public class BotListener implements SessionListener {
         }
 
         Packet packet = pre.getPacket();
-
+        //logger.warning("Received packet: " + packet.getClass().getName());
         if (packet instanceof ServerSpawnObjectPacket) {
             // 0x00 Spawn Object
             ServerSpawnObjectPacket p = (ServerSpawnObjectPacket) packet;
@@ -218,7 +289,6 @@ public class BotListener implements SessionListener {
             pl.setPitch(p.getPitch());
             pl.setYaw(p.getYaw());
             // TODO Metadata
-
             bot.getWorld().loadEntity(pl);
 
         } else if (packet instanceof ServerEntityAnimationPacket) {
@@ -230,10 +300,26 @@ public class BotListener implements SessionListener {
             // 0x07 Statistics
             ServerStatisticsPacket p = (ServerStatisticsPacket) packet;
             // TODO
-
+        } else if (packet instanceof ServerPlayerActionAckPacket){
+            //0x08 Player digging
+            ServerPlayerActionAckPacket p = (ServerPlayerActionAckPacket) packet;
+            // TODO
         } else if (packet instanceof ServerBlockBreakAnimPacket) {
-            // 0x08 Block Break Animation
+            // 0x09 Block Break Animation
             ServerBlockBreakAnimPacket p = (ServerBlockBreakAnimPacket) packet;
+            if(p.getStage() == BlockBreakStage.STAGE_10) {
+                Entity a = world.getEntity(p.getBreakerEntityId());
+                if (a instanceof Player){
+                    for (PlayerListEntry pl : bot.getPlayers())
+                        try {
+                            if (a.getUuid().equals(pl.getProfile().getId())) {
+                                logger.info("[BlockBreakAnimPacket][" + getHash(pl.getProfile().getName(), salt)+"][Location: (" + p.getPosition().getX() + ", " + p.getPosition().getY() + ", " + p.getPosition().getZ() + ")");
+                            }
+                        } catch (NullPointerException n){
+
+                        }
+                }
+            }
             // TODO
 
         } else if (packet instanceof ServerUpdateTileEntityPacket) {
@@ -244,30 +330,8 @@ public class BotListener implements SessionListener {
         } else if (packet instanceof ServerBlockValuePacket) {
             // 0x0A Block Action
             ServerBlockValuePacket p = (ServerBlockValuePacket) packet;
+            logger.info("[ServerBlockValuePacket]" + p.toString());
             // TODO
-
-        } else if (packet instanceof ServerBlockChangePacket) {
-            // 0x0B Block Change
-            ServerBlockChangePacket p = (ServerBlockChangePacket) packet;
-
-            BlockChangeRecord r = p.getRecord();
-            Position pos = r.getPosition();
-
-            if (pos.getY() > 255) {
-                // https://github.com/Steveice10/MCProtocolLib/issues/347
-                logger.warning("Ignoring BlockChange: (" + pos.getX() + "," + pos.getY() + "," + pos.getZ() + ")");
-                return;
-            }
-
-            Block b = null;
-            try {
-                b = bot.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
-            } catch (ChunkNotLoadedException e) {
-                logger.warning("Received BlockChange for block in unloaded chunk: " + pos);
-                return;
-            }
-
-            b.setInternalState(r.getBlock());
 
         } else if (packet instanceof ServerBossBarPacket) {
             // 0x0C Boss Bar
@@ -285,19 +349,11 @@ public class BotListener implements SessionListener {
             ServerTabCompletePacket p = (ServerTabCompletePacket) packet;
             // TODO
 
-        } else if (packet instanceof ServerChatPacket) {
-            // 0x0F Chat Message
-            ServerChatPacket p = (ServerChatPacket) packet;
-            // TODO
-
         } else if (packet instanceof ServerMultiBlockChangePacket) {
             // 0x10 Multi Block Change
             ServerMultiBlockChangePacket p = (ServerMultiBlockChangePacket) packet;
-
             for (BlockChangeRecord r : p.getRecords()) {
                 Position pos = r.getPosition();
-
-                //logger.info("MultiBlockChange: (" + pos.getX() + "," + pos.getY() + "," + pos.getZ() + ")");
                 Block b = null;
                 try {
                     b = bot.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
@@ -305,8 +361,9 @@ public class BotListener implements SessionListener {
                     logger.warning("Received MultiBlockChange for block in unloaded chunk: " + pos);
                     return;
                 }
-
+                String from = b.getBlockMaterial();
                 b.setInternalState(r.getBlock());
+                logger.info("[MultiBlockChangePacket][" + from  + ", updated to: ," + b.getBlockMaterial() + "][Location: (" + pos.getX() + "," + pos.getY() + "," + pos.getZ() + ")]");
             }
 
         } else if (packet instanceof ServerConfirmTransactionPacket) {
@@ -366,7 +423,7 @@ public class BotListener implements SessionListener {
         } else if (packet instanceof ServerExplosionPacket) {
             // 0x1C Explosion
             ServerExplosionPacket p = (ServerExplosionPacket) packet;
-            logger.warning("explosion");
+            logger.warning("Explosion");
             // TODO - help the server exploded
 
         } else if (packet instanceof ServerUnloadChunkPacket) {
@@ -387,7 +444,7 @@ public class BotListener implements SessionListener {
         } else if (packet instanceof ServerChunkDataPacket) {
             // 0x20 Chunk Data
             ServerChunkDataPacket p = (ServerChunkDataPacket) packet;
-
+            //logger.info("new chunk?");
             Column newCol = p.getColumn();
             try {
                 Column chunk = world.getChunk(new ChunkLocation(newCol.getX(), newCol.getZ()));
@@ -398,9 +455,9 @@ public class BotListener implements SessionListener {
                     // Replace the previous chunk
                     //logger.info("Replacing pre-existing chunk: " + new ChunkLocation(newCol.getX(), newCol.getZ()));
                     world.loadChunk(newCol);
+
                 } else {
                     // Only update the new chunk sections
-                    String s = "";
                     for (int i = 0; i < newCol.getChunks().length; i++) {
                         if (newCol.getChunks()[i] == null) {
                             // Chunk not updated
@@ -427,6 +484,7 @@ public class BotListener implements SessionListener {
         } else if (packet instanceof ServerJoinGamePacket) {
             // 0x23 Join Game
             ServerJoinGamePacket p = (ServerJoinGamePacket) packet;
+            bot.setPlayerSize(p.getMaxPlayers());
             // TODO: Reduced debug info field?
 
             // Init the game
@@ -449,6 +507,17 @@ public class BotListener implements SessionListener {
         } else if (packet instanceof ServerEntityPositionPacket) {
             ServerEntityPositionPacket p = (ServerEntityPositionPacket) packet;
             Entity e = world.getEntity(p.getEntityId());
+            if ( e instanceof Player) {
+                try {
+                    for (PlayerListEntry pl : bot.getPlayers()) {
+                        if (pl.getProfile().getId().equals(e.getUuid())) {
+                            logger.info("[EntityPositionPacket][" + getHash(pl.getProfile().getName(), salt) + "]");
+                            return;
+                        }
+                    }
+                } catch (NullPointerException n) {
+                }
+            }
             var loc = new Vector3d(p.getMoveX(), p.getMoveY(), p.getMoveZ());
             handleEntityPositionUpdate(p.getEntityId(), e, loc, p.isOnGround());
         } else if (packet instanceof ServerEntityRotationPacket) {
@@ -466,7 +535,6 @@ public class BotListener implements SessionListener {
             Entity e = world.getEntity(p.getEntityId());
             if (e == null) {
                 logger.warning("Received entity movement packet for unknown entity: " + p.getEntityId());
-                return;
             }
         } else if (packet instanceof ServerVehicleMovePacket) {
             // 0x29 Vehicle Move
@@ -493,11 +561,21 @@ public class BotListener implements SessionListener {
         } else if (packet instanceof ServerCombatPacket) {
             // 0x2C Combat Event
             ServerCombatPacket p = (ServerCombatPacket) packet;
+            //logger.info("Combat!:" + p.getCombatState());
+
             // TODO
 
         } else if (packet instanceof ServerPlayerListEntryPacket) {
             // 0x2D Player List Item
             ServerPlayerListEntryPacket p = (ServerPlayerListEntryPacket) packet;
+            for (PlayerListEntry pl : p.getEntries()){
+                if(p.getAction().equals(PlayerListEntryAction.ADD_PLAYER)){
+                    bot.addPlayers(pl);
+                }
+                if(p.getAction().equals(PlayerListEntryAction.REMOVE_PLAYER)){
+                    bot.remPlayers(pl);
+                }
+            }
             // TODO
 
         } else if (packet instanceof ServerPlayerPositionRotationPacket) {
@@ -512,8 +590,7 @@ public class BotListener implements SessionListener {
 
             Session session = bot.getClient().getSession();
             session.send(new ClientTeleportConfirmPacket(p.getTeleportId()));
-
-            logger.info("Received new Player position: " + player.getLocation());
+            //logger.info("Received new Player position: " + player.getLocation());
 
         } else if (packet instanceof ServerEntityDestroyPacket) {
             // 0x30 Destroy Entities
@@ -550,7 +627,6 @@ public class BotListener implements SessionListener {
                 logger.warning("Received entity head look packet for unknown entity: " + p.getEntityId());
                 return;
             }
-
             e.setHeadYaw(p.getHeadYaw());
 
         } else if (packet instanceof ServerWorldBorderPacket) {
@@ -576,7 +652,62 @@ public class BotListener implements SessionListener {
         } else if (packet instanceof ServerEntityMetadataPacket) {
             // 0x39 Entity Metadata
             ServerEntityMetadataPacket p = (ServerEntityMetadataPacket) packet;
-            // TODO
+            Entity e = world.getEntity(p.getEntityId());
+
+            if(e != null ) { e.setMetadata(p.getMetadata()); }
+
+            for (EntityMetadata m : p.getMetadata()) {
+                if (e instanceof Mob && m.getId() == 8) {
+                    logger.info("[EntityMetaDataPacket][" + ((Mob) e).getType().toString() +"][" + m.getValue().toString() +"]");
+                }
+                else if (e instanceof Player) {
+                    try {
+                        for (PlayerListEntry pl : bot.getPlayers()) {
+                            if (pl.getProfile().getId().equals(e.getUuid())) {
+                                if(m.getId() == 8){
+                                    logger.info("[EntityMetadataPacket][" + getHash(pl.getProfile().getName(), salt) + "][" + m.getValue().toString() +"]");
+                                } else if(m.getId() == 0) {
+                                    String action = "";
+                                    switch (m.getValue().toString()){
+                                        case "1":
+                                            action = "On fire";
+                                            break;
+                                        case "2":
+                                            action = "Crouched";
+                                            break;
+                                        case "8":
+                                            action = "Sprinting";
+                                            break;
+                                        case "10":
+                                            action = "Swimming";
+                                            break;
+                                        case "40":
+                                            action = "Glowing";
+                                            break;
+                                        case "80":
+                                            action = "Elytra";
+                                            break;
+                                        case "20":
+                                            action = "Invisible";
+                                            break;
+                                        case "0":
+                                            action = "Neutral";
+                                            break;
+
+                                    }
+                                    logger.info("[EntityMetadataPacket][" + getHash(pl.getProfile().getName(), salt) + "][" + action +"]");
+                                }
+                            }
+                        }
+                    } catch (NullPointerException n) {
+                    }
+                } else if (e instanceof ObjectEntity){
+                    if(m.getId() == 7){
+                        logger.info("[EntityMetadataPacket][Item on ground][" + e.getItem(((ItemStack) m.getValue()).getId()) +"]");
+                    }
+                }
+            }
+            // TODO specify player actions
 
         } else if (packet instanceof ServerEntityAttachPacket) {
             // 0x3A Attach Entity
@@ -586,7 +717,6 @@ public class BotListener implements SessionListener {
         } else if (packet instanceof ServerEntityVelocityPacket) {
             // 0x3B Entity Velocity
             ServerEntityVelocityPacket p = (ServerEntityVelocityPacket) packet;
-
             Entity e = world.getEntity(p.getEntityId());
             if (e == null) {
                 logger.warning("Received entity velocity packet for unknown entity: " + p.getEntityId());
@@ -597,7 +727,18 @@ public class BotListener implements SessionListener {
         } else if (packet instanceof ServerEntityEquipmentPacket) {
             // 0x3C Entity Equipment
             ServerEntityEquipmentPacket p = (ServerEntityEquipmentPacket) packet;
-            // TODO
+            Entity e = bot.getWorld().getEntity(p.getEntityId());
+            if (e instanceof Player) {
+                try {
+                    for (PlayerListEntry pl : bot.getPlayers()) {
+                        if (pl.getProfile().getId().equals(e.getUuid())) {
+                            logger.info("[EntityEquipmentPacket][" + getHash(pl.getProfile().getName(), salt) + "][" + e.getItem(p.getItem().getId()) + "]");
+                        }
+                    }
+                } catch (NullPointerException n) {
+
+                }
+            }
 
         } else if (packet instanceof ServerPlayerSetExperiencePacket) {
             // 0x3D Set Experience
@@ -607,7 +748,6 @@ public class BotListener implements SessionListener {
         } else if (packet instanceof ServerPlayerHealthPacket) {
             // 0x3E Update Health
             ServerPlayerHealthPacket p = (ServerPlayerHealthPacket) packet;
-
             player.setHealth(p.getHealth());
 
         } else if (packet instanceof ServerScoreboardObjectivePacket) {
@@ -659,7 +799,25 @@ public class BotListener implements SessionListener {
         } else if (packet instanceof ServerEntityCollectItemPacket) {
             // 0x48 Collect Item
             ServerEntityCollectItemPacket p = (ServerEntityCollectItemPacket) packet;
-            // TODO
+            Entity e = world.getEntity(p.getCollectorEntityId());
+            Entity i = world.getEntity(p.getCollectedEntityId());
+            String item = "";
+            for (PlayerListEntry pl : bot.getPlayers()){
+                try {
+                    if (pl.getProfile().getId().equals(e.getUuid())){
+                        for (EntityMetadata m : i.getMetadata() ){
+                            if(m.getId() == 7 && m.getType().equals(MetadataType.ITEM)) {
+                                if (m.getValue() instanceof ItemStack){
+                                    item = i.getItem(((ItemStack) m.getValue()).getId());
+                                    logger.info("[EntityCollectItemPacket][" + getHash(pl.getProfile().getName(),salt) + "]["+ item + "][" + p.getItemCount() + "]" );
+                                }
+                            }
+                        }
+                    }
+                } catch (NullPointerException n){
+
+                }
+            }
 
         } else if (packet instanceof ServerEntityTeleportPacket) {
             // 0x49 Entity Teleport
@@ -670,7 +828,6 @@ public class BotListener implements SessionListener {
                 logger.warning("Received entity movement packet for unknown entity: " + p.getEntityId());
                 return;
             }
-
             e.setLocation(new Vector3d(p.getX(), p.getY(), p.getZ()));
             e.setYaw(p.getYaw());
             e.setPitch(p.getPitch());
@@ -678,6 +835,14 @@ public class BotListener implements SessionListener {
         } else if (packet instanceof ServerEntityPropertiesPacket) {
             // 0x4A Entity Properties
             ServerEntityPropertiesPacket p = (ServerEntityPropertiesPacket) packet;
+            Entity e = world.getEntity(p.getEntityId());
+            if (e == null){
+                Entity newEntity = new Entity(p.getEntityId(),null);
+                world.loadEntity(newEntity);
+            }
+            if(e != null) {
+                e.setAttributes(p.getAttributes());
+            }
             // TODO
 
         } else if (packet instanceof ServerEntityEffectPacket) {
@@ -685,10 +850,66 @@ public class BotListener implements SessionListener {
             ServerEntityEffectPacket p = (ServerEntityEffectPacket) packet;
             // TODO
 
+        } else if (packet instanceof ServerBlockChangePacket) {
+            // 0x0B Block Change
+
+            ServerBlockChangePacket p = (ServerBlockChangePacket) packet;
+            BlockChangeRecord r = p.getRecord();
+            Position pos = r.getPosition();
+
+            if (pos.getY() > 255) {
+                // https://github.com/Steveice10/MCProtocolLib/issues/347
+                logger.warning("Ignoring BlockChange: (" + pos.getX() + "," + pos.getY() + "," + pos.getZ() + ")");
+                return;
+            }
+
+            Block b = null;
+            String from = "";
+            try {
+                b = bot.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
+
+            } catch (ChunkNotLoadedException e) {
+                logger.warning("Received BlockChange for block in unloaded chunk: " + pos);
+                return;
+            }
+            if (b.getBlockMaterial() != null ) {
+                from = b.getBlockMaterial();
+            }
+            b.setInternalState(r.getBlock());
+            logger.info("[BlockChangePacket][" + from  + ", updated to: ," + b.getBlockMaterial() + "][Location: (" + pos.getX() + "," + pos.getY() + "," + pos.getZ() + ")]");
+
+        } else if (packet instanceof ServerChatPacket) {
+            // 0x0F Chat Message
+            ServerChatPacket p = (ServerChatPacket) packet;
+            if(p.getType().equals(MessageType.SYSTEM)){
+                logger.info("[System message][" + p.getMessage().toString() + "]");
+            } else if (p.getType().equals(MessageType.CHAT)){
+                if(p.getMessage() instanceof TranslationMessage){
+                    String m = messageToString(p.getMessage());
+                    logger.info("[Chat message]");
+                }
+            } else if (p.getType().equals(MessageType.NOTIFICATION)){
+                logger.info("[Notification message][" + p.getMessage().toString() + "]");
+            }
+            // TODO
         } else {
             //logger.warning("Received unhandled packet: " + packet.getClass().getName());
         }
     }
+
+    private String messageToString(Message message){
+        TranslationMessage tm = (TranslationMessage) (message);
+        //logger.info("Message to string");
+        String m = "";
+        for(Message ms : tm.getExtra()){
+            m = m + " " + ms.getFullText();
+        }
+        for(Message ms : tm.getTranslationParams()){
+            m = m + " " + ms.getFullText();
+        }
+        return m;
+    }
+
 
     private void handleEntityPositionUpdate(int id, Entity entity, Vector3d location, boolean isOnGround) {
         if (entity == null) {
@@ -725,7 +946,6 @@ public class BotListener implements SessionListener {
     @Override
     public void disconnecting(DisconnectingEvent de) {
     }
-
     @Override
     public void disconnected(DisconnectedEvent de) {
         logger.info("Disconnected: " + de.getReason());

@@ -77,6 +77,10 @@ public class Block {
         return Material.getById(this.getTypeId());
     }
 
+    public String getBlockMaterial(){
+        return BlockMaterial.getMaterial(this.getTypeId());
+    }
+
     public Block getRelative(int x, int y, int z) throws ChunkNotLoadedException {
         return getWorld().getBlockAt(this.x + x, this.y + y, this.z + z);
     }

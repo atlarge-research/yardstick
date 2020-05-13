@@ -54,8 +54,10 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
         @Override
         public PathNode call() throws Exception {
             BotPlayer player = bot.getPlayer();
-            logger.warning("Creating astar path");
+            logger.warning("Creating astar path, target :" + target);
+            logger.warning("Creating astar path, player loc :" + player.getLocation().intVector());
             PathNode start = bot.getPathFinder().search(player.getLocation().intVector(), target);
+            logger.warning("Start: " + start.getLocation());
             return start;
         }
     };

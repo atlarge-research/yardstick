@@ -1,5 +1,8 @@
 # Yardstick excludes
 /script/workload
+/workload
+logs.txt
+logs.txt.lck
 
 # Netbeans excludes
 /nbproject/private
@@ -32,3 +35,5 @@ nbactions.xml
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+.toml

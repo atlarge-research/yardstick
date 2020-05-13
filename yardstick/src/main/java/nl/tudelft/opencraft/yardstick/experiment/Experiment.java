@@ -2,6 +2,7 @@ package nl.tudelft.opencraft.yardstick.experiment;
 
 import com.github.steveice10.mc.auth.exception.request.RequestException;
 import com.github.steveice10.mc.protocol.MinecraftProtocol;
+import com.github.steveice10.mc.protocol.data.SubProtocol;
 import com.github.steveice10.packetlib.Client;
 import com.github.steveice10.packetlib.Session;
 import com.github.steveice10.packetlib.tcp.TcpSessionFactory;
@@ -57,7 +58,9 @@ public abstract class Experiment implements Runnable {
         logger.info("Running: experiment " + number + " - " + description);
 
         for (String key : options.experimentParams.keySet()) {
-            logger.info("Parameter - " + key + ": " + options.experimentParams.get(key));
+            if(!key.contains("pw")) {
+                logger.info("Parameter - " + key + ": " + options.experimentParams.get(key));
+            }
         }
 
         if (dumper != null) {
@@ -162,7 +165,8 @@ public abstract class Experiment implements Runnable {
         if (password == null || password.equals("")) {
             return new MinecraftProtocol(username);
         }
-        return new MinecraftProtocol(username, password);
+        MinecraftProtocol prot = new MinecraftProtocol(username, password);
+        return prot;
     }
 
     private void setupClient(Client client, String name) {

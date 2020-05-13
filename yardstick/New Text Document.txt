@@ -1,0 +1,3 @@
+[accounts]
+account1 = "name,password"
+account2 = "name,password"

@@ -18,6 +18,7 @@ package nl.tudelft.opencraft.yardstick.logging;
 import java.io.File;
 import java.util.logging.Formatter;
 import java.util.logging.Level;
+import java.util.logging.FileHandler;
 
 /**
  * Represents a logger for logging data.

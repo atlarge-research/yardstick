@@ -36,6 +36,19 @@
     </repositories>
 
     <dependencies>
+        <!--Json-->
+        <dependency>
+            <groupId>com.googlecode.json-simple</groupId>
+            <artifactId>json-simple</artifactId>
+            <version>1.1.1</version>
+        </dependency>
+
+        <!--JsonPath-->
+        <dependency>
+            <groupId>com.jayway.jsonpath</groupId>
+            <artifactId>json-path</artifactId>
+            <version>2.4.0</version>
+        </dependency>
         <!-- Google Guava -->
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -54,6 +67,7 @@
         <dependency>
             <groupId>com.github.Steveice10</groupId>
             <artifactId>packetlib</artifactId>
+            <!-- <version>1.4</version> -->
             <version>1.5</version>
         </dependency>
 
@@ -62,6 +76,8 @@
             <groupId>com.github.Steveice10</groupId>
             <artifactId>MCProtocolLib</artifactId>
             <version>dc375f9958</version>
+            <!-- <version>1.14.4-2</version> -->
+            <!-- <version>dc375f9958</version> -->
         </dependency>
 
         <!-- Prometheus -->

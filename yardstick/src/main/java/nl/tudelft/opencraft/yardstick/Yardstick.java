@@ -35,7 +35,8 @@ public class Yardstick {
     public static void main(String[] args) {
         // Logger
         LOGGER.setupConsoleLogging(new SimpleTimeFormatter());
-
+        File logs = new File("logs.txt");
+        LOGGER.setupFileLogging(new SimpleTimeFormatter(), logs);
         List<String> allArgs = new ArrayList<String>();
         // Parse options from config file
         try (FileReader reader = new FileReader("yardstick.properties"); Scanner scanner = new Scanner(reader);) {

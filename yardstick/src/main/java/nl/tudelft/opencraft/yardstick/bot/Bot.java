@@ -2,6 +2,7 @@ package nl.tudelft.opencraft.yardstick.bot;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.github.steveice10.mc.protocol.MinecraftProtocol;
+import com.github.steveice10.mc.protocol.data.game.PlayerListEntry;
 import com.github.steveice10.packetlib.Client;
 import com.github.steveice10.packetlib.event.session.DisconnectedEvent;
 import com.github.steveice10.packetlib.event.session.SessionAdapter;
@@ -16,6 +17,7 @@ import nl.tudelft.opencraft.yardstick.bot.world.World;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 
+import java.util.UUID;
 /**
  * Represents a Minecraft simulated bot.
  */
@@ -42,6 +44,10 @@ public class Bot {
     @JsonIgnore
     private SimpleAStar pathFinder;
     private TaskExecutor taskExecutor;
+    private PlayerListEntry[] players;
+    private UUID following;
+    private String target;
+    private boolean teleport;
 
     /**
      * Creates a new bot with the given {@link MinecraftProtocol}.
@@ -51,14 +57,16 @@ public class Bot {
      * @param port the port of the Minecraft server.
      */
     public Bot(MinecraftProtocol protocol, String host, int port) {
+
         this.name = protocol.getProfile().getName();
         this.logger = GlobalLogger.getLogger().newSubLogger("Bot").newSubLogger(name);
+
         this.protocol = protocol;
         this.ticker = new BotTicker(this);
         this.client = new Client(host, port, protocol, new TcpSessionFactory());
-        this.client.getSession().addListener(new BotListener(this));
+        this.client.getSession().addListener(new BotDataGatherer(this));
         this.controller = new BotController(this);
-
+        this.teleport = false;
         // Set disconnected field
         this.client.getSession().addListener(new SessionAdapter() {
             @Override
@@ -275,4 +283,49 @@ public class Bot {
     public void setPlayer(BotPlayer player) {
         this.player = player;
     }
+
+    /**
+     * Flagging bots for teleporting
+     */
+    public void setTeleport(){teleport = !teleport;}
+    public boolean getTeleport(){return this.teleport;}
+
+    public void setPlayerSize(int s){ this.players = new PlayerListEntry[s]; }
+
+    public void addPlayers(PlayerListEntry ple){
+        //check for no duplicate entries
+        if(dupCheck(ple)) {
+            for (int i = 0; i < players.length; i++) {
+                if (players[i] == null) {
+                    this.players[i] = ple;
+                    break;
+                }
+            }
+        }
+    }
+    public boolean dupCheck(PlayerListEntry ple){
+        for (PlayerListEntry pl : players){
+            if(pl != null && pl.getProfile().getId().equals(ple.getProfile().getId())){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public void remPlayers(PlayerListEntry ple){
+        for (int i = 0; i < players.length; i++){
+            if(players[i] != null && players[i].getProfile().getId().equals(ple.getProfile().getId())){
+                this.players[i] = null;
+            }
+        }
+    }
+
+    public PlayerListEntry[] getPlayers(){ return this.players; }
+
+    public UUID getFollowing() { return following; }
+    public String getFollowingName() { return target; }
+    /**
+     * Set target for bot to follow
+     */
+    public void setFollowing(UUID uuid, String name) { this.following = uuid; this.target = name; }
 }

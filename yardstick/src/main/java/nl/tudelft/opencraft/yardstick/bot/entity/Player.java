@@ -5,7 +5,7 @@ import nl.tudelft.opencraft.yardstick.util.Vector3d;
 
 public class Player extends Living {
 
-    public Player(UUID uuid, int id) {
+    public Player(int id, UUID uuid) {
         super(id, uuid);
     }
 

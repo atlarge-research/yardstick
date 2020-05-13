@@ -1,9 +1,21 @@
 package nl.tudelft.opencraft.yardstick.bot.entity;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.util.List;
 import java.util.Objects;
+import java.util.Scanner;
 import java.util.UUID;
 
+import com.jayway.jsonpath.Configuration;
+import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.Option;
+import nl.tudelft.opencraft.yardstick.bot.world.BlockMaterial;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
+
+import com.github.steveice10.mc.protocol.data.game.entity.metadata.EntityMetadata;
+import com.github.steveice10.mc.protocol.data.game.entity.attribute.Attribute;
 
 /**
  * Represents an entity.
@@ -20,6 +32,8 @@ public class Entity {
     protected double yaw, headYaw, pitch;
     protected Vector3d velocity;
     protected boolean onGround = true;
+    protected List<Attribute> attributes;
+    protected EntityMetadata[] metadata;
     // TODO: Metadata
 
     public Entity(int id, UUID uuid) {
@@ -83,6 +97,12 @@ public class Entity {
         this.onGround = onGround;
     }
 
+    public void setAttributes(List<Attribute> attributes) { this.attributes = attributes; }
+    public List<Attribute> getAttributes() { return attributes; }
+
+    public EntityMetadata[] getMetadata() {return metadata;}
+    public void setMetadata(EntityMetadata[] metadata) { this.metadata = metadata; }
+
     @Override
     public int hashCode() {
         int hash = 5;
@@ -107,5 +127,41 @@ public class Entity {
             return false;
         }
         return true;
+    }
+
+    public static String getItem(int id){
+        InputStream is = null;
+        try {
+            is = new FileInputStream("registries.json");
+        } catch (FileNotFoundException e){
+            System.out.println(("file not found"));
+            return null;
+        }
+        String jsonString = new Scanner(is, "UTF-8").useDelimiter("\\Z").next();
+        Configuration configuration = Configuration.builder().options(Option.AS_PATH_LIST).build();
+        //Object dataObject = JsonPath.parse(jsonString).read("$..id");
+        Object dataObject = JsonPath.using(configuration).parse(jsonString).read("$.['minecraft:item']..[?(@.protocol_id == "+id+")]");
+        String dataString = dataObject.toString();
+        String delims1 = "[\\[']+";
+        String[] tokens = dataString.split(delims1);
+        return tokens[6];
+    }
+
+    public static String getHeldItem(int id){
+        InputStream is = null;
+        try {
+            is = new FileInputStream("registries.json");
+        } catch (FileNotFoundException e){
+            System.out.println(("file not found"));
+            return null;
+        }
+        String jsonString = new Scanner(is, "UTF-8").useDelimiter("\\Z").next();
+        Configuration configuration = Configuration.builder().options(Option.AS_PATH_LIST).build();
+        //Object dataObject = JsonPath.parse(jsonString).read("$..id");
+        Object dataObject = JsonPath.using(configuration).parse(jsonString).read("$.['minecraft:item']..[?(@.protocol_id == "+id+")]");
+        String dataString = dataObject.toString();
+        String delims1 = "[\\[']+";
+        String[] tokens = dataString.split(delims1);
+        return tokens[6];
     }
 }

@@ -31,7 +31,7 @@ public class Experiment4MultiWalkAround extends Experiment {
 
     @Override
     protected void before() {
-        this.botsTotal = Integer.parseInt(options.experimentParams.getOrDefault("bots","4"));
+        this.botsTotal = Integer.parseInt(options.experimentParams.getOrDefault("bots","1"));
         this.durationInSeconds = Integer.parseInt(options.experimentParams.getOrDefault("duration", "600"));
         this.secondsBetweenJoin = Integer.parseInt(options.experimentParams.getOrDefault("joininterval", "1"));
         this.numberOfBotsPerJoin = Integer.parseInt(options.experimentParams.getOrDefault("numbotsperjoin", "1"));
