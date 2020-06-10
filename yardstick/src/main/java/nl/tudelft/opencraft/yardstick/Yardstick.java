@@ -47,9 +47,9 @@ public class Yardstick {
         }
         Collections.addAll(allArgs, args);
 
-        File config = new File("yardstick.toml");
-        // Parse config options
-        OPTIONS.readTOML(config);
+//        File config = new File("yardstick.toml");
+//        // Parse config options
+//        OPTIONS.readTOML(config);
         // Parse command line options
         JCommander optParser = new JCommander(OPTIONS);
         optParser.parse(allArgs.toArray(new String[0]));
@@ -128,6 +128,7 @@ public class Yardstick {
         }
 
         if (OPTIONS.dumpWorkload) {
+            System.out.println("dumper");
             ex.setWorkloadDumper(new WorkloadDumper());
         }
 
