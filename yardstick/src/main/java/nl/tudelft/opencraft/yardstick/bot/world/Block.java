@@ -1,7 +1,6 @@
 package nl.tudelft.opencraft.yardstick.bot.world;
 
 import java.util.Objects;
-import com.github.steveice10.mc.protocol.data.game.chunk.BlockStorage;
 import com.github.steveice10.mc.protocol.data.game.chunk.Column;
 import com.github.steveice10.mc.protocol.data.game.world.block.BlockState;
 import com.google.common.base.Preconditions;
@@ -50,24 +49,12 @@ public class Block {
         return getWorld().getBlockAt(getLocation().add(face.getOffset()));
     }
 
-    public int getTypeId() {
+    public int getId() {
         return getInternalState().getId();
     }
 
-    public void setTypeId(int newType) {
-        setInternalState(new BlockState(newType, getData()));
-    }
-
-    public int getData() {
-        return getInternalState().getData();
-    }
-
-    public void setData(byte newData) {
-        setInternalState(new BlockState(getTypeId(), newData));
-    }
-
-    public void setTypeIdAndData(int newType, byte newData) {
-        setInternalState(new BlockState(newType, newData));
+    public void setId(int id) {
+        setInternalState(new BlockState(id));
     }
 
     public void setInternalState(BlockState newState) {
@@ -84,7 +71,7 @@ public class Block {
     }
 
     public Material getMaterial() {
-        return Material.getById(this.getTypeId());
+        return Material.getById(this.getId());
     }
 
     public Block getRelative(int x, int y, int z) throws ChunkNotLoadedException {
@@ -95,7 +82,7 @@ public class Block {
         return getRelative(offset.getX(), offset.getY(), offset.getZ());
     }
 
-    private BlockStorage getInternalStorage() {
+    private com.github.steveice10.mc.protocol.data.game.chunk.Chunk getInternalStorage() {
         Column handle = chunk.getHandle();
 
         // TODO: Test this
@@ -109,10 +96,10 @@ public class Block {
 
         if (sections[index] == null) {
             //GlobalLogger.getLogger().info("Making new chunk section for air chunk section: (" + handle.getX() + "," + index + "," + handle.getZ() + ")");
-            sections[index] = new com.github.steveice10.mc.protocol.data.game.chunk.Chunk(handle.hasSkylight());
+            sections[index] = new com.github.steveice10.mc.protocol.data.game.chunk.Chunk();
         }
 
-        return sections[index].getBlocks();
+        return sections[index];
 
     }
 

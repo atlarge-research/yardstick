@@ -214,7 +214,7 @@ public class SimpleWorldPhysics implements WorldPhysics {
 
     @Override
     public boolean canClimb(Vector3i location) throws ChunkNotLoadedException {
-        int id = world.getBlockAt(location).getTypeId();
+        int id = world.getBlockAt(location).getId();
         if (id == 8 || id == 9 || id == 65) // Water / Moving Water / Ladder
         {
             return true;

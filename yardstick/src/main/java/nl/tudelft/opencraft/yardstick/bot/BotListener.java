@@ -7,7 +7,7 @@ import com.github.steveice10.mc.protocol.MinecraftProtocol;
 import com.github.steveice10.mc.protocol.data.SubProtocol;
 import com.github.steveice10.mc.protocol.data.game.chunk.Column;
 import com.github.steveice10.mc.protocol.data.game.entity.metadata.Position;
-import com.github.steveice10.mc.protocol.data.game.entity.type.GlobalEntityType;
+import com.github.steveice10.mc.protocol.data.game.entity.type.WeatherEntityType;
 import com.github.steveice10.mc.protocol.data.game.world.block.BlockChangeRecord;
 import com.github.steveice10.mc.protocol.packet.ingame.client.world.ClientTeleportConfirmPacket;
 import com.github.steveice10.mc.protocol.packet.ingame.server.*;
@@ -60,9 +60,9 @@ public class BotListener implements SessionListener {
 
         Packet packet = pre.getPacket();
 
-        if (packet instanceof ServerSpawnObjectPacket) {
+        if (packet instanceof ServerSpawnEntityPacket) {
             // 0x00 Spawn Object
-            ServerSpawnObjectPacket p = (ServerSpawnObjectPacket) packet;
+            ServerSpawnEntityPacket p = (ServerSpawnEntityPacket) packet;
             // TODO
 
             if (p.getEntityId() == 0) {
@@ -70,7 +70,7 @@ public class BotListener implements SessionListener {
                 return;
             }
 
-            ObjectEntity obj = new ObjectEntity(p.getEntityId(), p.getUUID());
+            ObjectEntity obj = new ObjectEntity(p.getEntityId(), p.getUuid());
             obj.setLocation(new Vector3d(p.getX(), p.getY(), p.getZ()));
             obj.setPitch(p.getPitch());
             obj.setYaw(p.getYaw());
@@ -90,11 +90,11 @@ public class BotListener implements SessionListener {
             orb.setCount(p.getExp());
             world.loadEntity(orb);
 
-        } else if (packet instanceof ServerSpawnGlobalEntityPacket) {
+        } else if (packet instanceof ServerSpawnWeatherEntityPacket) {
             // 0x02 Spawn Global Entity
-            ServerSpawnGlobalEntityPacket p = (ServerSpawnGlobalEntityPacket) packet;
+            ServerSpawnWeatherEntityPacket p = (ServerSpawnWeatherEntityPacket) packet;
 
-            if (p.getType() != GlobalEntityType.LIGHTNING_BOLT) {
+            if (p.getType() != WeatherEntityType.LIGHTNING_BOLT) {
                 logger.warning("Received spawn global entity for non-lightning strike");
                 return;
             }
@@ -105,12 +105,12 @@ public class BotListener implements SessionListener {
             world.loadEntity(ls);
 
             // TODO: Remove entity?
-        } else if (packet instanceof ServerSpawnMobPacket) {
+        } else if (packet instanceof ServerSpawnLivingEntityPacket) {
             // 0x03 Spawn Mob
-            ServerSpawnMobPacket p = (ServerSpawnMobPacket) packet;
+            ServerSpawnLivingEntityPacket p = (ServerSpawnLivingEntityPacket) packet;
 
             // TODO: double check the getType().ordinal() works as expected.
-            Entity e = new Mob(p.getEntityId(), p.getUUID(), p.getType());
+            Entity e = new Mob(p.getEntityId(), p.getUuid(), p.getType());
             e.setLocation(new Vector3d(p.getX(), p.getY(), p.getZ()));
             e.setYaw(p.getYaw());
             e.setHeadYaw(p.getHeadYaw());
@@ -122,7 +122,7 @@ public class BotListener implements SessionListener {
             // 0x04 Spawn painting
             ServerSpawnPaintingPacket p = (ServerSpawnPaintingPacket) packet;
 
-            Painting painting = new Painting(p.getEntityId(), p.getUUID());
+            Painting painting = new Painting(p.getEntityId(), p.getUuid());
             painting.setLocation(new Vector3d(p.getPosition().getX(), p.getPosition().getY(), p.getPosition().getZ()));
             // TODO: Direction, type
             world.loadEntity(painting);
@@ -131,7 +131,7 @@ public class BotListener implements SessionListener {
             // 0x05 Spawn Player
             ServerSpawnPlayerPacket p = (ServerSpawnPlayerPacket) packet;
 
-            Player pl = new Player(p.getUUID(), p.getEntityId());
+            Player pl = new Player(p.getUuid(), p.getEntityId());
             pl.setLocation(new Vector3d(p.getX(), p.getY(), p.getZ()));
             pl.setPitch(p.getPitch());
             pl.setYaw(p.getYaw());
@@ -285,13 +285,14 @@ public class BotListener implements SessionListener {
             // 0x1C Explosion
             ServerExplosionPacket p = (ServerExplosionPacket) packet;
             // TODO - help the server exploded
-
+        } else if (packet instanceof ServerUpdateViewPositionPacket) {
+            ServerUpdateViewPositionPacket p = (ServerUpdateViewPositionPacket) packet;
+            logger.info("Should load Chunk " + p.getChunkX() + " " + p.getChunkZ());
         } else if (packet instanceof ServerUnloadChunkPacket) {
             // 0x1D Unload Chunk
             ServerUnloadChunkPacket p = (ServerUnloadChunkPacket) packet;
-
             world.unloadChunk(p.getX(), p.getZ());
-
+            logger.info("Unloading Chunk " + p.getX() + " " + p.getZ());
         } else if (packet instanceof ServerNotifyClientPacket) {
             // 0x1E Change Game State
             ServerNotifyClientPacket p = (ServerNotifyClientPacket) packet;
@@ -311,9 +312,9 @@ public class BotListener implements SessionListener {
 
                 // col.hasBiomeData() is currently the only way to determine the 'ground-up contrinous' property.
                 // See http://wiki.vg/Chunk_Format#Ground-up_continuous for more details
-                if (newCol.hasBiomeData()) {
+                if (newCol.getBiomeData() != null) {
                     // Replace the previous chunk
-                    //logger.info("Replacing pre-existing chunk: " + new ChunkLocation(newCol.getX(), newCol.getZ()));
+                    logger.info("Replacing pre-existing chunk: " + new ChunkLocation(newCol.getX(), newCol.getZ()));
                     world.loadChunk(new Chunk(world, p.getColumn()));
                 } else {
                     // Only update the new chunk sections
@@ -328,9 +329,11 @@ public class BotListener implements SessionListener {
 
                         chunk.getHandle().getChunks()[i] = newCol.getChunks()[i];
                     }
-                    //logger.info("Updating pre-existing chunk: " + new ChunkLocation(newCol.getX(), newCol.getZ()) + ", sections: " + s);
+                    logger.info("Updating pre-existing chunk: " + new ChunkLocation(newCol.getX(), newCol.getZ()) + ", sections: " + s);
                 }
             } catch (ChunkNotLoadedException ex) {
+                logger.info("Loading new chunk: " + new ChunkLocation(newCol.getX(), newCol.getZ()));
+
                 // New chunk
                 world.loadChunk(new Chunk(world, p.getColumn()));
             }
@@ -356,13 +359,11 @@ public class BotListener implements SessionListener {
 
             this.server = new Server();
             server.setMaxPlayers(p.getMaxPlayers());
-            server.setDifficulty(p.getDifficulty());
             bot.setServer(server);
 
             this.player = new BotPlayer(bot, p.getEntityId());
             player.setGamemode(p.getGameMode());
             bot.setPlayer(player);
-
         } else if (packet instanceof ServerMapDataPacket) {
             // 0x24 Map
             ServerMapDataPacket p = (ServerMapDataPacket) packet;
@@ -381,27 +382,27 @@ public class BotListener implements SessionListener {
                 logger.warning("Received entity movement packet for unknown entity: " + p.getEntityId());
                 return;
             }
-
-            if (packet instanceof ServerEntityPositionPacket) {
-                // 0x25
-                e.setLocation(e.getLocation().add(new Vector3d(p.getMovementX(), p.getMovementY(), p.getMovementZ())));
-                e.setOnGround(p.isOnGround());
-            } else if (packet instanceof ServerEntityRotationPacket) {
-                // 0x27
-                e.setPitch(p.getPitch());
-                e.setYaw(p.getYaw());
-                e.setOnGround(p.isOnGround());
-            } else if (packet instanceof ServerEntityPositionRotationPacket) {
-                // 0x26
-                e.setLocation(e.getLocation().add(new Vector3d(p.getMovementX(), p.getMovementY(), p.getMovementZ())));
-                e.setPitch(p.getPitch());
-                e.setYaw(p.getYaw());
-                e.setOnGround(p.isOnGround());
-            } else {
-                // 0x28
-                // Do nothing.
-            }
-
+        } else if (packet instanceof ServerEntityPositionPacket) {
+            // 0x25
+            ServerEntityPositionPacket q = (ServerEntityPositionPacket) packet;
+            Entity e = world.getEntity(q.getEntityId());
+            e.setLocation(e.getLocation().add(new Vector3d(q.getMoveX(), q.getMoveY(), q.getMoveZ())));
+            e.setOnGround(q.isOnGround());
+        } else if (packet instanceof ServerEntityRotationPacket) {
+            // 0x27
+            ServerEntityRotationPacket q = (ServerEntityRotationPacket) packet;
+            Entity e = world.getEntity(q.getEntityId());
+            e.setPitch(q.getPitch());
+            e.setYaw(q.getYaw());
+            e.setOnGround(q.isOnGround());
+        } else if (packet instanceof ServerEntityPositionRotationPacket) {
+            // 0x26
+            ServerEntityPositionRotationPacket q = (ServerEntityPositionRotationPacket) packet;
+            Entity e = world.getEntity(q.getEntityId());
+            e.setLocation(e.getLocation().add(new Vector3d(q.getMoveX(), q.getMoveY(), q.getMoveZ())));
+            e.setPitch(q.getPitch());
+            e.setYaw(q.getYaw());
+            e.setOnGround(q.isOnGround());
         } else if (packet instanceof ServerVehicleMovePacket) {
             // 0x29 Vehicle Move
             ServerVehicleMovePacket p = (ServerVehicleMovePacket) packet;
@@ -419,9 +420,9 @@ public class BotListener implements SessionListener {
             BotPlayer player = bot.getPlayer();
             player.setFlySpeed(p.getFlySpeed());
             player.setWalkSpeed(p.getWalkSpeed());
-            player.setInvincible(p.getInvincible());
-            player.setFlying(p.getFlying());
-            player.setCanFly(p.getCanFly());
+            player.setInvincible(p.isInvincible());
+            player.setFlying(p.isFlying());
+            player.setCanFly(p.isCanFly());
             // TODO: Creative mode?
 
         } else if (packet instanceof ServerCombatPacket) {
@@ -448,11 +449,6 @@ public class BotListener implements SessionListener {
             session.send(new ClientTeleportConfirmPacket(p.getTeleportId()));
 
             logger.info("Received new Player position: " + player.getLocation());
-
-        } else if (packet instanceof ServerPlayerUseBedPacket) {
-            // 0x2F Use Bed
-            ServerPlayerUseBedPacket p = (ServerPlayerUseBedPacket) packet;
-            // TODO
 
         } else if (packet instanceof ServerEntityDestroyPacket) {
             // 0x30 Destroy Entities
@@ -623,14 +619,26 @@ public class BotListener implements SessionListener {
             // 0x4B Entity Effect
             ServerEntityEffectPacket p = (ServerEntityEffectPacket) packet;
             // TODO
-
+        } else if (packet instanceof ServerUpdateLightPacket) {
+            ServerUpdateLightPacket p = (ServerUpdateLightPacket) packet;
+            // TODO
         } else {
             logger.warning("Received unhandled packet: " + packet.getClass().getName());
         }
     }
 
     @Override
+    public void packetSending(PacketSendingEvent packetSendingEvent) {
+
+    }
+
+    @Override
     public void packetSent(PacketSentEvent pse) {
+    }
+
+    @Override
+    public void packetError(PacketErrorEvent packetErrorEvent) {
+
     }
 
     @Override

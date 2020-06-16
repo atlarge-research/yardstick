@@ -160,8 +160,8 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
         // Calculate speed
         double moveSpeed = this.speed;
         boolean inLiquid = false; // TODO: player.isInLiquid();
-        if (Material.getById(thisBlock.getTypeId()) == Material.SOUL_SAND) {
-            if (Material.getById(thisBlock.getTypeId()) == Material.SOUL_SAND) {
+        if (Material.getById(thisBlock.getId()) == Material.SOUL_SAND) {
+            if (Material.getById(thisBlock.getId()) == Material.SOUL_SAND) {
                 // Soulsand makes us shorter 8D
                 stepTarget = stepTarget.add(0, -0.12, 0);
             }

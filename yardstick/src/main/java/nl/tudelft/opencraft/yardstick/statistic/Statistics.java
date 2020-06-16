@@ -150,6 +150,11 @@ public class Statistics implements SessionListener {
     }
 
     @Override
+    public void packetSending(PacketSendingEvent packetSendingEvent) {
+
+    }
+
+    @Override
     public void packetSent(PacketSentEvent pse) {
         packOut.inc();
 
@@ -163,6 +168,11 @@ public class Statistics implements SessionListener {
         }
 
         bytesOut.observe(cos.getCount());
+    }
+
+    @Override
+    public void packetError(PacketErrorEvent packetErrorEvent) {
+
     }
 
     @Override
