@@ -18,17 +18,15 @@
     <description>Distributed Minecraft Benchmark</description>
 
     <repositories>
-        <!-- Offline, for now
         <repository>
-            <id>spacehq-releases</id>
-            <url>https://repo.spacehq.org/content/repositories/releases/</url>
+            <id>central</id>
+            <name>Central Repository</name>
+            <url>https://repo.maven.apache.org/maven2</url>
+            <layout>default</layout>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
         </repository>
-        <repository>
-            <id>spacehq-snapshots</id>
-            <url>https://repo.spacehq.org/content/repositories/snapshots/</url>
-        </repository>
-        -->
-
         <repository>
             <id>jitpack.io</id>
             <url>https://jitpack.io</url>
@@ -40,7 +38,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>20.0</version>
+            <version>29.0-jre</version>
         </dependency>
         
         <!-- JCommander -->
