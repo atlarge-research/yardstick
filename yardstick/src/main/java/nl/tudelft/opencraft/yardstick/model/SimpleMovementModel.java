@@ -24,11 +24,11 @@ public class SimpleMovementModel implements BotModel {
     }
 
     public Vector3i newTargetLocation(Bot bot) {
-        if (RANDOM.nextDouble() < 0.1) {
-            return getNewLongDistanceTarget(bot);
-        } else {
+//        if (RANDOM.nextDouble() < 0.1) {
+//            return getNewLongDistanceTarget(bot);
+//        } else {
             return getNewFieldLocation(bot);
-        }
+//        }
     }
 
     /**

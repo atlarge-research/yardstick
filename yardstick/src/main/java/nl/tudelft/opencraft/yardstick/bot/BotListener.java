@@ -299,6 +299,7 @@ public class BotListener implements SessionListener {
         } else if (packet instanceof ServerKeepAlivePacket) {
             // 0x1F Keep Alive
             // Do nothing, handled by default listener.
+            System.out.println(((ServerKeepAlivePacket) packet).getPingId() + " I GOT PINGED");
 
         } else if (packet instanceof ServerChunkDataPacket) {
             // 0x20 Chunk Data

@@ -54,8 +54,12 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
         @Override
         public PathNode call() throws Exception {
             BotPlayer player = bot.getPlayer();
-            PathNode start = bot.getPathFinder().search(player.getLocation().intVector(), target);
-            return start;
+            try {
+                PathNode start = bot.getPathFinder().search(player.getLocation().intVector(), target);
+                return start;
+            } catch(ChunkNotLoadedException e) {
+                return null;
+            }
         }
     };
 
