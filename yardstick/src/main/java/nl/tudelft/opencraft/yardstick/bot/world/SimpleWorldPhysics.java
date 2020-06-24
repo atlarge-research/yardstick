@@ -127,7 +127,8 @@ public class SimpleWorldPhysics implements WorldPhysics {
         valid = valid && isTraversable(origX, origY + 1, origZ);
 
         if (!valid) {
-            throw new IllegalArgumentException("Invalid move: " + locA + " -> " + locB + ". Origin not walkable!");
+            return false;
+//            throw new IllegalArgumentException("Invalid move: " + locA + " -> " + locB + ". Origin not walkable!");
         }
 
         //
