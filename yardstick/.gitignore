@@ -33,3 +33,6 @@ nbactions.xml
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Ignores for benchmark files
+*.jar
