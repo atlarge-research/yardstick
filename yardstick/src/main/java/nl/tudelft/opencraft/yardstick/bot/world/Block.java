@@ -101,7 +101,6 @@ public class Block {
             handle = chunk.getHandle();
         } catch (NullPointerException e) {
             System.out.println(this.toString());
-            int a = 2;
         }
 
         // TODO: Test this
