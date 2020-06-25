@@ -8,7 +8,7 @@ import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
  */
 public class MoveInteractModel implements BotModel {
 
-    private static final double INTERACT_TO_MOVEMENT = 1f / 10f;
+    private static final double INTERACT_TO_MOVEMENT = 1f / 2f;
     //
     private final BotModel interact = new SimpleInteractionModel();
     private final BotModel movement = new SimpleMovementModel();

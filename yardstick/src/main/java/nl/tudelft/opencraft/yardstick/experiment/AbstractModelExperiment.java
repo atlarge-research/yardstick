@@ -28,7 +28,7 @@ public abstract class AbstractModelExperiment extends Experiment {
     protected void before() {
         this.botsTotal = Integer.parseInt(options.experimentParams.get("bots"));
         this.durationInSeconds = Integer.parseInt(options.experimentParams.getOrDefault("duration", "20000"));
-        this.secondsBetweenJoin = Integer.parseInt(options.experimentParams.getOrDefault("joininterval", "2"));
+        this.secondsBetweenJoin = Integer.parseInt(options.experimentParams.getOrDefault("joininterval", "5"));
         this.numberOfBotsPerJoin = Integer.parseInt(options.experimentParams.getOrDefault("numbotsperjoin", "1"));
         this.startMillis = System.currentTimeMillis();
     }
