@@ -73,7 +73,7 @@ def get_experiment_settings() -> List[Dict[str, Union[str, int, timedelta]]]:
 
         if players_per_client * client_amount < 100:
             base_run_time = timedelta(minutes=10)
-        if players_per_client * client_amount < 200:
+        elif players_per_client * client_amount < 200:
             base_run_time = timedelta(minutes=15)
 
         client_run_time = base_run_time + player_join_interval * total_players
