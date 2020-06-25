@@ -165,7 +165,7 @@ def generate_benchmarks(working_directory: Path, client_jar_original: Path):
             job_index += 1
 
             # Move the template to the job directory
-            shutil.copytree(server_template, job_directory / "server-template", dirs_exist_ok=True)
+            shutil.copytree(server_template, job_directory / "server-template")
 
             # Prepare relative jar file paths
             server_jar_relative = os.path.relpath(server_jar_copy, job_directory)
