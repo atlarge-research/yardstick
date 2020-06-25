@@ -96,10 +96,11 @@ def get_experiment_settings() -> List[Dict[str, Union[str, int, timedelta]]]:
 def experiment_template(
         server_jar: str,
         client_jar: str,
+        server_relative_directory: str,
         settings: Dict[str, Union[str, int, timedelta]]
 ) -> Dict[str, str]:
     # Add 30 seconds to ensure that the script does not exit too early.
-    timeout = str(settings["CLIENT_START_DELAY"] + settings["CLIENT_RUN_TIME"] + timedelta(seconds=30))
+    timeout = settings["CLIENT_START_DELAY"] + settings["CLIENT_RUN_TIME"] + timedelta(seconds=30)
 
     run_jar = "java -Xmx32768M -Xms4096M -jar"
     experiment = settings['EXPERIMENT']
@@ -107,16 +108,16 @@ def experiment_template(
     client_join_interval = str(int(settings["CLIENT_JOIN_INTERVAL"].total_seconds()))
 
     template_map = {
-        "TIMEOUT": timeout,
+        "TIMEOUT": str(timeout),
         "NODES": str(settings["NODES"]),
-        "RUN_SERVER_COMMAND": f'{run_jar} \\"{server_jar}\\"',
+        "RUN_SERVER_COMMAND": f'cd \\"{server_relative_directory}\\"; {run_jar} \\"{server_jar}\\"',
         "CLIENT_START_DELAY": str(int(settings["CLIENT_START_DELAY"].total_seconds())),
         "CLIENT_AMOUNT": str(settings["CLIENT_AMOUNT"]),
-        "RUN_CLIENT_COMMAND": f'{run_jar} {client_jar} '
+        "RUN_CLIENT_COMMAND": f'{run_jar} \\"{client_jar}\\" '
                               f'-e {experiment} '
                               f'-Ebots={bots} '
                               f'-Ejoininterval={client_join_interval} '
-                              f'-Eduration={timeout} '  # Bot should not stop running on its own.
+                              f'-Eduration={str(int(timeout.total_seconds()))} '  # Bot should not stop running on its own.
                               f'--host "$SERVER_HOSTNAME"',
         "CLIENT_RUN_TIME": str(int(settings["CLIENT_RUN_TIME"].total_seconds())),
         "PLAYER_JOIN_INTERVAL": str(int(settings["PLAYER_JOIN_INTERVAL"].total_seconds())),
@@ -165,15 +166,17 @@ def generate_benchmarks(working_directory: Path, client_jar_original: Path):
             job_index += 1
 
             # Move the template to the job directory
-            shutil.copytree(server_template, job_directory / "server-template")
+            server_directory = job_directory / "server-template"
+            shutil.copytree(server_template, server_directory)
 
             # Prepare relative jar file paths
-            server_jar_relative = os.path.relpath(server_jar_copy, job_directory)
-            client_jar_relative = os.path.relpath(client_jar_copy, job_directory)
+            server_jar_relative = str(os.path.relpath(server_jar_copy, job_directory))
+            client_jar_relative = str(os.path.relpath(client_jar_copy, job_directory))
+            server_directory = str(os.path.relpath(server_directory, job_directory))
 
             # Create job script from template
             job_template_file = job_templates_directory / experiment_settings["JOB_TEMPLATE"]
-            template_map = experiment_template(str(server_jar_relative), str(client_jar_relative), experiment_settings)
+            template_map = experiment_template(server_jar_relative, client_jar_relative, server_directory, experiment_settings)
 
             job_script = instantiate_template(job_template_file, template_map)
 
