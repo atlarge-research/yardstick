@@ -113,7 +113,7 @@ def experiment_template(
         "RUN_SERVER_COMMAND": f'cd \\"{server_relative_directory}\\"; {run_jar} \\"{server_jar}\\"',
         "CLIENT_START_DELAY": str(int(settings["CLIENT_START_DELAY"].total_seconds())),
         "CLIENT_AMOUNT": str(settings["CLIENT_AMOUNT"]),
-        "RUN_CLIENT_COMMAND": f'{run_jar} \\"{client_jar}\\" '
+        "RUN_CLIENT_COMMAND": f'{run_jar} "{client_jar}" '
                               f'-e {experiment} '
                               f'-Ebots={bots} '
                               f'-Ejoininterval={client_join_interval} '
@@ -170,7 +170,7 @@ def generate_benchmarks(working_directory: Path, client_jar_original: Path):
             shutil.copytree(server_template, server_directory)
 
             # Prepare relative jar file paths
-            server_jar_relative = str(os.path.relpath(server_jar_copy, job_directory))
+            server_jar_relative = str(os.path.relpath(server_jar_copy, server_directory))
             client_jar_relative = str(os.path.relpath(client_jar_copy, job_directory))
             server_directory = str(os.path.relpath(server_directory, job_directory))
 

@@ -16,7 +16,7 @@ sleep '<<<CLIENT_START_DELAY>>>'
 
 # Start the clients
 for ((i=0;i<='<<<CLIENT_AMOUNT>>>';i++)); do
-  srun -r 1 -N '<<<CLIENT_AMOUNT>>>' -n '<<<CLIENT_AMOUNT>>>' bash -c '<<<RUN_CLIENT_COMMAND>>> > client.log' &
+  srun -r 1 -N '<<<CLIENT_AMOUNT>>>' -n '<<<CLIENT_AMOUNT>>>' bash -c '<<<RUN_CLIENT_COMMAND>>> > client'$i'.log' &
   sleep '<<<PLAYER_JOIN_INTERVAL>>>'
 done
 
