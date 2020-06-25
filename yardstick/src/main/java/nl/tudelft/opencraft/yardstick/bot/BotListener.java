@@ -180,7 +180,7 @@ public class BotListener implements SessionListener {
             try {
                 b = bot.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
             } catch (ChunkNotLoadedException e) {
-                logger.warning("Received BlockChange for block in unloaded chunk: " + pos);
+//                logger.warning("Received BlockChange for block in unloaded chunk: " + pos);
                 return;
             }
 
@@ -219,7 +219,7 @@ public class BotListener implements SessionListener {
                 try {
                     b = bot.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
                 } catch (ChunkNotLoadedException e) {
-                    logger.warning("Received MultiBlockChange for block in unloaded chunk: " + pos);
+//                    logger.warning("Received MultiBlockChange for block in unloaded chunk: " + pos);
                     return;
                 }
 
@@ -299,6 +299,7 @@ public class BotListener implements SessionListener {
         } else if (packet instanceof ServerKeepAlivePacket) {
             // 0x1F Keep Alive
             // Do nothing, handled by default listener.
+            System.out.println(((ServerKeepAlivePacket) packet).getPingId() + " I GOT PINGED");
 
         } else if (packet instanceof ServerChunkDataPacket) {
             // 0x20 Chunk Data

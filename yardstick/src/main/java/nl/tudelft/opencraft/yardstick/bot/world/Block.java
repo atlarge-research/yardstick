@@ -96,7 +96,12 @@ public class Block {
     }
 
     private BlockStorage getInternalStorage() {
-        Column handle = chunk.getHandle();
+        Column handle = null;
+        try {
+            handle = chunk.getHandle();
+        } catch (NullPointerException e) {
+            System.out.println(this.toString());
+        }
 
         // TODO: Test this
         int index = Math.floorDiv(y, 16);

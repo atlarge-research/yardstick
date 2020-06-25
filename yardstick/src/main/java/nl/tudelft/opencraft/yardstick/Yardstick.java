@@ -132,6 +132,7 @@ public class Yardstick {
         }
 
         if (OPTIONS.dumpWorkload) {
+            System.out.println("dumper");
             ex.setWorkloadDumper(new WorkloadDumper());
         }
 

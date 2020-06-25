@@ -18,6 +18,7 @@ public class World {
     private final WorldPhysics physics;
     //
     private final Map<ChunkLocation, Chunk> chunks = new HashMap<>();
+    public final Map<ChunkLocation, Chunk> unloadedChunks = new HashMap<>();
     private final Map<Integer, Entity> entities = new HashMap<>();
     private Position spawnPoint;
 
@@ -45,6 +46,7 @@ public class World {
 
     public void loadChunk(Chunk chunk) {
         chunks.put(chunk.getLocation(), chunk);
+        unloadedChunks.put(chunk.getLocation(), chunk);
     }
 
     public void unloadChunk(Chunk chunk) {
@@ -71,12 +73,24 @@ public class World {
         }
     }
 
+    public Chunk getUnloadedChunk(ChunkLocation location) throws ChunkNotLoadedException {
+        if (unloadedChunks.containsKey(location)) {
+            return unloadedChunks.get(location);
+        } else {
+            throw new ChunkNotLoadedException(location);
+        }
+    }
+
     public Block getBlockAt(Vector3i v) throws ChunkNotLoadedException {
         return getBlockAt(v.getX(), v.getY(), v.getZ());
     }
 
     public Block getBlockAt(int x, int y, int z) throws ChunkNotLoadedException {
         Chunk chunk = getChunk(getChunkLocation(x, z));
+        if (chunk == null) {
+            chunk = getUnloadedChunk(getChunkLocation(x, z));
+            System.out.println("had to get an unloaded chunk");
+        }
         return new Block(x, y, z, chunk);
     }
 

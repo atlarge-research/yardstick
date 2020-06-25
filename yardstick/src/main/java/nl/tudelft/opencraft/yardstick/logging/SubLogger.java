@@ -15,6 +15,7 @@
  */
 package nl.tudelft.opencraft.yardstick.logging;
 
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -41,6 +42,18 @@ public class SubLogger extends Logger {
         }
         logger.setParent(this);
         return logger;
+    }
+
+    @Override
+    public void log(Level level, String msg) {
+    }
+
+    @Override
+    public void info(String msg) {
+    }
+
+    @Override
+    public void warning(String msg) {
     }
 
 }
