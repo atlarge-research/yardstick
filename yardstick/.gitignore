@@ -36,3 +36,4 @@ Thumbs.db
 
 # Ignores for benchmark files
 *.jar
+script/working_dir

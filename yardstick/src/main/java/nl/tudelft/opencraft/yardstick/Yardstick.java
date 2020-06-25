@@ -1,7 +1,6 @@
 package nl.tudelft.opencraft.yardstick;
 
-import java.io.File;
-import java.io.FileNotFoundException;
+import com.beust.jcommander.JCommander;
 import java.io.FileReader;
 import java.io.IOException;
 import java.time.LocalTime;
@@ -12,9 +11,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 import java.util.logging.Level;
-import com.beust.jcommander.JCommander;
-import com.moandjiezana.toml.Toml;
-import nl.tudelft.opencraft.yardstick.experiment.*;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment1SimpleJoin;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment2ScheduledJoin;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment3WalkAround;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment4MultiWalkAround;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment5SimpleWalk;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment6InteractWalk;
+import nl.tudelft.opencraft.yardstick.experiment.RemoteControlledExperiment;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SimpleTimeFormatter;
 import nl.tudelft.opencraft.yardstick.statistic.Statistics;
@@ -47,9 +51,9 @@ public class Yardstick {
         }
         Collections.addAll(allArgs, args);
 
-        File config = new File("yardstick.toml");
-        // Parse config options
-        OPTIONS.readTOML(config);
+//        File config = new File("yardstick.toml");
+//        // Parse config options
+//        OPTIONS.readTOML(config);
         // Parse command line options
         JCommander optParser = new JCommander(OPTIONS);
         optParser.parse(allArgs.toArray(new String[0]));

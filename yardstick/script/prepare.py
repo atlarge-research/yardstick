@@ -38,9 +38,10 @@ def parse_arguments() -> (Path, Path):
     return working_directory, client_jar_file
 
 
-def generate_directory(directory):
+def generate_directory(directory, clear_directory=False):
     """Recreate a directory such that it is available and clean."""
-    shutil.rmtree(directory, ignore_errors=True)
+    if clear_directory:
+        shutil.rmtree(directory, ignore_errors=True)
     directory.mkdir(parents=True, exist_ok=True)
 
 
@@ -60,15 +61,22 @@ def instantiate_template(template_path: Path, template_map: Dict[str, str]) -> s
 
 def get_experiment_settings() -> List[Dict[str, Union[str, int, timedelta]]]:
     experiment_settings = list()
+    players_per_client = 25
+    player_join_interval = timedelta(seconds=1)
 
     for client_amount in range(13):
         nodes = client_amount + 1
-        players_per_client = client_amount * 25
+        total_players = client_amount * players_per_client
+        client_join_interval = player_join_interval * client_amount
         client_start_delay = timedelta(seconds=60)
-        client_run_time = timedelta(minutes=20)
+        base_run_time = timedelta(minutes=20)
 
-        if players_per_client * client_amount > 150:
-            client_run_time = timedelta(minutes=30)
+        if players_per_client * client_amount < 100:
+            base_run_time = timedelta(minutes=10)
+        if players_per_client * client_amount > 200:
+            base_run_time = timedelta(minutes=15)
+
+        client_run_time = base_run_time + player_join_interval * total_players
 
         experiment_settings.append({
             "NODES": nodes,
@@ -77,7 +85,9 @@ def get_experiment_settings() -> List[Dict[str, Union[str, int, timedelta]]]:
             "CLIENT_AMOUNT": client_amount,
             "CLIENT_START_DELAY": client_start_delay,
             "CLIENT_RUN_TIME": client_run_time,
+            "CLIENT_JOIN_INTERVAL": client_join_interval,
             "JOB_TEMPLATE": "opencraft.template.sh",
+            "PLAYER_JOIN_INTERVAL": player_join_interval,
         })
 
     return experiment_settings
@@ -94,16 +104,22 @@ def experiment_template(
     run_jar = "java -Xmx32768M -Xms4096M -jar"
     experiment = settings['EXPERIMENT']
     bots = settings['PLAYERS_PER_CLIENT']
+    client_join_interval = str(int(settings["CLIENT_JOIN_INTERVAL"].total_seconds()))
 
     template_map = {
         "TIMEOUT": str(timeout),
         "NODES": str(settings["NODES"]),
-        "RUN_SERVER_COMMAND": f'{run_jar} "{server_jar}"',
-        "CLIENT_START_DELAY": str(settings["CLIENT_START_DELAY"].total_seconds()),
+        "RUN_SERVER_COMMAND": f'{run_jar} \\"{server_jar}\\"',
+        "CLIENT_START_DELAY": str(int(settings["CLIENT_START_DELAY"].total_seconds())),
         "CLIENT_AMOUNT": str(settings["CLIENT_AMOUNT"]),
-        "RUN_CLIENT_COMMAND": f'{run_jar} {client_jar} -e {experiment} -E bots={bots} --host "$SERVER_HOSTNAME"',
-        "CLIENT_RUN_TIME": str(settings["CLIENT_RUN_TIME"].total_seconds()),
-        "STOP_SERVER_COMMAND": "stop\n",  # Need the newline for the command to active in the opencraft server console
+        "RUN_CLIENT_COMMAND": f'{run_jar} {client_jar} '
+                              f'-e {experiment} '
+                              f'-Ebots={bots} '
+                              f'-Ejoininterval={client_join_interval} '
+                              f'--host "$SERVER_HOSTNAME"',
+        "CLIENT_RUN_TIME": str(int(settings["CLIENT_RUN_TIME"].total_seconds())),
+        "PLAYER_JOIN_INTERVAL": str(int(settings["PLAYER_JOIN_INTERVAL"].total_seconds())),
+        "STOP_SERVER_COMMAND": "stop\\n",  # Need the newline for the command to active in the opencraft server console
     }
 
     return template_map
@@ -115,7 +131,7 @@ def generate_benchmarks(working_directory: Path, client_jar_original: Path):
 
     # Prepare jobs directory
     benchmarks_directory = working_directory / "yardstick-benchmarks"
-    generate_directory(benchmarks_directory)
+    generate_directory(benchmarks_directory, clear_directory=True)
 
     # Copy jar file to working directory
     client_jar_copy = Path(shutil.copy(client_jar_original, working_directory / "client.jar"))
@@ -138,12 +154,12 @@ def generate_benchmarks(working_directory: Path, client_jar_original: Path):
                 f"This jar is required for running the server!"
             )
 
-        base_server_directory = os.path.dirname(server_template)
+        _, base_server_directory = os.path.split(server_template)
         server_jar_copy = Path(shutil.copy(template_server_jar, working_directory / f"{base_server_directory}_server.jar"))
 
         for experiment_settings in get_experiment_settings():
             # Prepare job directory
-            job_directory = benchmarks_directory / ("job_" + base_server_directory + "_" + str(job_index))
+            job_directory = benchmarks_directory / ("job_" + str(job_index) + "_" + base_server_directory)
             job_directory.mkdir(parents=True)
             job_index += 1
 

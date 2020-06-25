@@ -11,13 +11,14 @@ module add python/3.6.0
 export SERVER_HOSTNAME=`srun -r 0 -N 1 -n 1 bash -c 'hostname'`
 
 # Start the server
-srun -r 0 -N 1 -n 1 bash -c 'screen -S "opencraft-server" -md bash -c "<<<RUN_SERVER_COMMAND>>>"' &
+srun -r 0 -N 1 -n 1 bash -c 'screen -S "opencraft-server" -md bash -c "<<<RUN_SERVER_COMMAND>>> > server.log"' &
 sleep '<<<CLIENT_START_DELAY>>>'
 
 # Start the clients
-if (('<<<CLIENT_AMOUNT>>>' > 0)); then
-  srun -r 1 -N '<<<CLIENT_AMOUNT>>>' -n '<<<CLIENT_AMOUNT>>>' bash -c '<<<RUN_CLIENT_COMMAND>>>' &
-fi
+for ((i=0;i<='<<<CLIENT_AMOUNT>>>';i++)); do
+  srun -r 1 -N '<<<CLIENT_AMOUNT>>>' -n '<<<CLIENT_AMOUNT>>>' bash -c '<<<RUN_CLIENT_COMMAND>>> > client.log' &
+  sleep '<<<PLAYER_JOIN_INTERVAL>>>'
+done
 
 sleep '<<<CLIENT_RUN_TIME>>>'
 
