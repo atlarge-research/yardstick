@@ -99,7 +99,7 @@ def experiment_template(
         settings: Dict[str, Union[str, int, timedelta]]
 ) -> Dict[str, str]:
     # Add 30 seconds to ensure that the script does not exit too early.
-    timeout = settings["CLIENT_START_DELAY"] + settings["CLIENT_RUN_TIME"] + timedelta(seconds=30)
+    timeout = str(settings["CLIENT_START_DELAY"] + settings["CLIENT_RUN_TIME"] + timedelta(seconds=30))
 
     run_jar = "java -Xmx32768M -Xms4096M -jar"
     experiment = settings['EXPERIMENT']
@@ -107,7 +107,7 @@ def experiment_template(
     client_join_interval = str(int(settings["CLIENT_JOIN_INTERVAL"].total_seconds()))
 
     template_map = {
-        "TIMEOUT": str(timeout),
+        "TIMEOUT": timeout,
         "NODES": str(settings["NODES"]),
         "RUN_SERVER_COMMAND": f'{run_jar} \\"{server_jar}\\"',
         "CLIENT_START_DELAY": str(int(settings["CLIENT_START_DELAY"].total_seconds())),
@@ -116,6 +116,7 @@ def experiment_template(
                               f'-e {experiment} '
                               f'-Ebots={bots} '
                               f'-Ejoininterval={client_join_interval} '
+                              f'-Eduration={timeout} '  # Bot should not stop running on its own.
                               f'--host "$SERVER_HOSTNAME"',
         "CLIENT_RUN_TIME": str(int(settings["CLIENT_RUN_TIME"].total_seconds())),
         "PLAYER_JOIN_INTERVAL": str(int(settings["PLAYER_JOIN_INTERVAL"].total_seconds())),
