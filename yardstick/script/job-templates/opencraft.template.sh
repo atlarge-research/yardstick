@@ -15,8 +15,8 @@ srun -r 0 -N 1 -n 1 bash -c 'screen -S "opencraft-server" -md bash -c "<<<RUN_SE
 sleep '<<<CLIENT_START_DELAY>>>'
 
 # Start the clients
-for ((i=0;i<='<<<CLIENT_AMOUNT>>>';i++)); do
-  srun -r 1 -N '<<<CLIENT_AMOUNT>>>' -n '<<<CLIENT_AMOUNT>>>' bash -c '<<<RUN_CLIENT_COMMAND>>> > client'$i'.log' &
+for ((i=1;i<='<<<CLIENT_AMOUNT>>>';i++)); do
+  srun -r $i -N 1 -n 1 bash -c '<<<RUN_CLIENT_COMMAND>>> > client'$i'.log' &
   sleep '<<<PLAYER_JOIN_INTERVAL>>>'
 done
 
