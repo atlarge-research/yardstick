@@ -12,7 +12,7 @@ export SERVER_HOSTNAME=`srun -r 0 -N 1 -n 1 bash -c 'hostname'`
 
 # Start the server
 echo "Starting the server!"
-srun -r 0 -N 1 -n 1 bash -c 'screen -S "opencraft-server" -md bash -c "<<<RUN_SERVER_COMMAND>>> > server.log"' &
+srun -r 0 -N 1 -n 1 bash -c 'bash -c "<<<RUN_SERVER_COMMAND>>> > server.log"' &
 echo "Sleep until server finished starting!"
 sleep '<<<CLIENT_START_DELAY>>>'
 
@@ -28,7 +28,7 @@ sleep '<<<CLIENT_RUN_TIME>>>'
 
 # Shutdown the server
 echo "Shutting down the server!"
-srun -r 0 -N 1 -n 1 bash -c 'screen -r "opencraft-server" -X stuff "<<<STOP_SERVER_COMMAND>>>"'
+srun -r 0 -N 1 -n 1 bash -c 'killall java'
 
 # Wait until the server and clients have finished running
 echo "Waiting until shutdown complete..."
