@@ -1,5 +1,5 @@
 # Yardstick excludes
-*.bin
+/script/workload
 
 
 # Netbeans excludes
