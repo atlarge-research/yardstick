@@ -65,7 +65,7 @@ public class BotListener implements SessionListener {
             // TODO
 
             if (p.getEntityId() == 0) {
-                //logger.warning("Received spawn object with EID == 0: " + p.getType());
+                logger.warning("Received spawn object with EID == 0: " + p.getType());
                 return;
             }
 
