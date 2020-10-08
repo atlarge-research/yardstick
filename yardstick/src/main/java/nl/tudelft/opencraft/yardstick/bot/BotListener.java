@@ -413,15 +413,16 @@ public class BotListener implements SessionListener {
         } else if (packet instanceof ServerPlayerAbilitiesPacket) {
 
             // 0x2B Player Abilities
-            //ServerPlayerAbilitiesPacket p = (ServerPlayerAbilitiesPacket) packet;
+            ServerPlayerAbilitiesPacket p = (ServerPlayerAbilitiesPacket) packet;
 
-            //BotPlayer player = bot.getPlayer();
-            //System.out.println(bot);
-            //player.setFlySpeed(p.getFlySpeed());
-            //player.setWalkSpeed(p.getWalkSpeed());
-            //player.setInvincible(p.getInvincible());
-            //player.setFlying(p.getFlying());
-            //player.setCanFly(p.getCanFly());
+            BotPlayer player = bot.getPlayer();
+            if (player != null) {
+                player.setFlySpeed(p.getFlySpeed());
+                player.setWalkSpeed(p.getWalkSpeed());
+                player.setInvincible(p.getInvincible());
+                player.setFlying(p.getFlying());
+                player.setCanFly(p.getCanFly());
+            }
             // TODO: Creative mode?
 
         } else if (packet instanceof ServerCombatPacket) {
