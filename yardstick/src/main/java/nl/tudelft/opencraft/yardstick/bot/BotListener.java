@@ -631,6 +631,11 @@ public class BotListener implements SessionListener {
     }
 
     @Override
+    public void packetSending(PacketSendingEvent packetSendingEvent) {
+
+    }
+
+    @Override
     public void packetSent(PacketSentEvent pse) {
     }
 
