@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/opencraft-yardstick.iml" filepath="$PROJECT_DIR$/.idea/opencraft-yardstick.iml" />
+      <module fileurl="file://$PROJECT_DIR$/yardstick/yardstick.iml" filepath="$PROJECT_DIR$/yardstick/yardstick.iml" />
+    </modules>
+  </component>
+</project>
