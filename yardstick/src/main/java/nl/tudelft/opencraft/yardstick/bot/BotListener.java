@@ -59,7 +59,6 @@ public class BotListener implements SessionListener {
         }
 
         Packet packet = pre.getPacket();
-
         if (packet instanceof ServerSpawnObjectPacket) {
             // 0x00 Spawn Object
             ServerSpawnObjectPacket p = (ServerSpawnObjectPacket) packet;
@@ -362,7 +361,6 @@ public class BotListener implements SessionListener {
             this.player = new BotPlayer(bot, p.getEntityId());
             player.setGamemode(p.getGameMode());
             bot.setPlayer(player);
-
         } else if (packet instanceof ServerMapDataPacket) {
             // 0x24 Map
             ServerMapDataPacket p = (ServerMapDataPacket) packet;
@@ -413,15 +411,18 @@ public class BotListener implements SessionListener {
             // TODO
 
         } else if (packet instanceof ServerPlayerAbilitiesPacket) {
+
             // 0x2B Player Abilities
             ServerPlayerAbilitiesPacket p = (ServerPlayerAbilitiesPacket) packet;
 
             BotPlayer player = bot.getPlayer();
-            player.setFlySpeed(p.getFlySpeed());
-            player.setWalkSpeed(p.getWalkSpeed());
-            player.setInvincible(p.getInvincible());
-            player.setFlying(p.getFlying());
-            player.setCanFly(p.getCanFly());
+            if (player != null) {
+                player.setFlySpeed(p.getFlySpeed());
+                player.setWalkSpeed(p.getWalkSpeed());
+                player.setInvincible(p.getInvincible());
+                player.setFlying(p.getFlying());
+                player.setCanFly(p.getCanFly());
+            }
             // TODO: Creative mode?
 
         } else if (packet instanceof ServerCombatPacket) {

@@ -1,5 +1,7 @@
 # Yardstick excludes
-/script/workload
+**/workload/*.csv
+**/workload/*.bin
+
 
 # Netbeans excludes
 /nbproject/private
