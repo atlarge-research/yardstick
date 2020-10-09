@@ -9,6 +9,7 @@ import nl.tudelft.opencraft.yardstick.bot.world.BlockFace;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
+import nl.tudelft.opencraft.yardstick.util.ZigZagRange;
 
 /**
  * Represents a model which moves the bot randomly to short and long distance
@@ -67,15 +68,13 @@ public class SimpleMovementModel implements BotModel {
     private Vector3i getTargetAt(Bot bot, int x, int z) {
         Vector3d botLoc = bot.getPlayer().getLocation();
 
-        int startY = Math.max(botLoc.intVector().getY(), 5);
         int y = -1;
         try {
-            Block b = bot.getWorld().getBlockAt(x, startY, z);
-            for (int i = -5; i <= 5; i++) {
-                Block test = b.getRelative(0, i, 0);
+            for (ZigZagRange it = new ZigZagRange(0, 255, (int) botLoc.getY()); it.hasNext(); ) {
+                y = it.next();
+                Block test = bot.getWorld().getBlockAt(x, y, z);
                 if (test.getMaterial().isTraversable()
                         && !test.getRelative(BlockFace.BOTTOM).getMaterial().isTraversable()) {
-                    y = startY + i;
                     break;
                 }
             }
@@ -86,7 +85,7 @@ public class SimpleMovementModel implements BotModel {
 
             return new Vector3i(x, y, z);
         } catch (ChunkNotLoadedException ex) {
-            bot.getLogger().warning("Bot target not loaded: (" + x + "," + startY + "," + z + ")");
+            bot.getLogger().warning("Bot target not loaded: (" + x + "," + y + "," + z + ")");
             return botLoc.intVector();
         }
     }

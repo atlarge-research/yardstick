@@ -1,7 +1,7 @@
 package nl.tudelft.opencraft.yardstick;
 
+import com.beust.jcommander.JCommander;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.time.LocalTime;
@@ -12,9 +12,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 import java.util.logging.Level;
-import com.beust.jcommander.JCommander;
-import com.moandjiezana.toml.Toml;
-import nl.tudelft.opencraft.yardstick.experiment.*;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment1SimpleJoin;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment2ScheduledJoin;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment3WalkAround;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment4MultiWalkAround;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment5SimpleWalk;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment6InteractWalk;
+import nl.tudelft.opencraft.yardstick.experiment.RemoteControlledExperiment;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SimpleTimeFormatter;
 import nl.tudelft.opencraft.yardstick.statistic.Statistics;
@@ -27,6 +32,7 @@ import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
  */
 public class Yardstick {
 
+    // FIXME don't duplicate version number. Version number is in pom.xml.
     public static final String VERSION = "0.1";
     public static final GlobalLogger LOGGER = GlobalLogger.setupGlobalLogger("Yardstick");
     public static final Options OPTIONS = new Options();
@@ -36,7 +42,7 @@ public class Yardstick {
         // Logger
         LOGGER.setupConsoleLogging(new SimpleTimeFormatter());
 
-        List<String> allArgs = new ArrayList<String>();
+        List<String> allArgs = new ArrayList<>();
         // Parse options from config file
         try (FileReader reader = new FileReader("yardstick.properties"); Scanner scanner = new Scanner(reader);) {
             while (scanner.hasNext()) {
