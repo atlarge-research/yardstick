@@ -14,7 +14,3 @@ id = 0
 nodes = 1
 joininterval = 10
 interval = 10
-#		{ "num-bots" = "10" },
-#		{ "duration" = "10m" },
-#		{ "join-interval" = "1" },
-#		{ "bots-per-join" = "2" },
