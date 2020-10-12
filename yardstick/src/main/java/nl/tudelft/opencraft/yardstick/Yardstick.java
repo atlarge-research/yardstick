@@ -8,6 +8,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
@@ -42,6 +43,9 @@ public class Yardstick {
         // Logger
         LOGGER.setupConsoleLogging(new SimpleTimeFormatter());
 
+        // Let's go!
+        LOGGER.info("Yardstick v" + VERSION);
+
         List<String> allArgs = new ArrayList<>();
         // Parse options from config file
         try (FileReader reader = new FileReader("yardstick.properties"); Scanner scanner = new Scanner(reader);) {
@@ -59,9 +63,12 @@ public class Yardstick {
         // Parse command line options
         JCommander optParser = new JCommander(OPTIONS);
         optParser.parse(allArgs.toArray(new String[0]));
-
-        // Let's go!
-        LOGGER.info("Yardstick v" + VERSION);
+        if (args.length > 0) {
+            LOGGER.warning("Yardstick configured using command-line options. Please use the config file.");
+            LOGGER.warning("Command-line options: " + Arrays.toString(args));
+        }
+        LOGGER.info("Effective Yardstick Configuration:");
+        LOGGER.info(OPTIONS.toString());
 
         if (OPTIONS.help) {
             optParser.usage();

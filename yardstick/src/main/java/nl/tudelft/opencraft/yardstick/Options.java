@@ -1,17 +1,16 @@
 package nl.tudelft.opencraft.yardstick;
 
+import com.beust.jcommander.DynamicParameter;
+import com.beust.jcommander.IStringConverter;
+import com.beust.jcommander.Parameter;
+import com.google.common.base.Joiner;
+import com.moandjiezana.toml.Toml;
 import java.io.File;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
-
-import com.beust.jcommander.DynamicParameter;
-import com.beust.jcommander.IStringConverter;
-import com.beust.jcommander.Parameter;
-import com.moandjiezana.toml.Toml;
 
 /**
  * Represents command line options for the emulator.
@@ -102,4 +101,20 @@ public class Options {
         this.start = toml.contains("timing.start") ? new DateConverter().convert(toml.getString("timing.start")) : this.start;
     }
 
+    @Override
+    public String toString() {
+        return "Options{" + "help=" + help +
+                ", dumpWorkload=" + dumpWorkload +
+                ", host='" + host + '\'' +
+                ", port=" + port +
+                ", experiment=" + experiment +
+                ", experimentParams=" + Joiner.on(",").withKeyValueSeparator(":").join(experimentParams) +
+                ", prometheusHost='" + prometheusHost + '\'' +
+                ", prometheusPort=" + prometheusPort +
+                ", start=" + start +
+                ", csvDump=" + csvDump +
+                ", inFile='" + inFile + '\'' +
+                ", outFile='" + outFile + '\'' +
+                '}';
+    }
 }
