@@ -1,14 +1,19 @@
 [logging]
-dump-workload = true
+dump-workload = false
 
 [game]
 host = "::1"
 port = 25565
 
 [experiment]
-id = 7
+id = 4
 [experiment.params]
 port = "7000"
+bots = 1
+id = 0
+nodes = 1
+joininterval = 10
+interval = 10
 #		{ "num-bots" = "10" },
 #		{ "duration" = "10m" },
 #		{ "join-interval" = "1" },
