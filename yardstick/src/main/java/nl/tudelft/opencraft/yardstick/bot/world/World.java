@@ -1,10 +1,10 @@
 package nl.tudelft.opencraft.yardstick.bot.world;
 
+import com.github.steveice10.mc.protocol.data.game.entity.metadata.Position;
+import com.github.steveice10.mc.protocol.data.game.world.WorldType;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import com.github.steveice10.mc.protocol.data.game.entity.metadata.Position;
-import com.github.steveice10.mc.protocol.data.game.world.WorldType;
 import nl.tudelft.opencraft.yardstick.bot.entity.Entity;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
@@ -18,6 +18,7 @@ public class World {
     private final WorldPhysics physics;
     //
     private final Map<ChunkLocation, Chunk> chunks = new HashMap<>();
+    private final Map<ChunkLocation, Chunk> unloadedChunks = new HashMap<>();
     private final Map<Integer, Entity> entities = new HashMap<>();
     private Position spawnPoint;
 
@@ -53,7 +54,10 @@ public class World {
     }
 
     public void unloadChunk(int x, int z) {
-        chunks.remove(new ChunkLocation(x, z));
+        final Chunk chunk = chunks.remove(new ChunkLocation(x, z));
+        if (chunk != null) {
+            unloadedChunks.put(chunk.getLocation(), chunk);
+        }
     }
 
     public ChunkLocation getChunkLocation(int x, int z) {
@@ -64,11 +68,14 @@ public class World {
     }
 
     public Chunk getChunk(ChunkLocation location) throws ChunkNotLoadedException {
-        if (chunks.containsKey(location)) {
-            return chunks.get(location);
-        } else {
-            throw new ChunkNotLoadedException(location);
+        Chunk chunk = chunks.get(location);
+        if (chunk == null) {
+            chunk = unloadedChunks.get(location);
+            if (chunk == null) {
+                throw new ChunkNotLoadedException(location);
+            }
         }
+        return chunk;
     }
 
     public Block getBlockAt(Vector3i v) throws ChunkNotLoadedException {

@@ -1,5 +1,7 @@
 package nl.tudelft.opencraft.yardstick.bot.world;
 
+import java.util.Objects;
+
 public class ChunkLocation {
 
     private final int x, z;
@@ -19,8 +21,7 @@ public class ChunkLocation {
 
     @Override
     public int hashCode() {
-        int hash = 3;
-        return hash;
+        return Objects.hash(x, z);
     }
 
     @Override
