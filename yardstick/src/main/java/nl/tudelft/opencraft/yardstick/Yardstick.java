@@ -20,6 +20,7 @@ import nl.tudelft.opencraft.yardstick.experiment.Experiment3WalkAround;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment4MultiWalkAround;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment5SimpleWalk;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment6InteractWalk;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment8BoxWalkAround;
 import nl.tudelft.opencraft.yardstick.experiment.RemoteControlledExperiment;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SimpleTimeFormatter;
@@ -130,6 +131,9 @@ public class Yardstick {
                 break;
             case 7:
                 ex = new RemoteControlledExperiment();
+                break;
+            case 8:
+                ex = new Experiment8BoxWalkAround();
                 break;
             default:
                 System.out.println("Invalid experiment: " + OPTIONS.experiment);

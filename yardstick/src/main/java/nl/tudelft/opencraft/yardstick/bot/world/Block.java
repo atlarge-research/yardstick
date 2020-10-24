@@ -1,10 +1,10 @@
 package nl.tudelft.opencraft.yardstick.bot.world;
 
-import java.util.Objects;
 import com.github.steveice10.mc.protocol.data.game.chunk.BlockStorage;
 import com.github.steveice10.mc.protocol.data.game.chunk.Column;
 import com.github.steveice10.mc.protocol.data.game.world.block.BlockState;
 import com.google.common.base.Preconditions;
+import java.util.Objects;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
@@ -16,6 +16,7 @@ public class Block {
     public Block(int x, int y, int z, Chunk chunk) {
         Preconditions.checkArgument(y >= 0, "Argument was %s but expected nonnegative", y);
         Preconditions.checkArgument(y < 256, "Argument was %s but expected lower than 256", y);
+        Preconditions.checkArgument(chunk != null);
         this.x = x;
         this.y = y;
         this.z = z;

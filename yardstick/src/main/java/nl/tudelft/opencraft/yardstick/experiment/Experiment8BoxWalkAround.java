@@ -11,14 +11,15 @@ import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
-import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
+import nl.tudelft.opencraft.yardstick.model.BoundingBoxMovementModel;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
-public class Experiment4MultiWalkAround extends Experiment {
+// TODO remove this class once we have a good BotModel interface.
+public class Experiment8BoxWalkAround extends Experiment {
 
     private final List<Bot> botList = Collections.synchronizedList(new ArrayList<>());
-    private SimpleMovementModel movement;
+    private BoundingBoxMovementModel movement;
 
     private int botsTotal = 0;
     private long startMillis;
@@ -28,7 +29,7 @@ public class Experiment4MultiWalkAround extends Experiment {
     private final Map<Bot, Vector3d> botSpawnLocations = new HashMap<>();
     private long lastJoin = System.currentTimeMillis();
 
-    public Experiment4MultiWalkAround() {
+    public Experiment8BoxWalkAround() {
         super(4, "Bots walking around based on a movement model for Second Life.");
     }
 
@@ -38,7 +39,7 @@ public class Experiment4MultiWalkAround extends Experiment {
         this.durationInSeconds = Integer.parseInt(options.experimentParams.getOrDefault("duration", "600"));
         this.secondsBetweenJoin = Integer.parseInt(options.experimentParams.getOrDefault("joininterval", "1"));
         this.numberOfBotsPerJoin = Integer.parseInt(options.experimentParams.getOrDefault("numbotsperjoin", "1"));
-        this.movement = new SimpleMovementModel(
+        this.movement = new BoundingBoxMovementModel(
                 Integer.parseInt(options.experimentParams.getOrDefault("boxDiameter", "32")),
                 Boolean.parseBoolean(options.experimentParams.getOrDefault("spawnAnchor", "false"))
         );

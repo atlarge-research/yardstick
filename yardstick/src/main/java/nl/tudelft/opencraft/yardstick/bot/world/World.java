@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 import nl.tudelft.opencraft.yardstick.bot.entity.Entity;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Represents world-related data visible to the bot.
@@ -67,6 +68,7 @@ public class World {
         return new ChunkLocation(chunkX, chunkZ);
     }
 
+    @NotNull
     public Chunk getChunk(ChunkLocation location) throws ChunkNotLoadedException {
         Chunk chunk = chunks.get(location);
         if (chunk == null) {
