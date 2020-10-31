@@ -19,22 +19,28 @@
     <description>Distributed Minecraft Benchmark</description>
 
     <repositories>
-        <!-- Offline, for now
         <repository>
-            <id>spacehq-releases</id>
-            <url>https://repo.spacehq.org/content/repositories/releases/</url>
-        </repository>
-        <repository>
-            <id>spacehq-snapshots</id>
-            <url>https://repo.spacehq.org/content/repositories/snapshots/</url>
-        </repository>
-        -->
-
-        <repository>
-            <id>jitpack.io</id>
-            <url>https://jitpack.io</url>
+            <id>opencraft-group</id>
+            <url>https://opencraft-vm.labs.vu.nl/nexus/repository/opencraft-group/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
         </repository>
     </repositories>
+
+    <distributionManagement>
+        <repository>
+            <id>opencraft-releases</id>
+            <url>https://opencraft-vm.labs.vu.nl/nexus/repository/opencraft-releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>opencraft-snapshots</id>
+            <url>https://opencraft-vm.labs.vu.nl/nexus/repository/opencraft-snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
 
     <dependencies>
         <!-- Google Guava -->
