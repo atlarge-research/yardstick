@@ -1,8 +1,8 @@
 package nl.tudelft.opencraft.yardstick.bot.world;
 
-import com.github.steveice10.mc.protocol.data.game.chunk.BlockStorage;
-import com.github.steveice10.mc.protocol.data.game.chunk.Column;
-import com.github.steveice10.mc.protocol.data.game.world.block.BlockState;
+import science.atlarge.opencraft.mcprotocollib.data.game.chunk.BlockStorage;
+import science.atlarge.opencraft.mcprotocollib.data.game.chunk.Column;
+import science.atlarge.opencraft.mcprotocollib.data.game.world.block.BlockState;
 import com.google.common.base.Preconditions;
 import java.util.Objects;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
@@ -106,11 +106,11 @@ public class Block {
             GlobalLogger.getLogger().warning("How did this happen: (" + x + "," + y + "," + z + ")");
         }
 
-        com.github.steveice10.mc.protocol.data.game.chunk.Chunk[] sections = handle.getChunks();
+        science.atlarge.opencraft.mcprotocollib.data.game.chunk.Chunk[] sections = handle.getChunks();
 
         if (sections[index] == null) {
             //GlobalLogger.getLogger().info("Making new chunk section for air chunk section: (" + handle.getX() + "," + index + "," + handle.getZ() + ")");
-            sections[index] = new com.github.steveice10.mc.protocol.data.game.chunk.Chunk(handle.hasSkylight());
+            sections[index] = new science.atlarge.opencraft.mcprotocollib.data.game.chunk.Chunk(handle.hasSkylight());
         }
 
         return sections[index].getBlocks();

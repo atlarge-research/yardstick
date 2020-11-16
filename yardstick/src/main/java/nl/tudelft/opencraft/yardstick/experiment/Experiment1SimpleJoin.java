@@ -1,6 +1,6 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import com.github.steveice10.packetlib.Client;
+import science.atlarge.opencraft.packetlib.Client;
 
 public class Experiment1SimpleJoin extends Experiment {
 

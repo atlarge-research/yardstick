@@ -1,9 +1,10 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import com.github.steveice10.mc.protocol.MinecraftProtocol;
-import com.github.steveice10.packetlib.Client;
-import com.github.steveice10.packetlib.Session;
-import com.github.steveice10.packetlib.tcp.TcpSessionFactory;
+import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
+import science.atlarge.opencraft.packetlib.Client;
+import science.atlarge.opencraft.packetlib.Session;
+import science.atlarge.opencraft.packetlib.tcp.TcpSessionFactory;
+import java.util.UUID;
 import nl.tudelft.opencraft.yardstick.Options;
 import nl.tudelft.opencraft.yardstick.Yardstick;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
@@ -14,8 +15,6 @@ import nl.tudelft.opencraft.yardstick.statistic.Statistics;
 import nl.tudelft.opencraft.yardstick.util.Scheduler;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadSessionListener;
-
-import java.util.UUID;
 
 /**
  * A runnable Yardstick experiment.
@@ -37,7 +36,7 @@ public abstract class Experiment implements Runnable {
      * Creates a new experiment.
      *
      * @param number The experiment number. Must be unique globally.
-     * @param desc A human-friendly description of the experiment.
+     * @param desc   A human-friendly description of the experiment.
      */
     public Experiment(int number, String desc) {
         this.number = number;
@@ -134,7 +133,7 @@ public abstract class Experiment implements Runnable {
      * @return the client.
      */
     protected Client newClient(String name) {
-        Client client = new Client(options.host, options.port, new MinecraftProtocol(name), new TcpSessionFactory());
+        Client client = new Client(options.host, options.port, new MinecraftProtocol(name), new TcpSessionFactory(true));
         setupClient(client, name);
         return client;
     }

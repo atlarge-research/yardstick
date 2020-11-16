@@ -3,7 +3,7 @@ package nl.tudelft.opencraft.yardstick.workload;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import com.github.steveice10.packetlib.packet.Packet;
+import science.atlarge.opencraft.packetlib.packet.Packet;
 import nl.tudelft.opencraft.yardstick.util.PacketUtil;
 
 /**

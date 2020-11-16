@@ -1,7 +1,7 @@
 package nl.tudelft.opencraft.yardstick.bot.entity;
 
 import java.util.UUID;
-import com.github.steveice10.mc.protocol.data.game.entity.type.object.ObjectType;
+import science.atlarge.opencraft.mcprotocollib.data.game.entity.type.object.ObjectType;
 
 /**
  * Represents an Object.

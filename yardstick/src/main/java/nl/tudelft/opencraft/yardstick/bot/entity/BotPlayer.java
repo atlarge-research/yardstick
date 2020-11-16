@@ -4,8 +4,8 @@ import java.nio.charset.Charset;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.github.steveice10.mc.protocol.data.game.entity.player.GameMode;
-import com.github.steveice10.packetlib.Session;
+import science.atlarge.opencraft.mcprotocollib.data.game.entity.player.GameMode;
+import science.atlarge.opencraft.packetlib.Session;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 
 /**

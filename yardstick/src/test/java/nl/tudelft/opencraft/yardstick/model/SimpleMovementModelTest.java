@@ -1,6 +1,6 @@
 package nl.tudelft.opencraft.yardstick.model;
 
-import com.github.steveice10.mc.protocol.data.game.entity.metadata.Position;
+import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.Position;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
 import nl.tudelft.opencraft.yardstick.bot.world.Block;
