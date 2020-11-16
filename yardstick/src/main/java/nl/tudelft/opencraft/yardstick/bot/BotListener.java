@@ -264,7 +264,7 @@ public class BotListener implements SessionListener {
             try {
                 b = bot.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
             } catch (ChunkNotLoadedException e) {
-                logger.warning("Received BlockChange for block in unloaded chunk: " + pos);
+                logger.fine("Received BlockChange for block in unloaded chunk: " + pos);
                 return;
             }
 
@@ -303,7 +303,7 @@ public class BotListener implements SessionListener {
                 try {
                     b = bot.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
                 } catch (ChunkNotLoadedException e) {
-                    logger.warning("Received MultiBlockChange for block in unloaded chunk: " + pos);
+                    logger.fine("Received MultiBlockChange for block in unloaded chunk: " + pos);
                     return;
                 }
 
