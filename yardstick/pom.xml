@@ -22,7 +22,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>nl.tudelft</groupId>
     <artifactId>yardstick</artifactId>
-    <version>1.0.2-SNAPSHOT</version>
+    <version>1.0.2</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -201,5 +201,11 @@
                 <version>3.0.0-M4</version>
             </plugin>
         </plugins>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
     </build>
 </project>
