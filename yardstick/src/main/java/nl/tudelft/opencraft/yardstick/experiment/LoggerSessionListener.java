@@ -20,10 +20,10 @@ package nl.tudelft.opencraft.yardstick.experiment;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import com.github.steveice10.packetlib.event.session.ConnectedEvent;
-import com.github.steveice10.packetlib.event.session.DisconnectedEvent;
-import com.github.steveice10.packetlib.event.session.DisconnectingEvent;
-import com.github.steveice10.packetlib.event.session.SessionAdapter;
+import science.atlarge.opencraft.packetlib.event.session.ConnectedEvent;
+import science.atlarge.opencraft.packetlib.event.session.DisconnectedEvent;
+import science.atlarge.opencraft.packetlib.event.session.DisconnectingEvent;
+import science.atlarge.opencraft.packetlib.event.session.SessionAdapter;
 
 /**
  * A {@link SessionAdapter} for logging bot events to a {@link Logger}.

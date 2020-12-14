@@ -76,16 +76,16 @@
 
         <!-- PacketLib -->
         <dependency>
-            <groupId>com.github.Steveice10</groupId>
-            <artifactId>PacketLib</artifactId>
-            <version>1.2</version>
+            <groupId>science.atlarge.opencraft</groupId>
+            <artifactId>packetlib</artifactId>
+            <version>1.2.1-SNAPSHOT</version>
         </dependency>
 
         <!-- MCProtocolLib -->
         <dependency>
-            <groupId>com.github.Steveice10</groupId>
-            <artifactId>MCProtocolLib</artifactId>
-            <version>1.12.2-2</version>
+            <groupId>science.atlarge.opencraft</groupId>
+            <artifactId>mcprotocollib</artifactId>
+            <version>1.12.2-3-SNAPSHOT</version>
         </dependency>
 
         <!-- Prometheus -->

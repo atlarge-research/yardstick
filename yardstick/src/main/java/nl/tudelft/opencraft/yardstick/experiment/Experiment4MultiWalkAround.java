@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
@@ -77,7 +78,7 @@ public class Experiment4MultiWalkAround extends Experiment {
             lastJoin = System.currentTimeMillis();
             int botsToConnect = Math.min(this.numberOfBotsPerJoin, this.botsTotal - botList.size());
             for (int i = 0; i < botsToConnect; i++) {
-                new Thread(() -> {
+                CompletableFuture.runAsync(() -> {
                     long startTime = System.currentTimeMillis();
                     try {
                         Bot bot = createBot();
@@ -86,7 +87,7 @@ public class Experiment4MultiWalkAround extends Experiment {
                     } catch (ConnectException e) {
                         logger.warning(String.format("Could not connect bot on %s:%d after %d ms.", options.host, options.port, System.currentTimeMillis() - startTime));
                     }
-                }).start();
+                });
             }
         }
         synchronized (botList) {

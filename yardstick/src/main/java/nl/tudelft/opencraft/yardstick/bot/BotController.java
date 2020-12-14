@@ -18,18 +18,18 @@
 
 package nl.tudelft.opencraft.yardstick.bot;
 
-import com.github.steveice10.mc.protocol.data.game.entity.metadata.ItemStack;
-import com.github.steveice10.mc.protocol.data.game.entity.metadata.Position;
-import com.github.steveice10.mc.protocol.data.game.entity.player.Hand;
-import com.github.steveice10.mc.protocol.data.game.entity.player.PlayerAction;
-import com.github.steveice10.mc.protocol.packet.ingame.client.player.ClientPlayerActionPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.client.player.ClientPlayerPlaceBlockPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.client.player.ClientPlayerPositionPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.client.player.ClientPlayerRotationPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.client.player.ClientPlayerSwingArmPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.client.window.ClientCreativeInventoryActionPacket;
-import com.github.steveice10.packetlib.Session;
-import com.github.steveice10.packetlib.packet.Packet;
+import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.ItemStack;
+import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.Position;
+import science.atlarge.opencraft.mcprotocollib.data.game.entity.player.Hand;
+import science.atlarge.opencraft.mcprotocollib.data.game.entity.player.PlayerAction;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.client.player.ClientPlayerActionPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.client.player.ClientPlayerPlaceBlockPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.client.player.ClientPlayerPositionPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.client.player.ClientPlayerRotationPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.client.player.ClientPlayerSwingArmPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.client.window.ClientCreativeInventoryActionPacket;
+import science.atlarge.opencraft.packetlib.Session;
+import science.atlarge.opencraft.packetlib.packet.Packet;
 import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
 import nl.tudelft.opencraft.yardstick.bot.world.Block;
 import nl.tudelft.opencraft.yardstick.bot.world.BlockFace;

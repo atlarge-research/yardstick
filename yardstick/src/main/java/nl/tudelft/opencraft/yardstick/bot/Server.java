@@ -18,7 +18,7 @@
 
 package nl.tudelft.opencraft.yardstick.bot;
 
-import com.github.steveice10.mc.protocol.data.game.setting.Difficulty;
+import science.atlarge.opencraft.mcprotocollib.data.game.setting.Difficulty;
 
 /**
  * Represents server-related data visible to the Bot.
