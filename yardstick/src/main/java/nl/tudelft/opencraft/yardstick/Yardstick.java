@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Properties;
 import java.util.Scanner;
 import java.util.logging.Level;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment;
@@ -54,8 +55,6 @@ import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
  */
 public class Yardstick {
 
-    // FIXME don't duplicate version number. Version number is in pom.xml.
-    public static final String VERSION = "0.1";
     public static final GlobalLogger LOGGER = GlobalLogger.setupGlobalLogger("Yardstick");
     public static final Options OPTIONS = new Options();
     public static final StatisticsPusher PROMETHEUS = new StatisticsPusher();
@@ -65,7 +64,16 @@ public class Yardstick {
         LOGGER.setupConsoleLogging(new SimpleTimeFormatter());
 
         // Let's go!
-        LOGGER.info("Yardstick v" + VERSION);
+        String version = null;
+        final Properties properties = new Properties();
+        try {
+            properties.load(Yardstick.class.getClassLoader().getResourceAsStream("project.properties"));
+            version = properties.getProperty("version");
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Could not load project.properties. This JAR was not packaged correctly!");
+            System.exit(1);
+        }
+        LOGGER.info("Yardstick v" + version);
 
         List<String> allArgs = new ArrayList<>();
         // Parse options from config file
