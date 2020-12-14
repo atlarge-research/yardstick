@@ -18,7 +18,6 @@
 
 package nl.tudelft.opencraft.yardstick.model;
 
-import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.Position;
 import java.util.Random;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
@@ -29,12 +28,13 @@ import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import nl.tudelft.opencraft.yardstick.util.ZigZagRange;
+import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.Position;
 
 /**
  * Represents a model which moves the bot randomly to short and long distance
  * locations.
  */
-public class SimpleMovementModel implements BotModel {
+public class BoundingBoxMovementModel implements BotModel {
 
     private static final Random RANDOM = new Random(System.nanoTime());
 
@@ -42,17 +42,17 @@ public class SimpleMovementModel implements BotModel {
     private Vector3d anchor;
     private final int boxDiameter;
 
-    public SimpleMovementModel() {
+    public BoundingBoxMovementModel() {
         anchored = false;
         boxDiameter = 32;
     }
 
-    public SimpleMovementModel(int boxDiameter) {
+    public BoundingBoxMovementModel(int boxDiameter) {
         this.anchored = false;
         this.boxDiameter = boxDiameter;
     }
 
-    public SimpleMovementModel(int boxDiameter, boolean spawnAnchor) {
+    public BoundingBoxMovementModel(int boxDiameter, boolean spawnAnchor) {
         this.anchored = spawnAnchor;
         this.boxDiameter = boxDiameter;
     }
@@ -62,21 +62,13 @@ public class SimpleMovementModel implements BotModel {
         return new WalkTaskExecutor(bot, newTargetLocation(bot));
     }
 
-    public Vector3i newTargetLocation(Bot bot) {
-        if (RANDOM.nextDouble() < 0.1) {
-            return getNewLongDistanceTarget(bot);
-        } else {
-            return getNewFieldLocation(bot);
-        }
-    }
-
     /**
      * Function to make bot walk in a specific area.
      *
      * @return New random location in a field that has the original location at
      * its center.
      */
-    Vector3i getNewFieldLocation(Bot bot) {
+    public Vector3i newTargetLocation(Bot bot) {
         Vector3d originalLocation = getStartLocation(bot);
         int maxx = ((int) originalLocation.getX()) + boxDiameter / 2;
         int minx = ((int) originalLocation.getX()) - boxDiameter / 2;
@@ -100,20 +92,6 @@ public class SimpleMovementModel implements BotModel {
         return bot.getPlayer().getLocation();
     }
 
-    private Vector3i getNewLongDistanceTarget(Bot bot) {
-        // TODO make param for this value.
-        int maxDist = 64 * 5;
-        int minDist = 64 * 1;
-        int distance = RANDOM.nextInt(maxDist - minDist) + minDist;
-        int angle = RANDOM.nextInt(360);
-
-        Vector3d location = getStartLocation(bot);
-        int newX = (int) (Math.floor(location.getX() + (distance * Math.cos(angle))) + 0.5);
-        int newZ = (int) (Math.floor(location.getZ() + (distance * Math.sin(angle))) + 0.5);
-
-        return getTargetAt(bot, newX, newZ);
-    }
-
     // TODO make sure this also uses the getStartingLoc Function
     // TODO remove bot from param list
     private Vector3i getTargetAt(Bot bot, int x, int z) {
@@ -125,7 +103,7 @@ public class SimpleMovementModel implements BotModel {
                 y = it.next();
                 Block test = bot.getWorld().getBlockAt(x, y, z);
                 if (test.getMaterial().isTraversable()
-                        && !test.getRelative(BlockFace.BOTTOM).getMaterial().isTraversable()) {
+                    && !test.getRelative(BlockFace.BOTTOM).getMaterial().isTraversable()) {
                     break;
                 }
             }

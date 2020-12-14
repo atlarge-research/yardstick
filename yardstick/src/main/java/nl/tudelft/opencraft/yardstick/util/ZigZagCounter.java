@@ -16,23 +16,28 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package nl.tudelft.opencraft.yardstick.bot.entity;
+package nl.tudelft.opencraft.yardstick.util;
 
-import java.util.UUID;
-import science.atlarge.opencraft.mcprotocollib.data.game.entity.type.MobType;
+import java.util.Iterator;
 
-public class Mob extends Entity {
+public class ZigZagCounter implements Iterator<Integer> {
 
-    protected final MobType type;
+    private int val = 0;
+    private boolean start = true;
 
-    public Mob(int id, UUID uuid, MobType type) {
-        super(id, uuid);
-
-        this.type = type;
+    @Override
+    public boolean hasNext() {
+        return true;
     }
 
-    public MobType getType() {
-        return type;
+    @Override
+    public Integer next() {
+        if (start) {
+            start = false;
+        } else if (val <= 0) {
+            val--;
+        }
+        val = -val;
+        return val;
     }
-
 }

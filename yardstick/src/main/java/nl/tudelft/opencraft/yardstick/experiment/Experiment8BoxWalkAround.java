@@ -23,21 +23,21 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
-import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
+import nl.tudelft.opencraft.yardstick.model.BoundingBoxMovementModel;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
-public class Experiment4MultiWalkAround extends Experiment {
+// TODO remove this class once we have a good BotModel interface.
+public class Experiment8BoxWalkAround extends Experiment {
 
     private final List<Bot> botList = Collections.synchronizedList(new ArrayList<>());
-    private SimpleMovementModel movement;
+    private BoundingBoxMovementModel movement;
 
     private int botsTotal = 0;
     private long startMillis;
@@ -47,7 +47,7 @@ public class Experiment4MultiWalkAround extends Experiment {
     private final Map<Bot, Vector3d> botSpawnLocations = new HashMap<>();
     private long lastJoin = System.currentTimeMillis();
 
-    public Experiment4MultiWalkAround() {
+    public Experiment8BoxWalkAround() {
         super(4, "Bots walking around based on a movement model for Second Life.");
     }
 
@@ -57,9 +57,9 @@ public class Experiment4MultiWalkAround extends Experiment {
         this.durationInSeconds = Integer.parseInt(options.experimentParams.getOrDefault("duration", "600"));
         this.secondsBetweenJoin = Integer.parseInt(options.experimentParams.getOrDefault("joininterval", "1"));
         this.numberOfBotsPerJoin = Integer.parseInt(options.experimentParams.getOrDefault("numbotsperjoin", "1"));
-        this.movement = new SimpleMovementModel(
-                Integer.parseInt(options.experimentParams.getOrDefault("boxDiameter", "32")),
-                Boolean.parseBoolean(options.experimentParams.getOrDefault("spawnAnchor", "false"))
+        this.movement = new BoundingBoxMovementModel(
+            Integer.parseInt(options.experimentParams.getOrDefault("boxDiameter", "32")),
+            Boolean.parseBoolean(options.experimentParams.getOrDefault("spawnAnchor", "false"))
         );
         this.startMillis = System.currentTimeMillis();
     }
@@ -68,17 +68,17 @@ public class Experiment4MultiWalkAround extends Experiment {
     protected void tick() {
         synchronized (botList) {
             List<Bot> disconnectedBots = botList.stream()
-                    .filter(bot -> !bot.isJoined())
-                    .collect(Collectors.toList());
+                .filter(bot -> !bot.isJoined())
+                .collect(Collectors.toList());
             disconnectedBots.forEach(bot -> bot.disconnect("Bot is not connected"));
             botList.removeAll(disconnectedBots);
         }
         if (System.currentTimeMillis() - this.lastJoin > secondsBetweenJoin * 1000
-                && botList.size() <= this.botsTotal) {
+            && botList.size() <= this.botsTotal) {
             lastJoin = System.currentTimeMillis();
             int botsToConnect = Math.min(this.numberOfBotsPerJoin, this.botsTotal - botList.size());
             for (int i = 0; i < botsToConnect; i++) {
-                CompletableFuture.runAsync(() -> {
+                new Thread(() -> {
                     long startTime = System.currentTimeMillis();
                     try {
                         Bot bot = createBot();
@@ -87,7 +87,7 @@ public class Experiment4MultiWalkAround extends Experiment {
                     } catch (ConnectException e) {
                         logger.warning(String.format("Could not connect bot on %s:%d after %d ms.", options.host, options.port, System.currentTimeMillis() - startTime));
                     }
-                });
+                }).start();
             }
         }
         synchronized (botList) {

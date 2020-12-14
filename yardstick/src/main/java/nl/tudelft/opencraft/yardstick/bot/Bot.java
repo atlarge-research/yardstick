@@ -19,12 +19,6 @@
 package nl.tudelft.opencraft.yardstick.bot;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.github.steveice10.mc.protocol.MinecraftProtocol;
-import com.github.steveice10.packetlib.Client;
-import com.github.steveice10.packetlib.event.session.DisconnectedEvent;
-import com.github.steveice10.packetlib.event.session.SessionAdapter;
-import com.github.steveice10.packetlib.event.session.SessionListener;
-import com.github.steveice10.packetlib.tcp.TcpSessionFactory;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.SimpleAStar;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.heuristic.EuclideanHeuristic;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
@@ -33,6 +27,12 @@ import nl.tudelft.opencraft.yardstick.bot.world.SimpleWorldPhysics;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
+import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
+import science.atlarge.opencraft.packetlib.Client;
+import science.atlarge.opencraft.packetlib.event.session.DisconnectedEvent;
+import science.atlarge.opencraft.packetlib.event.session.SessionAdapter;
+import science.atlarge.opencraft.packetlib.event.session.SessionListener;
+import science.atlarge.opencraft.packetlib.tcp.TcpSessionFactory;
 
 /**
  * Represents a Minecraft simulated bot.
@@ -65,15 +65,15 @@ public class Bot {
      * Creates a new bot with the given {@link MinecraftProtocol}.
      *
      * @param protocol the protocol.
-     * @param host the hostname of the Minecraft server.
-     * @param port the port of the Minecraft server.
+     * @param host     the hostname of the Minecraft server.
+     * @param port     the port of the Minecraft server.
      */
     public Bot(MinecraftProtocol protocol, String host, int port) {
         this.name = protocol.getProfile().getName();
         this.logger = GlobalLogger.getLogger().newSubLogger("Bot").newSubLogger(name);
         this.protocol = protocol;
         this.ticker = new BotTicker(this);
-        this.client = new Client(host, port, protocol, new TcpSessionFactory());
+        this.client = new Client(host, port, protocol, new TcpSessionFactory(true));
         this.client.getSession().addListener(new BotListener(this));
         this.controller = new BotController(this);
 

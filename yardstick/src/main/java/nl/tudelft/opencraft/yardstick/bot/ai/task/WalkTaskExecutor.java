@@ -38,10 +38,14 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 package nl.tudelft.opencraft.yardstick.bot.ai.task;
 
-import java.util.concurrent.*;
-
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.PathNode;
 import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
@@ -55,8 +59,8 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
 
     private static double speed = 0.15, jumpFactor = 3, fallFactor = 4, liquidFactor = 0.5;
     private static int defaultTimeout = 6000;
+    private static final ExecutorService service = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
-    private final ExecutorService service = Executors.newSingleThreadExecutor();
     private final Vector3i target;
 
     private final long startTime;
@@ -236,7 +240,6 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
             pathFuture.cancel(true);
         }
         nextStep = null;
-        this.service.shutdown();
     }
 
     public Vector3i getTarget() {

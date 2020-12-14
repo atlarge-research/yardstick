@@ -18,9 +18,10 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import science.atlarge.opencraft.packetlib.Client;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import com.github.steveice10.packetlib.Client;
 
 public class Experiment2ScheduledJoin extends Experiment {
 
@@ -42,6 +43,8 @@ public class Experiment2ScheduledJoin extends Experiment {
     // All connections
     private final List<Client> clients = new ArrayList<>();
 
+    private Instant endTime;
+
     public Experiment2ScheduledJoin() {
         super(2, "Gradually lets bots join a server in a scheduled manner. Supports a clustered approach.");
     }
@@ -62,7 +65,7 @@ public class Experiment2ScheduledJoin extends Experiment {
             return true;
         }
 
-        return tick > botsTotal * interval + 10_000;
+        return endTime != null && Instant.now().isAfter(endTime);
     }
 
     @Override
@@ -97,6 +100,7 @@ public class Experiment2ScheduledJoin extends Experiment {
 
         if (step == botsTotal) {
             logger.info("All bots have joined. Sleeping 10 seconds");
+            endTime = Instant.now().plusSeconds(10);
         }
     }
 

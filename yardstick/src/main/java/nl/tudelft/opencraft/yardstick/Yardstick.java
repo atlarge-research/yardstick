@@ -20,19 +20,29 @@
 
 package nl.tudelft.opencraft.yardstick;
 
-import java.io.FileNotFoundException;
+import com.beust.jcommander.JCommander;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Properties;
 import java.util.Scanner;
 import java.util.logging.Level;
-import com.beust.jcommander.JCommander;
-import nl.tudelft.opencraft.yardstick.experiment.*;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment1SimpleJoin;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment2ScheduledJoin;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment3WalkAround;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment4MultiWalkAround;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment5SimpleWalk;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment6InteractWalk;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment8BoxWalkAround;
+import nl.tudelft.opencraft.yardstick.experiment.RemoteControlledExperiment;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SimpleTimeFormatter;
 import nl.tudelft.opencraft.yardstick.statistic.Statistics;
@@ -45,7 +55,6 @@ import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
  */
 public class Yardstick {
 
-    public static final String VERSION = "0.1";
     public static final GlobalLogger LOGGER = GlobalLogger.setupGlobalLogger("Yardstick");
     public static final Options OPTIONS = new Options();
     public static final StatisticsPusher PROMETHEUS = new StatisticsPusher();
@@ -54,7 +63,19 @@ public class Yardstick {
         // Logger
         LOGGER.setupConsoleLogging(new SimpleTimeFormatter());
 
-        List<String> allArgs = new ArrayList<String>();
+        // Let's go!
+        String version = null;
+        final Properties properties = new Properties();
+        try {
+            properties.load(Yardstick.class.getClassLoader().getResourceAsStream("project.properties"));
+            version = properties.getProperty("version");
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Could not load project.properties. This JAR was not packaged correctly!");
+            System.exit(1);
+        }
+        LOGGER.info("Yardstick v" + version);
+
+        List<String> allArgs = new ArrayList<>();
         // Parse options from config file
         try (FileReader reader = new FileReader("yardstick.properties"); Scanner scanner = new Scanner(reader);) {
             while (scanner.hasNext()) {
@@ -65,12 +86,18 @@ public class Yardstick {
         }
         Collections.addAll(allArgs, args);
 
-        // Parse options
+        File config = new File("yardstick.toml");
+        // Parse config options
+        OPTIONS.readTOML(config);
+        // Parse command line options
         JCommander optParser = new JCommander(OPTIONS);
         optParser.parse(allArgs.toArray(new String[0]));
-
-        // Let's go!
-        LOGGER.info("Yardstick v" + VERSION);
+        if (args.length > 0) {
+            LOGGER.warning("Yardstick configured using command-line options. Please use the config file.");
+            LOGGER.warning("Command-line options: " + Arrays.toString(args));
+        }
+        LOGGER.info("Effective Yardstick Configuration:");
+        LOGGER.info(OPTIONS.toString());
 
         if (OPTIONS.help) {
             optParser.usage();
@@ -132,6 +159,9 @@ public class Yardstick {
                 break;
             case 7:
                 ex = new RemoteControlledExperiment();
+                break;
+            case 8:
+                ex = new Experiment8BoxWalkAround();
                 break;
             default:
                 System.out.println("Invalid experiment: " + OPTIONS.experiment);

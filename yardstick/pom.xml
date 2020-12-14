@@ -16,14 +16,13 @@
   ~ You should have received a copy of the GNU Lesser General Public License
   ~ along with this program.  If not, see <https://www.gnu.org/licenses/>.
   -->
-
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
     <groupId>nl.tudelft</groupId>
     <artifactId>yardstick</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -32,27 +31,33 @@
         <maven.wagon.http.ssl.insecure>true</maven.wagon.http.ssl.insecure>
         <maven.wagon.http.ssl.allowall>true</maven.wagon.http.ssl.allowall>
     </properties>
-    
+
     <name>Yardstick</name>
     <description>Distributed Minecraft Benchmark</description>
 
     <repositories>
-        <!-- Offline, for now
         <repository>
-            <id>spacehq-releases</id>
-            <url>https://repo.spacehq.org/content/repositories/releases/</url>
-        </repository>
-        <repository>
-            <id>spacehq-snapshots</id>
-            <url>https://repo.spacehq.org/content/repositories/snapshots/</url>
-        </repository>
-        -->
-
-        <repository>
-            <id>jitpack.io</id>
-            <url>https://jitpack.io</url>
+            <id>opencraft-group</id>
+            <url>https://opencraft-vm.labs.vu.nl/nexus/repository/opencraft-group/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
         </repository>
     </repositories>
+
+    <distributionManagement>
+        <repository>
+            <id>opencraft-releases</id>
+            <url>https://opencraft-vm.labs.vu.nl/nexus/repository/opencraft-releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>opencraft-snapshots</id>
+            <url>https://opencraft-vm.labs.vu.nl/nexus/repository/opencraft-snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
 
     <dependencies>
         <!-- Google Guava -->
@@ -61,26 +66,26 @@
             <artifactId>guava</artifactId>
             <version>20.0</version>
         </dependency>
-        
+
         <!-- JCommander -->
         <dependency>
             <groupId>com.beust</groupId>
             <artifactId>jcommander</artifactId>
             <version>1.58</version>
         </dependency>
-        
+
         <!-- PacketLib -->
         <dependency>
-            <groupId>com.github.Steveice10</groupId>
-            <artifactId>PacketLib</artifactId>
-            <version>1.0</version>
+            <groupId>science.atlarge.opencraft</groupId>
+            <artifactId>packetlib</artifactId>
+            <version>1.2.1-SNAPSHOT</version>
         </dependency>
-        
+
         <!-- MCProtocolLib -->
         <dependency>
-            <groupId>com.github.Steveice10</groupId>
-            <artifactId>MCProtocolLib</artifactId>
-            <version>1.11.2-1</version>
+            <groupId>science.atlarge.opencraft</groupId>
+            <artifactId>mcprotocollib</artifactId>
+            <version>1.12.2-3-SNAPSHOT</version>
         </dependency>
 
         <!-- Prometheus -->
@@ -113,38 +118,94 @@
             <version>1.7.26</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.moandjiezana.toml</groupId>
+            <artifactId>toml4j</artifactId>
+            <version>0.7.2</version>
+        </dependency>
+        <!-- ... -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>5.7.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>5.7.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>2.21.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-collections4 -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+            <version>4.1</version>
+        </dependency>
+
     </dependencies>
 
     <build>
         <sourceDirectory>src/main/java</sourceDirectory>
 
         <plugins>
-            
+
             <!-- Executable Jar -->
             <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>2.6</version>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>nl.tudelft.opencraft.yardstick.Yardstick</mainClass>
-                        </manifest>
-                    </archive>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                </configuration>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.4</version>
                 <executions>
                     <execution>
-                        <id>make-assembly</id>
                         <phase>package</phase>
                         <goals>
-                            <goal>single</goal>
+                            <goal>shade</goal>
                         </goals>
+                        <configuration>
+                            <transformers>
+                                <transformer
+                                    implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>
+                                        nl.tudelft.opencraft.yardstick.Yardstick
+                                    </mainClass>
+                                </transformer>
+                            </transformers>
+                            <createDependencyReducedPom>
+                                false
+                            </createDependencyReducedPom>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>8</source>
+                    <target>8</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.0.0-M4</version>
+            </plugin>
+            <plugin>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>3.0.0-M4</version>
+            </plugin>
         </plugins>
-        
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
     </build>
 </project>

@@ -18,31 +18,115 @@
 
 package nl.tudelft.opencraft.yardstick.bot;
 
+import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
+import science.atlarge.opencraft.mcprotocollib.data.SubProtocol;
+import science.atlarge.opencraft.mcprotocollib.data.game.chunk.Column;
+import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.Position;
+import science.atlarge.opencraft.mcprotocollib.data.game.entity.type.GlobalEntityType;
+import science.atlarge.opencraft.mcprotocollib.data.game.world.block.BlockChangeRecord;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.client.world.ClientTeleportConfirmPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerBossBarPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerChatPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerCombatPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerDifficultyPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerDisconnectPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerJoinGamePacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerKeepAlivePacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerPlayerListDataPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerPlayerListEntryPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerPluginMessagePacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerResourcePackSendPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerRespawnPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerSetCooldownPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerStatisticsPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerSwitchCameraPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerTabCompletePacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerTitlePacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityAnimationPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityAttachPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityCollectItemPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityDestroyPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityEffectPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityEquipmentPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityHeadLookPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityMetadataPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityMovementPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityPositionPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityPositionRotationPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityPropertiesPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityRemoveEffectPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityRotationPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntitySetPassengersPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityStatusPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityTeleportPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityVelocityPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerVehicleMovePacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.player.ServerPlayerAbilitiesPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.player.ServerPlayerChangeHeldItemPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.player.ServerPlayerHealthPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.player.ServerPlayerPositionRotationPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.player.ServerPlayerSetExperiencePacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.player.ServerPlayerUseBedPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.spawn.ServerSpawnExpOrbPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.spawn.ServerSpawnGlobalEntityPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.spawn.ServerSpawnMobPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.spawn.ServerSpawnObjectPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.spawn.ServerSpawnPaintingPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.spawn.ServerSpawnPlayerPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.scoreboard.ServerDisplayScoreboardPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.scoreboard.ServerScoreboardObjectivePacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.scoreboard.ServerTeamPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.scoreboard.ServerUpdateScorePacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.window.ServerCloseWindowPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.window.ServerConfirmTransactionPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.window.ServerOpenWindowPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.window.ServerSetSlotPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.window.ServerWindowItemsPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.window.ServerWindowPropertyPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerBlockBreakAnimPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerBlockChangePacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerBlockValuePacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerChunkDataPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerExplosionPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerMapDataPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerMultiBlockChangePacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerNotifyClientPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerOpenTileEntityEditorPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerPlayBuiltinSoundPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerPlayEffectPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerPlaySoundPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerSpawnParticlePacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerSpawnPositionPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerUnloadChunkPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerUpdateTileEntityPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerUpdateTimePacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerWorldBorderPacket;
+import science.atlarge.opencraft.packetlib.Session;
+import science.atlarge.opencraft.packetlib.event.session.ConnectedEvent;
+import science.atlarge.opencraft.packetlib.event.session.DisconnectedEvent;
+import science.atlarge.opencraft.packetlib.event.session.DisconnectingEvent;
+import science.atlarge.opencraft.packetlib.event.session.PacketReceivedEvent;
+import science.atlarge.opencraft.packetlib.event.session.PacketSendingEvent;
+import science.atlarge.opencraft.packetlib.event.session.PacketSentEvent;
+import science.atlarge.opencraft.packetlib.event.session.SessionListener;
+import science.atlarge.opencraft.packetlib.packet.Packet;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import com.github.steveice10.mc.protocol.MinecraftProtocol;
-import com.github.steveice10.mc.protocol.data.SubProtocol;
-import com.github.steveice10.mc.protocol.data.game.chunk.Column;
-import com.github.steveice10.mc.protocol.data.game.entity.metadata.Position;
-import com.github.steveice10.mc.protocol.data.game.entity.type.GlobalEntityType;
-import com.github.steveice10.mc.protocol.data.game.world.block.BlockChangeRecord;
-import com.github.steveice10.mc.protocol.packet.ingame.client.world.ClientTeleportConfirmPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.*;
-import com.github.steveice10.mc.protocol.packet.ingame.server.entity.*;
-import com.github.steveice10.mc.protocol.packet.ingame.server.entity.player.*;
-import com.github.steveice10.mc.protocol.packet.ingame.server.entity.spawn.*;
-import com.github.steveice10.mc.protocol.packet.ingame.server.scoreboard.ServerDisplayScoreboardPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.scoreboard.ServerScoreboardObjectivePacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.scoreboard.ServerTeamPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.scoreboard.ServerUpdateScorePacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.window.*;
-import com.github.steveice10.mc.protocol.packet.ingame.server.world.*;
-import com.github.steveice10.packetlib.Session;
-import com.github.steveice10.packetlib.event.session.*;
-import com.github.steveice10.packetlib.packet.Packet;
-import nl.tudelft.opencraft.yardstick.bot.entity.*;
-import nl.tudelft.opencraft.yardstick.bot.world.*;
+import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
+import nl.tudelft.opencraft.yardstick.bot.entity.Entity;
+import nl.tudelft.opencraft.yardstick.bot.entity.ExperienceOrb;
+import nl.tudelft.opencraft.yardstick.bot.entity.LightningStrike;
+import nl.tudelft.opencraft.yardstick.bot.entity.Mob;
+import nl.tudelft.opencraft.yardstick.bot.entity.ObjectEntity;
+import nl.tudelft.opencraft.yardstick.bot.entity.Painting;
+import nl.tudelft.opencraft.yardstick.bot.entity.Player;
+import nl.tudelft.opencraft.yardstick.bot.world.Block;
+import nl.tudelft.opencraft.yardstick.bot.world.Chunk;
+import nl.tudelft.opencraft.yardstick.bot.world.ChunkLocation;
+import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
+import nl.tudelft.opencraft.yardstick.bot.world.Dimension;
+import nl.tudelft.opencraft.yardstick.bot.world.World;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 
 /**
@@ -77,7 +161,6 @@ public class BotListener implements SessionListener {
         }
 
         Packet packet = pre.getPacket();
-
         if (packet instanceof ServerSpawnObjectPacket) {
             // 0x00 Spawn Object
             ServerSpawnObjectPacket p = (ServerSpawnObjectPacket) packet;
@@ -199,7 +282,7 @@ public class BotListener implements SessionListener {
             try {
                 b = bot.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
             } catch (ChunkNotLoadedException e) {
-                logger.warning("Received BlockChange for block in unloaded chunk: " + pos);
+                logger.fine("Received BlockChange for block in unloaded chunk: " + pos);
                 return;
             }
 
@@ -238,7 +321,7 @@ public class BotListener implements SessionListener {
                 try {
                     b = bot.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
                 } catch (ChunkNotLoadedException e) {
-                    logger.warning("Received MultiBlockChange for block in unloaded chunk: " + pos);
+                    logger.fine("Received MultiBlockChange for block in unloaded chunk: " + pos);
                     return;
                 }
 
@@ -380,7 +463,6 @@ public class BotListener implements SessionListener {
             this.player = new BotPlayer(bot, p.getEntityId());
             player.setGamemode(p.getGameMode());
             bot.setPlayer(player);
-
         } else if (packet instanceof ServerMapDataPacket) {
             // 0x24 Map
             ServerMapDataPacket p = (ServerMapDataPacket) packet;
@@ -396,7 +478,6 @@ public class BotListener implements SessionListener {
 
             Entity e = world.getEntity(p.getEntityId());
             if (e == null) {
-                logger.warning("Received entity movement packet for unknown entity: " + p.getEntityId());
                 return;
             }
 
@@ -431,15 +512,18 @@ public class BotListener implements SessionListener {
             // TODO
 
         } else if (packet instanceof ServerPlayerAbilitiesPacket) {
+
             // 0x2B Player Abilities
             ServerPlayerAbilitiesPacket p = (ServerPlayerAbilitiesPacket) packet;
 
             BotPlayer player = bot.getPlayer();
-            player.setFlySpeed(p.getFlySpeed());
-            player.setWalkSpeed(p.getWalkSpeed());
-            player.setInvincible(p.getInvincible());
-            player.setFlying(p.getFlying());
-            player.setCanFly(p.getCanFly());
+            if (player != null) {
+                player.setFlySpeed(p.getFlySpeed());
+                player.setWalkSpeed(p.getWalkSpeed());
+                player.setInvincible(p.getInvincible());
+                player.setFlying(p.getFlying());
+                player.setCanFly(p.getCanFly());
+            }
             // TODO: Creative mode?
 
         } else if (packet instanceof ServerCombatPacket) {
@@ -479,8 +563,6 @@ public class BotListener implements SessionListener {
             for (int id : p.getEntityIds()) {
                 if (world.isEntityLoaded(id)) {
                     world.unloadEntity(id);
-                } else {
-                    logger.warning("Received entity destroy packet for unknown entity: " + id);
                 }
             }
         } else if (packet instanceof ServerEntityRemoveEffectPacket) {
@@ -504,7 +586,6 @@ public class BotListener implements SessionListener {
 
             Entity e = world.getEntity(p.getEntityId());
             if (e == null) {
-                logger.warning("Received entity head look packet for unknown entity: " + p.getEntityId());
                 return;
             }
 
@@ -546,7 +627,6 @@ public class BotListener implements SessionListener {
 
             Entity e = world.getEntity(p.getEntityId());
             if (e == null) {
-                logger.warning("Received entity velocity packet for unknown entity: " + p.getEntityId());
                 return;
             }
             e.setVelocity(new Vector3d(p.getMotionX(), p.getMotionY(), p.getMotionZ()));
@@ -624,7 +704,6 @@ public class BotListener implements SessionListener {
 
             Entity e = world.getEntity(p.getEntityId());
             if (e == null) {
-                logger.warning("Received entity movement packet for unknown entity: " + p.getEntityId());
                 return;
             }
 
@@ -645,6 +724,11 @@ public class BotListener implements SessionListener {
         } else {
             logger.warning("Received unhandled packet: " + packet.getClass().getName());
         }
+    }
+
+    @Override
+    public void packetSending(PacketSendingEvent packetSendingEvent) {
+
     }
 
     @Override

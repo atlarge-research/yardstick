@@ -77,7 +77,7 @@ public class BotTicker implements Runnable {
                 if (status.getType() == TaskStatus.StatusType.FAILURE) {
 
                     if (status.getThrowable() != null) {
-                        logger.log(Level.WARNING, "Task Failure: " + status.getMessage(), status.getThrowable());
+                        logger.log(Level.FINE, "Task Failure: " + status.getMessage(), status.getThrowable());
                     } else {
                         logger.warning("Task Failure: " + status.getMessage());
                     }
