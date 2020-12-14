@@ -58,8 +58,8 @@ public class Experiment8BoxWalkAround extends Experiment {
         this.secondsBetweenJoin = Integer.parseInt(options.experimentParams.getOrDefault("joininterval", "1"));
         this.numberOfBotsPerJoin = Integer.parseInt(options.experimentParams.getOrDefault("numbotsperjoin", "1"));
         this.movement = new BoundingBoxMovementModel(
-                Integer.parseInt(options.experimentParams.getOrDefault("boxDiameter", "32")),
-                Boolean.parseBoolean(options.experimentParams.getOrDefault("spawnAnchor", "false"))
+            Integer.parseInt(options.experimentParams.getOrDefault("boxDiameter", "32")),
+            Boolean.parseBoolean(options.experimentParams.getOrDefault("spawnAnchor", "false"))
         );
         this.startMillis = System.currentTimeMillis();
     }
@@ -68,13 +68,13 @@ public class Experiment8BoxWalkAround extends Experiment {
     protected void tick() {
         synchronized (botList) {
             List<Bot> disconnectedBots = botList.stream()
-                    .filter(bot -> !bot.isJoined())
-                    .collect(Collectors.toList());
+                .filter(bot -> !bot.isJoined())
+                .collect(Collectors.toList());
             disconnectedBots.forEach(bot -> bot.disconnect("Bot is not connected"));
             botList.removeAll(disconnectedBots);
         }
         if (System.currentTimeMillis() - this.lastJoin > secondsBetweenJoin * 1000
-                && botList.size() <= this.botsTotal) {
+            && botList.size() <= this.botsTotal) {
             lastJoin = System.currentTimeMillis();
             int botsToConnect = Math.min(this.numberOfBotsPerJoin, this.botsTotal - botList.size());
             for (int i = 0; i < botsToConnect; i++) {
