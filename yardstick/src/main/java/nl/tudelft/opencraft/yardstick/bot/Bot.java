@@ -69,11 +69,21 @@ public class Bot {
      * @param port     the port of the Minecraft server.
      */
     public Bot(MinecraftProtocol protocol, String host, int port) {
+        this(protocol, new Client(host, port, protocol, new TcpSessionFactory(true)));
+    }
+
+    /**
+     * Creates a new bot with the given {@link MinecraftProtocol} and {@link Client}.
+     *
+     * @param protocol the protocol.
+     * @param client   the Minecraft client.
+     */
+    public Bot(MinecraftProtocol protocol, Client client) {
         this.name = protocol.getProfile().getName();
         this.logger = GlobalLogger.getLogger().newSubLogger("Bot").newSubLogger(name);
         this.protocol = protocol;
         this.ticker = new BotTicker(this);
-        this.client = new Client(host, port, protocol, new TcpSessionFactory(true));
+        this.client = client;
         this.client.getSession().addListener(new BotListener(this));
         this.controller = new BotController(this);
 
