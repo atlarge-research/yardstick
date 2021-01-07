@@ -66,8 +66,8 @@ public enum BlockFace {
         return VECTOR3I_TO_BLOCKFACE.get(vec);
     }
 
-    public science.atlarge.opencraft.mcprotocollib.data.game.world.block.BlockFace getInternalFace() {
+    public com.github.steveice10.mc.protocol.data.game.world.block.BlockFace getInternalFace() {
         // RIP clean code
-        return science.atlarge.opencraft.mcprotocollib.data.game.world.block.BlockFace.values()[ordinal()];
+        return com.github.steveice10.mc.protocol.data.game.world.block.BlockFace.values()[ordinal()];
     }
 }

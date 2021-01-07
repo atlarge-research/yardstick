@@ -18,9 +18,9 @@
 
 package nl.tudelft.opencraft.yardstick.workload;
 
-import science.atlarge.opencraft.packetlib.event.session.PacketReceivedEvent;
-import science.atlarge.opencraft.packetlib.event.session.PacketSentEvent;
-import science.atlarge.opencraft.packetlib.event.session.SessionAdapter;
+import com.github.steveice10.packetlib.event.session.PacketReceivedEvent;
+import com.github.steveice10.packetlib.event.session.PacketSentEvent;
+import com.github.steveice10.packetlib.event.session.SessionAdapter;
 
 /**
  * A {@link SessionAdapter} which writes packets to a {@link WorkloadDumper}.
