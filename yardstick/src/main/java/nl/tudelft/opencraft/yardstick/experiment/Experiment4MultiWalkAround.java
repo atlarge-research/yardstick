@@ -130,4 +130,34 @@ public class Experiment4MultiWalkAround extends Experiment {
             bot.disconnect("disconnect");
         }
     }
+
+    public long getStartMillis() {
+        return startMillis;
+    }
+
+    public int getBotsTotal() {
+        return botsTotal;
+    }
+
+    public int currentNumberOfBots() {
+        return botList.size() + connectingBots.size();
+    }
+
+    public long getLastJoined() {
+        return lastJoin;
+    }
+
+    public int joinIntervalInSeconds() {
+        return secondsBetweenJoin;
+    }
+
+    public int getBotsPerJoin() {
+        return numberOfBotsPerJoin;
+    }
+
+    public void disconnectBots(int num, String reason) {
+        for (int i = 0; i < Math.min(num, botList.size()); i++) {
+            botList.get(i).disconnect(reason);
+        }
+    }
 }
