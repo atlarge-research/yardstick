@@ -18,8 +18,8 @@
 
 package nl.tudelft.opencraft.yardstick.bot.world;
 
-import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.Position;
-import science.atlarge.opencraft.mcprotocollib.data.game.world.WorldType;
+import com.github.steveice10.mc.protocol.data.game.entity.metadata.Position;
+import com.github.steveice10.mc.protocol.data.game.world.WorldType;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;

@@ -18,6 +18,7 @@
 
 package nl.tudelft.opencraft.yardstick.model;
 
+import com.github.steveice10.mc.protocol.data.game.entity.metadata.Position;
 import java.util.Random;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
@@ -28,7 +29,6 @@ import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import nl.tudelft.opencraft.yardstick.util.ZigZagRange;
-import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.Position;
 
 /**
  * Represents a model which moves the bot randomly to short and long distance
@@ -103,7 +103,7 @@ public class BoundingBoxMovementModel implements BotModel {
                 y = it.next();
                 Block test = bot.getWorld().getBlockAt(x, y, z);
                 if (test.getMaterial().isTraversable()
-                    && !test.getRelative(BlockFace.BOTTOM).getMaterial().isTraversable()) {
+                        && !test.getRelative(BlockFace.BOTTOM).getMaterial().isTraversable()) {
                     break;
                 }
             }

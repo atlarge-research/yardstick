@@ -75,9 +75,8 @@ public class GlobalLogger extends SubLogger {
 
     public static GlobalLogger getLogger() {
         if (logger == null) {
-            throw new IllegalStateException("Global logger has not be set up");
+            logger = setupGlobalLogger("Yardstick");
         }
-
         return logger;
     }
 }

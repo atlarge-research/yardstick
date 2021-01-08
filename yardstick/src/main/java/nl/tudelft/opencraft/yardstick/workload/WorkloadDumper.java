@@ -24,9 +24,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
-import science.atlarge.opencraft.packetlib.event.session.PacketReceivedEvent;
-import science.atlarge.opencraft.packetlib.event.session.PacketSentEvent;
-import science.atlarge.opencraft.packetlib.packet.Packet;
+import com.github.steveice10.packetlib.event.session.PacketReceivedEvent;
+import com.github.steveice10.packetlib.event.session.PacketSentEvent;
+import com.github.steveice10.packetlib.packet.Packet;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 

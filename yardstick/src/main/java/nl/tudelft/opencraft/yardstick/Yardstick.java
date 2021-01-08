@@ -56,7 +56,7 @@ import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
  */
 public class Yardstick {
 
-    public static final GlobalLogger LOGGER = GlobalLogger.setupGlobalLogger("Yardstick");
+    public static final GlobalLogger LOGGER = GlobalLogger.getLogger();
     public static final Options OPTIONS = new Options();
     public static final StatisticsPusher PROMETHEUS = new StatisticsPusher();
 
