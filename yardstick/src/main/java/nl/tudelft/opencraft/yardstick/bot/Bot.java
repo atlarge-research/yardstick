@@ -94,6 +94,11 @@ public class Bot {
                 disconnected = true;
             }
         });
+
+        // If the provided client is already connected, start the ticker right away.
+        if (client.getSession().isConnected()) {
+            ticker.start();
+        }
     }
 
     /**
