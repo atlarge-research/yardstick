@@ -1,12 +1,28 @@
+/*
+ * Yardstick: A Benchmark for Minecraft-like Services
+ * Copyright (C) 2020 AtLarge Research
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package nl.tudelft.opencraft.yardstick.bot;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.github.steveice10.mc.protocol.ClientListener;
 import com.github.steveice10.mc.protocol.MinecraftProtocol;
-import com.github.steveice10.packetlib.Client;
-import com.github.steveice10.packetlib.event.session.DisconnectedEvent;
-import com.github.steveice10.packetlib.event.session.SessionAdapter;
-import com.github.steveice10.packetlib.event.session.SessionListener;
-import com.github.steveice10.packetlib.tcp.TcpSessionFactory;
+import com.github.steveice10.mc.protocol.data.SubProtocol;
+import com.github.steveice10.packetlib.ProxyInfo;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.SimpleAStar;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.heuristic.EuclideanHeuristic;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
@@ -15,6 +31,11 @@ import nl.tudelft.opencraft.yardstick.bot.world.SimpleWorldPhysics;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
+import com.github.steveice10.packetlib.Client;
+import com.github.steveice10.packetlib.event.session.DisconnectedEvent;
+import com.github.steveice10.packetlib.event.session.SessionAdapter;
+import com.github.steveice10.packetlib.event.session.SessionListener;
+import com.github.steveice10.packetlib.tcp.TcpSessionFactory;
 
 /**
  * Represents a Minecraft simulated bot.
@@ -47,15 +68,15 @@ public class Bot {
      * Creates a new bot with the given {@link MinecraftProtocol}.
      *
      * @param protocol the protocol.
-     * @param host the hostname of the Minecraft server.
-     * @param port the port of the Minecraft server.
+     * @param host     the hostname of the Minecraft server.
+     * @param port     the port of the Minecraft server.
      */
     public Bot(MinecraftProtocol protocol, String host, int port) {
         this.name = protocol.getProfile().getName();
         this.logger = GlobalLogger.getLogger().newSubLogger("Bot").newSubLogger(name);
         this.protocol = protocol;
         this.ticker = new BotTicker(this);
-        this.client = new Client(host, port, protocol, new TcpSessionFactory());
+        this.client = new Client(host, port, protocol, new TcpSessionFactory(null));
         this.client.getSession().addListener(new BotListener(this));
         this.controller = new BotController(this);
 

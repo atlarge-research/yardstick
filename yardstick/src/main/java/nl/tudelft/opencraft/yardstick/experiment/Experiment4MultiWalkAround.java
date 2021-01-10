@@ -1,20 +1,43 @@
+/*
+ * Yardstick: A Benchmark for Minecraft-like Services
+ * Copyright (C) 2020 AtLarge Research
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
+import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public class Experiment4MultiWalkAround extends Experiment {
 
     private final List<Bot> botList = Collections.synchronizedList(new ArrayList<>());
-    private final SimpleMovementModel movement = new SimpleMovementModel();
+    private SimpleMovementModel movement;
 
     private int botsTotal = 0;
     private long startMillis;
@@ -34,6 +57,10 @@ public class Experiment4MultiWalkAround extends Experiment {
         this.durationInSeconds = Integer.parseInt(options.experimentParams.getOrDefault("duration", "600"));
         this.secondsBetweenJoin = Integer.parseInt(options.experimentParams.getOrDefault("joininterval", "1"));
         this.numberOfBotsPerJoin = Integer.parseInt(options.experimentParams.getOrDefault("numbotsperjoin", "1"));
+        this.movement = new SimpleMovementModel(
+                Integer.parseInt(options.experimentParams.getOrDefault("boxDiameter", "32")),
+                Boolean.parseBoolean(options.experimentParams.getOrDefault("spawnAnchor", "false"))
+        );
         this.startMillis = System.currentTimeMillis();
     }
 
@@ -51,7 +78,7 @@ public class Experiment4MultiWalkAround extends Experiment {
             lastJoin = System.currentTimeMillis();
             int botsToConnect = Math.min(this.numberOfBotsPerJoin, this.botsTotal - botList.size());
             for (int i = 0; i < botsToConnect; i++) {
-                new Thread(() -> {
+                CompletableFuture.runAsync(() -> {
                     long startTime = System.currentTimeMillis();
                     try {
                         Bot bot = createBot();
@@ -60,7 +87,7 @@ public class Experiment4MultiWalkAround extends Experiment {
                     } catch (ConnectException e) {
                         logger.warning(String.format("Could not connect bot on %s:%d after %d ms.", options.host, options.port, System.currentTimeMillis() - startTime));
                     }
-                }).start();
+                });
             }
         }
         synchronized (botList) {

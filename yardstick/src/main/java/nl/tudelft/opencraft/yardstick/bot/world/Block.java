@@ -1,10 +1,28 @@
+/*
+ * Yardstick: A Benchmark for Minecraft-like Services
+ * Copyright (C) 2020 AtLarge Research
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package nl.tudelft.opencraft.yardstick.bot.world;
 
-import java.util.Objects;
-import com.github.steveice10.mc.protocol.data.game.chunk.BlockStorage;
+import com.github.steveice10.mc.protocol.data.game.chunk.BitStorage;
 import com.github.steveice10.mc.protocol.data.game.chunk.Column;
-import com.github.steveice10.mc.protocol.data.game.world.block.BlockState;
+import com.github.steveice10.mc.protocol.data.game.world.block.BlockChangeRecord;
 import com.google.common.base.Preconditions;
+import java.util.Objects;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
@@ -16,6 +34,7 @@ public class Block {
     public Block(int x, int y, int z, Chunk chunk) {
         Preconditions.checkArgument(y >= 0, "Argument was %s but expected nonnegative", y);
         Preconditions.checkArgument(y < 256, "Argument was %s but expected lower than 256", y);
+        Preconditions.checkArgument(chunk != null);
         this.x = x;
         this.y = y;
         this.z = z;
@@ -51,26 +70,17 @@ public class Block {
     }
 
     public int getTypeId() {
-        return getInternalState().getId();
+        return getInternalStorage().getPalette().stateToId(getInternalState());
+
     }
 
-    public void setTypeId(int newType) {
-        setInternalState(new BlockState(newType, getData()));
-    }
-
-    public int getData() {
-        return getInternalState().getData();
-    }
 
     public void setData(byte newData) {
-        setInternalState(new BlockState(getTypeId(), newData));
+        setInternalState(newData);
     }
 
-    public void setTypeIdAndData(int newType, byte newData) {
-        setInternalState(new BlockState(newType, newData));
-    }
 
-    public void setInternalState(BlockState newState) {
+    public void setInternalState(byte newState) {
         int locX = Math.floorMod(x, 16);
         int locY = Math.floorMod(y, 16);
         int locZ = Math.floorMod(z, 16);
@@ -95,7 +105,7 @@ public class Block {
         return getRelative(offset.getX(), offset.getY(), offset.getZ());
     }
 
-    private BlockStorage getInternalStorage() {
+    private com.github.steveice10.mc.protocol.data.game.chunk.Chunk getInternalStorage() {
         Column handle = chunk.getHandle();
 
         // TODO: Test this
@@ -109,23 +119,22 @@ public class Block {
 
         if (sections[index] == null) {
             //GlobalLogger.getLogger().info("Making new chunk section for air chunk section: (" + handle.getX() + "," + index + "," + handle.getZ() + ")");
-            sections[index] = new com.github.steveice10.mc.protocol.data.game.chunk.Chunk(handle.hasSkylight());
+            sections[index] = new com.github.steveice10.mc.protocol.data.game.chunk.Chunk();
+
         }
 
-        return sections[index].getBlocks();
+        return sections[index];
 
     }
 
-    private BlockState getInternalState() {
+    private int getInternalState() {
         int locX = Math.floorMod(x, 16);
         int locY = Math.floorMod(y, 16);
         int locZ = Math.floorMod(z, 16);
         //GlobalLogger.getLogger().info("Get internal state: (" + x + "," + y + "," + z + ") -> (" + locX + "," + locY + "," + locZ + ")");
 
-        return getInternalStorage().get(
-                locX,
-                locY,
-                locZ);
+        return getInternalStorage().get(locX,locY,locZ);
+
     }
 
     @Override

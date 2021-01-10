@@ -1,12 +1,30 @@
+/*
+ * Yardstick: A Benchmark for Minecraft-like Services
+ * Copyright (C) 2020 AtLarge Research
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package nl.tudelft.opencraft.yardstick.bot.world;
 
+import com.github.steveice10.mc.protocol.data.game.entity.metadata.Position;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import com.github.steveice10.mc.protocol.data.game.entity.metadata.Position;
-import com.github.steveice10.mc.protocol.data.game.world.WorldType;
 import nl.tudelft.opencraft.yardstick.bot.entity.Entity;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Represents world-related data visible to the bot.
@@ -14,25 +32,20 @@ import nl.tudelft.opencraft.yardstick.util.Vector3i;
 public class World {
 
     private final Dimension dimension;
-    private final WorldType type;
     private final WorldPhysics physics;
     //
     private final Map<ChunkLocation, Chunk> chunks = new HashMap<>();
+    private final Map<ChunkLocation, Chunk> unloadedChunks = new HashMap<>();
     private final Map<Integer, Entity> entities = new HashMap<>();
     private Position spawnPoint;
 
-    public World(Dimension dimension, WorldType type) {
+    public World(Dimension dimension) {
         this.dimension = dimension;
-        this.type = type;
         this.physics = new SimpleWorldPhysics(this);
     }
 
     public Dimension getDimension() {
         return dimension;
-    }
-
-    public WorldType getType() {
-        return type;
     }
 
     public WorldPhysics getPhysics() {
@@ -53,7 +66,10 @@ public class World {
     }
 
     public void unloadChunk(int x, int z) {
-        chunks.remove(new ChunkLocation(x, z));
+        final Chunk chunk = chunks.remove(new ChunkLocation(x, z));
+        if (chunk != null) {
+            unloadedChunks.put(chunk.getLocation(), chunk);
+        }
     }
 
     public ChunkLocation getChunkLocation(int x, int z) {
@@ -63,12 +79,16 @@ public class World {
         return new ChunkLocation(chunkX, chunkZ);
     }
 
+    @NotNull
     public Chunk getChunk(ChunkLocation location) throws ChunkNotLoadedException {
-        if (chunks.containsKey(location)) {
-            return chunks.get(location);
-        } else {
-            throw new ChunkNotLoadedException(location);
+        Chunk chunk = chunks.get(location);
+        if (chunk == null) {
+            chunk = unloadedChunks.get(location);
+            if (chunk == null) {
+                throw new ChunkNotLoadedException(location);
+            }
         }
+        return chunk;
     }
 
     public Block getBlockAt(Vector3i v) throws ChunkNotLoadedException {

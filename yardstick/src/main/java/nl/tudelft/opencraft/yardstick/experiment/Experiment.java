@@ -1,9 +1,28 @@
+/*
+ * Yardstick: A Benchmark for Minecraft-like Services
+ * Copyright (C) 2020 AtLarge Research
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package nl.tudelft.opencraft.yardstick.experiment;
 
 import com.github.steveice10.mc.protocol.MinecraftProtocol;
 import com.github.steveice10.packetlib.Client;
 import com.github.steveice10.packetlib.Session;
 import com.github.steveice10.packetlib.tcp.TcpSessionFactory;
+import java.util.UUID;
 import nl.tudelft.opencraft.yardstick.Options;
 import nl.tudelft.opencraft.yardstick.Yardstick;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
@@ -14,8 +33,6 @@ import nl.tudelft.opencraft.yardstick.statistic.Statistics;
 import nl.tudelft.opencraft.yardstick.util.Scheduler;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadSessionListener;
-
-import java.util.UUID;
 
 /**
  * A runnable Yardstick experiment.
@@ -37,7 +54,7 @@ public abstract class Experiment implements Runnable {
      * Creates a new experiment.
      *
      * @param number The experiment number. Must be unique globally.
-     * @param desc A human-friendly description of the experiment.
+     * @param desc   A human-friendly description of the experiment.
      */
     public Experiment(int number, String desc) {
         this.number = number;
@@ -134,7 +151,7 @@ public abstract class Experiment implements Runnable {
      * @return the client.
      */
     protected Client newClient(String name) {
-        Client client = new Client(options.host, options.port, new MinecraftProtocol(name), new TcpSessionFactory());
+        Client client = new Client(options.host, options.port, new MinecraftProtocol(name), new TcpSessionFactory(null));
         setupClient(client, name);
         return client;
     }
