@@ -120,7 +120,6 @@ public class Block {
         if (sections[index] == null) {
             //GlobalLogger.getLogger().info("Making new chunk section for air chunk section: (" + handle.getX() + "," + index + "," + handle.getZ() + ")");
             sections[index] = new com.github.steveice10.mc.protocol.data.game.chunk.Chunk();
-
         }
 
         return sections[index];

@@ -100,6 +100,7 @@ import com.github.steveice10.opennbt.conversion.builtin.CompoundTagConverter;
 import com.github.steveice10.packetlib.Session;
 import com.github.steveice10.packetlib.event.session.*;
 import com.github.steveice10.packetlib.packet.Packet;
+
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -282,12 +283,6 @@ public class BotListener implements SessionListener {
             // 0x0C Boss Bar
             ServerBossBarPacket p = (ServerBossBarPacket) packet;
             // TODO
-
-        } else if (packet instanceof ServerDifficultyPacket) {
-            // 0x0D Server Difficulty
-            ServerDifficultyPacket p = (ServerDifficultyPacket) packet;
-
-            bot.getServer().setDifficulty(p.getDifficulty());
 
         } else if (packet instanceof ServerTabCompletePacket) {
             // 0x0E Tab-Complete
@@ -525,6 +520,7 @@ public class BotListener implements SessionListener {
                 player.setInvincible(p.isInvincible());
                 player.setFlying(p.isFlying());
                 player.setCanFly(p.isCanFly());
+
             }
             // TODO: Creative mode?
 

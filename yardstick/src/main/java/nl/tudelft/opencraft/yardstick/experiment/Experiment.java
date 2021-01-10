@@ -179,6 +179,7 @@ public abstract class Experiment implements Runnable {
         // Statistics
         if (stats != null) {
             s.addListener(stats);
+
         }
 
         // Workload session listener
