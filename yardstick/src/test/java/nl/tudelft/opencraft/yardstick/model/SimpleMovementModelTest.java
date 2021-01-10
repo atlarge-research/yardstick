@@ -35,7 +35,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.Position;
+import com.github.steveice10.mc.protocol.data.game.entity.metadata.Position;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class SimpleMovementModelTest {

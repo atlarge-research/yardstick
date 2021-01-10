@@ -18,9 +18,9 @@
 
 package nl.tudelft.opencraft.yardstick.bot.world;
 
-import science.atlarge.opencraft.mcprotocollib.data.game.chunk.BlockStorage;
-import science.atlarge.opencraft.mcprotocollib.data.game.chunk.Column;
-import science.atlarge.opencraft.mcprotocollib.data.game.world.block.BlockState;
+import com.github.steveice10.mc.protocol.data.game.chunk.BitStorage;
+import com.github.steveice10.mc.protocol.data.game.chunk.Column;
+import com.github.steveice10.mc.protocol.data.game.world.block.BlockChangeRecord;
 import com.google.common.base.Preconditions;
 import java.util.Objects;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
@@ -70,26 +70,17 @@ public class Block {
     }
 
     public int getTypeId() {
-        return getInternalState().getId();
+        return getInternalStorage().getPalette().stateToId(getInternalState());
+
     }
 
-    public void setTypeId(int newType) {
-        setInternalState(new BlockState(newType, getData()));
-    }
-
-    public int getData() {
-        return getInternalState().getData();
-    }
 
     public void setData(byte newData) {
-        setInternalState(new BlockState(getTypeId(), newData));
+        setInternalState(newData);
     }
 
-    public void setTypeIdAndData(int newType, byte newData) {
-        setInternalState(new BlockState(newType, newData));
-    }
 
-    public void setInternalState(BlockState newState) {
+    public void setInternalState(byte newState) {
         int locX = Math.floorMod(x, 16);
         int locY = Math.floorMod(y, 16);
         int locZ = Math.floorMod(z, 16);
@@ -114,7 +105,7 @@ public class Block {
         return getRelative(offset.getX(), offset.getY(), offset.getZ());
     }
 
-    private BlockStorage getInternalStorage() {
+    private com.github.steveice10.mc.protocol.data.game.chunk.Chunk getInternalStorage() {
         Column handle = chunk.getHandle();
 
         // TODO: Test this
@@ -124,27 +115,25 @@ public class Block {
             GlobalLogger.getLogger().warning("How did this happen: (" + x + "," + y + "," + z + ")");
         }
 
-        science.atlarge.opencraft.mcprotocollib.data.game.chunk.Chunk[] sections = handle.getChunks();
+        com.github.steveice10.mc.protocol.data.game.chunk.Chunk[] sections = handle.getChunks();
 
         if (sections[index] == null) {
             //GlobalLogger.getLogger().info("Making new chunk section for air chunk section: (" + handle.getX() + "," + index + "," + handle.getZ() + ")");
-            sections[index] = new science.atlarge.opencraft.mcprotocollib.data.game.chunk.Chunk(handle.hasSkylight());
+            sections[index] = new com.github.steveice10.mc.protocol.data.game.chunk.Chunk();
         }
 
-        return sections[index].getBlocks();
+        return sections[index];
 
     }
 
-    private BlockState getInternalState() {
+    private int getInternalState() {
         int locX = Math.floorMod(x, 16);
         int locY = Math.floorMod(y, 16);
         int locZ = Math.floorMod(z, 16);
         //GlobalLogger.getLogger().info("Get internal state: (" + x + "," + y + "," + z + ") -> (" + locX + "," + locY + "," + locZ + ")");
 
-        return getInternalStorage().get(
-                locX,
-                locY,
-                locZ);
+        return getInternalStorage().get(locX,locY,locZ);
+
     }
 
     @Override

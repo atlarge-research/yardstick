@@ -19,10 +19,10 @@
 package nl.tudelft.opencraft.yardstick.bot.entity;
 
 import java.util.UUID;
-import science.atlarge.opencraft.mcprotocollib.data.game.entity.type.object.ObjectType;
+import com.github.steveice10.mc.protocol.data.game.entity.type.EntityType;
 
 /**
- * Represents an Object.
+ * Represents an EntityObject.
  *
  * <p>
  * http://wiki.vg/Entities#Objects</p>
@@ -30,7 +30,7 @@ import science.atlarge.opencraft.mcprotocollib.data.game.entity.type.object.Obje
 public class ObjectEntity extends Entity {
 
     protected int data;
-    protected ObjectType type;
+    protected EntityType type;
 
     public ObjectEntity(int id, UUID uuid) {
         super(id, uuid);
@@ -44,11 +44,11 @@ public class ObjectEntity extends Entity {
         this.data = data;
     }
 
-    public ObjectType getType() {
+    public EntityType getType() {
         return type;
     }
 
-    public void setType(ObjectType type) {
+    public void setType(EntityType type) {
         this.type = type;
     }
 

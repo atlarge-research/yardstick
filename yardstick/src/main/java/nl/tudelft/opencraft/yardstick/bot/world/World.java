@@ -18,8 +18,7 @@
 
 package nl.tudelft.opencraft.yardstick.bot.world;
 
-import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.Position;
-import science.atlarge.opencraft.mcprotocollib.data.game.world.WorldType;
+import com.github.steveice10.mc.protocol.data.game.entity.metadata.Position;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,7 +32,6 @@ import org.jetbrains.annotations.NotNull;
 public class World {
 
     private final Dimension dimension;
-    private final WorldType type;
     private final WorldPhysics physics;
     //
     private final Map<ChunkLocation, Chunk> chunks = new HashMap<>();
@@ -41,18 +39,13 @@ public class World {
     private final Map<Integer, Entity> entities = new HashMap<>();
     private Position spawnPoint;
 
-    public World(Dimension dimension, WorldType type) {
+    public World(Dimension dimension) {
         this.dimension = dimension;
-        this.type = type;
         this.physics = new SimpleWorldPhysics(this);
     }
 
     public Dimension getDimension() {
         return dimension;
-    }
-
-    public WorldType getType() {
-        return type;
     }
 
     public WorldPhysics getPhysics() {

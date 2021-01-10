@@ -18,98 +18,89 @@
 
 package nl.tudelft.opencraft.yardstick.bot;
 
-import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
-import science.atlarge.opencraft.mcprotocollib.data.SubProtocol;
-import science.atlarge.opencraft.mcprotocollib.data.game.chunk.Column;
-import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.Position;
-import science.atlarge.opencraft.mcprotocollib.data.game.entity.type.GlobalEntityType;
-import science.atlarge.opencraft.mcprotocollib.data.game.world.block.BlockChangeRecord;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.client.world.ClientTeleportConfirmPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerBossBarPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerChatPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerCombatPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerDifficultyPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerDisconnectPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerJoinGamePacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerKeepAlivePacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerPlayerListDataPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerPlayerListEntryPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerPluginMessagePacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerResourcePackSendPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerRespawnPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerSetCooldownPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerStatisticsPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerSwitchCameraPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerTabCompletePacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerTitlePacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityAnimationPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityAttachPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityCollectItemPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityDestroyPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityEffectPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityEquipmentPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityHeadLookPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityMetadataPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityMovementPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityPositionPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityPositionRotationPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityPropertiesPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityRemoveEffectPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityRotationPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntitySetPassengersPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityStatusPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityTeleportPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityVelocityPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerVehicleMovePacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.player.ServerPlayerAbilitiesPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.player.ServerPlayerChangeHeldItemPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.player.ServerPlayerHealthPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.player.ServerPlayerPositionRotationPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.player.ServerPlayerSetExperiencePacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.player.ServerPlayerUseBedPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.spawn.ServerSpawnExpOrbPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.spawn.ServerSpawnGlobalEntityPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.spawn.ServerSpawnMobPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.spawn.ServerSpawnObjectPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.spawn.ServerSpawnPaintingPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.spawn.ServerSpawnPlayerPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.scoreboard.ServerDisplayScoreboardPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.scoreboard.ServerScoreboardObjectivePacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.scoreboard.ServerTeamPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.scoreboard.ServerUpdateScorePacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.window.ServerCloseWindowPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.window.ServerConfirmTransactionPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.window.ServerOpenWindowPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.window.ServerSetSlotPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.window.ServerWindowItemsPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.window.ServerWindowPropertyPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerBlockBreakAnimPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerBlockChangePacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerBlockValuePacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerChunkDataPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerExplosionPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerMapDataPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerMultiBlockChangePacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerNotifyClientPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerOpenTileEntityEditorPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerPlayBuiltinSoundPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerPlayEffectPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerPlaySoundPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerSpawnParticlePacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerSpawnPositionPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerUnloadChunkPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerUpdateTileEntityPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerUpdateTimePacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.world.ServerWorldBorderPacket;
-import science.atlarge.opencraft.packetlib.Session;
-import science.atlarge.opencraft.packetlib.event.session.ConnectedEvent;
-import science.atlarge.opencraft.packetlib.event.session.DisconnectedEvent;
-import science.atlarge.opencraft.packetlib.event.session.DisconnectingEvent;
-import science.atlarge.opencraft.packetlib.event.session.PacketReceivedEvent;
-import science.atlarge.opencraft.packetlib.event.session.PacketSendingEvent;
-import science.atlarge.opencraft.packetlib.event.session.PacketSentEvent;
-import science.atlarge.opencraft.packetlib.event.session.SessionListener;
-import science.atlarge.opencraft.packetlib.packet.Packet;
+import com.github.steveice10.mc.protocol.MinecraftProtocol;
+import com.github.steveice10.mc.protocol.data.SubProtocol;
+import com.github.steveice10.mc.protocol.data.game.chunk.Column;
+import com.github.steveice10.mc.protocol.data.game.entity.metadata.Position;
+import com.github.steveice10.mc.protocol.data.game.entity.type.EntityType;
+import com.github.steveice10.mc.protocol.data.game.setting.Difficulty;
+import com.github.steveice10.mc.protocol.data.game.world.block.BlockChangeRecord;
+import com.github.steveice10.mc.protocol.packet.ingame.client.world.ClientTeleportConfirmPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.ServerBossBarPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.ServerChatPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.ServerCombatPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.ServerDifficultyPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.ServerDisconnectPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.ServerJoinGamePacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.ServerKeepAlivePacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.ServerPlayerListDataPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.ServerPlayerListEntryPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.ServerPluginMessagePacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.ServerResourcePackSendPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.ServerRespawnPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.ServerSetCooldownPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.ServerStatisticsPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.ServerSwitchCameraPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.ServerTabCompletePacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.ServerTitlePacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntityAnimationPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntityAttachPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntityCollectItemPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntityDestroyPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntityEffectPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntityEquipmentPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntityHeadLookPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntityMetadataPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntityMovementPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntityPositionPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntityPositionRotationPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntityPropertiesPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntityRemoveEffectPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntityRotationPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntitySetPassengersPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntityStatusPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntityTeleportPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerEntityVelocityPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.ServerVehicleMovePacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.player.ServerPlayerAbilitiesPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.player.ServerPlayerChangeHeldItemPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.player.ServerPlayerHealthPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.player.ServerPlayerPositionRotationPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.player.ServerPlayerSetExperiencePacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.entity.spawn.*;
+import com.github.steveice10.mc.protocol.packet.ingame.server.scoreboard.ServerDisplayScoreboardPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.scoreboard.ServerScoreboardObjectivePacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.scoreboard.ServerTeamPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.scoreboard.ServerUpdateScorePacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.window.ServerCloseWindowPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.window.ServerConfirmTransactionPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.window.ServerOpenWindowPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.window.ServerSetSlotPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.window.ServerWindowItemsPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.window.ServerWindowPropertyPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerBlockBreakAnimPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerBlockChangePacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerBlockValuePacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerChunkDataPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerExplosionPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerMapDataPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerMultiBlockChangePacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerNotifyClientPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerOpenTileEntityEditorPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerPlayBuiltinSoundPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerPlayEffectPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerPlaySoundPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerSpawnParticlePacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerSpawnPositionPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerUnloadChunkPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerUpdateTileEntityPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerUpdateTimePacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerWorldBorderPacket;
+import com.github.steveice10.opennbt.conversion.builtin.CompoundTagConverter;
+import com.github.steveice10.packetlib.Session;
+import com.github.steveice10.packetlib.event.session.*;
+import com.github.steveice10.packetlib.packet.Packet;
+
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -161,9 +152,9 @@ public class BotListener implements SessionListener {
         }
 
         Packet packet = pre.getPacket();
-        if (packet instanceof ServerSpawnObjectPacket) {
+        if (packet instanceof ServerSpawnEntityPacket) {
             // 0x00 Spawn Object
-            ServerSpawnObjectPacket p = (ServerSpawnObjectPacket) packet;
+            ServerSpawnEntityPacket p = (ServerSpawnEntityPacket) packet;
             // TODO
 
             if (p.getEntityId() == 0) {
@@ -171,7 +162,7 @@ public class BotListener implements SessionListener {
                 return;
             }
 
-            ObjectEntity obj = new ObjectEntity(p.getEntityId(), p.getUUID());
+            ObjectEntity obj = new ObjectEntity(p.getEntityId(), p.getUuid());
             obj.setLocation(new Vector3d(p.getX(), p.getY(), p.getZ()));
             obj.setPitch(p.getPitch());
             obj.setYaw(p.getYaw());
@@ -191,11 +182,11 @@ public class BotListener implements SessionListener {
             orb.setCount(p.getExp());
             world.loadEntity(orb);
 
-        } else if (packet instanceof ServerSpawnGlobalEntityPacket) {
+        } else if (packet instanceof ServerSpawnEntityPacket) {
             // 0x02 Spawn Global Entity
-            ServerSpawnGlobalEntityPacket p = (ServerSpawnGlobalEntityPacket) packet;
+            ServerSpawnEntityPacket p = (ServerSpawnEntityPacket) packet;
 
-            if (p.getType() != GlobalEntityType.LIGHTNING_BOLT) {
+            if (p.getType() != EntityType.LIGHTNING_BOLT) {
                 logger.warning("Received spawn global entity for non-lightning strike");
                 return;
             }
@@ -206,12 +197,12 @@ public class BotListener implements SessionListener {
             world.loadEntity(ls);
 
             // TODO: Remove entity?
-        } else if (packet instanceof ServerSpawnMobPacket) {
+        } else if (packet instanceof ServerSpawnLivingEntityPacket) {
             // 0x03 Spawn Mob
-            ServerSpawnMobPacket p = (ServerSpawnMobPacket) packet;
+            ServerSpawnLivingEntityPacket p = (ServerSpawnLivingEntityPacket) packet;
 
             // TODO: double check the getType().ordinal() works as expected.
-            Entity e = new Mob(p.getEntityId(), p.getUUID(), p.getType());
+            Entity e = new Mob(p.getEntityId(), p.getUuid(), p.getType());
             e.setLocation(new Vector3d(p.getX(), p.getY(), p.getZ()));
             e.setYaw(p.getYaw());
             e.setHeadYaw(p.getHeadYaw());
@@ -223,7 +214,7 @@ public class BotListener implements SessionListener {
             // 0x04 Spawn painting
             ServerSpawnPaintingPacket p = (ServerSpawnPaintingPacket) packet;
 
-            Painting painting = new Painting(p.getEntityId(), p.getUUID());
+            Painting painting = new Painting(p.getEntityId(), p.getUuid());
             painting.setLocation(new Vector3d(p.getPosition().getX(), p.getPosition().getY(), p.getPosition().getZ()));
             // TODO: Direction, type
             world.loadEntity(painting);
@@ -232,7 +223,7 @@ public class BotListener implements SessionListener {
             // 0x05 Spawn Player
             ServerSpawnPlayerPacket p = (ServerSpawnPlayerPacket) packet;
 
-            Player pl = new Player(p.getUUID(), p.getEntityId());
+            Player pl = new Player(p.getUuid(), p.getEntityId());
             pl.setLocation(new Vector3d(p.getX(), p.getY(), p.getZ()));
             pl.setPitch(p.getPitch());
             pl.setYaw(p.getYaw());
@@ -286,18 +277,12 @@ public class BotListener implements SessionListener {
                 return;
             }
 
-            b.setInternalState(r.getBlock());
+            b.setInternalState((byte)r.getBlock());
 
         } else if (packet instanceof ServerBossBarPacket) {
             // 0x0C Boss Bar
             ServerBossBarPacket p = (ServerBossBarPacket) packet;
             // TODO
-
-        } else if (packet instanceof ServerDifficultyPacket) {
-            // 0x0D Server Difficulty
-            ServerDifficultyPacket p = (ServerDifficultyPacket) packet;
-
-            bot.getServer().setDifficulty(p.getDifficulty());
 
         } else if (packet instanceof ServerTabCompletePacket) {
             // 0x0E Tab-Complete
@@ -325,7 +310,7 @@ public class BotListener implements SessionListener {
                     return;
                 }
 
-                b.setInternalState(r.getBlock());
+                b.setInternalState((byte)r.getBlock());
             }
 
         } else if (packet instanceof ServerConfirmTransactionPacket) {
@@ -412,7 +397,8 @@ public class BotListener implements SessionListener {
 
                 // col.hasBiomeData() is currently the only way to determine the 'ground-up contrinous' property.
                 // See http://wiki.vg/Chunk_Format#Ground-up_continuous for more details
-                if (newCol.hasBiomeData()) {
+
+                if (newCol.getBiomeData() != null) {
                     // Replace the previous chunk
                     //logger.info("Replacing pre-existing chunk: " + new ChunkLocation(newCol.getX(), newCol.getZ()));
                     world.loadChunk(new Chunk(world, p.getColumn()));
@@ -452,12 +438,16 @@ public class BotListener implements SessionListener {
             // TODO: Reduced debug info field?
 
             // Init the game
-            this.world = new World(Dimension.forId(p.getDimension()), p.getWorldType());
+            CompoundTagConverter conv = new CompoundTagConverter();
+            Dimension dim = Dimension.forTag((String)conv.convert((p.getDimension())).getOrDefault("Dimension", "minecraft:overworld"));
+            this.world = new World(dim);
+
+
             bot.setWorld(world);
 
             this.server = new Server();
             server.setMaxPlayers(p.getMaxPlayers());
-            server.setDifficulty(p.getDifficulty());
+            server.setDifficulty(Difficulty.NORMAL); // Hardcode difficulty as packet no longer supports it
             bot.setServer(server);
 
             this.player = new BotPlayer(bot, p.getEntityId());
@@ -468,40 +458,47 @@ public class BotListener implements SessionListener {
             ServerMapDataPacket p = (ServerMapDataPacket) packet;
             // TODO
 
-        } else if (packet instanceof ServerEntityMovementPacket) {
+        } else if (packet instanceof ServerEntityPositionPacket) {
             // 0x25 Entity Relative Move
             // 0x26 Entity Look And Relative Move
             // 0x27 Entity Look
             // 0x28 Entity
 
-            ServerEntityMovementPacket p = (ServerEntityMovementPacket) packet;
+            ServerEntityPositionPacket p = (ServerEntityPositionPacket) packet;
 
             Entity e = world.getEntity(p.getEntityId());
             if (e == null) {
                 return;
             }
 
-            if (packet instanceof ServerEntityPositionPacket) {
-                // 0x25
-                e.setLocation(e.getLocation().add(new Vector3d(p.getMovementX(), p.getMovementY(), p.getMovementZ())));
-                e.setOnGround(p.isOnGround());
-            } else if (packet instanceof ServerEntityRotationPacket) {
-                // 0x27
-                e.setPitch(p.getPitch());
-                e.setYaw(p.getYaw());
-                e.setOnGround(p.isOnGround());
-            } else if (packet instanceof ServerEntityPositionRotationPacket) {
-                // 0x26
-                e.setLocation(e.getLocation().add(new Vector3d(p.getMovementX(), p.getMovementY(), p.getMovementZ())));
-                e.setPitch(p.getPitch());
-                e.setYaw(p.getYaw());
-                e.setOnGround(p.isOnGround());
-            } else {
-                // 0x28
-                // Do nothing.
-            }
 
-        } else if (packet instanceof ServerVehicleMovePacket) {
+            e.setLocation(e.getLocation().add(new Vector3d(p.getMoveX(), p.getMoveY(), p.getMoveZ())));
+            e.setOnGround(p.isOnGround());
+        } else if (packet instanceof ServerEntityRotationPacket) {
+            ServerEntityRotationPacket p = (ServerEntityRotationPacket) packet;
+
+            Entity e = world.getEntity(p.getEntityId());
+            if (e == null) {
+                return;
+            }
+            // 0x27
+            e.setPitch(p.getPitch());
+            e.setYaw(p.getYaw());
+            e.setOnGround(p.isOnGround());
+        } else if (packet instanceof ServerEntityPositionRotationPacket) {
+            ServerEntityPositionRotationPacket p = (ServerEntityPositionRotationPacket) packet;
+
+            Entity e = world.getEntity(p.getEntityId());
+            if (e == null) {
+                return;
+            }
+            // 0x26
+            e.setLocation(e.getLocation().add(new Vector3d(p.getMoveX(), p.getMoveY(), p.getMoveZ())));
+            e.setPitch(p.getPitch());
+            e.setYaw(p.getYaw());
+            e.setOnGround(p.isOnGround());
+        }
+        else if (packet instanceof ServerVehicleMovePacket) {
             // 0x29 Vehicle Move
             ServerVehicleMovePacket p = (ServerVehicleMovePacket) packet;
             // TODO
@@ -520,9 +517,10 @@ public class BotListener implements SessionListener {
             if (player != null) {
                 player.setFlySpeed(p.getFlySpeed());
                 player.setWalkSpeed(p.getWalkSpeed());
-                player.setInvincible(p.getInvincible());
-                player.setFlying(p.getFlying());
-                player.setCanFly(p.getCanFly());
+                player.setInvincible(p.isInvincible());
+                player.setFlying(p.isFlying());
+                player.setCanFly(p.isCanFly());
+
             }
             // TODO: Creative mode?
 
@@ -550,11 +548,6 @@ public class BotListener implements SessionListener {
             session.send(new ClientTeleportConfirmPacket(p.getTeleportId()));
 
             logger.info("Received new Player position: " + player.getLocation());
-
-        } else if (packet instanceof ServerPlayerUseBedPacket) {
-            // 0x2F Use Bed
-            ServerPlayerUseBedPacket p = (ServerPlayerUseBedPacket) packet;
-            // TODO
 
         } else if (packet instanceof ServerEntityDestroyPacket) {
             // 0x30 Destroy Entities
@@ -751,4 +744,8 @@ public class BotListener implements SessionListener {
         }
     }
 
+    @Override
+    public void packetError(PacketErrorEvent pe){
+        logger.log(Level.WARNING, "Packet error!", pe.getCause());
+    }
 }

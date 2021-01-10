@@ -18,7 +18,7 @@
 
 package nl.tudelft.opencraft.yardstick.model;
 
-import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.Position;
+import com.github.steveice10.mc.protocol.data.game.entity.metadata.Position;
 import java.util.Random;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;

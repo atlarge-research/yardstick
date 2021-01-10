@@ -20,23 +20,23 @@ package nl.tudelft.opencraft.yardstick.bot.world;
 
 public enum Dimension {
 
-    NETHER(-1),
-    OVERWORLD(0),
-    END(1);
+    NETHER("minecraft:the_nether"),
+    OVERWORLD("minecraft:overworld"),
+    END("minecraft:the_end");
 
-    private final int id;
+    private final String tag;
 
-    private Dimension(int id) {
-        this.id = id;
+    private Dimension(String tag) {
+        this.tag = tag;
     }
 
-    public int getId() {
-        return id;
+    public String getTag() {
+        return tag;
     }
 
-    public static Dimension forId(int id) {
+    public static Dimension forTag(String id) {
         for (Dimension d : Dimension.values()) {
-            if (d.getId() == id) {
+            if (d.getTag().equals(id)) {
                 return d;
             }
         }

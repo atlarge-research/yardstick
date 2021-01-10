@@ -18,7 +18,7 @@
 
 package nl.tudelft.opencraft.yardstick.bot.world;
 
-import science.atlarge.opencraft.mcprotocollib.data.game.chunk.Column;
+import com.github.steveice10.mc.protocol.data.game.chunk.Column;
 
 /**
  * Represents a vertical column of 16x16x16 chunks.

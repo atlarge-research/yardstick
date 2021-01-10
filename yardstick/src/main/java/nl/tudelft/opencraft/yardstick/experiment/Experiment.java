@@ -18,10 +18,10 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
-import science.atlarge.opencraft.packetlib.Client;
-import science.atlarge.opencraft.packetlib.Session;
-import science.atlarge.opencraft.packetlib.tcp.TcpSessionFactory;
+import com.github.steveice10.mc.protocol.MinecraftProtocol;
+import com.github.steveice10.packetlib.Client;
+import com.github.steveice10.packetlib.Session;
+import com.github.steveice10.packetlib.tcp.TcpSessionFactory;
 import java.util.UUID;
 import nl.tudelft.opencraft.yardstick.Options;
 import nl.tudelft.opencraft.yardstick.Yardstick;
@@ -151,7 +151,7 @@ public abstract class Experiment implements Runnable {
      * @return the client.
      */
     protected Client newClient(String name) {
-        Client client = new Client(options.host, options.port, new MinecraftProtocol(name), new TcpSessionFactory(true));
+        Client client = new Client(options.host, options.port, new MinecraftProtocol(name), new TcpSessionFactory(null));
         setupClient(client, name);
         return client;
     }
@@ -179,6 +179,7 @@ public abstract class Experiment implements Runnable {
         // Statistics
         if (stats != null) {
             s.addListener(stats);
+
         }
 
         // Workload session listener
