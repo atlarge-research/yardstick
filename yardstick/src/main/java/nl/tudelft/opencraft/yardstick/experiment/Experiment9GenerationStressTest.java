@@ -26,6 +26,7 @@ public class Experiment9GenerationStressTest extends Experiment {
 
     private long startMillis;
     private int durationInSeconds;
+    private int delay;
 
     public Experiment9GenerationStressTest() {
         super(9, "Bots move away from the spawn location");
@@ -35,6 +36,7 @@ public class Experiment9GenerationStressTest extends Experiment {
     protected void before() {
         int botsTotal = Integer.parseInt(options.experimentParams.get("bots"));
         this.durationInSeconds = Integer.parseInt(options.experimentParams.getOrDefault("duration", "600"));
+        this.delay = Integer.parseInt(options.experimentParams.getOrDefault("delay", "0")) * 1000;
         this.targetDistance = Integer.parseInt(options.experimentParams.getOrDefault("distance", "300"));
         this.botSpeed = Double.parseDouble(options.experimentParams.getOrDefault("speed", "0.3"));
         this.startMillis = System.currentTimeMillis();
@@ -53,6 +55,10 @@ public class Experiment9GenerationStressTest extends Experiment {
 
     @Override
     protected void tick() {
+        if (System.currentTimeMillis() - startMillis < delay) {
+            return;
+        }
+
         synchronized (botList) {
             List<Bot> disconnectedBots = botList.stream()
                     .filter(Bot::hasBeenDisconnected)
