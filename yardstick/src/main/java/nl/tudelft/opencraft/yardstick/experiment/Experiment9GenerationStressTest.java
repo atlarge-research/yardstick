@@ -37,10 +37,10 @@ public class Experiment9GenerationStressTest extends Experiment {
         int botsTotal = Integer.parseInt(options.experimentParams.get("bots"));
         this.durationInSeconds = Integer.parseInt(options.experimentParams.getOrDefault("duration", "600"));
         this.delay = Integer.parseInt(options.experimentParams.getOrDefault("delay", "0")) * 1000;
-        this.targetDistance = Integer.parseInt(options.experimentParams.getOrDefault("distance", "300"));
         this.botSpeed = Double.parseDouble(options.experimentParams.getOrDefault("speed", "0.3"));
         this.startMillis = System.currentTimeMillis();
         this.increment = 2 * Math.PI / botsTotal;
+        this.targetDistance = ((int) (1000 / TICK_MS) * durationInSeconds) * botSpeed;
 
         // connect the bots; todo: synchronized?
         for (int i = 0; i < botsTotal; i++) {
