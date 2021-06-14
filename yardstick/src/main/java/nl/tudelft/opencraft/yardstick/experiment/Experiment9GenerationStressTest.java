@@ -45,7 +45,13 @@ public class Experiment9GenerationStressTest extends Experiment {
         this.speedIncrementInterval = Integer.parseInt(options.experimentParams.getOrDefault("speedincrementinterval", "0")) * 1_000;
         this.startMillis = System.currentTimeMillis();
         this.increment = 2 * Math.PI / botsTotal;
-        this.targetDistance = ((int) (1000 / TICK_MS) * durationInSeconds) * botSpeed;
+
+        // calculate maximum speed so we don't end the experiment too early
+        double maxSpeed = botSpeed;
+        if (speedIncrement > 0 && speedIncrementInterval > 0) {
+            maxSpeed += ((double) (1_000 * durationInSeconds / speedIncrementInterval)) * speedIncrement;
+        }
+        this.targetDistance = ((int) (1000 / TICK_MS) * durationInSeconds) * maxSpeed;
 
         // connect the bots; todo: synchronized?
         for (int i = 0; i < botsTotal; i++) {
