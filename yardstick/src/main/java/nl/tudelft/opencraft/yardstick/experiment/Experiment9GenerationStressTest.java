@@ -8,25 +8,28 @@ import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class Experiment9GenerationStressTest extends Experiment {
 
     private final List<Bot> botList = Collections.synchronizedList(new ArrayList<>());
-    private final Set<Bot> targetSet = Collections.synchronizedSet(new HashSet<>());
+    private final Map<Bot, Vector3i> botTargets = Collections.synchronizedMap(new HashMap<>());
 
     private double angle = 0;
     private double increment;
     private double targetDistance;
-    private double botSpeed;
+    private double botSpeed; /* specified in meters per tick */
+    private double speedIncrement; /* specified in meters per tick */
+    private int speedIncrementInterval; /* specified in seconds */
 
     private long startMillis;
     private int durationInSeconds;
     private int delay;
+    private long lastSpeedIncrement = 0;
 
     public Experiment9GenerationStressTest() {
         super(9, "Bots move away from the spawn location");
@@ -36,8 +39,10 @@ public class Experiment9GenerationStressTest extends Experiment {
     protected void before() {
         int botsTotal = Integer.parseInt(options.experimentParams.get("bots"));
         this.durationInSeconds = Integer.parseInt(options.experimentParams.getOrDefault("duration", "600"));
-        this.delay = Integer.parseInt(options.experimentParams.getOrDefault("delay", "0")) * 1000;
+        this.delay = Integer.parseInt(options.experimentParams.getOrDefault("delay", "0")) * 1_000;
         this.botSpeed = Double.parseDouble(options.experimentParams.getOrDefault("speed", "0.3"));
+        this.speedIncrement = Double.parseDouble(options.experimentParams.getOrDefault("speedincrement", "0"));
+        this.speedIncrementInterval = Integer.parseInt(options.experimentParams.getOrDefault("speedincrementinterval", "0")) * 1_000;
         this.startMillis = System.currentTimeMillis();
         this.increment = 2 * Math.PI / botsTotal;
         this.targetDistance = ((int) (1000 / TICK_MS) * durationInSeconds) * botSpeed;
@@ -50,6 +55,37 @@ public class Experiment9GenerationStressTest extends Experiment {
             connector.setDaemon(false);
             connector.start();
             botList.add(bot);
+        }
+    }
+
+    private void maybeIncreaseSpeed() {
+        // check whether we should increment
+        if (speedIncrement == 0 || speedIncrementInterval == 0) {
+            return;
+        }
+
+        long currentTime = System.currentTimeMillis();
+
+        // check whether delay just ended
+        if (lastSpeedIncrement == 0) {
+            lastSpeedIncrement = currentTime;
+            return;
+        }
+
+        // if the time interval has passed, increase the speed
+        if (currentTime - lastSpeedIncrement > speedIncrementInterval) {
+            botSpeed += speedIncrement;
+            lastSpeedIncrement = currentTime;
+
+            // update bot task executors for new speed
+            synchronized (botList) {
+                for (Bot bot : botList) {
+                    if (botTargets.containsKey(bot)) {
+                        bot.setTaskExecutor(new FlyTaskExecutor(bot, botTargets.get(bot), botSpeed));
+                        bot.getLogger().info("Changed bot speed to " + botSpeed);
+                    }
+                }
+            }
         }
     }
 
@@ -76,6 +112,8 @@ public class Experiment9GenerationStressTest extends Experiment {
                 botTick(bot);
             }
         }
+
+        maybeIncreaseSpeed();
     }
 
     private void botTick(Bot bot) {
@@ -84,7 +122,7 @@ public class Experiment9GenerationStressTest extends Experiment {
         }
 
         // calculate bot target location if not already done
-        if (!targetSet.contains(bot)) {
+        if (!botTargets.containsKey(bot)) {
             // calculate target
             Vector3i startLocation = bot.getPlayer().getLocation().intVector();
             int finalX = (int) Math.floor(targetDistance * Math.cos(angle)) + startLocation.getX();
@@ -95,7 +133,7 @@ public class Experiment9GenerationStressTest extends Experiment {
             // move bot towards target
             bot.getLogger().info(String.format("Moving bot towards final target (%d, %d)", finalX, finalZ));
             bot.setTaskExecutor(new FlyTaskExecutor(bot, botTarget, botSpeed));
-            targetSet.add(bot);
+            botTargets.put(bot, botTarget);
         }
 
         // disconnect bot if arrived
