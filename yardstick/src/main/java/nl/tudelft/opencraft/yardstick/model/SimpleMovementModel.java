@@ -36,25 +36,37 @@ import nl.tudelft.opencraft.yardstick.util.ZigZagRange;
  */
 public class SimpleMovementModel implements BotModel {
 
-    private static final Random RANDOM = new Random(System.nanoTime());
 
     private final boolean anchored;
     private Vector3d anchor;
     private final int boxDiameter;
+    private Random RANDOM;
+    private boolean first = true;
+    private boolean bounded = true;
+
 
     public SimpleMovementModel() {
         anchored = false;
         boxDiameter = 32;
+        this.RANDOM = new Random(System.nanoTime());
     }
 
     public SimpleMovementModel(int boxDiameter) {
         this.anchored = false;
         this.boxDiameter = boxDiameter;
+        this.RANDOM = new Random(System.nanoTime());
     }
 
     public SimpleMovementModel(int boxDiameter, boolean spawnAnchor) {
         this.anchored = spawnAnchor;
         this.boxDiameter = boxDiameter;
+        this.RANDOM = new Random(System.nanoTime());
+    }
+
+    public SimpleMovementModel(int boxDiameter, boolean spawnAnchor, int seed) {
+        this.anchored = spawnAnchor;
+        this.boxDiameter = boxDiameter;
+        this.RANDOM = new Random(seed);
     }
 
     @Override
@@ -63,6 +75,9 @@ public class SimpleMovementModel implements BotModel {
     }
 
     public Vector3i newTargetLocation(Bot bot) {
+        if(bounded){
+            return getNewFieldLocation(bot);
+        }
         if (RANDOM.nextDouble() < 0.1) {
             return getNewLongDistanceTarget(bot);
         } else {
@@ -90,14 +105,12 @@ public class SimpleMovementModel implements BotModel {
     }
 
     private Vector3d getStartLocation(Bot bot) {
-        if (anchored) {
-            if (anchor == null) {
-                Position pos = bot.getWorld().getSpawnPoint();
-                anchor = new Vector3d(pos.getX(), pos.getY(), pos.getZ());
-            }
-            return anchor;
+        if(first){
+            anchor = bot.getPlayer().getLocation();
+            //bot.getLogger().info("Setting spawn to " + anchor.toString());
+            first = false;
         }
-        return bot.getPlayer().getLocation();
+        return anchor;
     }
 
     private Vector3i getNewLongDistanceTarget(Bot bot) {
@@ -124,8 +137,8 @@ public class SimpleMovementModel implements BotModel {
             for (ZigZagRange it = new ZigZagRange(0, 255, (int) botLoc.getY()); it.hasNext(); ) {
                 y = it.next();
                 Block test = bot.getWorld().getBlockAt(x, y, z);
-                if (test.getMaterial().isTraversable()
-                        && !test.getRelative(BlockFace.BOTTOM).getMaterial().isTraversable()) {
+                if (test.getTraversable()
+                        && !test.getRelative(BlockFace.BOTTOM).getTraversable()) {
                     break;
                 }
             }

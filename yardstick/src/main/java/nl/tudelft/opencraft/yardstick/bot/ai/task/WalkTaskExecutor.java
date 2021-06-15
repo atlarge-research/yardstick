@@ -57,7 +57,7 @@ import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public class WalkTaskExecutor extends AbstractTaskExecutor {
 
-    private static double speed = 0.15, jumpFactor = 3, fallFactor = 4, liquidFactor = 0.5;
+    private static double speed = 0.15, runFactor =1.6, jumpFactor = 3, fallFactor = 4, liquidFactor = 0.5;
     private static int defaultTimeout = 6000;
     private static final ExecutorService service = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
@@ -69,12 +69,21 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
     private PathNode nextStep;
     private int ticksSinceStepChange = 0;
     private int timeout = defaultTimeout;
+    private boolean useAstar = true;
+    private boolean running = false;
+    private int squareSize = 4;
 
     private Callable<PathNode> task = new Callable<PathNode>() {
         @Override
         public PathNode call() throws Exception {
             BotPlayer player = bot.getPlayer();
-            PathNode start = bot.getPathFinder().search(player.getLocation().intVector(), target);
+            PathNode start = null;
+            if(useAstar){
+                start = bot.getPathFinder().search(player.getLocation().intVector(), target);
+            } else {
+                start = bot.getFixedCircle().getCirclePath(player.getLocation().intVector(), squareSize);
+            }
+
             return start;
         }
     };
@@ -86,6 +95,22 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
         if (bot.getPlayer().getLocation().intVector().equals(target)) {
             logger.warning("Useless walk task. Bot and given target location equal.");
         }
+        pathFuture = service.submit(task);
+        startTime = System.currentTimeMillis();
+    }
+    public WalkTaskExecutor(final Bot bot,  boolean useAstar, int squareSize) {
+        super(bot);
+        this.target = null;
+        this.useAstar = useAstar;
+        this.squareSize = squareSize;
+        pathFuture = service.submit(task);
+        startTime = System.currentTimeMillis();
+    }
+
+    public WalkTaskExecutor(final Bot bot,  final Vector3i target, boolean running) {
+        super(bot);
+        this.target = target;
+        this.running = running;
         pathFuture = service.submit(task);
         startTime = System.currentTimeMillis();
     }
@@ -179,12 +204,15 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
 
         // Calculate speed
         double moveSpeed = this.speed;
+        if(running){
+            moveSpeed *= runFactor;
+        }
         boolean inLiquid = false; // TODO: player.isInLiquid();
         if (Material.getById(thisBlock.getTypeId()) == Material.SOUL_SAND) {
-            if (Material.getById(thisBlock.getTypeId()) == Material.SOUL_SAND) {
-                // Soulsand makes us shorter 8D
-                stepTarget = stepTarget.add(0, -0.12, 0);
-            }
+
+            // Soulsand makes us shorter 8D
+            stepTarget = stepTarget.add(0, -0.12, 0);
+
             moveSpeed *= liquidFactor;
         } else if (inLiquid) {
             moveSpeed *= liquidFactor;

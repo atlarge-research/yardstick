@@ -27,9 +27,11 @@ import com.github.steveice10.mc.protocol.packet.ingame.client.player.ClientPlaye
 import com.github.steveice10.mc.protocol.packet.ingame.client.player.ClientPlayerPositionPacket;
 import com.github.steveice10.mc.protocol.packet.ingame.client.player.ClientPlayerRotationPacket;
 import com.github.steveice10.mc.protocol.packet.ingame.client.player.ClientPlayerSwingArmPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.client.ClientChatPacket;
 import com.github.steveice10.mc.protocol.packet.ingame.client.window.ClientCreativeInventoryActionPacket;
 import com.github.steveice10.packetlib.Session;
 import com.github.steveice10.packetlib.packet.Packet;
+import java.util.UUID;
 import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
 import nl.tudelft.opencraft.yardstick.bot.world.Block;
 import nl.tudelft.opencraft.yardstick.bot.world.BlockFace;
@@ -84,6 +86,25 @@ public class BotController {
         boolean onGround = vector.getY() - Math.floor(vector.getY()) < 0.1;
         getPlayer().setLocation(vector);
         getSession().send(new ClientPlayerPositionPacket(onGround, vector.getX(), vector.getY(), vector.getZ()));
+    }
+
+    /**
+     * Sends a chat packet to the server
+     *
+     * @param message the string to sent
+     */
+    public void sendChatMessage(String message) {
+        ClientChatPacket messagePacket = new ClientChatPacket(message);
+        getSession().send(messagePacket);
+    }
+    /**
+     * Sends a chat packet to the server
+     *
+     * @param length message length in bytes
+     */
+    public void sendRandomChatMessage(int length) {
+        String message = UUID.randomUUID().toString().substring(0, length);
+        sendChatMessage(message);
     }
 
     /**

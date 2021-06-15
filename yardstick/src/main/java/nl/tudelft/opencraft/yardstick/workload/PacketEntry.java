@@ -21,7 +21,17 @@ package nl.tudelft.opencraft.yardstick.workload;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.List;
+import java.util.logging.Level;
+
+import com.github.steveice10.mc.protocol.data.message.Message;
+import com.github.steveice10.mc.protocol.data.message.TextMessage;
+import com.github.steveice10.mc.protocol.data.message.TranslationMessage;
+import com.github.steveice10.mc.protocol.packet.ingame.client.ClientChatPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.ServerChatPacket;
 import com.github.steveice10.packetlib.packet.Packet;
+import nl.tudelft.opencraft.yardstick.Yardstick;
+import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.util.PacketUtil;
 
 /**
@@ -34,6 +44,7 @@ public class PacketEntry {
     private final String name;
     private final boolean outgoing;
     private final int length;
+    private final String chat_message;
 
     /**
      * Creates a new PacketEntry.
@@ -43,12 +54,14 @@ public class PacketEntry {
      * @param packet a shorthand name for the message type.
      * @param outgoing true if the message was client->server, false otherwise.
      * @param length the length of the message in bytes.
+     * @param chat_message the chat message, if the packet is a chat message
      */
-    public PacketEntry(long timestamp, String packet, boolean outgoing, int length) {
+    public PacketEntry(long timestamp, String packet, boolean outgoing, int length, String chat_message) {
         this.timestamp = timestamp;
         this.name = packet;
         this.outgoing = outgoing;
         this.length = length;
+        this.chat_message = chat_message;
     }
 
     /**
@@ -62,6 +75,7 @@ public class PacketEntry {
         dos.writeBoolean(outgoing);
         dos.writeUTF(name);
         dos.writeInt(length);
+        dos.writeUTF(chat_message);
     }
 
     /**
@@ -76,7 +90,8 @@ public class PacketEntry {
         boolean outgoing = dis.readBoolean();
         String name = dis.readUTF();
         int length = dis.readInt();
-        return new PacketEntry(timestamp, name, outgoing, length);
+        String message = dis.readUTF();
+        return new PacketEntry(timestamp, name, outgoing, length, message);
     }
 
     /**
@@ -90,7 +105,40 @@ public class PacketEntry {
         long timestamp = System.currentTimeMillis();
         String packetName = packet.getClass().getSimpleName();
         int length = PacketUtil.packetLength(packet);
-        return new PacketEntry(timestamp, packetName, outgoing, length);
+        String message = "";
+
+        if(packetName.equals("ClientChatPacket")){
+           ClientChatPacket chatPacket = (ClientChatPacket) packet;
+           message = chatPacket.getMessage();
+        }
+        if(packetName.equals("ServerChatPacket")){
+            ServerChatPacket chatPacket = (ServerChatPacket) packet;
+            Message m_message = chatPacket.getMessage();
+            message = "malformed";
+
+            if(m_message instanceof TextMessage){
+                // Only occurs in PaperMC, uses "extra" field
+                TextMessage textMessage = (TextMessage) m_message;
+                Message extra = textMessage.getExtra().get(0);
+                message = ((TextMessage) extra).getText();
+            } else if (m_message instanceof TranslationMessage){
+                TranslationMessage tr_message = (TranslationMessage) m_message;
+                String key = tr_message.getKey();
+                List<Message> messages = tr_message.getWith();
+                if(messages.size() > 1){
+                    TextMessage textMessage1 = (TextMessage) messages.get(0);
+                    TextMessage textMessage2 = (TextMessage) messages.get(1);
+
+                    message = "<" +textMessage1.getText() + "> " + textMessage2.getText();
+                } else {
+                    // Caused when the server sends left/join game packets to allow hover-over
+                    TextMessage textMessage1 = (TextMessage) messages.get(0);
+                    message = textMessage1.getText();
+                }
+            }
+
+        }
+        return new PacketEntry(timestamp, packetName, outgoing, length, message);
     }
 
     /**
@@ -104,7 +152,8 @@ public class PacketEntry {
         sb.append(timestamp).append(',');
         sb.append(outgoing).append(',');
         sb.append(name).append(',');
-        sb.append(length).append('\n');
+        sb.append(length).append(',');
+        sb.append(chat_message).append('\n');
         return sb.toString();
     }
 

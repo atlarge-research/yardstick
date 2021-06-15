@@ -18,9 +18,6 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.stream.Collectors;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
@@ -28,15 +25,20 @@ import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.world.Block;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
+import nl.tudelft.opencraft.yardstick.model.FixedMovementModel;
 import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
-public class Experiment4MultiWalkAround extends Experiment {
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.stream.Collectors;
+
+public class Experiment12RunLine extends Experiment {
 
     private final List<Bot> botList = Collections.synchronizedList(new ArrayList<>());
     private final List<Future<Bot>> connectingBots = new ArrayList<>();
-    private SimpleMovementModel movement;
+    private FixedMovementModel movement;
 
     private int botsTotal = 0;
     private long startMillis;
@@ -46,7 +48,7 @@ public class Experiment4MultiWalkAround extends Experiment {
     private boolean singleStandStill;
     private boolean first = true;
     private int seed;
-    private final Map<Bot, Vector3d> botSpawnLocations = new HashMap<>();
+    private final Map<Bot, Vector3d> botDirections = new HashMap<>();
     private final Map<Bot, Integer> botIds = new HashMap<>();
     private Boolean[] loadedIn;
     private int currentBotID = 0;
@@ -56,11 +58,22 @@ public class Experiment4MultiWalkAround extends Experiment {
 
     ScheduledExecutorService messageThread;
 
-    public Experiment4MultiWalkAround() {
-        super(4, "Bots walking around based on a movement model for Second Life.");
+    private final Vector3d[] moves = {
+            new Vector3d(-1,0,0),
+            new Vector3d(-1,0,-1),
+            new Vector3d(-1,0,1),
+            new Vector3d(1,0,0),
+            new Vector3d(1,0,1),
+            new Vector3d(1,0,-1),
+            new Vector3d(0,0,1),
+            new Vector3d(0,0,-1)
+    };
+
+    public Experiment12RunLine() {
+        super(12, "Bots running in straight-ish lines away from spawn.");
     }
 
-    public Experiment4MultiWalkAround(int num, String desc) {
+    public Experiment12RunLine(int num, String desc) {
         super(num, desc);
     }
 
@@ -76,11 +89,7 @@ public class Experiment4MultiWalkAround extends Experiment {
         this.singleStandStill = Boolean.parseBoolean(options.experimentParams.getOrDefault("singleStandStill", "false"));
         this.sendPings = Boolean.parseBoolean(options.experimentParams.getOrDefault("sendPings", "true"));
         this.pingInterval = Integer.parseInt(options.experimentParams.getOrDefault("pingInterval", "1"));
-        this.movement = new SimpleMovementModel(
-                Integer.parseInt(options.experimentParams.getOrDefault("boxDiameter", "32")),
-                Boolean.parseBoolean(options.experimentParams.getOrDefault("spawnAnchor", "false")),
-                this.seed
-        );
+        this.movement = new FixedMovementModel(this.seed);
         this.startMillis = System.currentTimeMillis();
     }
 
@@ -133,9 +142,10 @@ public class Experiment4MultiWalkAround extends Experiment {
             Bot bot = createBot("still");
             loadedIn[0]=true;
             botIds.put(bot, currentBotID);
+
             this.currentBotID++;
-            botSpawnLocations.put(bot, bot.getPlayer().getLocation());
             botList.add(bot);
+
 
             if(this.sendPings){
                 messageThread = Executors.newSingleThreadScheduledExecutor();
@@ -160,10 +170,10 @@ public class Experiment4MultiWalkAround extends Experiment {
                 Bot bot;
 
                 bot = createBot();
-
+                Vector3d direction = moves[ currentBotID % 7 ];
+                botDirections.put(bot, direction);
                 botIds.put(bot, currentBotID);
                 this.currentBotID++;
-                botSpawnLocations.put(bot, bot.getPlayer().getLocation());
                 return bot;
             } catch (ConnectException e) {
                 logger.warning(String.format("Could not connect bot on %s:%d after %d ms.", options.host, options.port, System.currentTimeMillis() - startTime));
@@ -197,14 +207,13 @@ public class Experiment4MultiWalkAround extends Experiment {
 
         TaskExecutor t = bot.getTaskExecutor();
         if (t == null || t.getStatus().getType() != TaskStatus.StatusType.IN_PROGRESS) {
-            Vector3i newLocation = movement.newTargetLocation(bot);
-            //bot.getLogger().info(String.format("Setting task for bot to walk to %s", newLocation));
-            /*Vector3i underneath = new Vector3i(newLocation.getX(), newLocation.getY() - 1 , newLocation.getZ());
+            Vector3i newLocation = movement.newTargetLocation(bot, botDirections.get(bot));
+            Vector3i underneath = new Vector3i(newLocation.getX(), newLocation.getY() - 1 , newLocation.getZ());
             try{
                 bot.getLogger().info(String.format("Block at %s has state %s", newLocation, bot.getWorld().getBlockAt(underneath).getState() ));
-            } catch(ChunkNotLoadedException e){}*/
+            } catch(ChunkNotLoadedException e){}
 
-            bot.setTaskExecutor(new WalkTaskExecutor(bot, newLocation));
+            bot.setTaskExecutor(new WalkTaskExecutor(bot, newLocation, true));
         }
     }
 
@@ -228,7 +237,6 @@ public class Experiment4MultiWalkAround extends Experiment {
 
     @Override
     protected void after() {
-        messageThread.shutdown();
         for (Bot bot : botList) {
             bot.disconnect("disconnect");
         }

@@ -159,10 +159,11 @@ public class SimpleWorldPhysics implements WorldPhysics {
         valid = valid && isTraversable(destX, destY, destZ);
         valid = valid && isTraversable(destX, destY + 1, destZ);
 
-        // Avoid lava
-        Material lowerMat = world.getBlockAt(destX, destY - 1, destZ).getMaterial();
-        valid = valid && lowerMat != Material.LAVA;
-        valid = valid && lowerMat != Material.STATIONARY_LAVA;
+        // Materials are broken, rely on traversability checks for now
+        /* Avoid lava
+        //Material lowerMat = world.getBlockAt(destX, destY - 1, destZ).getMaterial();
+        //valid = valid && lowerMat != Material.LAVA;
+        //valid = valid && lowerMat != Material.STATIONARY_LAVA;
 
         // Avoid fences
         valid = valid && lowerMat != Material.FENCE;
@@ -178,7 +179,7 @@ public class SimpleWorldPhysics implements WorldPhysics {
         valid = valid && lowerMat != Material.NETHER_FENCE;
         //valid = valid && lowerMat != Material.NETHER_FENCE_GATE; // Doesn't exist
         valid = valid && lowerMat != Material.SPRUCE_FENCE;
-        valid = valid && lowerMat != Material.SPRUCE_FENCE_GATE;
+        valid = valid && lowerMat != Material.SPRUCE_FENCE_GATE;*/
 
         // Only one coord at a time
         boolean movingX = origX != destX;
@@ -221,8 +222,8 @@ public class SimpleWorldPhysics implements WorldPhysics {
         // If we're falling
         if (destY < origY) {
             // Origin block may not be fluid (drowning)
-            Material mat = world.getBlockAt(origX, origY, origZ).getMaterial();
-            valid = valid && !mat.isFluid();
+            Block b = world.getBlockAt(origX, origY, origZ);
+            valid = valid && !b.getFluid();
         }
 
         return valid;
@@ -230,12 +231,16 @@ public class SimpleWorldPhysics implements WorldPhysics {
 
     @Override
     public boolean canClimb(Vector3i location) throws ChunkNotLoadedException {
-        int id = world.getBlockAt(location).getTypeId();
-        if (id == 8 || id == 9 || id == 65) // Water / Moving Water / Ladder
+        Block b = world.getBlockAt(location);
+        /*if (id == 8 || id == 9 || id == 65) // Water / Moving Water / Ladder
         {
             return true;
+        }*/
+        int state = b.getState();
+        if(b.getFluid() || state == 60 || state == 54 || state == 58 || state == 56){ // Water  / Ladder
+            return true;
         }
-        if (id == 106) { // Vines (which require an adjacent solid block)
+        if (state == -49 | state == -42 | state == -45 | state == -57) { // Vines (which require an adjacent solid block)
             if (!isTraversable(location.getX(), location.getY(), location.getZ() + 1) || !isTraversable(location.getX(), location.getY(), location.getZ() - 1)
                     || !isTraversable(location.getX() + 1, location.getY(), location.getZ()) || !isTraversable(location.getX() - 1, location.getY(), location.getZ())) {
                 return true;
@@ -258,7 +263,8 @@ public class SimpleWorldPhysics implements WorldPhysics {
         if (block.getChunk() == null) {
             throw new ChunkNotLoadedException(new ChunkLocation(x, z));
         }
-        return block.getMaterial().isTraversable();
+        return block.getTraversable();
+        //return block.getMaterial().isTraversable();
     }
 
     public boolean canStand(Vector3i location) throws ChunkNotLoadedException {

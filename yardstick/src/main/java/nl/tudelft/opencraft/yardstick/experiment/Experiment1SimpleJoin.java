@@ -23,9 +23,9 @@ import com.github.steveice10.packetlib.Client;
 public class Experiment1SimpleJoin extends Experiment {
 
     public static final long EXPERIMENT_DURATION = 10_000;
-    //
+
     private Client client;
-    //
+
 
     public Experiment1SimpleJoin() {
         super(1,

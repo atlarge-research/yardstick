@@ -84,7 +84,7 @@ public class Block {
         int locX = Math.floorMod(x, 16);
         int locY = Math.floorMod(y, 16);
         int locZ = Math.floorMod(z, 16);
-        //GlobalLogger.getLogger().info("Set internal state: (" + x + "," + y + "," + z + ") -> (" + locX + "," + locY + "," + locZ + ")");
+        //GlobalLogger.getLogger().info("Set internal state: (" + x + "," + y + "," + z + ") -> (" + locX + "," + locY + "," + locZ + "): " + Integer.toBinaryString(newState));
 
         getInternalStorage().set(
                 locX,
@@ -95,6 +95,20 @@ public class Block {
 
     public Material getMaterial() {
         return Material.getById(this.getTypeId());
+    }
+
+    public int getState() {
+        return this.getInternalState();
+    }
+
+    public boolean getTraversable(){
+        int state = this.getState();
+        return Material.isStateTraversable(state);
+    }
+
+    public boolean getFluid(){
+        int state = this.getState();
+        return Material.isStateFluid(state);
     }
 
     public Block getRelative(int x, int y, int z) throws ChunkNotLoadedException {

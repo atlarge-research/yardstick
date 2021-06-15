@@ -78,24 +78,7 @@ import com.github.steveice10.mc.protocol.packet.ingame.server.window.ServerOpenW
 import com.github.steveice10.mc.protocol.packet.ingame.server.window.ServerSetSlotPacket;
 import com.github.steveice10.mc.protocol.packet.ingame.server.window.ServerWindowItemsPacket;
 import com.github.steveice10.mc.protocol.packet.ingame.server.window.ServerWindowPropertyPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerBlockBreakAnimPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerBlockChangePacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerBlockValuePacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerChunkDataPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerExplosionPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerMapDataPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerMultiBlockChangePacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerNotifyClientPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerOpenTileEntityEditorPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerPlayBuiltinSoundPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerPlayEffectPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerPlaySoundPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerSpawnParticlePacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerSpawnPositionPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerUnloadChunkPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerUpdateTileEntityPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerUpdateTimePacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.world.ServerWorldBorderPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.world.*;
 import com.github.steveice10.opennbt.conversion.builtin.CompoundTagConverter;
 import com.github.steveice10.packetlib.Session;
 import com.github.steveice10.packetlib.event.session.*;
@@ -714,8 +697,13 @@ public class BotListener implements SessionListener {
             ServerEntityEffectPacket p = (ServerEntityEffectPacket) packet;
             // TODO
 
+        }else if (packet instanceof ServerUpdateLightPacket) {
+            // 0x4B Entity Effect
+            ServerUpdateLightPacket p = (ServerUpdateLightPacket) packet;
+            // TODO
+
         } else {
-            logger.warning("Received unhandled packet: " + packet.getClass().getName());
+            //logger.warning("Received unhandled packet: " + packet.getClass().getName());
         }
     }
 

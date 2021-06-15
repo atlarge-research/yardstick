@@ -95,10 +95,10 @@ class SimpleMovementModelTest {
         for (int i = 0; i < 1000; i++) {
             Vector3i location = model.getNewFieldLocation(mockBot);
 
-            Assertions.assertTrue(location.getX() <= 32, "Value was " + location.getX());
-            Assertions.assertTrue(location.getZ() <= 32, "Value was " + location.getZ());
-            Assertions.assertTrue(location.getX() >= -32, "Value was " + location.getX());
-            Assertions.assertTrue(location.getZ() >= -32, "Value was " + location.getZ());
+            Assertions.assertTrue(location.getX() <= 132, "Value was " + location.getX());
+            Assertions.assertTrue(location.getZ() <= 132, "Value was " + location.getZ());
+            Assertions.assertTrue(location.getX() >= -132, "Value was " + location.getX());
+            Assertions.assertTrue(location.getZ() >= -132, "Value was " + location.getZ());
         }
     }
 }

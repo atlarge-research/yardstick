@@ -91,7 +91,7 @@ public class CsvConverter {
         LOGGER.info("Converting: " + inFileName);
         int packets = 0;
         try {
-            writeString(out, "timestamp,outgoing,name,length\n");
+            writeString(out, "timestamp,outgoing,name,length,message\n");
 
             while (in.available() > 0) {
 

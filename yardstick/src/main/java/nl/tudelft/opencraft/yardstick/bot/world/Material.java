@@ -43,6 +43,7 @@ package nl.tudelft.opencraft.yardstick.bot.world;
 import nl.tudelft.opencraft.yardstick.bot.inventory.ToolType;
 import static nl.tudelft.opencraft.yardstick.bot.inventory.ToolType.*;
 import static nl.tudelft.opencraft.yardstick.bot.world.Material.Flag.*;
+import java.util.Arrays;
 
 public enum Material {
 
@@ -238,6 +239,14 @@ public enum Material {
     private final int id, maxStack, flags;
     private final ToolType toolType;
 
+    private static final Integer[] traversable_states = {0, 21, 23, 25, 27, 29, 31, 1341,
+            62, 63, 64, -124, -123, -122, -121, -120, -119, -118, -117, -38,
+            -116, -115, -114, -113, -112, -111, -110, 108, -73, -65, -64,
+            -64, -62, -61, -60, -59, -58, -57, -56, -54, -53, -52, -51, -50,
+            62, 114, -112, 78, 101, 3887, -88, 61, 44, 32, -78, 1342, 7897};
+
+    private static final Integer[] fluid_states = {34, 35, 36, 37, 38, 39, 41, 42,  50, 52, 54, 56, 11, -84};
+
     private Material(int id) {
         this(id, ToolType.PICKAXE);
     }
@@ -275,6 +284,13 @@ public enum Material {
 
     public boolean isTraversable() {
         return (flags & TRAVERSABLE) == TRAVERSABLE;
+    }
+
+    public static boolean isStateTraversable(int state) {
+        return Arrays.asList(traversable_states).contains(state);
+    }
+    public static boolean isStateFluid(int state) {
+        return Arrays.asList(fluid_states).contains(state);
     }
 
     public boolean isInteractable() {

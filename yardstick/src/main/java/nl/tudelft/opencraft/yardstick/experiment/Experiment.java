@@ -217,6 +217,25 @@ public abstract class Experiment implements Runnable {
         }
         return bot;
     }
+    protected Bot createBot(String name) throws ConnectException {
+        Bot bot = newBot(name);
+        bot.connect();
+        int sleep = 1000;
+        int tries = 10;
+        while (tries-- > 0 && !bot.isJoined()) {
+            try {
+                Thread.sleep(sleep);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                break;
+            }
+        }
+        if (!bot.isJoined()) {
+            bot.disconnect("Make sure to close all connections.");
+            throw new ConnectException();
+        }
+        return bot;
+    }
 
     /**
      * Should return true when the experiment is complete.

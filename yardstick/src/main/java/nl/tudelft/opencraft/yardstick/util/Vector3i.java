@@ -33,6 +33,12 @@ public class Vector3i {
         this.z = z;
     }
 
+    public Vector3i(Vector3d vec) {
+        this.x = (int) vec.getX();
+        this.y = (int) vec.getY();
+        this.z = (int) vec.getZ();
+    }
+
     public int getX() {
         return x;
     }

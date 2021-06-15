@@ -23,6 +23,7 @@ import com.github.steveice10.mc.protocol.ClientListener;
 import com.github.steveice10.mc.protocol.MinecraftProtocol;
 import com.github.steveice10.mc.protocol.data.SubProtocol;
 import com.github.steveice10.packetlib.ProxyInfo;
+import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.FixedCircle;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.SimpleAStar;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.heuristic.EuclideanHeuristic;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
@@ -62,6 +63,7 @@ public class Bot {
     private BotPlayer player;
     @JsonIgnore
     private SimpleAStar pathFinder;
+    private FixedCircle fixedCircle;
     private TaskExecutor taskExecutor;
 
     /**
@@ -213,6 +215,9 @@ public class Bot {
         return pathFinder;
     }
 
+    public FixedCircle getFixedCircle(){return fixedCircle;}
+
+    public void setFixedCircle(FixedCircle toSet){this.fixedCircle=toSet;}
     /**
      * Returns the protocol for this bot.
      *
