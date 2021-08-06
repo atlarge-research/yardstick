@@ -18,6 +18,7 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
@@ -98,8 +99,21 @@ public abstract class AbstractModelExperiment extends Experiment {
 
     private Runnable newBotConnector(Bot bot) {
         return () -> {
+            long start = System.currentTimeMillis();
             bot.connect();
-            int sleep = 1000;
+
+            // log login time if the bot is connected (exp12)
+            if (number == 12 && bot.isConnected()) {
+                long end = System.currentTimeMillis();
+                try {
+                    Experiment12RandomE2E.fw.write(end + "\t" + "login\t" + (end-start) + "\n");
+                    Experiment12RandomE2E.fw.flush();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            int sleep = 2000;
             int tries = 3;
             while (tries-- > 0 && (bot.getPlayer() == null || !bot.isJoined())) {
                 try {
@@ -109,9 +123,13 @@ public abstract class AbstractModelExperiment extends Experiment {
                     break;
                 }
             }
+
             if (!bot.isJoined()) {
                 logger.warning(String.format("Could not connect bot %s:%d.", options.host, options.port));
                 bot.disconnect("Make sure to close all connections.");
+                if (number == 10) {
+                    Experiment10WalkStraight.currBotId -= Experiment10WalkStraight.clientCount;
+                }
             }
         };
     }
@@ -143,5 +161,9 @@ public abstract class AbstractModelExperiment extends Experiment {
         for (Bot bot : botList) {
             bot.disconnect("disconnect");
         }
+    }
+
+    public BotModel getModel() {
+        return model;
     }
 }

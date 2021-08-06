@@ -78,6 +78,15 @@ public class SimpleMovementModel implements BotModel {
      */
     Vector3i getNewFieldLocation(Bot bot) {
         Vector3d originalLocation = getStartLocation(bot);
+
+        // No bound random
+        if (boxDiameter == 0) {
+            int newX = (int) (originalLocation.getX() + RANDOM.nextInt(10) * (RANDOM.nextBoolean() ? -1 : 1) * RANDOM.nextDouble());
+            int newZ = (int) (originalLocation.getZ() + RANDOM.nextInt(10) * (RANDOM.nextBoolean() ? -1 : 1) * RANDOM.nextDouble());
+            return getTargetAt(bot, newX, newZ);
+        }
+
+
         int maxx = ((int) originalLocation.getX()) + boxDiameter / 2;
         int minx = ((int) originalLocation.getX()) - boxDiameter / 2;
         int maxz = ((int) originalLocation.getZ()) + boxDiameter / 2;

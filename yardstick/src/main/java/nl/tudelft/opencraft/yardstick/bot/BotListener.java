@@ -18,12 +18,14 @@
 
 package nl.tudelft.opencraft.yardstick.bot;
 
+import nl.tudelft.opencraft.yardstick.experiment.Experiment12RandomE2E;
 import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
 import science.atlarge.opencraft.mcprotocollib.data.SubProtocol;
 import science.atlarge.opencraft.mcprotocollib.data.game.chunk.Column;
 import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.Position;
 import science.atlarge.opencraft.mcprotocollib.data.game.entity.type.GlobalEntityType;
 import science.atlarge.opencraft.mcprotocollib.data.game.world.block.BlockChangeRecord;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.client.player.ClientPlayerPositionRotationPacket;
 import science.atlarge.opencraft.mcprotocollib.packet.ingame.client.world.ClientTeleportConfirmPacket;
 import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerBossBarPacket;
 import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerChatPacket;
@@ -110,7 +112,14 @@ import science.atlarge.opencraft.packetlib.event.session.PacketSendingEvent;
 import science.atlarge.opencraft.packetlib.event.session.PacketSentEvent;
 import science.atlarge.opencraft.packetlib.event.session.SessionListener;
 import science.atlarge.opencraft.packetlib.packet.Packet;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
@@ -141,6 +150,10 @@ public class BotListener implements SessionListener {
     private Server server;
     private World world;
 
+    private ConcurrentHashMap<Integer, PacketReceivedEvent> unhandledRecvPkt = new ConcurrentHashMap<>();
+    private int pktCounter = 0;
+    private boolean serverJoinGame;
+
     /**
      * Creates a new listener.
      *
@@ -161,6 +174,7 @@ public class BotListener implements SessionListener {
         }
 
         Packet packet = pre.getPacket();
+//        System.out.println(packet.getClass().getName());
         if (packet instanceof ServerSpawnObjectPacket) {
             // 0x00 Spawn Object
             ServerSpawnObjectPacket p = (ServerSpawnObjectPacket) packet;
@@ -309,6 +323,29 @@ public class BotListener implements SessionListener {
             ServerChatPacket p = (ServerChatPacket) packet;
             // TODO
 
+            // log time
+            long end = System.currentTimeMillis();
+
+            String key = null;
+            if (p.getMessage().getText().startsWith("There are"))
+                key = "banlist";
+            if (p.getMessage().getText().startsWith("Banned player"))
+                key = "ban";
+            if (p.getMessage().getText().startsWith("Unbanned"))
+                key = "unban";
+            if (p.getMessage().getText().startsWith("Changing to clear"))
+                key = "clear";
+            if (p.getMessage().getText().startsWith("Changing to rain and thunder"))
+                key = "thunder";
+            try {
+                if (key != null) {
+                    Experiment12RandomE2E.fw.write(end + "\t" + key + "\t" + (end - Experiment12RandomE2E.GMStartTime) + "\n");
+                    Experiment12RandomE2E.fw.flush();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
         } else if (packet instanceof ServerMultiBlockChangePacket) {
             // 0x10 Multi Block Change
             ServerMultiBlockChangePacket p = (ServerMultiBlockChangePacket) packet;
@@ -451,6 +488,7 @@ public class BotListener implements SessionListener {
             ServerJoinGamePacket p = (ServerJoinGamePacket) packet;
             // TODO: Reduced debug info field?
 
+//            System.out.println(p);
             // Init the game
             this.world = new World(Dimension.forId(p.getDimension()), p.getWorldType());
             bot.setWorld(world);
@@ -463,6 +501,16 @@ public class BotListener implements SessionListener {
             this.player = new BotPlayer(bot, p.getEntityId());
             player.setGamemode(p.getGameMode());
             bot.setPlayer(player);
+
+            // Replay the unhandled packet events before receiving server join game
+            serverJoinGame = true;
+            Iterator<Map.Entry<Integer, PacketReceivedEvent>> iter = unhandledRecvPkt.entrySet().iterator();
+            while (iter.hasNext()) {
+                Map.Entry<Integer, PacketReceivedEvent> entry = iter.next();
+                packetReceived(entry.getValue());
+                iter.remove();
+            }
+
         } else if (packet instanceof ServerMapDataPacket) {
             // 0x24 Map
             ServerMapDataPacket p = (ServerMapDataPacket) packet;
@@ -511,7 +559,15 @@ public class BotListener implements SessionListener {
             ServerOpenTileEntityEditorPacket p = (ServerOpenTileEntityEditorPacket) packet;
             // TODO
 
-        } else if (packet instanceof ServerPlayerAbilitiesPacket) {
+        }
+        // ServerJoinGame packet is received after a few Player packets.
+        // Save them to handle later
+        else if (!serverJoinGame) {
+            unhandledRecvPkt.put(++pktCounter, pre);
+            return;
+        }
+
+        else if (packet instanceof ServerPlayerAbilitiesPacket) {
 
             // 0x2B Player Abilities
             ServerPlayerAbilitiesPacket p = (ServerPlayerAbilitiesPacket) packet;
@@ -539,16 +595,16 @@ public class BotListener implements SessionListener {
         } else if (packet instanceof ServerPlayerPositionRotationPacket) {
             // 0x2E Player Position And Look
             ServerPlayerPositionRotationPacket p = (ServerPlayerPositionRotationPacket) packet;
-
             BotPlayer player = bot.getPlayer();
+
             player.setLocation(new Vector3d(p.getX(), p.getY(), p.getZ()));
             player.setPitch(p.getPitch());
             player.setYaw(p.getYaw());
             player.setOnGround(true);
 
             Session session = bot.getClient().getSession();
-            session.send(new ClientTeleportConfirmPacket(p.getTeleportId()));
-
+//            session.send(new ClientTeleportConfirmPacket(p.getTeleportId()));
+            session.send(new ClientPlayerPositionRotationPacket(true, p.getX(), p.getY(),p.getZ(),p.getYaw(),p.getPitch()));
             logger.info("Received new Player position: " + player.getLocation());
 
         } else if (packet instanceof ServerPlayerUseBedPacket) {
@@ -721,9 +777,10 @@ public class BotListener implements SessionListener {
             ServerEntityEffectPacket p = (ServerEntityEffectPacket) packet;
             // TODO
 
-        } else {
-            logger.warning("Received unhandled packet: " + packet.getClass().getName());
         }
+//        else {
+//            logger.warning("Received unhandled packet: " + packet.getClass().getName());
+//        }
     }
 
     @Override
