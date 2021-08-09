@@ -45,7 +45,7 @@ namespace TrProtocol
                     if (cond != null)
                     {
                         var get2 = dict[cond.field].GetMethod;
-                        condition = o => ((BitsByte)get2.Invoke(o, empty))[cond.bit];
+                        condition = o => ((BitsByte)get2.Invoke(o, empty))[cond.bit] == cond.pred;
                     }
 
 
@@ -55,17 +55,17 @@ namespace TrProtocol
                         if (set != null)
                             deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadInt32() }); };
                     }
-                    else if (t == typeof(short))
+                    else if (t == typeof(bool))
                     {
-                        serializer += (o, bw) => { if (condition(o)) bw.Write((short)get.Invoke(o, empty)); };
+                        serializer += (o, bw) => { if (condition(o)) bw.Write((bool)get.Invoke(o, empty)); };
                         if (set != null)
-                            deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadInt16() }); };
+                            deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadBoolean() }); };
                     }
-                    else if (t == typeof(string))
+                    else if (t == typeof(sbyte))
                     {
-                        serializer += (o, bw) => { if (condition(o)) bw.Write((string)get.Invoke(o, empty)); };
+                        serializer += (o, bw) => { if (condition(o)) bw.Write((sbyte)get.Invoke(o, empty)); };
                         if (set != null)
-                            deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadString() }); };
+                            deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadSByte() }); };
                     }
                     else if (t == typeof(byte))
                     {
@@ -73,11 +73,29 @@ namespace TrProtocol
                         if (set != null)
                             deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadByte() }); };
                     }
-                    else if (t == typeof(bool))
+                    else if (t == typeof(short))
                     {
-                        serializer += (o, bw) => { if (condition(o)) bw.Write((bool)get.Invoke(o, empty)); };
+                        serializer += (o, bw) => { if (condition(o)) bw.Write((short)get.Invoke(o, empty)); };
                         if (set != null)
-                            deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadBoolean() }); };
+                            deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadInt16() }); };
+                    }
+                    else if (t == typeof(ushort))
+                    {
+                        serializer += (o, bw) => { if (condition(o)) bw.Write((ushort)get.Invoke(o, empty)); };
+                        if (set != null)
+                            deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadUInt16() }); };
+                    }
+                    else if (t == typeof(string))
+                    {
+                        serializer += (o, bw) => { if (condition(o)) bw.Write((string)get.Invoke(o, empty)); };
+                        if (set != null)
+                            deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadString() }); };
+                    }
+                    else if (t == typeof(float))
+                    {
+                        serializer += (o, bw) => { if (condition(o)) bw.Write((float)get.Invoke(o, empty)); };
+                        if (set != null)
+                            deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadSingle() }); };
                     }
                     else if (t == typeof(byte[]))
                     {

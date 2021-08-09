@@ -97,7 +97,7 @@ namespace TrClient
         {
             Send(new SyncPlayer
             {
-                Name = "rabbit2"
+                Name = Guid.NewGuid().ToString()[0..10]
             });
             Send(new PlayerHealth { StatLifeMax = 100, StatLife = 100 });
             for (byte i = 0; i < 73; ++i)
@@ -169,6 +169,8 @@ namespace TrClient
                         case StartPlaying:
                             Console.WriteLine("Spawning player...");
                             Spawn(100, 100);
+                            break;
+                        case SyncNPC npc:
                             break;
                         default:
                             //Console.ForegroundColor = ConsoleColor.Red;

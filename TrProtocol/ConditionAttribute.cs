@@ -20,10 +20,12 @@ namespace TrProtocol
     {
         public string field;
         public byte bit;
-        public ConditionAttribute(string field, byte bit)
+        public bool pred;
+        public ConditionAttribute(string field, byte bit, bool pred=true)
         {
             this.bit = bit;
             this.field = field;
+            this.pred = pred;
         }
     }
 }
