@@ -115,7 +115,7 @@ namespace TrClient
 
         public delegate void OnStatusBarCallback(TClient self, NetworkText text);
         public event OnStatusBarCallback OnStatusBar;
-        public delegate void OnChatCallback(TClient self, string text, Color color);
+        public delegate void OnChatCallback(TClient self, NetworkText text, Color color);
         public event OnChatCallback OnChat;
 
         public void GameLoop(IPEndPoint endPoint, string password, IPEndPoint proxy = null)
@@ -146,7 +146,7 @@ namespace TrClient
                             OnChat?.Invoke(this, text.Text, text.Color);
                             break;
                         case SmartTextMessage text:
-                            OnChat?.Invoke(this, text.Text.ToString(), text.Color);
+                            OnChat?.Invoke(this, text.Text, text.Color);
                             break;
                         case Kick kick:
                             Console.WriteLine("Kicked : " + kick.Reason.ToString());

@@ -11,6 +11,8 @@ namespace TrClientTest
             var client = new TClient();
             client.CurRelease = "Terraria238";
 
+            client.OnChat += (o, t, c) => Console.WriteLine(t);
+
             client.GameLoop(new IPEndPoint(IPAddress.Loopback, 7777), null);
         }
     }

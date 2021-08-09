@@ -16,7 +16,7 @@ namespace TrProtocol.Packets.Modules
         public override MessageID Type => MessageID.NetModules;
         public override short ModuleType => 1;
         public byte PlayerSlot { get; set; }
-        public string Text { get; set; }
+        public NetworkText Text { get; set; }
         public Color Color { get; set; }
     }
 }
