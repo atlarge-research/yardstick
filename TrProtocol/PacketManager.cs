@@ -96,31 +96,40 @@ namespace TrProtocol
                 }
 
                 var inst = Activator.CreateInstance(type);
-                serializers[type] = (bw, o) => serializer(o, bw);
 
-                if (inst is NetModulesPacket p)
+                if (client ? (type.GetCustomAttribute<S2COnlyAttribute>() == null) : (type.GetCustomAttribute<C2SOnlyAttribute>()) == null)
+                    serializers[type] = (bw, o) => serializer?.Invoke(o, bw);
+
+                if ((!client) ? (type.GetCustomAttribute<S2COnlyAttribute>() == null) : (type.GetCustomAttribute<C2SOnlyAttribute>()) == null)
                 {
-                    moduledeserializers[p.ModuleType] = br =>
+                    if (inst is NetModulesPacket p)
                     {
-                        var result = Activator.CreateInstance(type) as NetModulesPacket;
-                        deserializer(result, br);
-                        return result;
-                    };
-                }
-                else if (inst is Packet p2)
-                {
-                    deserializers[p2.Type] = br =>
+                        moduledeserializers[p.ModuleType] = br =>
+                        {
+                            var result = Activator.CreateInstance(type) as NetModulesPacket;
+                            deserializer?.Invoke(result, br);
+                            return result;
+                        };
+                    }
+                    else if (inst is Packet p2)
                     {
-                        var result = Activator.CreateInstance(type) as Packet;
-                        deserializer(result, br);
-                        return result;
-                    };
+                        deserializers[p2.Type] = br =>
+                        {
+                            var result = Activator.CreateInstance(type) as Packet;
+                            deserializer?.Invoke(result, br);
+                            return result;
+                        };
+                    }
                 }
+                    
             }
         }
 
-        public PacketManager()
+        private bool client;
+
+        public PacketManager(bool client)
         {
+            this.client = client;
             LoadPackets(Assembly.GetExecutingAssembly());
         }
 

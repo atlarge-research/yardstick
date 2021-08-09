@@ -13,7 +13,7 @@ namespace TrProtocolTest
     {
         static void Main(string[] args)
         {
-            var mgr = new PacketManager();
+            var mgr = new PacketManager(true);
             using var ms = new MemoryStream();
             using var bw = new BinaryWriter(ms);
             var b = mgr.Serialize(new ClientHello
@@ -21,11 +21,6 @@ namespace TrProtocolTest
                 Version = "Terraria183"
             });
             Console.WriteLine(string.Join(" ", b.Select(b => $"{b:x2}")));
-            var p = mgr.Deserialize(new BinaryReader(new MemoryStream(mgr.Serialize(new NetTextModule
-            {
-                Command = "say",
-                Text = "text",
-            }))));
             var p2 = mgr.Deserialize(new BinaryReader(new MemoryStream(mgr.Serialize(new TileSection
             {
                 Data = new byte[] { 1, 2, 3, 4, 5, 6 }

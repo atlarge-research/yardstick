@@ -7,6 +7,5 @@ namespace TrProtocol.Packets
         public override MessageID Type => MessageID.ChangeDoor;
         public bool ChangeType { get; set; }
         public ShortPosition Position { get; set; }
-        public short Moon { get; set; }
     }
 }
