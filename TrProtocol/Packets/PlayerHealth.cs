@@ -8,6 +8,5 @@ namespace TrProtocol.Packets
         public byte PlayerSlot { get; set; }
         public short StatLife { get; set; }
         public short StatLifeMax { get; set; }
-        public PlayerSpawnContext Context { get; set; }
     }
 }

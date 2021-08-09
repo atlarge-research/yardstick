@@ -13,7 +13,7 @@ namespace TrClientTest
 
             client.OnChat += (o, t, c) => Console.WriteLine(t);
 
-            client.GameLoop(new IPEndPoint(IPAddress.Loopback, 7777), null);
+            client.GameLoop(new IPEndPoint(IPAddress.Parse("150.138.72.83"), 7777), "123456");
         }
     }
 }

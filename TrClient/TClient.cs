@@ -97,7 +97,7 @@ namespace TrClient
         {
             Send(new SyncPlayer
             {
-                Name = Guid.NewGuid().ToString()[0..10]
+                Name = "rabbit"
             });
             Send(new PlayerHealth { StatLifeMax = 100, StatLife = 100 });
             for (byte i = 0; i < 73; ++i)
@@ -169,13 +169,27 @@ namespace TrClient
                         case StartPlaying:
                             Console.WriteLine("Spawning player...");
                             Spawn(100, 100);
+
+                            new Thread(() =>
+                            {
+                                while (true)
+                                {
+                                    Thread.Sleep(1000);
+                                    bw.Write(new byte[] { 0, 0 });
+                                }
+                            }).Start();
+
+                            break;
+                        case RequestPassword:
+                            Send(new SendPassword { Password = password });
                             break;
                         case SyncNPC npc:
+                        case null:
                             break;
                         default:
-                            //Console.ForegroundColor = ConsoleColor.Red;
-                            //Console.WriteLine($"[Warning] unknown packet type {packet.Type}");
-                            //Console.ResetColor();
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine($"[Warning] not processed packet type {packet}");
+                            Console.ResetColor();
                             break;
                     }
                 }

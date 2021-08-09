@@ -11,12 +11,12 @@ namespace TrProtocol.Serializers
     {
         protected override T _Read(BinaryReader br)
         {
-            return (T)Convert.ChangeType(br.ReadByte(), typeof(T));
+            return (T)(object)br.ReadByte();
         }
 
         protected override void _Write(BinaryWriter bw, T t)
         {
-            bw.Write((byte)Convert.ChangeType(t, typeof(byte)));
+            bw.Write((byte)(object)t);
         }
     }
 }
