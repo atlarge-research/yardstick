@@ -175,7 +175,7 @@ namespace TrClient
                                 while (true)
                                 {
                                     Thread.Sleep(1000);
-                                    bw.Write(new byte[] { 0, 0 });
+                                    Send(new PlayerControls());
                                 }
                             }).Start();
 
@@ -187,9 +187,9 @@ namespace TrClient
                         case null:
                             break;
                         default:
-                            Console.ForegroundColor = ConsoleColor.Red;
-                            Console.WriteLine($"[Warning] not processed packet type {packet}");
-                            Console.ResetColor();
+                            //Console.ForegroundColor = ConsoleColor.Red;
+                            //Console.WriteLine($"[Warning] not processed packet type {packet}");
+                            //Console.ResetColor();
                             break;
                     }
                 }

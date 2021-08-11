@@ -42,6 +42,11 @@ namespace TrProtocol
 
                     var cond = prop.GetCustomAttribute<ConditionAttribute>();
 
+                    if ((client
+                        ? (Attribute)prop.GetCustomAttribute<S2COnlyAttribute>()
+                        : prop.GetCustomAttribute<C2SOnlyAttribute>()) != null)
+                        continue;
+
                     if (cond != null)
                     {
                         var get2 = dict[cond.field].GetMethod;
@@ -96,6 +101,27 @@ namespace TrProtocol
                         serializer += (o, bw) => { if (condition(o)) bw.Write((float)get.Invoke(o, empty)); };
                         if (set != null)
                             deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadSingle() }); };
+                    }
+                    else if (t == typeof(short[]))
+                    {
+                        serializer += (o, bw) =>
+                        {
+                            if (!condition(o)) return;
+                            foreach (var x in (short[])get.Invoke(o, empty))
+                                bw.Write(x);
+
+                        };
+                        var n = t.GetCustomAttribute<ArraySizeAttribute>().size;
+                        if (set != null)
+                        {
+                            deserializer += (o, br) =>
+                            {
+                                if (!condition(o)) return;
+                                var t = new short[n];
+                                for (int i = 0; i < n; ++i) t[i] = br.ReadInt16();
+                                set.Invoke(o, new object[] {t});
+                            };
+                        }
                     }
                     else if (t == typeof(byte[]))
                     {
@@ -164,12 +190,12 @@ namespace TrProtocol
                 if (moduledeserializers.TryGetValue(moduletype, out var f))
                     return f(br);
                 else
-                    Console.WriteLine($"[Warning] net module type = {moduletype} not defined, ignoring");
+                    ;// Console.WriteLine($"[Warning] net module type = {moduletype} not defined, ignoring");
             }
             else if (deserializers.TryGetValue(msgid, out var f2))
                 return f2(br);
             else
-                Console.WriteLine($"[Warning] message type = {msgid} not defined, ignoring");
+                ;// Console.WriteLine($"[Warning] message type = {msgid} not defined, ignoring");
             return null;
         }
 

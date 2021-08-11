@@ -3,18 +3,29 @@ using TrProtocol.Models;
 
 namespace TrProtocol
 {
-    [AttributeUsage(AttributeTargets.Class)]
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Property)]
     public sealed class S2COnlyAttribute : Attribute
     {
 
     }
 
-    [AttributeUsage(AttributeTargets.Class)]
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Property)]
     public sealed class C2SOnlyAttribute : Attribute
     {
 
     }
 
+
+    [AttributeUsage(AttributeTargets.Property)]
+    public sealed class ArraySizeAttribute : Attribute
+    {
+        public int size;
+
+        public ArraySizeAttribute(int size)
+        {
+            this.size = size;
+        }
+    }
     [AttributeUsage(AttributeTargets.Property)]
     public sealed class ConditionAttribute : Attribute
     {

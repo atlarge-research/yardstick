@@ -1,4 +1,6 @@
-﻿namespace TrProtocol
+﻿using System;
+
+namespace TrProtocol
 {
     public abstract class Packet
     {
@@ -14,15 +16,15 @@
     }
     public interface IItemSlot
     {
-        byte ItemSlot { get; set; }
+        short ItemSlot { get; set; }
     }
     public interface INPCSlot
     {
-        byte NPCSlot { get; set; }
+        short NPCSlot { get; set; }
     }
     public interface IProjSlot
     {
-        byte ProjSlot { get; set; }
+        short ProjSlot { get; set; }
     }
     public abstract class NetModulesPacket : Packet
     {
