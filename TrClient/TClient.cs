@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -112,11 +113,60 @@ namespace TrClient
                 Text = message
             });
         }
-
-        public delegate void OnStatusBarCallback(TClient self, NetworkText text);
-        public event OnStatusBarCallback OnStatusBar;
+        
         public delegate void OnChatCallback(TClient self, NetworkText text, Color color);
         public event OnChatCallback OnChat;
+
+        private Dictionary<Type, Action<Packet>> handlers = new();
+
+        public void On<T>(Action<T> handler) where T : Packet
+        {
+            void Handler(Packet p) => handler(p as T);
+
+            if (handlers.TryGetValue(typeof(T), out var val)) val += Handler;
+            else handlers.Add(typeof(T), Handler);
+        }
+
+        public TClient()
+        {
+            InternalOn();
+        }
+
+        private void InternalOn()
+        {
+
+            On<StatusText>(status => OnChat?.Invoke(this, status.Text, Color.White));
+            On<NetTextModuleS2C>(text => OnChat?.Invoke(this, text.Text, text.Color));
+            On<SmartTextMessage>(text => OnChat?.Invoke(this, text.Text, text.Color));
+            On<Kick>(kick =>
+            {
+                Console.WriteLine("Kicked : " + kick.Reason);
+                connected = false;
+            });
+            On<LoadPlayer>(player =>
+            {
+                PlayerSlot = player.PlayerSlot;
+                SendPlayer();
+                Send(new RequestWorldInfo());
+                Console.WriteLine("Requesting World Info...");
+            });
+            On<WorldData>(_ =>
+            {
+                if (!IsPlaying)
+                {
+                    TileGetSection(100, 100);
+                    IsPlaying = true;
+                }
+            });
+            On<StartPlaying>(_ =>
+            {
+                Console.WriteLine("Spawning player...");
+                Spawn(100, 100);
+
+            });
+        }
+
+        private bool connected = false;
 
         public void GameLoop(IPEndPoint endPoint, string password, IPEndPoint proxy = null)
         {
@@ -124,77 +174,33 @@ namespace TrClient
             Console.WriteLine("Sending Client Hello...");
             Hello(CurRelease);
 
+            new Thread(() =>
+            {
+                while (connected)
+                {
+                    Thread.Sleep(1000);
+                    Send(new PlayerControls());
+                }
+            }).Start();
+
             /*TcpClient verify = new TcpClient();
             byte[] raw = Encoding.ASCII.GetBytes("-1551487326");
             verify.Connect(new IPEndPoint(endPoint.Address, 7980));
             verify.GetStream().Write(raw, 0, raw.Length);
             verify.Close();*/
 
-            bool connected = true;
+            On<RequestPassword>(_ => Send(new SendPassword { Password = password }));
+
+            connected = true;
             while (connected)
             {
                 Packet packet = Receive();
                 try
                 {
-                    //lock (Console.Out) Console.WriteLine($"received type {packet.Type}");
-                    switch (packet)
-                    {
-                        case MenuSunMoon moon:
-                            //Console.WriteLine($"menu set={moon.DayTime}, {moon.Sun}, {moon.Moon}, {moon.Time}");
-                            break;
-                        case StatusText status:
-                            OnStatusBar?.Invoke(this, status.Text);
-                            break;
-                        case NetTextModuleS2C text:
-                            OnChat?.Invoke(this, text.Text, text.Color);
-                            break;
-                        case SmartTextMessage text:
-                            OnChat?.Invoke(this, text.Text, text.Color);
-                            break;
-                        case Kick kick:
-                            Console.WriteLine("Kicked : " + kick.Reason.ToString());
-                            connected = false;
-                            break;
-                        case LoadPlayer player:
-                            PlayerSlot = player.PlayerSlot;
-                            SendPlayer();
-                            Send(new RequestWorldInfo());
-                            Console.WriteLine("Requesting World Info...");
-                            break;
-                        case WorldData data:
-                            Packet worldInfo = packet;
-                            if (!IsPlaying)
-                            {
-                                TileGetSection(100, 100);
-                                IsPlaying = true;
-                            }
-                            break;
-                        case StartPlaying:
-                            Console.WriteLine("Spawning player...");
-                            Spawn(100, 100);
-
-                            new Thread(() =>
-                            {
-                                while (true)
-                                {
-                                    Thread.Sleep(1000);
-                                    Send(new PlayerControls());
-                                }
-                            }).Start();
-
-                            break;
-                        case RequestPassword:
-                            Send(new SendPassword { Password = password });
-                            break;
-                        case SyncNPC npc:
-                        case null:
-                            break;
-                        default:
-                            //Console.ForegroundColor = ConsoleColor.Red;
-                            //Console.WriteLine($"[Warning] not processed packet type {packet}");
-                            //Console.ResetColor();
-                            break;
-                    }
+                    if (handlers.TryGetValue(packet.GetType(), out var act))
+                        act(packet);
+                    else
+                        ;//Console.WriteLine($"[Warning] not processed packet type {packet}");
                 }
                 catch (Exception e)
                 {
