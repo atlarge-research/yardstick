@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -7,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using TrProtocol.Models;
+using TrProtocol.Packets;
 
 namespace TrProtocol
 {
@@ -18,7 +20,7 @@ namespace TrProtocol
         private Dictionary<Type, Action<BinaryWriter, Packet>> serializers = new();
 
         private Dictionary<MessageID, Func<BinaryReader, Packet>> deserializers = new();
-        private Dictionary<short, Func<BinaryReader, NetModulesPacket>> moduledeserializers = new();
+        private Dictionary<NetModuleType, Func<BinaryReader, NetModulesPacket>> moduledeserializers = new();
 
         public void LoadPackets(Assembly asm)
         {
@@ -101,7 +103,7 @@ namespace TrProtocol
                     {
                         serializer += (o, bw) => { if (condition(o)) bw.Write((uint)get.Invoke(o, empty)); };
                         if (set != null)
-                            deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadInt32() }); };
+                            deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadUInt32() }); };
                     }
                     else if (t == typeof(string))
                     {
@@ -115,6 +117,27 @@ namespace TrProtocol
                         if (set != null)
                             deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadSingle() }); };
                     }
+                    else if (t == typeof(ushort[]))
+                    {
+                        serializer += (o, bw) =>
+                        {
+                            if (!condition(o)) return;
+                            foreach (var x in (ushort[])get.Invoke(o, empty))
+                                bw.Write(x);
+
+                        };
+                        var n = prop.GetCustomAttribute<ArraySizeAttribute>().size;
+                        if (set != null)
+                        {
+                            deserializer += (o, br) =>
+                            {
+                                if (!condition(o)) return;
+                                var t = new ushort[n];
+                                for (int i = 0; i < n; ++i) t[i] = br.ReadUInt16();
+                                set.Invoke(o, new object[] { t });
+                            };
+                        }
+                    }
                     else if (t == typeof(short[]))
                     {
                         serializer += (o, bw) =>
@@ -124,7 +147,7 @@ namespace TrProtocol
                                 bw.Write(x);
 
                         };
-                        var n = t.GetCustomAttribute<ArraySizeAttribute>().size;
+                        var n = prop.GetCustomAttribute<ArraySizeAttribute>().size;
                         if (set != null)
                         {
                             deserializer += (o, br) =>
@@ -165,21 +188,21 @@ namespace TrProtocol
                 {
                     if (inst is NetModulesPacket p)
                     {
-                        moduledeserializers[p.ModuleType] = br =>
+                        moduledeserializers.Add(p.ModuleType, br =>
                         {
                             var result = Activator.CreateInstance(type) as NetModulesPacket;
                             deserializer?.Invoke(result, br);
                             return result;
-                        };
+                        });
                     }
                     else if (inst is Packet p2)
                     {
-                        deserializers[p2.Type] = br =>
+                        deserializers.Add(p2.Type, br =>
                         {
                             var result = Activator.CreateInstance(type) as Packet;
                             deserializer?.Invoke(result, br);
                             return result;
-                        };
+                        });
                     }
                 }
                     
@@ -203,7 +226,7 @@ namespace TrProtocol
             var msgid = (MessageID)br.ReadByte();
             if (msgid == MessageID.NetModules)
             {
-                var moduletype = br.ReadInt16();
+                var moduletype = (NetModuleType)br.ReadInt16();
                 if (moduledeserializers.TryGetValue(moduletype, out var f))
                     return f(br);
                 else

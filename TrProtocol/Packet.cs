@@ -1,4 +1,5 @@
 ﻿using System;
+using TrProtocol.Models;
 
 namespace TrProtocol
 {
@@ -28,6 +29,6 @@ namespace TrProtocol
     }
     public abstract class NetModulesPacket : Packet
     {
-        public abstract short ModuleType { get; }
+        public abstract NetModuleType ModuleType { get; }
     }
 }

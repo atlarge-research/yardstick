@@ -139,6 +139,9 @@ namespace TrClient
                     //lock (Console.Out) Console.WriteLine($"received type {packet.Type}");
                     switch (packet)
                     {
+                        case MenuSunMoon moon:
+                            //Console.WriteLine($"menu set={moon.DayTime}, {moon.Sun}, {moon.Moon}, {moon.Time}");
+                            break;
                         case StatusText status:
                             OnStatusBar?.Invoke(this, status.Text);
                             break;

@@ -8,16 +8,16 @@ using TrProtocol.Packets;
 
 namespace TrProtocol.Serializers
 {
-    public class ByteEnumSerializer<T> : FieldSerializer<T>
+    public class ShortEnumSerializer<T> : FieldSerializer<T>
     {
         protected override T _Read(BinaryReader br)
         {
-            return (T)(object)br.ReadByte();
+            return (T)(object)br.ReadInt16();
         }
 
         protected override void _Write(BinaryWriter bw, T t)
         {
-            bw.Write((byte)(object)t);
+            bw.Write((short)(object)t);
         }
     }
 }
