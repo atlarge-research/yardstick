@@ -1,5 +1,7 @@
 ﻿namespace TrProtocol.Models
 {
+    // Token: 0x0200096F RID: 2415
+
     // Token: 0x0200086B RID: 2155
     public struct Vector4
     {

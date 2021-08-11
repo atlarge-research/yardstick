@@ -30,13 +30,21 @@ namespace TrProtocol
     public sealed class ConditionAttribute : Attribute
     {
         public string field;
-        public byte bit;
+        public sbyte bit;
         public bool pred;
-        public ConditionAttribute(string field, byte bit, bool pred=true)
+        public long? integer;
+
+        public ConditionAttribute(string field, sbyte bit = -1, bool pred = true)
         {
             this.bit = bit;
             this.field = field;
             this.pred = pred;
+        }
+        public ConditionAttribute(string field, long integer, bool inv = false)
+        {
+            this.field = field;
+            this.integer = integer;
+            this.pred = inv;
         }
     }
 }

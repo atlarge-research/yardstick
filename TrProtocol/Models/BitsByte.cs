@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace TrProtocol.Models
 {
+	// Token: 0x0200072A RID: 1834
     // Token: 0x02000010 RID: 16
 	public partial struct BitsByte
 	{

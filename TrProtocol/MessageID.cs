@@ -354,7 +354,7 @@ namespace TrProtocol
         CrystalInvasionStart = 113,
 
         // Token: 0x04002D6F RID: 11631
-        CrystalInvasionWipeAllTheThingsss = 114,
+        CrystalInvasionWipeAllTheThings = 114,
 
         // Token: 0x04002D70 RID: 11632
         MinionAttackTargetUpdate = 115,
@@ -435,18 +435,6 @@ namespace TrProtocol
         SetMiscEventValues = 140,
 
         // Token: 0x04003A8E RID: 14990
-        Count = 141,
-
-        // Token: 0x04002D76 RID: 11638
-        InGameChangeConfig = 249,
-
-        // Token: 0x04002D77 RID: 11639
-        ModPacket = 250,
-
-        // Token: 0x04002D78 RID: 11640
-        SyncMods = 251,
-
-        // Token: 0x04002D79 RID: 11641
-        ModFile = 252
+        Count = 141
     }
 }

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using TrProtocol.Models;
 
@@ -50,17 +51,17 @@ namespace TrProtocol
                     if (cond != null)
                     {
                         var get2 = dict[cond.field].GetMethod;
-                        condition = o => ((BitsByte)get2.Invoke(o, empty))[cond.bit] == cond.pred;
+                        if (cond.integer != null)
+                            condition = o =>
+                                (long) Convert.ChangeType(get2.Invoke(o, empty), typeof(long)) == cond.integer ^ cond.pred;
+                        else if (cond.bit == -1)
+                            condition = o => ((bool) get2.Invoke(o, empty));
+                        else
+                            condition = o => ((BitsByte)get2.Invoke(o, empty))[cond.bit] == cond.pred;
                     }
 
 
-                    if (t == typeof(int))
-                    {
-                        serializer += (o, bw) => { if (condition(o)) bw.Write((int)get.Invoke(o, empty)); };
-                        if (set != null)
-                            deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadInt32() }); };
-                    }
-                    else if (t == typeof(bool))
+                    if (t == typeof(bool))
                     {
                         serializer += (o, bw) => { if (condition(o)) bw.Write((bool)get.Invoke(o, empty)); };
                         if (set != null)
@@ -89,6 +90,18 @@ namespace TrProtocol
                         serializer += (o, bw) => { if (condition(o)) bw.Write((ushort)get.Invoke(o, empty)); };
                         if (set != null)
                             deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadUInt16() }); };
+                    }
+                    else if (t == typeof(int))
+                    {
+                        serializer += (o, bw) => { if (condition(o)) bw.Write((int)get.Invoke(o, empty)); };
+                        if (set != null)
+                            deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadInt32() }); };
+                    }
+                    else if (t == typeof(uint))
+                    {
+                        serializer += (o, bw) => { if (condition(o)) bw.Write((uint)get.Invoke(o, empty)); };
+                        if (set != null)
+                            deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadInt32() }); };
                     }
                     else if (t == typeof(string))
                     {
@@ -131,7 +144,11 @@ namespace TrProtocol
                     }
                     else
                     {
-                        var ser = t.GetCustomAttribute<SerializerAttribute>().serializer;
+                        var attr = t.GetCustomAttribute<SerializerAttribute>();
+                        IFieldSerializer ser;
+                        if (attr != null) ser = attr.serializer;
+                        else if (!fieldSerializers.TryGetValue(t, out ser))
+                            throw new Exception("No valid serializer for type: " + t.FullName);
 
                         serializer += (o, bw) => { if (condition(o)) ser.Write(bw, get.Invoke(o, empty)); };
                         if (set != null)
@@ -197,6 +214,12 @@ namespace TrProtocol
             else
                 Console.WriteLine($"[Warning] message type = {msgid} not defined, ignoring");
             return null;
+        }
+
+        private Dictionary<Type, IFieldSerializer> fieldSerializers = new();
+        public void RegisterSerializer<T>(IFieldSerializer serializer)
+        {
+            fieldSerializers.Add(typeof(T), serializer);
         }
 
         public byte[] Serialize(Packet p)
