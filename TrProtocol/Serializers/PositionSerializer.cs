@@ -5,7 +5,7 @@ namespace TrProtocol.Models
     [Serializer(typeof(PositionSerializer))]
     public partial struct Position
     {
-        private class PositionSerializer : Serializer<Position>
+        private class PositionSerializer : FieldSerializer<Position>
         {
             protected override Position _Read(BinaryReader br)
             {

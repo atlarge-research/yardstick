@@ -5,7 +5,7 @@ namespace TrProtocol.Models
     [Serializer(typeof(BitsByteSerializer))]
     public partial struct BitsByte
 	{
-        private class BitsByteSerializer : Serializer<BitsByte>
+        private class BitsByteSerializer : FieldSerializer<BitsByte>
         {
             protected override BitsByte _Read(BinaryReader br)
             {

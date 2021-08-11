@@ -5,7 +5,7 @@ namespace TrProtocol.Models
     [Serializer(typeof(Vector2Serailizer))]
     public partial struct Vector2
     {
-        public class Vector2Serailizer : Serializer<Vector2>
+        public class Vector2Serailizer : FieldSerializer<Vector2>
         {
             protected override Vector2 _Read(BinaryReader bb)
             {

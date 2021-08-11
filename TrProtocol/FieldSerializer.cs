@@ -2,7 +2,7 @@
 
 namespace TrProtocol
 {
-    public abstract class Serializer<T> : ISerializer
+    public abstract class FieldSerializer<T> : IFieldSerializer
     {
         protected abstract T _Read(BinaryReader br);
 

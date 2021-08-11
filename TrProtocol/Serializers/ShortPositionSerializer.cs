@@ -5,7 +5,7 @@ namespace TrProtocol.Models
     [Serializer(typeof(ShortPositionSerializer))]
     public partial struct ShortPosition
     {
-        private class ShortPositionSerializer : Serializer<ShortPosition>
+        private class ShortPositionSerializer : FieldSerializer<ShortPosition>
         {
             protected override ShortPosition _Read(BinaryReader br)
             {

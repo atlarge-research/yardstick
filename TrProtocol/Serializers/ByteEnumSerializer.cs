@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace TrProtocol.Serializers
 {
-    public class ByteEnumSerializer<T> : Serializer<T>
+    public class ByteEnumSerializer<T> : FieldSerializer<T>
     {
         protected override T _Read(BinaryReader br)
         {

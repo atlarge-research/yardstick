@@ -9,7 +9,7 @@ using TrProtocol.Models;
 
 namespace TrProtocol
 {
-    public class PacketManager
+    public class PacketSerializer
     {
         private delegate void Serializer(object o, BinaryWriter bw);
         private delegate void Deserializer(object o, BinaryReader br);
@@ -171,7 +171,7 @@ namespace TrProtocol
 
         private bool client;
 
-        public PacketManager(bool client)
+        public PacketSerializer(bool client)
         {
             this.client = client;
             LoadPackets(Assembly.GetExecutingAssembly());
@@ -190,12 +190,12 @@ namespace TrProtocol
                 if (moduledeserializers.TryGetValue(moduletype, out var f))
                     return f(br);
                 else
-                    ;// Console.WriteLine($"[Warning] net module type = {moduletype} not defined, ignoring");
+                    Console.WriteLine($"[Warning] net module type = {moduletype} not defined, ignoring");
             }
             else if (deserializers.TryGetValue(msgid, out var f2))
                 return f2(br);
             else
-                ;// Console.WriteLine($"[Warning] message type = {msgid} not defined, ignoring");
+                Console.WriteLine($"[Warning] message type = {msgid} not defined, ignoring");
             return null;
         }
 

@@ -21,7 +21,7 @@ namespace TrClient
 
         private BinaryReader br;
         private BinaryWriter bw;
-        private PacketManager mgr = new PacketManager(true);
+        private PacketSerializer mgr = new PacketSerializer(true);
 
         public void Connect(IPEndPoint server, IPEndPoint proxy = null)
         {

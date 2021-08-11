@@ -2,7 +2,7 @@
 
 namespace TrProtocol
 {
-    public interface ISerializer
+    public interface IFieldSerializer
     {
         object Read(BinaryReader br);
         void Write(BinaryWriter bw, object o);

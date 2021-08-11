@@ -5,7 +5,7 @@ namespace TrProtocol.Models
     [Serializer(typeof(ColorSerailizer))]
     public partial struct Color
     {
-        public class ColorSerailizer : Serializer<Color>
+        public class ColorSerailizer : FieldSerializer<Color>
         {
             protected override Color _Read(BinaryReader bb)
             {

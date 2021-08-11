@@ -13,7 +13,7 @@ namespace TrProtocolTest
     {
         static void Main(string[] args)
         {
-            var mgr = new PacketManager(true);
+            var mgr = new PacketSerializer(true);
             using var ms = new MemoryStream();
             using var bw = new BinaryWriter(ms);
             var b = mgr.Serialize(new ClientHello

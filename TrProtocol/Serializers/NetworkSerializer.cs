@@ -5,7 +5,7 @@ namespace TrProtocol.Models
 	[Serializer(typeof(NetworkSerializer))]
 	public partial class NetworkText
 	{
-        private class NetworkSerializer : Serializer<NetworkText>
+        private class NetworkSerializer : FieldSerializer<NetworkText>
 		{
 			protected override NetworkText _Read(BinaryReader br)
 			{
