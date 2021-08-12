@@ -18,11 +18,20 @@ namespace TrClient
 
         public byte PlayerSlot { get; private set; }
         public string CurRelease = "Terraria194";
+        public string Username = "";
         public bool IsPlaying { get; private set; }
 
         private BinaryReader br;
         private BinaryWriter bw;
         private PacketSerializer mgr = new PacketSerializer(true);
+
+        public void Connect(string hostname, int port)
+        {
+            client = new TcpClient();
+            client.Connect(hostname, port);
+            br = new BinaryReader(client.GetStream());
+            bw = new BinaryWriter(client.GetStream());
+        }
 
         public void Connect(IPEndPoint server, IPEndPoint proxy = null)
         {
@@ -98,7 +107,7 @@ namespace TrClient
         {
             Send(new SyncPlayer
             {
-                Name = "rabbit"
+                Name = Username
             });
             Send(new PlayerHealth { StatLifeMax = 100, StatLife = 100 });
             for (byte i = 0; i < 73; ++i)
@@ -114,8 +123,9 @@ namespace TrClient
             });
         }
         
-        public delegate void OnChatCallback(TClient self, NetworkText text, Color color);
-        public event OnChatCallback OnChat;
+        public event Action<TClient, NetworkText, Color> OnChat;
+        public event Action<TClient, string> OnMessage;
+        public Func<bool> shouldExit = () => false;
 
         private Dictionary<Type, Action<Packet>> handlers = new();
 
@@ -140,7 +150,7 @@ namespace TrClient
             On<SmartTextMessage>(text => OnChat?.Invoke(this, text.Text, text.Color));
             On<Kick>(kick =>
             {
-                Console.WriteLine("Kicked : " + kick.Reason);
+                OnMessage?.Invoke(this, "Kicked : " + kick.Reason);
                 connected = false;
             });
             On<LoadPlayer>(player =>
@@ -148,7 +158,6 @@ namespace TrClient
                 PlayerSlot = player.PlayerSlot;
                 SendPlayer();
                 Send(new RequestWorldInfo());
-                Console.WriteLine("Requesting World Info...");
             });
             On<WorldData>(_ =>
             {
@@ -160,28 +169,28 @@ namespace TrClient
             });
             On<StartPlaying>(_ =>
             {
-                Console.WriteLine("Spawning player...");
                 Spawn(100, 100);
 
             });
         }
 
-        private bool connected = false;
+        public bool connected = false;
 
+        public void GameLoop(string host, int port, string password)
+        {
+            Connect(host, port);
+            GameLoopInternal(password);
+        }
         public void GameLoop(IPEndPoint endPoint, string password, IPEndPoint proxy = null)
         {
             Connect(endPoint, proxy);
+            GameLoopInternal(password);
+        }
+        private void GameLoopInternal(string password)
+        {
+
             Console.WriteLine("Sending Client Hello...");
             Hello(CurRelease);
-
-            new Thread(() =>
-            {
-                while (connected)
-                {
-                    Thread.Sleep(1000);
-                    Send(new PlayerControls());
-                }
-            }).Start();
 
             /*TcpClient verify = new TcpClient();
             byte[] raw = Encoding.ASCII.GetBytes("-1551487326");
@@ -192,7 +201,7 @@ namespace TrClient
             On<RequestPassword>(_ => Send(new SendPassword { Password = password }));
 
             connected = true;
-            while (connected)
+            while (connected && !shouldExit())
             {
                 Packet packet = Receive();
                 try
