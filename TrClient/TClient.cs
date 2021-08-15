@@ -214,8 +214,9 @@ namespace TrClient
                 catch (Exception e)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"Exception caught when trying to parse packet {packet.Type}");
-                    Console.WriteLine(e);
+                    var msg = $"Exception caught when trying to parse packet {packet.Type}\n{e}";
+                    Console.WriteLine(msg);
+                    File.AppendAllText("log.txt", msg + "\n");
                     Console.ResetColor();
                 }
             }
