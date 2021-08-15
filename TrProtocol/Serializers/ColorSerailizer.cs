@@ -9,7 +9,7 @@ namespace TrProtocol.Models
         {
             protected override Color _Read(BinaryReader bb)
             {
-                return new Color((int)bb.ReadByte(), (int)bb.ReadByte(), (int)bb.ReadByte());
+                return new Color(bb.ReadByte(), bb.ReadByte(), bb.ReadByte());
             }
 
             protected override void _Write(BinaryWriter bb, Color c)
