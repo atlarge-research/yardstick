@@ -54,7 +54,7 @@ public class Options {
     public int port = 25565;
 
     @Parameter(names = {"--architecture"}, description = "The game architecture. singleserver or serverless.")
-    public String architecture = "singleserver";
+    public Map<String, String> gameParams = new HashMap<>();
 
     /**
      * Experiment
@@ -112,7 +112,10 @@ public class Options {
         this.dumpWorkload = toml.getBoolean("logging.dump-workload", this.dumpWorkload);
         this.host = toml.getString("game.host", this.host);
         this.port = toml.getLong("game.port", (long) this.port).intValue();
-        this.architecture = toml.getString("game.architecture");
+        this.gameParams = toml.getTable("game.params").toMap().entrySet()
+                .stream()
+                .collect(Collectors.toMap(Map.Entry::getKey,
+                        e -> e.getValue().toString()));
         this.experiment = toml.getLong("experiment.id", (long) this.experiment).intValue();
         this.experimentParams = toml.getTable("experiment.params").toMap().entrySet()
                 .stream()
@@ -129,7 +132,7 @@ public class Options {
                 ", dumpWorkload=" + dumpWorkload +
                 ", host='" + host + '\'' +
                 ", port=" + port +
-                ", architecture='" + architecture + '\'' +
+                ", gameParams='" + Joiner.on(",").withKeyValueSeparator(":").join(gameParams) + '\'' +
                 ", experiment=" + experiment +
                 ", experimentParams=" + Joiner.on(",").withKeyValueSeparator(":").join(experimentParams) +
                 ", prometheusHost='" + prometheusHost + '\'' +

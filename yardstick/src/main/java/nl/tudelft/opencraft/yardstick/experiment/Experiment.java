@@ -18,21 +18,24 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
-import science.atlarge.opencraft.packetlib.Client;
-import science.atlarge.opencraft.packetlib.Session;
-import science.atlarge.opencraft.packetlib.tcp.TcpSessionFactory;
+import java.net.InetSocketAddress;
 import java.util.UUID;
 import nl.tudelft.opencraft.yardstick.Options;
 import nl.tudelft.opencraft.yardstick.Yardstick;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
+import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
+import nl.tudelft.opencraft.yardstick.game.GameFactory;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 import nl.tudelft.opencraft.yardstick.statistic.Statistics;
 import nl.tudelft.opencraft.yardstick.util.Scheduler;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadSessionListener;
+import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
+import science.atlarge.opencraft.packetlib.Client;
+import science.atlarge.opencraft.packetlib.Session;
+import science.atlarge.opencraft.packetlib.tcp.TcpSessionFactory;
 
 /**
  * A runnable Yardstick experiment.
@@ -50,6 +53,8 @@ public abstract class Experiment implements Runnable {
     private Statistics stats;
     private WorkloadDumper dumper;
 
+    private final GameArchitecture game;
+
     /**
      * Creates a new experiment.
      *
@@ -59,6 +64,7 @@ public abstract class Experiment implements Runnable {
     public Experiment(int number, String desc) {
         this.number = number;
         this.description = desc;
+        this.game = new GameFactory().getGame(options.host, options.port, options.gameParams);
         this.logger = GlobalLogger.getLogger().newSubLogger("Experiment " + number);
     }
 
@@ -151,7 +157,8 @@ public abstract class Experiment implements Runnable {
      * @return the client.
      */
     protected Client newClient(String name) {
-        Client client = new Client(options.host, options.port, new MinecraftProtocol(name), new TcpSessionFactory(true));
+        InetSocketAddress address = game.getAddressForPlayer();
+        Client client = new Client(address.getHostName(), address.getPort(), new MinecraftProtocol(name), new TcpSessionFactory(true));
         setupClient(client, name);
         return client;
     }
@@ -165,7 +172,8 @@ public abstract class Experiment implements Runnable {
      * @return the client.
      */
     protected Bot newBot(String name) {
-        Bot bot = new Bot(new MinecraftProtocol(name), options.host, options.port);
+        InetSocketAddress address = game.getAddressForPlayer();
+        Bot bot = new Bot(new MinecraftProtocol(name), address.getHostName(), address.getPort());
         setupClient(bot.getClient(), name);
         return bot;
     }
