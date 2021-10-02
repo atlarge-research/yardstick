@@ -53,6 +53,9 @@ public class Options {
     @Parameter(names = {"--port", "-p"}, description = "The port of the Minecraft server")
     public int port = 25565;
 
+    @Parameter(names = {"--architecture"}, description = "The game architecture. singleserver or serverless.")
+    public String architecture = "singleserver";
+
     /**
      * Experiment
      */
@@ -109,6 +112,7 @@ public class Options {
         this.dumpWorkload = toml.getBoolean("logging.dump-workload", this.dumpWorkload);
         this.host = toml.getString("game.host", this.host);
         this.port = toml.getLong("game.port", (long) this.port).intValue();
+        this.architecture = toml.getString("game.architecture");
         this.experiment = toml.getLong("experiment.id", (long) this.experiment).intValue();
         this.experimentParams = toml.getTable("experiment.params").toMap().entrySet()
                 .stream()
@@ -125,6 +129,7 @@ public class Options {
                 ", dumpWorkload=" + dumpWorkload +
                 ", host='" + host + '\'' +
                 ", port=" + port +
+                ", architecture='" + architecture + '\'' +
                 ", experiment=" + experiment +
                 ", experimentParams=" + Joiner.on(",").withKeyValueSeparator(":").join(experimentParams) +
                 ", prometheusHost='" + prometheusHost + '\'' +
