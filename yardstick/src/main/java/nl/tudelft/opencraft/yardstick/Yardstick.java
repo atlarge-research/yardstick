@@ -35,6 +35,7 @@ import java.util.Properties;
 import java.util.Scanner;
 import java.util.logging.Level;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment10GenerationStressTest;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment1SimpleJoin;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment2ScheduledJoin;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment3WalkAround;
@@ -166,6 +167,9 @@ public class Yardstick {
                 break;
             case 9:
                 ex = new Experiment9Spike();
+                break;
+            case 10:
+                ex = new Experiment10GenerationStressTest();
                 break;
             default:
                 System.out.println("Invalid experiment: " + OPTIONS.experiment);
