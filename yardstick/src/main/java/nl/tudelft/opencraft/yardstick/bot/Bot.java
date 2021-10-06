@@ -25,10 +25,14 @@ import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
 import nl.tudelft.opencraft.yardstick.bot.world.SimpleWorldPhysics;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
+import nl.tudelft.opencraft.yardstick.experiment.LoggerSessionListener;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
+import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
+import nl.tudelft.opencraft.yardstick.workload.WorkloadSessionListener;
 import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
 import science.atlarge.opencraft.packetlib.Client;
+import science.atlarge.opencraft.packetlib.Session;
 import science.atlarge.opencraft.packetlib.event.session.DisconnectedEvent;
 import science.atlarge.opencraft.packetlib.event.session.SessionAdapter;
 import science.atlarge.opencraft.packetlib.event.session.SessionListener;
@@ -113,11 +117,30 @@ public class Bot {
      * @throws IllegalStateException if the bot is already connected.
      */
     public void connect() {
-        if (client.getSession().isConnected()) {
+//        // Statistics
+//        if (stats != null) {
+//            s.addListener(stats);
+//        }
+//
+//        // Workload session listener
+//        if (dumper != null) {
+//            s.addListener(new WorkloadSessionListener(dumper, name));
+//        }
+        Session session = client.getSession();
+        if (session.isConnected()) {
             throw new IllegalStateException("Can not start connection. Bot already isConnected!");
         }
-        client.getSession().connect();
+        session.addListener(new LoggerSessionListener(logger.newSubLogger(name)));
+        session.connect();
         ticker.start();
+    }
+
+    public void addWorkloadListener(WorkloadDumper dumper) {
+        addListener(new WorkloadSessionListener(dumper, name));
+    }
+
+    public void addListener(SessionListener listener) {
+        client.getSession().addListener(listener);
     }
 
     /**

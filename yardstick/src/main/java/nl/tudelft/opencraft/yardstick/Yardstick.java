@@ -33,10 +33,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import java.util.Scanner;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Level;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment10GenerationStressTest;
-import nl.tudelft.opencraft.yardstick.experiment.Experiment1SimpleJoin;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment2ScheduledJoin;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment3WalkAround;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment4MultiWalkAround;
@@ -60,6 +61,7 @@ public class Yardstick {
     public static final GlobalLogger LOGGER = GlobalLogger.setupGlobalLogger("Yardstick");
     public static final Options OPTIONS = new Options();
     public static final StatisticsPusher PROMETHEUS = new StatisticsPusher();
+    public static final ScheduledExecutorService THREAD_POOL = Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
 
     public static void main(String[] args) {
         // Logger
@@ -141,9 +143,6 @@ public class Yardstick {
 
         Experiment ex;
         switch (OPTIONS.experiment) {
-            case 1:
-                ex = new Experiment1SimpleJoin();
-                break;
             case 2:
                 ex = new Experiment2ScheduledJoin();
                 break;

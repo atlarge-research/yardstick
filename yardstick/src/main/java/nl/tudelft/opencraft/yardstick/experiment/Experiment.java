@@ -31,11 +31,7 @@ import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 import nl.tudelft.opencraft.yardstick.statistic.Statistics;
 import nl.tudelft.opencraft.yardstick.util.Scheduler;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
-import nl.tudelft.opencraft.yardstick.workload.WorkloadSessionListener;
 import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
-import science.atlarge.opencraft.packetlib.Client;
-import science.atlarge.opencraft.packetlib.Session;
-import science.atlarge.opencraft.packetlib.tcp.TcpSessionFactory;
 
 /**
  * A runnable Yardstick experiment.
@@ -148,22 +144,6 @@ public abstract class Experiment implements Runnable {
     }
 
     /**
-     * Creates a new {@link Client} in this experiment. If a {@link Statistics}
-     * has been set, the statistics will listen to client events. If a
-     * {@link WorkloadDumper} has been set, the dumper will dump client
-     * messages.
-     *
-     * @param name the client name.
-     * @return the client.
-     */
-    protected Client newClient(String name) {
-        InetSocketAddress address = game.getAddressForPlayer();
-        Client client = new Client(address.getHostName(), address.getPort(), new MinecraftProtocol(name), new TcpSessionFactory(true));
-        setupClient(client, name);
-        return client;
-    }
-
-    /**
      * Creates a new {@link Bot} in this experiment. If a {@link Statistics} has
      * been set, the statistics will listen to bot events. If a
      * {@link WorkloadDumper} has been set, the dumper will dump bot messages.
@@ -174,25 +154,13 @@ public abstract class Experiment implements Runnable {
     protected Bot newBot(String name) {
         InetSocketAddress address = game.getAddressForPlayer();
         Bot bot = new Bot(new MinecraftProtocol(name), address.getHostName(), address.getPort());
-        setupClient(bot.getClient(), name);
-        return bot;
-    }
-
-    private void setupClient(Client client, String name) {
-        Session s = client.getSession();
-
-        // Logger
-        s.addListener(new LoggerSessionListener(logger.newSubLogger(name)));
-
-        // Statistics
         if (stats != null) {
-            s.addListener(stats);
+            bot.addListener(stats);
         }
-
-        // Workload session listener
         if (dumper != null) {
-            s.addListener(new WorkloadSessionListener(dumper, name));
+            bot.addWorkloadListener(dumper);
         }
+        return bot;
     }
 
     /**
