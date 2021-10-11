@@ -45,11 +45,13 @@ namespace TrProtocol
 
                     var cond = prop.GetCustomAttribute<ConditionAttribute>();
 
-                    if ((client
+                    var shouldSerialize = (client
                         ? (Attribute)prop.GetCustomAttribute<S2COnlyAttribute>()
-                        : prop.GetCustomAttribute<C2SOnlyAttribute>()) != null)
-                        continue;
-
+                        : prop.GetCustomAttribute<C2SOnlyAttribute>()) == null;
+                    var shouldDeserialize = (!client
+                        ? (Attribute)prop.GetCustomAttribute<S2COnlyAttribute>()
+                        : prop.GetCustomAttribute<C2SOnlyAttribute>()) == null && set != null;
+                    
                     if (cond != null)
                     {
                         var get2 = dict[cond.field].GetMethod;
@@ -65,61 +67,71 @@ namespace TrProtocol
 
                     if (t == typeof(bool))
                     {
-                        serializer += (o, bw) => { if (condition(o)) bw.Write((bool)get.Invoke(o, empty)); };
-                        if (set != null)
+                        if (shouldSerialize)
+                            serializer += (o, bw) => { if (condition(o)) bw.Write((bool)get.Invoke(o, empty)); };
+                        if (shouldDeserialize)
                             deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadBoolean() }); };
                     }
                     else if (t == typeof(sbyte))
                     {
-                        serializer += (o, bw) => { if (condition(o)) bw.Write((sbyte)get.Invoke(o, empty)); };
-                        if (set != null)
+                        if (shouldSerialize)
+                            serializer += (o, bw) => { if (condition(o)) bw.Write((sbyte)get.Invoke(o, empty)); };
+                        if (shouldDeserialize)
                             deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadSByte() }); };
                     }
                     else if (t == typeof(byte))
                     {
-                        serializer += (o, bw) => { if (condition(o)) bw.Write((byte)get.Invoke(o, empty)); };
-                        if (set != null)
+                        if (shouldSerialize)
+                            serializer += (o, bw) => { if (condition(o)) bw.Write((byte)get.Invoke(o, empty)); };
+                        if (shouldDeserialize)
                             deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadByte() }); };
                     }
                     else if (t == typeof(short))
                     {
-                        serializer += (o, bw) => { if (condition(o)) bw.Write((short)get.Invoke(o, empty)); };
-                        if (set != null)
+                        if (shouldSerialize)
+                            serializer += (o, bw) => { if (condition(o)) bw.Write((short)get.Invoke(o, empty)); };
+                        if (shouldDeserialize)
                             deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadInt16() }); };
                     }
                     else if (t == typeof(ushort))
                     {
-                        serializer += (o, bw) => { if (condition(o)) bw.Write((ushort)get.Invoke(o, empty)); };
-                        if (set != null)
+                        if (shouldSerialize)
+                            serializer += (o, bw) => { if (condition(o)) bw.Write((ushort)get.Invoke(o, empty)); };
+                        if (shouldDeserialize)
                             deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadUInt16() }); };
                     }
                     else if (t == typeof(int))
                     {
-                        serializer += (o, bw) => { if (condition(o)) bw.Write((int)get.Invoke(o, empty)); };
-                        if (set != null)
+                        if (shouldSerialize)
+                            serializer += (o, bw) => { if (condition(o)) bw.Write((int)get.Invoke(o, empty)); };
+                        if (shouldDeserialize)
                             deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadInt32() }); };
                     }
                     else if (t == typeof(uint))
                     {
-                        serializer += (o, bw) => { if (condition(o)) bw.Write((uint)get.Invoke(o, empty)); };
-                        if (set != null)
+                        if (shouldSerialize)
+                            serializer += (o, bw) => { if (condition(o)) bw.Write((uint)get.Invoke(o, empty)); };
+                        if (shouldDeserialize)
                             deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadUInt32() }); };
                     }
                     else if (t == typeof(string))
                     {
-                        serializer += (o, bw) => { if (condition(o)) bw.Write((string)get.Invoke(o, empty)); };
-                        if (set != null)
+                        if (shouldSerialize)
+                            serializer += (o, bw) => { if (condition(o)) bw.Write((string)get.Invoke(o, empty)); };
+                        if (shouldDeserialize)
                             deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadString() }); };
                     }
                     else if (t == typeof(float))
                     {
-                        serializer += (o, bw) => { if (condition(o)) bw.Write((float)get.Invoke(o, empty)); };
-                        if (set != null)
+                        if (shouldSerialize)
+                            serializer += (o, bw) => { if (condition(o)) bw.Write((float)get.Invoke(o, empty)); };
+                        if (shouldDeserialize)
                             deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadSingle() }); };
                     }
                     else if (t == typeof(ushort[]))
                     {
-                        serializer += (o, bw) =>
+                        if (shouldSerialize)
+                            serializer += (o, bw) =>
                         {
                             if (!condition(o)) return;
                             foreach (var x in (ushort[])get.Invoke(o, empty))
@@ -127,7 +139,7 @@ namespace TrProtocol
 
                         };
                         var n = prop.GetCustomAttribute<ArraySizeAttribute>().size;
-                        if (set != null)
+                        if (shouldDeserialize)
                         {
                             deserializer += (o, br) =>
                             {
@@ -140,7 +152,8 @@ namespace TrProtocol
                     }
                     else if (t == typeof(short[]))
                     {
-                        serializer += (o, bw) =>
+                        if (shouldSerialize)
+                            serializer += (o, bw) =>
                         {
                             if (!condition(o)) return;
                             foreach (var x in (short[])get.Invoke(o, empty))
@@ -148,7 +161,7 @@ namespace TrProtocol
 
                         };
                         var n = prop.GetCustomAttribute<ArraySizeAttribute>().size;
-                        if (set != null)
+                        if (shouldDeserialize)
                         {
                             deserializer += (o, br) =>
                             {
@@ -161,8 +174,9 @@ namespace TrProtocol
                     }
                     else if (t == typeof(byte[]))
                     {
-                        serializer += (o, bw) => { if (condition(o)) bw.Write((byte[])get.Invoke(o, empty)); };
-                        if (set != null)
+                        if (shouldSerialize)
+                            serializer += (o, bw) => { if (condition(o)) bw.Write((byte[])get.Invoke(o, empty)); };
+                        if (shouldDeserialize)
                             deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { br.ReadBytes((int)(br.BaseStream.Length - br.BaseStream.Position)) }); };
                     }
                     else
@@ -173,8 +187,9 @@ namespace TrProtocol
                         else if (!fieldSerializers.TryGetValue(t, out ser))
                             throw new Exception("No valid serializer for type: " + t.FullName);
 
-                        serializer += (o, bw) => { if (condition(o)) ser.Write(bw, get.Invoke(o, empty)); };
-                        if (set != null)
+                        if (shouldSerialize)
+                            serializer += (o, bw) => { if (condition(o)) ser.Write(bw, get.Invoke(o, empty)); };
+                        if (shouldDeserialize)
                             deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new object[] { ser.Read(br) }); };
                     }
                 }
@@ -222,21 +237,26 @@ namespace TrProtocol
             var l = br0.ReadInt16();
             using var ms = new MemoryStream(br0.ReadBytes(l - 2));
             using var br = new BinaryReader(ms);
-
+            Packet result = null;
             var msgid = (MessageID)br.ReadByte();
             if (msgid == MessageID.NetModules)
             {
                 var moduletype = (NetModuleType)br.ReadInt16();
                 if (moduledeserializers.TryGetValue(moduletype, out var f))
-                    return f(br);
+                    result = f(br);
                 else
                     Console.WriteLine($"[Warning] net module type = {moduletype} not defined, ignoring");
             }
             else if (deserializers.TryGetValue(msgid, out var f2))
-                return f2(br);
+                result = f2(br);
             else
                 Console.WriteLine($"[Warning] message type = {msgid} not defined, ignoring");
-            return null;
+
+            if (br.BaseStream.Position != br.BaseStream.Length)
+            {
+                Console.WriteLine($"[Warning] {br.BaseStream.Length - br.BaseStream.Position} not used when serializing {result}");
+            }
+            return result;
         }
 
         private Dictionary<Type, IFieldSerializer> fieldSerializers = new();

@@ -75,6 +75,9 @@ namespace TrProtocol.Models
         // Token: 0x060016DF RID: 5855 RVA: 0x0046C660 File Offset: 0x0046A860
         public void Serialize(BinaryWriter writer)
         {
+            writer.Write((byte)this._mode);
+            writer.Write(this._text);
+            this.SerializeSubstitutionList(writer);
         }
 
         // Token: 0x060016E0 RID: 5856 RVA: 0x0046C684 File Offset: 0x0046A884
