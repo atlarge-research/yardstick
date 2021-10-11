@@ -3,7 +3,7 @@
 namespace TrProtocol.Models
 {
     [Serializer(typeof(ByteEnumSerializer<MultiToolMode>))]
-    public enum MultiToolMode
+    public enum MultiToolMode : byte
     {
         // Token: 0x04004C68 RID: 19560
         Red = 1,
