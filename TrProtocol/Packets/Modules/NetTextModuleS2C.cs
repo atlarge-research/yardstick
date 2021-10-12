@@ -10,5 +10,9 @@ namespace TrProtocol.Packets.Modules
         public byte PlayerSlot { get; set; }
         public NetworkText Text { get; set; }
         public Color Color { get; set; }
+        public override string ToString()
+        {
+            return $"[S2C] {Text._text}";
+        }
     }
 }
