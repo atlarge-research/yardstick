@@ -32,7 +32,6 @@ namespace TrProtocol
         public string field;
         public sbyte bit;
         public bool pred;
-        public long? integer;
 
         public ConditionAttribute(string field, sbyte bit = -1, bool pred = true)
         {
@@ -40,11 +39,10 @@ namespace TrProtocol
             this.field = field;
             this.pred = pred;
         }
-        public ConditionAttribute(string field, long integer, bool inv = false)
-        {
-            this.field = field;
-            this.integer = integer;
-            this.pred = inv;
-        }
+    }
+
+    [AttributeUsage(AttributeTargets.Property)]
+    public sealed class IgnoreAttribute : Attribute
+    {
     }
 }

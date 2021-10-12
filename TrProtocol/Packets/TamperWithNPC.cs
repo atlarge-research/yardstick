@@ -5,9 +5,11 @@
         public override MessageID Type => MessageID.TamperWithNPC;
         public short NPCSlot { get; set; }
         public byte UniqueImmune { get; set; }
-        [Condition("UniqueImmune", 1L)]
+        [Ignore] public bool IsUniqueImmune => UniqueImmune == 1;
+
+        [Condition("IsUniqueImmune")]
         public int Time { get; set; }
-        [Condition("UniqueImmune", 1L)]
+        [Condition("IsUniqueImmune")]
         public byte OtherPlayerSlot { get; set; }
         public byte HighBitOfPlayerIsAlwaysZero { get; set; } = 0;
     }
