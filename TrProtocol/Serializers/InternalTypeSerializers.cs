@@ -9,6 +9,7 @@ namespace TrProtocol
     {
         static PacketSerializer()
         {
+            RegisterSerializer(new BoolSerializer());
             RegisterSerializer(new ByteSerializer());
             RegisterSerializer(new SByteSerializer());
             RegisterSerializer(new ShortSerializer());
@@ -33,6 +34,11 @@ namespace TrProtocol
             fieldSerializers.Add(typeof(T), serializer);
         }
 
+        private class BoolSerializer : FieldSerializer<bool>
+        {
+            protected override bool _Read(BinaryReader br) => br.ReadBoolean();
+            protected override void _Write(BinaryWriter bw, bool t) => bw.Write(t);
+        }
         private class ByteSerializer : FieldSerializer<byte>
         {
             protected override byte _Read(BinaryReader br) => br.ReadByte();

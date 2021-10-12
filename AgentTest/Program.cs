@@ -20,7 +20,6 @@ namespace AgentTest
                 while (true)
                 {
                     var p = f.Deserialize(br);
-                    Console.WriteLine((fromserver ? "s2c" : "c2s") + p);
                     bw.Write(t.Serialize(p));
                 }
             }).Start();
