@@ -8,7 +8,7 @@ using TrProtocol.Packets;
 
 namespace TrProtocol.Serializers
 {
-    public class ByteEnumSerializer<T> : FieldSerializer<T>
+    public class ByteEnumSerializer<T> : FieldSerializer<T> where T : Enum
     {
         protected override T _Read(BinaryReader br)
         {
