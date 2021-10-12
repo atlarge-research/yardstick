@@ -137,7 +137,7 @@ namespace TrProtocol
 
             if (br.BaseStream.Position != br.BaseStream.Length)
             {
-                Console.WriteLine($"[Warning] {br.BaseStream.Length - br.BaseStream.Position} not used when serializing {(client ? "C2S::" : "S2C::")}{result}");
+                Console.WriteLine($"[Warning] {br.BaseStream.Length - br.BaseStream.Position} not used when deserializing {(client ? "S2C::" : "C2S::")}{result}");
             }
             return result;
         }
