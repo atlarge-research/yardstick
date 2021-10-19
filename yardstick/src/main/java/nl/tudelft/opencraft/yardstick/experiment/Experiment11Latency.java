@@ -32,7 +32,6 @@ import science.atlarge.opencraft.packetlib.packet.Packet;
 public class Experiment11Latency extends Experiment {
 
     private BotManager botManager;
-    // TODO stop experiment after fixed duration?
     private ScheduledFuture<?> runningBotManager;
     private long packetSent = 0L;
     private boolean waitingForReply = false;
@@ -40,6 +39,9 @@ public class Experiment11Latency extends Experiment {
     private int countSent;
     private Position blockPos = null;
     private boolean placedBlock = false;
+
+    private long durationInSeconds;
+    private long startMillis;
 
     private final SessionListener listener = new SessionListener() {
         @Override
@@ -94,6 +96,8 @@ public class Experiment11Latency extends Experiment {
 
     public Experiment11Latency() {
         super(11, "latency experiment", 17);
+        this.startMillis = System.currentTimeMillis();
+        this.durationInSeconds = Integer.parseInt(options.experimentParams.getOrDefault("duration", "-1"));
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             logger.info(String.format("latency ping sent %d", countSent));
             logger.info(String.format("latency ping received %d", countReceived));
@@ -151,11 +155,14 @@ public class Experiment11Latency extends Experiment {
 
     @Override
     protected boolean isDone() {
-        return false;
+        return this.durationInSeconds > 0 && System.currentTimeMillis() - this.startMillis > this.durationInSeconds * 1_000L;
     }
 
     @Override
     protected void after() {
-
+        runningBotManager.cancel(false);
+        botManager.setPlayerCountTarget(0);
+        botManager.setPlayerStepDecrease(0);
+        botManager.run();
     }
 }
