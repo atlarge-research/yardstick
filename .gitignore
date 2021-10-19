@@ -1,3 +1,5 @@
 .vs/*
 bin/*
 obj/*
+/OTAPIServer/obj
+/Protocal/TrProtocol/bin/Debug/net5.0

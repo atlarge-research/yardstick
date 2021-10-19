@@ -37,7 +37,7 @@ namespace TrProtocol
 
         private class GuidSerializer : FieldSerializer<Guid>
         {
-            protected override Guid _Read(BinaryReader br) => new (br.ReadBytes(16));
+            protected override Guid _Read(BinaryReader br) => new(br.ReadBytes(16));
             protected override void _Write(BinaryWriter bw, Guid t) => bw.Write(t.ToByteArray());
         }
 

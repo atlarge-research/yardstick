@@ -1,14 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using TrProtocol.Models;
-using TrProtocol.Packets;
 
 namespace TrProtocol
 {
@@ -53,12 +47,12 @@ namespace TrProtocol
                     var shouldDeserialize = (!client
                         ? (object)prop.GetCustomAttribute<S2COnlyAttribute>()
                         : prop.GetCustomAttribute<C2SOnlyAttribute>()) == null && set != null;
-                    
+
                     if (cond != null)
                     {
                         var get2 = dict[cond.field].GetMethod;
                         if (cond.bit == -1)
-                            condition = o => ((bool) get2.Invoke(o, empty));
+                            condition = o => ((bool)get2.Invoke(o, empty));
                         else
                             condition = o => ((BitsByte)get2.Invoke(o, empty))[cond.bit] == cond.pred;
                     }
@@ -74,7 +68,7 @@ namespace TrProtocol
                     if (shouldSerialize)
                         serializer += (o, bw) => { if (condition(o)) ser.Write(bw, get.Invoke(o, empty)); };
                     if (shouldDeserialize)
-                        deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new [] { ser.Read(br) }); };
+                        deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new[] { ser.Read(br) }); };
                 }
 
                 var inst = Activator.CreateInstance(type);
@@ -103,7 +97,7 @@ namespace TrProtocol
                         });
                     }
                 }
-                    
+
             }
         }
 
@@ -114,7 +108,7 @@ namespace TrProtocol
             this.client = client;
             LoadPackets(Assembly.GetExecutingAssembly());
         }
-        
+
         public Packet Deserialize(BinaryReader br0)
         {
             var l = br0.ReadInt16();
@@ -156,7 +150,7 @@ namespace TrProtocol
                 bw.Write((short)l);
                 return ms.ToArray();
             }
-            
+
             Console.WriteLine($"[Warning] packet {p} not defined, ignoring");
             return Array.Empty<byte>();
         }

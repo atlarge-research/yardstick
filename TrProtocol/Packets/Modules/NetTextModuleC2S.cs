@@ -1,5 +1,4 @@
-﻿using System;
-using TrProtocol.Models;
+﻿using TrProtocol.Models;
 
 namespace TrProtocol.Packets.Modules
 {
