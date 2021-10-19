@@ -1,7 +1,4 @@
-﻿using System;
-using System.Globalization;
-
-namespace TrProtocol.Models
+﻿namespace TrProtocol.Models
 {
     // Token: 0x02000854 RID: 2132
     public partial struct Color

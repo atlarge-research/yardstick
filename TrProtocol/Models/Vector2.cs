@@ -1,7 +1,4 @@
-﻿using System;
-using System.Globalization;
-
-namespace TrProtocol.Models
+﻿namespace TrProtocol.Models
 {
     public partial struct Vector2
     {
@@ -10,9 +7,9 @@ namespace TrProtocol.Models
             X = x;
             Y = y;
         }
-        
+
         public float X;
-        
+
         public float Y;
     }
 }

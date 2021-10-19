@@ -11,7 +11,7 @@
         public ushort BuffType3 { get; set; }
         public short BuffTime3 { get; set; }
         public ushort BuffType4 { get; set; }
-        public short BuffTime4{ get; set; }
+        public short BuffTime4 { get; set; }
         public ushort BuffType5 { get; set; }
         public short BuffTime5 { get; set; }
     }
