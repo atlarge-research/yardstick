@@ -84,20 +84,7 @@ public class Experiment8BoxWalkAround extends Experiment {
 
     @Override
     protected boolean isDone() {
-        boolean timeUp = System.currentTimeMillis() - this.startMillis > this.durationInSeconds * 1_000L;
-        List<Bot> botList = botManager.getConnectedBots();
-        if (timeUp) {
-            return true;
-        } else if (botList.size() > 0) {
-            boolean allBotsDisconnected;
-            synchronized (botList) {
-                allBotsDisconnected = botList.stream().noneMatch(Bot::isJoined);
-            }
-            if (allBotsDisconnected) {
-                return true;
-            }
-        }
-        return false;
+        return System.currentTimeMillis() - this.startMillis > this.durationInSeconds * 1_000L;
     }
 
     @Override

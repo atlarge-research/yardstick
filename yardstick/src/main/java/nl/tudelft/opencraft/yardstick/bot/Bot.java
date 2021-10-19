@@ -143,6 +143,10 @@ public class Bot {
         client.getSession().addListener(listener);
     }
 
+    public boolean hasListener(SessionListener listener) {
+        return client.getSession().getListeners().contains(listener);
+    }
+
     /**
      * Returns true if the bot is connected to the server.
      *

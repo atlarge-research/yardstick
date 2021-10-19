@@ -38,8 +38,9 @@ import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
  */
 public abstract class Experiment implements Runnable {
 
-    public static final long TICK_MS = 50;
-    //
+    public static final int TICK_MS = 50;
+
+    protected final long tickMs;
     protected final int number;
     protected final String description;
     protected final Options options = Yardstick.OPTIONS;
@@ -58,14 +59,25 @@ public abstract class Experiment implements Runnable {
      * @param desc   A human-friendly description of the experiment.
      */
     public Experiment(int number, String desc) {
+        this(number, desc, 50);
+    }
+
+    /**
+     * Creates a new experiment.
+     *
+     * @param number The experiment number. Must be unique globally.
+     * @param desc   A human-friendly description of the experiment.
+     */
+    public Experiment(int number, String desc, int tickMs) {
         this.number = number;
         this.description = desc;
         this.game = new GameFactory().getGame(options.host, options.port, options.gameParams);
         this.logger = GlobalLogger.getLogger().newSubLogger("Experiment " + number);
+        this.tickMs = tickMs;
     }
 
     /**
-     * Runs the experiment. The experiment will use the {@link WorkLoadDumper}
+     * Runs the experiment. The experiment will use the {@link WorkloadDumper}
      * and {@link Statistics} if they have been set. A new scheduler will be
      * created to handle tick tasks for this experiment, such as model
      * interaction.
@@ -87,7 +99,7 @@ public abstract class Experiment implements Runnable {
         }
 
         try {
-            Scheduler sched = new Scheduler(TICK_MS);
+            Scheduler sched = new Scheduler(tickMs);
             sched.start();
             before();
             do {
@@ -96,6 +108,8 @@ public abstract class Experiment implements Runnable {
             } while (!isDone());
             after();
             logger.info("Experiment complete, exiting");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         } finally {
             if (dumper != null) {
                 dumper.stop();
@@ -166,14 +180,14 @@ public abstract class Experiment implements Runnable {
     /**
      * Called before the experiment starts.
      */
-    protected abstract void before();
+    protected abstract void before() throws InterruptedException;
 
     /**
      * Called during a bot tick.
      */
     protected abstract void tick();
 
-    protected Bot createBot() throws ConnectException {
+    protected Bot createBot() throws ConnectException, InterruptedException {
         Bot bot = newBot(UUID.randomUUID().toString().substring(0, 6));
         bot.connect();
         int sleep = 1000;

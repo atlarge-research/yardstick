@@ -1,19 +1,25 @@
 package nl.tudelft.opencraft.yardstick.bot;
 
+import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import lombok.Getter;
 import lombok.Setter;
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.Policy;
 import net.jodah.failsafe.RetryPolicy;
+import nl.tudelft.opencraft.yardstick.Yardstick;
 import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
+import nl.tudelft.opencraft.yardstick.game.SingleServer;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
+import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
 
 /**
  * Connects the specified number of bots to the game server
@@ -36,9 +42,16 @@ public class BotManager implements Runnable {
     @Getter
     private final GameArchitecture game;
     @Getter
-    private final List<Bot> connectedBots = new ArrayList<>();
+    private final List<Bot> connectedBots = Collections.synchronizedList(new ArrayList<>());
     private final List<Future<Bot>> connectingBots = Collections.synchronizedList(new ArrayList<>());
     private final Policy<Object> retryPolicy = new RetryPolicy<>().withMaxAttempts(3).withMaxDuration(Duration.ofSeconds(60));
+
+    public static void main(String[] args) throws InterruptedException {
+        var a = Yardstick.LOGGER;
+        var addr = new InetSocketAddress("::1", 25565);
+        var botmanager = new BotManager(new SingleServer(addr), 2, 2, 1);
+        Yardstick.THREAD_POOL.scheduleAtFixedRate(botmanager, 0, 5, TimeUnit.SECONDS);
+    }
 
     public BotManager(GameArchitecture game, int playerCountTarget, int playerStepIncrease, int playerStepDecrease) {
         this.playerCountTarget = playerCountTarget;
@@ -62,25 +75,28 @@ public class BotManager implements Runnable {
 
         int playerCount = getPlayerCount();
         int playerDeficit = playerCountTarget - playerCount;
+        int playerSurplus = -playerDeficit;
         if (playerCount < playerCountTarget) {
             int numPlayersToConnect = playerStepIncrease < 1 ? playerDeficit : Math.min(playerStepIncrease, playerDeficit);
             for (int i = 0; i < numPlayersToConnect; i++) {
                 connectingBots.add(Failsafe.with(retryPolicy).getAsync(() -> {
-                    // FIXME
-                    Bot bot = new Bot(null, null, 0);
+                    var addr = game.getAddressForPlayer();
+                    var username = UUID.randomUUID().toString().substring(0, 8);
+                    Bot bot = new Bot(new MinecraftProtocol(username), addr.getHostName(), addr.getPort());
                     bot.connect();
-                    connectedBots.add(bot);
                     return bot;
-                }).whenComplete((b, ex) -> {
+                }).whenComplete((bot, ex) -> {
                     if (ex != null) {
                         logger.log(Level.WARNING, ex.getMessage(), ex);
+                    } else {
+                        connectedBots.add(bot);
                     }
                 }));
             }
         } else if (playerCount > playerCountTarget) {
-            int numPlayersToDisconnect = playerStepDecrease < 1 ? playerDeficit : Math.min(playerStepDecrease, playerDeficit);
+            int numPlayersToDisconnect = playerStepDecrease < 1 ? playerSurplus : Math.min(playerStepDecrease, playerSurplus);
             for (int i = 0; i < numPlayersToDisconnect; i++) {
-                connectedBots.remove(0).disconnect(String.format("Too many players connected. Is %d should be %d", playerCount, playerCountTarget));
+                connectedBots.remove(0).disconnect(String.format("Too many players connected. Is %d, should be %d", playerCount, playerCountTarget));
             }
         }
     }

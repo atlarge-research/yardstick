@@ -18,7 +18,10 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
@@ -116,6 +119,7 @@ public abstract class AbstractModelExperiment extends Experiment {
         };
     }
 
+    @Override
     protected Bot createBot() {
         return newBot(UUID.randomUUID().toString().substring(0, 6));
     }
