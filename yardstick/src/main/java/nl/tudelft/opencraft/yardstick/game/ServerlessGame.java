@@ -2,10 +2,12 @@ package nl.tudelft.opencraft.yardstick.game;
 
 import java.net.InetSocketAddress;
 import java.text.MessageFormat;
+import java.time.Duration;
 import java.util.Random;
 import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.lambda.LambdaClient;
+import software.amazon.awssdk.services.lambda.LambdaAsyncClient;
 import software.amazon.awssdk.services.lambda.model.InvokeRequest;
 import software.amazon.awssdk.services.lambda.model.InvokeResponse;
 
@@ -15,8 +17,8 @@ import software.amazon.awssdk.services.lambda.model.InvokeResponse;
  */
 public class ServerlessGame implements GameArchitecture {
 
-    private final LambdaClient lambdaClient;
-    private final Random random = new Random(0);
+    private final LambdaAsyncClient lambdaClient;
+    private final Random random = new Random(System.currentTimeMillis());
 
     private final String functionName;
     private final Region region;
@@ -24,7 +26,17 @@ public class ServerlessGame implements GameArchitecture {
     public ServerlessGame(String functionName, String region) {
         this.functionName = functionName;
         this.region = Region.of(region);
-        this.lambdaClient = LambdaClient.builder().region(this.region).build();
+        Duration timeout = Duration.ofMinutes(15);
+        this.lambdaClient = LambdaAsyncClient.builder()
+                // These extended timeouts are needed to prevent the SDK from retrying a lambda that hasn't failed but
+                // simply takes a long time.
+                .httpClientBuilder(NettyNioAsyncHttpClient.builder()
+                        .connectionMaxIdleTime(timeout)
+                        .connectionTimeout(timeout)
+                        .readTimeout(timeout)
+                        .tcpKeepAlive(true))
+                .region(Region.EU_CENTRAL_1)
+                .build();
     }
 
     /**
@@ -35,15 +47,19 @@ public class ServerlessGame implements GameArchitecture {
     @Override
     public InetSocketAddress getAddressForPlayer() {
         String id = String.valueOf(random.nextInt());
-        String json = MessageFormat.format("'{' \"name\": \"servo/player:ID={0}\" '}'", id);
+        String json = MessageFormat.format("'{' \"name\": \"servo/player:ID={0}\", \"action\": \"get\" '}'", id);
         SdkBytes payload = SdkBytes.fromUtf8String(json);
-        InvokeResponse response = lambdaClient.invoke(InvokeRequest.builder()
+        var futureResponse = lambdaClient.invoke(InvokeRequest.builder()
                 .functionName(functionName)
                 .payload(payload)
                 .build());
+        InvokeResponse response = futureResponse.join();
+        if (response.statusCode() != 200) {
+            System.out.println(response.logResult());
+        }
         String responseText = response.payload().asUtf8String().replaceAll("\"", "");
-        String hostname = responseText.split(":")[0];
-        int port = Integer.parseInt(responseText.split(":")[1]);
-        return new InetSocketAddress(hostname, port);
+        System.out.println(responseText);
+        int port = 25571;
+        return new InetSocketAddress(responseText, port);
     }
 }
