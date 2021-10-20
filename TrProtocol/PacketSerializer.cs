@@ -16,88 +16,95 @@ namespace TrProtocol
         private Dictionary<MessageID, Func<BinaryReader, Packet>> deserializers = new();
         private Dictionary<NetModuleType, Func<BinaryReader, NetModulesPacket>> moduledeserializers = new();
 
-        public void LoadPackets(Assembly asm)
+        private void LoadPackets(Assembly asm)
         {
             foreach (var type in asm.GetTypes())
             {
-                if (type.IsAbstract || !type.IsSubclassOf(typeof(Packet))) continue;
-                Serializer serializer = null;
-                Deserializer deserializer = null;
+                RegisterPacket(type);
+            }
+        }
+        public void RegisterPacket<T>() where T : Packet
+        {
+            RegisterPacket(typeof(T));
+        }
+        private void RegisterPacket(Type type)
+        {
+            if (type.IsAbstract || !type.IsSubclassOf(typeof(Packet))) return;
+            Serializer serializer = null;
+            Deserializer deserializer = null;
 
-                var dict = new Dictionary<string, PropertyInfo>();
-                var empty = Array.Empty<object>();
+            var dict = new Dictionary<string, PropertyInfo>();
+            var empty = Array.Empty<object>();
 
-                foreach (var prop in type.GetProperties())
+            foreach (var prop in type.GetProperties())
+            {
+                dict.Add(prop.Name, prop);
+
+                if (prop.IsDefined(typeof(IgnoreAttribute))) continue;
+
+                var get = prop.GetMethod;
+                var set = prop.SetMethod;
+                var t = prop.PropertyType;
+
+                Func<object, bool> condition = _ => true;
+
+                var cond = prop.GetCustomAttribute<ConditionAttribute>();
+
+                var shouldSerialize = (client
+                    ? (object)prop.GetCustomAttribute<S2COnlyAttribute>()
+                    : prop.GetCustomAttribute<C2SOnlyAttribute>()) == null;
+                var shouldDeserialize = (!client
+                    ? (object)prop.GetCustomAttribute<S2COnlyAttribute>()
+                    : prop.GetCustomAttribute<C2SOnlyAttribute>()) == null && set != null;
+
+                if (cond != null)
                 {
-                    dict.Add(prop.Name, prop);
-
-                    if (prop.IsDefined(typeof(IgnoreAttribute))) continue;
-
-                    var get = prop.GetMethod;
-                    var set = prop.SetMethod;
-                    var t = prop.PropertyType;
-
-                    Func<object, bool> condition = _ => true;
-
-                    var cond = prop.GetCustomAttribute<ConditionAttribute>();
-
-                    var shouldSerialize = (client
-                        ? (object)prop.GetCustomAttribute<S2COnlyAttribute>()
-                        : prop.GetCustomAttribute<C2SOnlyAttribute>()) == null;
-                    var shouldDeserialize = (!client
-                        ? (object)prop.GetCustomAttribute<S2COnlyAttribute>()
-                        : prop.GetCustomAttribute<C2SOnlyAttribute>()) == null && set != null;
-
-                    if (cond != null)
-                    {
-                        var get2 = dict[cond.field].GetMethod;
-                        if (cond.bit == -1)
-                            condition = o => ((bool)get2.Invoke(o, empty));
-                        else
-                            condition = o => ((BitsByte)get2.Invoke(o, empty))[cond.bit] == cond.pred;
-                    }
-
-
-                    var attr = t.GetCustomAttribute<SerializerAttribute>();
-                    IFieldSerializer ser;
-                    if (attr != null) ser = attr.serializer;
-                    else if (!fieldSerializers.TryGetValue(t, out ser))
-                        throw new Exception("No valid serializer for type: " + t.FullName);
-                    if (ser is IConfigurable conf) ser = conf.Configure(prop);
-
-                    if (shouldSerialize)
-                        serializer += (o, bw) => { if (condition(o)) ser.Write(bw, get.Invoke(o, empty)); };
-                    if (shouldDeserialize)
-                        deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new[] { ser.Read(br) }); };
+                    var get2 = dict[cond.field].GetMethod;
+                    if (cond.bit == -1)
+                        condition = o => ((bool)get2.Invoke(o, empty));
+                    else
+                        condition = o => ((BitsByte)get2.Invoke(o, empty))[cond.bit] == cond.pred;
                 }
 
-                var inst = Activator.CreateInstance(type);
 
-                if (client ? (type.GetCustomAttribute<S2COnlyAttribute>() == null) : (type.GetCustomAttribute<C2SOnlyAttribute>()) == null)
-                    serializers[type] = (bw, o) => serializer?.Invoke(o, bw);
+                var attr = t.GetCustomAttribute<SerializerAttribute>();
+                IFieldSerializer ser;
+                if (attr != null) ser = attr.serializer;
+                else if (!fieldSerializers.TryGetValue(t, out ser))
+                    throw new Exception("No valid serializer for type: " + t.FullName);
+                if (ser is IConfigurable conf) ser = conf.Configure(prop);
 
-                if ((!client) ? (type.GetCustomAttribute<S2COnlyAttribute>() == null) : (type.GetCustomAttribute<C2SOnlyAttribute>()) == null)
+                if (shouldSerialize)
+                    serializer += (o, bw) => { if (condition(o)) ser.Write(bw, get.Invoke(o, empty)); };
+                if (shouldDeserialize)
+                    deserializer += (o, br) => { if (condition(o)) set.Invoke(o, new[] { ser.Read(br) }); };
+            }
+
+            var inst = Activator.CreateInstance(type);
+
+            if (client ? (type.GetCustomAttribute<S2COnlyAttribute>() == null) : (type.GetCustomAttribute<C2SOnlyAttribute>()) == null)
+                serializers[type] = (bw, o) => serializer?.Invoke(o, bw);
+
+            if ((!client) ? (type.GetCustomAttribute<S2COnlyAttribute>() == null) : (type.GetCustomAttribute<C2SOnlyAttribute>()) == null)
+            {
+                if (inst is NetModulesPacket p)
                 {
-                    if (inst is NetModulesPacket p)
+                    moduledeserializers.Add(p.ModuleType, br =>
                     {
-                        moduledeserializers.Add(p.ModuleType, br =>
-                        {
-                            var result = Activator.CreateInstance(type) as NetModulesPacket;
-                            deserializer?.Invoke(result, br);
-                            return result;
-                        });
-                    }
-                    else if (inst is Packet p2)
-                    {
-                        deserializers.Add(p2.Type, br =>
-                        {
-                            var result = Activator.CreateInstance(type) as Packet;
-                            deserializer?.Invoke(result, br);
-                            return result;
-                        });
-                    }
+                        var result = Activator.CreateInstance(type) as NetModulesPacket;
+                        deserializer?.Invoke(result, br);
+                        return result;
+                    });
                 }
-
+                else if (inst is Packet p2)
+                {
+                    deserializers.Add(p2.Type, br =>
+                    {
+                        var result = Activator.CreateInstance(type) as Packet;
+                        deserializer?.Invoke(result, br);
+                        return result;
+                    });
+                }
             }
         }
 

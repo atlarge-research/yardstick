@@ -1,8 +1,10 @@
-﻿namespace TrProtocol.Packets
+﻿using TrProtocol.Models;
+
+namespace TrProtocol.Packets
 {
     public class TileSquare : Packet
     {
         public override MessageID Type => MessageID.TileSquare;
-        public byte[] Data { get; set; }
+        public SquareData Data { get; set; }
     }
 }
