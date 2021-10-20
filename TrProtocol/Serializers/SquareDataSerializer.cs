@@ -38,7 +38,7 @@ namespace TrProtocol.Models
                         if (tile.Flags1[0])
                         {
                             tile.TileType = br.ReadUInt16();
-                            if (SectionData.tileFrameImportant.Contains(tile.TileType))
+                            if (Constants.tileFrameImportant[tile.TileType])
                             {
                                 tile.FrameX = br.ReadInt16();
                                 tile.FrameY = br.ReadInt16();
@@ -86,7 +86,7 @@ namespace TrProtocol.Models
                         if (flags1[0])
                         {
                             bw.Write(tile.TileType);
-                            if (SectionData.tileFrameImportant.Contains(tile.TileType))
+                            if (Constants.tileFrameImportant[tile.TileType])
                             {
                                 bw.Write(tile.FrameX);
                                 bw.Write(tile.FrameY);
