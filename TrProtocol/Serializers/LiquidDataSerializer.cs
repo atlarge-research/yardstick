@@ -16,17 +16,17 @@ namespace TrProtocol.Models
                 {
                     TotalChanges = br.ReadUInt16()
                 };
-                var changes = new List<LiquidChange>();
+                var changes = new LiquidChange[liquid.TotalChanges];
                 for (int i = 0; i < liquid.TotalChanges; i++)
                 {
-                    changes.Add(new LiquidChange()
+                    changes[i] = new LiquidChange()
                     {
                         Position = new(br.ReadInt16(), br.ReadInt16()),
                         LiquidAmount = br.ReadByte(),
-                        LiquidType = br.ReadByte()
-                    });
+                        LiquidType = (LiquidType)br.ReadByte()
+                    };
                 }
-                liquid.LiquidChanges = changes.ToArray();
+                liquid.LiquidChanges = changes;
                 return liquid;
             }
 
@@ -38,7 +38,7 @@ namespace TrProtocol.Models
                     bw.Write(change.Position.X);
                     bw.Write(change.Position.Y);
                     bw.Write(change.LiquidAmount);
-                    bw.Write(change.LiquidType);
+                    bw.Write((byte)change.LiquidType);
                 }
             }
         }

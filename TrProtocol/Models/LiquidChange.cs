@@ -10,9 +10,6 @@ namespace TrProtocol.Models
     {
         public ShortPosition Position { get; set; }
         public byte LiquidAmount { get; set; }
-        /// <summary>
-        /// 1 = Water, 2 = Lava, 3 = Honey
-        /// </summary>
-        public byte LiquidType { get; set; }
+        public LiquidType LiquidType { get; set; }
     }
 }
