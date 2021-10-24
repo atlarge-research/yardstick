@@ -9,6 +9,7 @@ namespace TrProtocol.Packets
         public Vector2 Position { get; set; }
         public Vector2 Velocity { get; set; }
         public byte PlayerSlot { get; set; }
+        [Bound("Terraria238", 955)]
         public short ProjType { get; set; }
         public BitsByte Bit1 { get; set; }
         [Condition("Bit1", 0)]
