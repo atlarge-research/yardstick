@@ -3,7 +3,6 @@ using TrProtocol.Serializers;
 
 namespace TrProtocol
 {
-    [Serializer(typeof(ByteEnumSerializer<MessageID>))]
     // Token: 0x02000250 RID: 592
     public enum MessageID : byte
     {

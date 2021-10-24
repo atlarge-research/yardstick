@@ -2,7 +2,7 @@
 
 namespace TrProtocol.Models
 {
-    [Serializer(typeof(ByteEnumSerializer<LogicCheckType>))]
+    
     public enum LogicCheckType : byte
     {
         None,

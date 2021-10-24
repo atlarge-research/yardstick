@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using TrProtocol.Models;
+using TrProtocol.Serializers;
 
 namespace TrProtocol
 {
@@ -11,10 +12,16 @@ namespace TrProtocol
         private delegate void Serializer(object o, BinaryWriter bw);
         private delegate void Deserializer(object o, BinaryReader br);
 
-        private Dictionary<Type, Action<BinaryWriter, Packet>> serializers = new();
+        private readonly Dictionary<Type, Action<BinaryWriter, Packet>> serializers = new();
 
-        private Dictionary<MessageID, Func<BinaryReader, Packet>> deserializers = new();
-        private Dictionary<NetModuleType, Func<BinaryReader, NetModulesPacket>> moduledeserializers = new();
+        private readonly Dictionary<MessageID, Func<BinaryReader, Packet>> deserializers = new();
+        private readonly Dictionary<NetModuleType, Func<BinaryReader, NetModulesPacket>> moduledeserializers = new();
+
+        private readonly Dictionary<Type, Type> enumSerializers = new()
+        {
+            [typeof(short)] = typeof(ShortEnumSerializer<>),
+            [typeof(byte)] = typeof(ByteEnumSerializer<>)
+        };
 
         private void LoadPackets(Assembly asm)
         {
@@ -23,10 +30,12 @@ namespace TrProtocol
                 RegisterPacket(type);
             }
         }
+
         public void RegisterPacket<T>() where T : Packet
         {
             RegisterPacket(typeof(T));
         }
+
         private void RegisterPacket(Type type)
         {
             if (type.IsAbstract || !type.IsSubclassOf(typeof(Packet))) return;
@@ -70,8 +79,15 @@ namespace TrProtocol
                 var attr = t.GetCustomAttribute<SerializerAttribute>();
                 IFieldSerializer ser;
                 if (attr != null) ser = attr.serializer;
+                else if (t.BaseType == typeof(Enum))
+                {
+                    var genrericType = enumSerializers[t.GetFields()[0].FieldType];
+                    var seriliazer = genrericType.MakeGenericType(t);
+                    ser = (IFieldSerializer) Activator.CreateInstance(seriliazer);
+                }
                 else if (!fieldSerializers.TryGetValue(t, out ser))
                     throw new Exception("No valid serializer for type: " + t.FullName);
+                
                 if (ser is IConfigurable conf) ser = conf.Configure(prop);
 
                 if (shouldSerialize)

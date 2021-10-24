@@ -2,7 +2,7 @@
 
 namespace TrProtocol.Models
 {
-    [Serializer(typeof(ShortEnumSerializer<CreativePowerTypes>))]
+    
     public enum CreativePowerTypes : short
     {
         // Token: 0x04000552 RID: 1362
