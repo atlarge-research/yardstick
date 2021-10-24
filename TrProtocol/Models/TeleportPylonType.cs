@@ -2,7 +2,7 @@
 
 namespace TrProtocol.Models
 {
-    [Serializer(typeof(ByteEnumSerializer<TeleportPylonType>))]
+    
     public enum TeleportPylonType : byte
     {
         // Token: 0x0400495B RID: 18779

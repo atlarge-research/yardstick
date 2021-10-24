@@ -2,7 +2,7 @@
 
 namespace TrProtocol.Models
 {
-    [Serializer(typeof(ByteEnumSerializer<TileEntityType>))]
+    
     public enum TileEntityType : byte
     {
         TETrainingDummy = 0,

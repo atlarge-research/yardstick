@@ -5,7 +5,7 @@ using System.IO.Compression;
 
 namespace TrProtocol.Models
 {
-    [Serializer(typeof(SectionDataSerializer))]
+    [Serializer(typeof(SectionDataSerializer), "Terraria238")]
     public partial struct SectionData
     {
         private class SectionDataSerializer : FieldSerializer<SectionData>

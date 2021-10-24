@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using TrProtocol.Models;
+using TrProtocol.Serializers;
 
 namespace TrProtocol
 {
@@ -11,10 +13,16 @@ namespace TrProtocol
         private delegate void Serializer(object o, BinaryWriter bw);
         private delegate void Deserializer(object o, BinaryReader br);
 
-        private Dictionary<Type, Action<BinaryWriter, Packet>> serializers = new();
+        private readonly Dictionary<Type, Action<BinaryWriter, Packet>> serializers = new();
 
-        private Dictionary<MessageID, Func<BinaryReader, Packet>> deserializers = new();
-        private Dictionary<NetModuleType, Func<BinaryReader, NetModulesPacket>> moduledeserializers = new();
+        private readonly Dictionary<MessageID, Func<BinaryReader, Packet>> deserializers = new();
+        private readonly Dictionary<NetModuleType, Func<BinaryReader, NetModulesPacket>> moduledeserializers = new();
+
+        private readonly Dictionary<Type, Type> enumSerializers = new()
+        {
+            [typeof(short)] = typeof(ShortEnumSerializer<>),
+            [typeof(byte)] = typeof(ByteEnumSerializer<>)
+        };
 
         private void LoadPackets(Assembly asm)
         {
@@ -23,10 +31,12 @@ namespace TrProtocol
                 RegisterPacket(type);
             }
         }
+
         public void RegisterPacket<T>() where T : Packet
         {
             RegisterPacket(typeof(T));
         }
+
         private void RegisterPacket(Type type)
         {
             if (type.IsAbstract || !type.IsSubclassOf(typeof(Packet))) return;
@@ -36,11 +46,17 @@ namespace TrProtocol
             var dict = new Dictionary<string, PropertyInfo>();
             var empty = Array.Empty<object>();
 
-            foreach (var prop in type.GetProperties())
+            foreach (var (prop, flag) in
+                type.GetProperties(BindingFlags.NonPublic | BindingFlags.Instance).Select(p => (p, BindingFlags.NonPublic))
+                    .Concat(type.GetProperties(BindingFlags.Public | BindingFlags.Instance).Select(p => (p, BindingFlags.Public))))
             {
                 dict.Add(prop.Name, prop);
 
                 if (prop.IsDefined(typeof(IgnoreAttribute))) continue;
+                if (flag == BindingFlags.NonPublic && !prop.IsDefined(typeof(ForceSerializeAttribute))) continue;
+
+                var ver = prop.GetCustomAttribute<ProtocolVwrsionAttribute>();
+                if (ver != null && ver.version != this.version) continue;
 
                 var get = prop.GetMethod;
                 var set = prop.SetMethod;
@@ -66,14 +82,30 @@ namespace TrProtocol
                         condition = o => ((BitsByte)get2.Invoke(o, empty))[cond.bit] == cond.pred;
                 }
 
-
-                var attr = t.GetCustomAttribute<SerializerAttribute>();
                 IFieldSerializer ser;
-                if (attr != null) ser = attr.serializer;
+
+                foreach (var attr in t.GetCustomAttributes<SerializerAttribute>())
+                {
+                    if ((attr.version ?? version) == version)
+                    {
+                        ser = attr.serializer;
+                        goto serFound;
+                    }
+                }
+
+                if (t.BaseType == typeof(Enum))
+                {
+                    var genrericType = enumSerializers[t.GetFields()[0].FieldType];
+                    var seriliazer = genrericType.MakeGenericType(t);
+                    ser = (IFieldSerializer) Activator.CreateInstance(seriliazer);
+                }
                 else if (!fieldSerializers.TryGetValue(t, out ser))
                     throw new Exception("No valid serializer for type: " + t.FullName);
-                if (ser is IConfigurable conf) ser = conf.Configure(prop);
+                
+                serFound:
 
+                if (ser is IConfigurable conf) ser = conf.Configure(prop, version);
+                
                 if (shouldSerialize)
                     serializer += (o, bw) => { if (condition(o)) ser.Write(bw, get.Invoke(o, empty)); };
                 if (shouldDeserialize)
@@ -109,10 +141,13 @@ namespace TrProtocol
         }
 
         private readonly bool client;
+        private readonly string version;
 
-        public PacketSerializer(bool client)
+
+        public PacketSerializer(bool client, string version="Terraria238")
         {
             this.client = client;
+            this.version = version;
             LoadPackets(Assembly.GetExecutingAssembly());
         }
 

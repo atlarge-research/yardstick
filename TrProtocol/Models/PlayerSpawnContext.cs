@@ -2,7 +2,7 @@
 
 namespace TrProtocol.Models
 {
-    [Serializer(typeof(ByteEnumSerializer<PlayerSpawnContext>))]
+    
     // Token: 0x0200005C RID: 92
     public enum PlayerSpawnContext : byte
     {

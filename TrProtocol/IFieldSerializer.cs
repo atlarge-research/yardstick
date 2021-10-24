@@ -13,6 +13,6 @@ namespace TrProtocol
 
     public interface IConfigurable
     {
-        IFieldSerializer Configure(PropertyInfo prop);
+        IFieldSerializer Configure(PropertyInfo prop, string version);
     }
 }

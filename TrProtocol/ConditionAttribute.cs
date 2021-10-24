@@ -2,6 +2,47 @@
 
 namespace TrProtocol
 {
+    public class BadBoundException : Exception
+    {
+        public BadBoundException(string message) : base(message)
+        {
+
+        }
+    }
+
+    [AttributeUsage(AttributeTargets.Property)]
+    public sealed class BoundAttribute : Attribute
+    {
+        public int upper, lower;
+        public string version;
+        public bool interrupt;
+
+        public BoundAttribute(string version, int upper, int lower = int.MinValue, bool interrupt = true)
+        {
+            this.upper = upper;
+            this.lower = lower;
+            this.version = version;
+            this.interrupt = interrupt;
+        }
+    }
+
+    [AttributeUsage(AttributeTargets.Property)]
+    public sealed class ForceSerializeAttribute : Attribute
+    {
+
+    }
+
+    [AttributeUsage(AttributeTargets.Property)]
+    public sealed class ProtocolVwrsionAttribute : Attribute
+    {
+        public string version;
+
+        public ProtocolVwrsionAttribute(string version)
+        {
+            this.version = version;
+        }
+    }
+
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Property)]
     public sealed class S2COnlyAttribute : Attribute
     {

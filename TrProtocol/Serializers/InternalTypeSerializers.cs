@@ -46,32 +46,32 @@ namespace TrProtocol
             protected override bool _Read(BinaryReader br) => br.ReadBoolean();
             protected override void _Write(BinaryWriter bw, bool t) => bw.Write(t);
         }
-        private class ByteSerializer : FieldSerializer<byte>
+        private class ByteSerializer : NumFieldSerializer<byte>
         {
             protected override byte _Read(BinaryReader br) => br.ReadByte();
             protected override void _Write(BinaryWriter bw, byte t) => bw.Write(t);
         }
-        private class SByteSerializer : FieldSerializer<sbyte>
+        private class SByteSerializer : NumFieldSerializer<sbyte>
         {
             protected override sbyte _Read(BinaryReader br) => br.ReadSByte();
             protected override void _Write(BinaryWriter bw, sbyte t) => bw.Write(t);
         }
-        private class ShortSerializer : FieldSerializer<short>
+        private class ShortSerializer : NumFieldSerializer<short>
         {
             protected override short _Read(BinaryReader br) => br.ReadInt16();
             protected override void _Write(BinaryWriter bw, short t) => bw.Write(t);
         }
-        private class UShortSerializer : FieldSerializer<ushort>
+        private class UShortSerializer : NumFieldSerializer<ushort>
         {
             protected override ushort _Read(BinaryReader br) => br.ReadUInt16();
             protected override void _Write(BinaryWriter bw, ushort t) => bw.Write(t);
         }
-        private class IntSerializer : FieldSerializer<int>
+        private class IntSerializer : NumFieldSerializer<int>
         {
             protected override int _Read(BinaryReader br) => br.ReadInt32();
             protected override void _Write(BinaryWriter bw, int t) => bw.Write(t);
         }
-        private class UIntSerializer : FieldSerializer<uint>
+        private class UIntSerializer : NumFieldSerializer<uint>
         {
             protected override uint _Read(BinaryReader br) => br.ReadUInt32();
             protected override void _Write(BinaryWriter bw, uint t) => bw.Write(t);
@@ -140,8 +140,9 @@ namespace TrProtocol
                     @base.Write(bw, x);
             }
 
-            public IFieldSerializer Configure(PropertyInfo prop)
+            public IFieldSerializer Configure(PropertyInfo prop, string version)
             {
+                if (@base is IConfigurable conf) conf.Configure(prop, version);
                 return new ArraySerializer<T>(prop.GetCustomAttribute<ArraySizeAttribute>().size);
             }
         }

@@ -14,6 +14,16 @@ namespace TrProtocolTest
             var mgr = new PacketSerializer(true);
             using var ms = new MemoryStream();
             using var bw = new BinaryWriter(ms);
+
+            try
+            {
+                _ = new PacketSerializer(true, "Terraria230");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
             var b = mgr.Serialize(new ClientHello
             {
                 Version = "Terraria183"
@@ -128,6 +138,17 @@ namespace TrProtocolTest
                 Position = new TrProtocol.Models.ShortPosition { X = 2, Y = 4 }
             }))));
 
+            try
+            {
+                mgr.Serialize(new SyncProjectile()
+                {
+                    ProjType = short.MaxValue
+                });
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
             var sw = Stopwatch.StartNew();
 
             for (int i = 0; i < 1000000; ++i)

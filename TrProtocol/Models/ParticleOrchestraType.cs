@@ -2,7 +2,7 @@
 
 namespace TrProtocol.Models
 {
-    [Serializer(typeof(ByteEnumSerializer<ParticleOrchestraType>))]
+    
     public enum ParticleOrchestraType : byte
     {
         Keybrand,

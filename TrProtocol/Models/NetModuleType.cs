@@ -2,7 +2,7 @@
 
 namespace TrProtocol.Models
 {
-    [Serializer(typeof(ShortEnumSerializer<NetModuleType>))]
+    
     public enum NetModuleType : short
     {
         NetLiquidModule = 0,
