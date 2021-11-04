@@ -2,12 +2,18 @@ package nl.tudelft.opencraft.yardstick.experiment;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import nl.tudelft.opencraft.yardstick.Yardstick;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.BotManager;
+import nl.tudelft.opencraft.yardstick.bot.world.ChunkLocation;
+import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.game.GameFactory;
+import nl.tudelft.opencraft.yardstick.util.Vector3i;
+import org.jetbrains.annotations.NotNull;
 import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.ItemStack;
 import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.Position;
 import science.atlarge.opencraft.mcprotocollib.data.game.entity.player.Hand;
@@ -30,6 +36,8 @@ import science.atlarge.opencraft.packetlib.event.session.SessionListener;
 import science.atlarge.opencraft.packetlib.packet.Packet;
 
 public class Experiment11Latency extends Experiment {
+
+    private final Random random = new Random(System.currentTimeMillis());
 
     private BotManager botManager;
     private ScheduledFuture<?> runningBotManager;
@@ -64,6 +72,10 @@ public class Experiment11Latency extends Experiment {
                     var duration = System.currentTimeMillis() - packetSent;
                     logger.info(String.format("latency %d ms", duration));
                     waitingForReply = false;
+                } else {
+                    for (Position blockPosition : blockPositions) {
+                        logger.info("expected block at " + blockPos + " but got " + blockPosition);
+                    }
                 }
             }
         }
@@ -95,7 +107,7 @@ public class Experiment11Latency extends Experiment {
     };
 
     public Experiment11Latency() {
-        super(11, "latency experiment", 17);
+        super(11, "latency experiment");
         this.startMillis = System.currentTimeMillis();
         this.durationInSeconds = Integer.parseInt(options.experimentParams.getOrDefault("duration", "-1"));
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -121,32 +133,58 @@ public class Experiment11Latency extends Experiment {
             if (bots.size() == 2 && !waitingForReply) {
                 var botA = bots.get(0);
                 var botB = bots.get(1);
-                if (!botB.isJoined() || !botA.isJoined()) {
+                if (!ready(botA, botB)) {
                     return;
                 }
                 if (!botA.hasListener(listener)) {
                     botA.addListener(listener);
                 }
                 waitingForReply = true;
-                packetSent = System.currentTimeMillis();
-                var blockLoc = botB.getPlayer().getLocation().add(0, 2, 0).intVector();
-                blockPos = new Position(blockLoc.getX(), blockLoc.getY(), blockLoc.getZ());
-                if (placedBlock) {
-                    sendPacket(botB, new ClientPlayerActionPacket(PlayerAction.START_DIGGING, blockPos, BlockFace.DOWN));
-                    sendPacket(botB, new ClientPlayerActionPacket(PlayerAction.FINISH_DIGGING, blockPos, BlockFace.DOWN));
-                    placedBlock = false;
-                } else {
-                    sendPacket(botB, new ClientCreativeInventoryActionPacket(36, new ItemStack(3, 64)));
-                    sendPacket(botB, new ClientPlayerChangeHeldItemPacket(0));
-                    sendPacket(botB, new ClientPlayerPlaceBlockPacket(
-                            blockPos,
-                            BlockFace.DOWN, Hand.MAIN_HAND, .5f, .5f, .5f));
-                    placedBlock = true;
-                }
-
-                countSent++;
+                CompletableFuture.delayedExecutor(random.nextInt(TICK_MS + 1), TimeUnit.MILLISECONDS).execute(() -> {
+                    packetSent = System.currentTimeMillis();
+                    var playerLoc = botB.getPlayer().getLocation().intVector();
+                    var placePos = new Position(playerLoc.getX() + 1, playerLoc.getY() - 1, playerLoc.getZ());
+                    blockPos = new Position(playerLoc.getX() + 1, playerLoc.getY(), playerLoc.getZ());
+                    if (placedBlock) {
+                        sendPacket(botB, new ClientPlayerActionPacket(PlayerAction.START_DIGGING, blockPos, BlockFace.DOWN));
+                        sendPacket(botB, new ClientPlayerActionPacket(PlayerAction.FINISH_DIGGING, blockPos, BlockFace.DOWN));
+                        placedBlock = false;
+                    } else {
+                        sendPacket(botB, new ClientCreativeInventoryActionPacket(36, new ItemStack(3, 64)));
+                        sendPacket(botB, new ClientPlayerChangeHeldItemPacket(0));
+                        sendPacket(botB, new ClientPlayerPlaceBlockPacket(
+                                placePos,
+                                BlockFace.UP, Hand.MAIN_HAND, .5f, 1f, .5f));
+                        placedBlock = true;
+                    }
+                    countSent++;
+                });
             }
         }
+    }
+
+    private boolean ready(Bot botA, Bot botB) {
+        if (!botB.isJoined() || !botA.isJoined()) {
+            return false;
+        }
+        var botALocation = botA.getPlayer().getLocation().intVector();
+        var botBLocation = botB.getPlayer().getLocation().intVector();
+        try {
+            ChunkLocation botAChunk = getChunkFromEntityLocation(botALocation);
+            ChunkLocation botBChunk = getChunkFromEntityLocation(botBLocation);
+            botA.getWorld().getChunk(botAChunk);
+            botA.getWorld().getChunk(botBChunk);
+            botB.getWorld().getChunk(botAChunk);
+            botB.getWorld().getChunk(botBChunk);
+        } catch (ChunkNotLoadedException e) {
+            return false;
+        }
+        return true;
+    }
+
+    @NotNull
+    private ChunkLocation getChunkFromEntityLocation(Vector3i location) {
+        return new ChunkLocation(location.getX() >> 4, location.getZ() >> 4);
     }
 
     private void sendPacket(Bot bot, Packet packet) {

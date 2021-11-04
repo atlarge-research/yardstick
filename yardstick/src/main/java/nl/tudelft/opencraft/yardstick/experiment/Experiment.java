@@ -20,6 +20,7 @@ package nl.tudelft.opencraft.yardstick.experiment;
 
 import java.net.InetSocketAddress;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 import nl.tudelft.opencraft.yardstick.Options;
 import nl.tudelft.opencraft.yardstick.Yardstick;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
@@ -40,7 +41,6 @@ public abstract class Experiment implements Runnable {
 
     public static final int TICK_MS = 50;
 
-    protected final long tickMs;
     protected final int number;
     protected final String description;
     protected final Options options = Yardstick.OPTIONS;
@@ -59,21 +59,10 @@ public abstract class Experiment implements Runnable {
      * @param desc   A human-friendly description of the experiment.
      */
     public Experiment(int number, String desc) {
-        this(number, desc, 50);
-    }
-
-    /**
-     * Creates a new experiment.
-     *
-     * @param number The experiment number. Must be unique globally.
-     * @param desc   A human-friendly description of the experiment.
-     */
-    public Experiment(int number, String desc, int tickMs) {
         this.number = number;
         this.description = desc;
         this.game = new GameFactory().getGame(options.host, options.port, options.gameParams);
         this.logger = GlobalLogger.getLogger().newSubLogger("Experiment " + number);
-        this.tickMs = tickMs;
     }
 
     /**
@@ -99,7 +88,7 @@ public abstract class Experiment implements Runnable {
         }
 
         try {
-            Scheduler sched = new Scheduler(tickMs);
+            Scheduler sched = new Scheduler(TICK_MS);
             sched.start();
             before();
             do {
@@ -166,7 +155,13 @@ public abstract class Experiment implements Runnable {
      * @return the client.
      */
     protected Bot newBot(String name) {
-        InetSocketAddress address = game.getAddressForPlayer();
+        var futureAddress = game.getAddressForPlayer();
+        InetSocketAddress address = null;
+        try {
+            address = futureAddress.get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
         Bot bot = new Bot(new MinecraftProtocol(name), address.getHostName(), address.getPort());
         if (stats != null) {
             bot.addListener(stats);

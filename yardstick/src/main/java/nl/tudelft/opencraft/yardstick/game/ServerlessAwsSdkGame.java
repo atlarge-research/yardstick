@@ -4,6 +4,7 @@ import java.net.InetSocketAddress;
 import java.text.MessageFormat;
 import java.time.Duration;
 import java.util.Random;
+import java.util.concurrent.CompletableFuture;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
@@ -15,7 +16,7 @@ import software.amazon.awssdk.services.lambda.model.InvokeResponse;
  * Represents a serverless Minecraft-like game, which does not have a central server.
  * Before a player can connect, they must ask the game's naming system where to connect to.
  */
-public class ServerlessGame implements GameArchitecture {
+public class ServerlessAwsSdkGame implements GameArchitecture {
 
     private final LambdaAsyncClient lambdaClient;
     private final Random random = new Random(System.currentTimeMillis());
@@ -23,7 +24,7 @@ public class ServerlessGame implements GameArchitecture {
     private final String functionName;
     private final Region region;
 
-    public ServerlessGame(String functionName, String region) {
+    public ServerlessAwsSdkGame(String functionName, String region) {
         this.functionName = functionName;
         this.region = Region.of(region);
         Duration timeout = Duration.ofMinutes(15);
@@ -45,7 +46,7 @@ public class ServerlessGame implements GameArchitecture {
      * @return a new address for a new player
      */
     @Override
-    public InetSocketAddress getAddressForPlayer() {
+    public CompletableFuture<InetSocketAddress> getAddressForPlayer() {
         String id = String.valueOf(random.nextInt());
         String json = MessageFormat.format("'{' \"name\": \"servo/player:ID={0}\", \"action\": \"get\" '}'", id);
         SdkBytes payload = SdkBytes.fromUtf8String(json);
@@ -60,6 +61,6 @@ public class ServerlessGame implements GameArchitecture {
         String responseText = response.payload().asUtf8String().replaceAll("\"", "");
         System.out.println(responseText);
         int port = 25571;
-        return new InetSocketAddress(responseText, port);
+        return CompletableFuture.completedFuture(new InetSocketAddress(responseText, port));
     }
 }

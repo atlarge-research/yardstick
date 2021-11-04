@@ -44,7 +44,11 @@ public class BotManager implements Runnable {
     @Getter
     private final List<Bot> connectedBots = Collections.synchronizedList(new ArrayList<>());
     private final List<Future<Bot>> connectingBots = Collections.synchronizedList(new ArrayList<>());
-    private final Policy<Object> retryPolicy = new RetryPolicy<>().withMaxAttempts(3).withMaxDuration(Duration.ofSeconds(60));
+    private final Policy<Bot> retryPolicy = new RetryPolicy<Bot>()
+            .handleResultIf(b -> !b.isConnected())
+            .withMaxAttempts(-1)
+            .withDelay(Duration.ofSeconds(5))
+            .withMaxDuration(Duration.ofSeconds(60));
 
     public static void main(String[] args) throws InterruptedException {
         var a = Yardstick.LOGGER;
@@ -79,13 +83,12 @@ public class BotManager implements Runnable {
         if (playerCount < playerCountTarget) {
             int numPlayersToConnect = playerStepIncrease < 1 ? playerDeficit : Math.min(playerStepIncrease, playerDeficit);
             for (int i = 0; i < numPlayersToConnect; i++) {
-                connectingBots.add(Failsafe.with(retryPolicy).getAsync(() -> {
-                    var addr = game.getAddressForPlayer();
-                    var username = UUID.randomUUID().toString().substring(0, 8);
-                    Bot bot = new Bot(new MinecraftProtocol(username), addr.getHostName(), addr.getPort());
+                var username = UUID.randomUUID().toString().substring(0, 8);
+                connectingBots.add(game.getAddressForPlayer().thenApply(a -> Failsafe.with(retryPolicy).get(() -> {
+                    Bot bot = new Bot(new MinecraftProtocol(username), a.getHostName(), a.getPort());
                     bot.connect();
                     return bot;
-                }).whenComplete((bot, ex) -> {
+                })).whenComplete((bot, ex) -> {
                     if (ex != null) {
                         logger.log(Level.WARNING, ex.getMessage(), ex);
                     } else {

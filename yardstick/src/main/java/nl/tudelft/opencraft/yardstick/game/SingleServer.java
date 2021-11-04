@@ -1,6 +1,7 @@
 package nl.tudelft.opencraft.yardstick.game;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.CompletableFuture;
 
 public class SingleServer implements GameArchitecture {
 
@@ -15,7 +16,7 @@ public class SingleServer implements GameArchitecture {
     }
 
     @Override
-    public InetSocketAddress getAddressForPlayer() {
-        return addr;
+    public CompletableFuture<InetSocketAddress> getAddressForPlayer() {
+        return CompletableFuture.completedFuture(addr);
     }
 }
