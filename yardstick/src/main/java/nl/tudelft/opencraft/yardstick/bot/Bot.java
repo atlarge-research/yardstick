@@ -117,15 +117,6 @@ public class Bot {
      * @throws IllegalStateException if the bot is already connected.
      */
     public void connect() {
-//        // Statistics
-//        if (stats != null) {
-//            s.addListener(stats);
-//        }
-//
-//        // Workload session listener
-//        if (dumper != null) {
-//            s.addListener(new WorkloadSessionListener(dumper, name));
-//        }
         Session session = client.getSession();
         if (session.isConnected()) {
             throw new IllegalStateException("Can not start connection. Bot already isConnected!");
