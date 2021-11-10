@@ -18,34 +18,28 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import nl.tudelft.opencraft.yardstick.Yardstick;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
+import nl.tudelft.opencraft.yardstick.bot.BotManager;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
-import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
+import nl.tudelft.opencraft.yardstick.game.GameFactory;
 import nl.tudelft.opencraft.yardstick.model.BoundingBoxMovementModel;
-import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 // TODO remove this class once we have a good BotModel interface.
 public class Experiment8BoxWalkAround extends Experiment {
 
-    private final List<Bot> botList = Collections.synchronizedList(new ArrayList<>());
     private BoundingBoxMovementModel movement;
 
-    private int botsTotal = 0;
     private long startMillis;
     private int durationInSeconds;
-    private int secondsBetweenJoin;
-    private int numberOfBotsPerJoin;
-    private final Map<Bot, Vector3d> botSpawnLocations = new HashMap<>();
-    private long lastJoin = System.currentTimeMillis();
+    private BotManager botManager;
+    private ScheduledFuture<?> runningBotManager;
 
     public Experiment8BoxWalkAround() {
         super(4, "Bots walking around based on a movement model for Second Life.");
@@ -53,45 +47,27 @@ public class Experiment8BoxWalkAround extends Experiment {
 
     @Override
     protected void before() {
-        this.botsTotal = Integer.parseInt(options.experimentParams.get("bots"));
+        int botsTotal = Integer.parseInt(options.experimentParams.get("bots"));
         this.durationInSeconds = Integer.parseInt(options.experimentParams.getOrDefault("duration", "600"));
-        this.secondsBetweenJoin = Integer.parseInt(options.experimentParams.getOrDefault("joininterval", "1"));
-        this.numberOfBotsPerJoin = Integer.parseInt(options.experimentParams.getOrDefault("numbotsperjoin", "1"));
+        int secondsBetweenJoin = Integer.parseInt(options.experimentParams.getOrDefault("joininterval", "1"));
+        int numberOfBotsPerJoin = Integer.parseInt(options.experimentParams.getOrDefault("numbotsperjoin", "1"));
         this.movement = new BoundingBoxMovementModel(
-            Integer.parseInt(options.experimentParams.getOrDefault("boxDiameter", "32")),
-            Boolean.parseBoolean(options.experimentParams.getOrDefault("spawnAnchor", "false"))
+                Integer.parseInt(options.experimentParams.getOrDefault("boxDiameter", "32")),
+                Boolean.parseBoolean(options.experimentParams.getOrDefault("spawnAnchor", "false"))
         );
         this.startMillis = System.currentTimeMillis();
+
+        botManager = new BotManager(new GameFactory().getGame(options.host, options.port, options.gameParams));
+        botManager.setPlayerStepIncrease(numberOfBotsPerJoin);
+        botManager.setPlayerCountTarget(botsTotal);
+        runningBotManager = Yardstick.THREAD_POOL.scheduleAtFixedRate(botManager, 0, secondsBetweenJoin, TimeUnit.SECONDS);
     }
 
     @Override
     protected void tick() {
-        synchronized (botList) {
-            List<Bot> disconnectedBots = botList.stream()
-                .filter(bot -> !bot.isJoined())
-                .collect(Collectors.toList());
-            disconnectedBots.forEach(bot -> bot.disconnect("Bot is not connected"));
-            botList.removeAll(disconnectedBots);
-        }
-        if (System.currentTimeMillis() - this.lastJoin > secondsBetweenJoin * 1000
-            && botList.size() <= this.botsTotal) {
-            lastJoin = System.currentTimeMillis();
-            int botsToConnect = Math.min(this.numberOfBotsPerJoin, this.botsTotal - botList.size());
-            for (int i = 0; i < botsToConnect; i++) {
-                new Thread(() -> {
-                    long startTime = System.currentTimeMillis();
-                    try {
-                        Bot bot = createBot();
-                        botSpawnLocations.put(bot, bot.getPlayer().getLocation());
-                        botList.add(bot);
-                    } catch (ConnectException e) {
-                        logger.warning(String.format("Could not connect bot on %s:%d after %d ms.", options.host, options.port, System.currentTimeMillis() - startTime));
-                    }
-                }).start();
-            }
-        }
-        synchronized (botList) {
-            for (Bot bot : botList) {
+        List<Bot> bots = botManager.getConnectedBots();
+        synchronized (bots) {
+            for (Bot bot : bots) {
                 botTick(bot);
             }
         }
@@ -108,24 +84,13 @@ public class Experiment8BoxWalkAround extends Experiment {
 
     @Override
     protected boolean isDone() {
-
-        boolean timeUp = System.currentTimeMillis() - this.startMillis > this.durationInSeconds * 1_000;
-        if (timeUp) {
-            return true;
-        } else if (botList.size() > 0) {
-            boolean allBotsDisconnected;
-            synchronized (botList) {
-                allBotsDisconnected = botList.stream().noneMatch(Bot::isJoined);
-            }
-            if (allBotsDisconnected) {
-                return true;
-            }
-        }
-        return false;
+        return System.currentTimeMillis() - this.startMillis > this.durationInSeconds * 1_000L;
     }
 
     @Override
     protected void after() {
+        runningBotManager.cancel(false);
+        List<Bot> botList = botManager.getConnectedBots();
         for (Bot bot : botList) {
             bot.disconnect("disconnect");
         }

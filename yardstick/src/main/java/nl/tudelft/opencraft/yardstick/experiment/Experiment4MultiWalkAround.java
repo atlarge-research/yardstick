@@ -115,7 +115,7 @@ public class Experiment4MultiWalkAround extends Experiment {
                 Bot bot = createBot();
                 botSpawnLocations.put(bot, bot.getPlayer().getLocation());
                 return bot;
-            } catch (ConnectException e) {
+            } catch (ConnectException | InterruptedException e) {
                 logger.warning(String.format("Could not connect bot on %s:%d after %d ms.", options.host, options.port, System.currentTimeMillis() - startTime));
             }
             return null;
