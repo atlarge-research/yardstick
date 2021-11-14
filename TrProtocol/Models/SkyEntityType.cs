@@ -2,7 +2,7 @@
 
 namespace TrProtocol.Models
 {
-    [Serializer(typeof(ByteEnumSerializer<SkyEntityType>))]
+    
     public enum SkyEntityType : byte
     {
         // Token: 0x0400573B RID: 22331

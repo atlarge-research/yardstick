@@ -1,5 +1,4 @@
-﻿using System;
-using TrProtocol.Models;
+﻿using TrProtocol.Models;
 
 namespace TrProtocol.Packets.Modules
 {
@@ -10,5 +9,9 @@ namespace TrProtocol.Packets.Modules
         public override NetModuleType ModuleType => NetModuleType.NetTextModule;
         public string Command { get; set; }
         public string Text { get; set; }
+        public override string ToString()
+        {
+            return $"[C2S] {Text}";
+        }
     }
 }

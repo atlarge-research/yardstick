@@ -14,9 +14,9 @@ namespace TrProtocol.Models
 
             protected override void _Write(BinaryWriter bb, Color c)
             {
-                bb.Write(c.R);
-                bb.Write(c.G);
-                bb.Write(c.B);
+                bb.Write((byte)c.R);
+                bb.Write((byte)c.G);
+                bb.Write((byte)c.B);
             }
         }
     }

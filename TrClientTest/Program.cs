@@ -10,7 +10,16 @@ namespace TrClientTest
         static void Main(string[] args)
         {
             var client = new TClient();
-            client.CurRelease = "Terraria238";
+            Console.Write("ip>");
+            var ip = Console.ReadLine();
+            Console.Write("port>");
+            var port = ushort.Parse(Console.ReadLine());
+            Console.Write("password>");
+            var password = Console.ReadLine();
+            Console.Write("curRelaese>");
+            client.CurRelease = Console.ReadLine();
+            Console.Write("username>");
+            client.Username = Console.ReadLine();
 
             client.OnChat += (o, t, c) => Console.WriteLine(t);
 
@@ -22,7 +31,7 @@ namespace TrClientTest
                 }
             }).Start();
 
-            client.GameLoop(new IPEndPoint(IPAddress.Parse("150.138.72.83"), 7777), "123456");
+            client.GameLoop(new IPEndPoint(IPAddress.Parse(ip), port), password);
         }
     }
 }

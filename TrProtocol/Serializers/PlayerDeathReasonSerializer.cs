@@ -5,7 +5,7 @@ namespace TrProtocol.Models
     [Serializer(typeof(PlayerDeathReasonSerializer))]
     public partial class PlayerDeathReason
     {
-        private partial class PlayerDeathReasonSerializer : FieldSerializer<PlayerDeathReason>
+        private class PlayerDeathReasonSerializer : FieldSerializer<PlayerDeathReason>
         {
             protected override PlayerDeathReason _Read(BinaryReader br)
             {

@@ -3,13 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31410.357
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrProtocol", "TrProtocol\TrProtocol.csproj", "{F4A41C2E-2BE0-47F2-9966-5C4E66D98455}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TrProtocol", "TrProtocol\TrProtocol.csproj", "{F4A41C2E-2BE0-47F2-9966-5C4E66D98455}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrProtocolTest", "TrProtocolTest\TrProtocolTest.csproj", "{4570A208-1AA8-40F1-858D-32C45D1FF22B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TrProtocolTest", "TrProtocolTest\TrProtocolTest.csproj", "{4570A208-1AA8-40F1-858D-32C45D1FF22B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrClient", "TrClient\TrClient.csproj", "{A0B5A5C8-DDD6-4246-8D84-A46E84E20D9A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TrClient", "TrClient\TrClient.csproj", "{A0B5A5C8-DDD6-4246-8D84-A46E84E20D9A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrClientTest", "TrClientTest\TrClientTest.csproj", "{2488E4F6-999E-4EFF-AC56-D951070256DB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TrClientTest", "TrClientTest\TrClientTest.csproj", "{2488E4F6-999E-4EFF-AC56-D951070256DB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgentTest", "AgentTest\AgentTest.csproj", "{2E267F30-8E22-419D-9DD4-C89F831ECD41}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{2488E4F6-999E-4EFF-AC56-D951070256DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2488E4F6-999E-4EFF-AC56-D951070256DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2488E4F6-999E-4EFF-AC56-D951070256DB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E267F30-8E22-419D-9DD4-C89F831ECD41}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E267F30-8E22-419D-9DD4-C89F831ECD41}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E267F30-8E22-419D-9DD4-C89F831ECD41}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E267F30-8E22-419D-9DD4-C89F831ECD41}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

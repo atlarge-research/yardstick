@@ -82,7 +82,7 @@ namespace TrProtocol.Models
             };
             return playerDeathReason;
         }
-        
+
         // Token: 0x060033DC RID: 13276 RVA: 0x0058D8BC File Offset: 0x0058BABC
         public void WriteSelfTo(BinaryWriter writer)
         {
