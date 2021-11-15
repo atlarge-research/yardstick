@@ -46,6 +46,7 @@ public class Options {
     @Parameter(names = "--output", description = "An output file to write to. To be used with --csvdump")
     public String outFile;
 
+
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("Options{");

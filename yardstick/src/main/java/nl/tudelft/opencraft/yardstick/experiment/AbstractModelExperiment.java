@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
@@ -38,8 +39,8 @@ public abstract class AbstractModelExperiment extends Experiment {
     private Duration experimentDuration;
     private long lastJoin = System.currentTimeMillis();
 
-    public AbstractModelExperiment(int id, String host, int port, String description, BotModel model) {
-        super(id, host, port, description);
+    public AbstractModelExperiment(int id, String host, int port, Config config, String description, BotModel model) {
+        super(id, host, port, config, description);
         this.model = model;
     }
 
@@ -82,9 +83,35 @@ public abstract class AbstractModelExperiment extends Experiment {
         }
     }
 
+    private Runnable newBotConnector(Bot bot) {
+        return () -> {
+            bot.connect();
+            int sleep = 1000;
+            int tries = 3;
+            while (tries-- > 0 && (bot.getPlayer() == null || !bot.isJoined())) {
+                try {
+                    Thread.sleep(sleep);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                    break;
+                }
+            }
+            if (!bot.isJoined()) {
+                String host = bot.getClient().getHost();
+                int port = bot.getClient().getPort();
+                logger.warning(String.format("Could not connect bot %s:%d.", host, port));
+                bot.disconnect("Make sure to close all connections.");
+            }
+        };
+    }
+
+    @Override
+    protected Bot createBot() {
+        return newBot(UUID.randomUUID().toString().substring(0, 6));
+    }
+
     @Override
     protected boolean isDone() {
-
         boolean timeUp = System.currentTimeMillis() - this.startMillis > this.experimentDuration.toMillis();
         if (timeUp) {
             return true;

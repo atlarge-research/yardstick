@@ -18,12 +18,13 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import com.typesafe.config.Config;
 import nl.tudelft.opencraft.yardstick.model.MoveInteractModel;
 
 public class Experiment6InteractWalk extends AbstractModelExperiment {
 
-    public Experiment6InteractWalk(String host, int port) {
-        super(6, host, port, "Bots move around randomly and have a chance to break or place blocks",
+    public Experiment6InteractWalk(String host, int port, Config config) {
+        super(6, host, port, config, "Bots move around randomly and have a chance to break or place blocks",
                 new MoveInteractModel());
     }
 

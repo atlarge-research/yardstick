@@ -24,6 +24,7 @@ import static io.javalin.apibuilder.ApiBuilder.post;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.typesafe.config.Config;
 import io.javalin.Javalin;
 import io.javalin.core.validation.Validator;
 import io.javalin.http.Context;
@@ -42,8 +43,8 @@ public class RemoteControlledExperiment extends Experiment {
     /**
      * Creates a new experiment.
      */
-    public RemoteControlledExperiment(String host, int port) {
-        super(7, host, port, "Experiment Controlled Through REST API.");
+    public RemoteControlledExperiment(String host, int port, Config config) {
+        super(7, host, port, config, "Experiment Controlled Through REST API.");
     }
 
     @Override
@@ -112,7 +113,7 @@ public class RemoteControlledExperiment extends Experiment {
                 bots.put(bot.getName(), bot);
             }
             context.result(bot.getName());
-        } catch (ConnectException e) {
+        } catch (ConnectException | InterruptedException e) {
             e.printStackTrace();
         }
     }

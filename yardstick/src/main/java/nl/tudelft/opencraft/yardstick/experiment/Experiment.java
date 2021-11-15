@@ -20,27 +20,27 @@ package nl.tudelft.opencraft.yardstick.experiment;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import java.net.InetSocketAddress;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
+import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
+import nl.tudelft.opencraft.yardstick.game.GameFactory;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 import nl.tudelft.opencraft.yardstick.statistic.Statistics;
 import nl.tudelft.opencraft.yardstick.util.Scheduler;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
-import nl.tudelft.opencraft.yardstick.workload.WorkloadSessionListener;
 import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
-import science.atlarge.opencraft.packetlib.Client;
-import science.atlarge.opencraft.packetlib.Session;
-import science.atlarge.opencraft.packetlib.tcp.TcpSessionFactory;
 
 /**
  * A runnable Yardstick experiment.
  */
 public abstract class Experiment implements Runnable {
 
-    public static final long TICK_MS = 50;
-    //
+    public static final int TICK_MS = 50;
+
     protected final int number;
     protected final String description;
     protected final Config config = ConfigFactory.load();
@@ -50,8 +50,7 @@ public abstract class Experiment implements Runnable {
     private Statistics stats;
     private WorkloadDumper dumper;
 
-    protected final String host;
-    protected final int port;
+    protected final GameArchitecture game;
 
     /**
      * Creates a new experiment.
@@ -59,11 +58,10 @@ public abstract class Experiment implements Runnable {
      * @param number The experiment number. Must be unique globally.
      * @param desc   A human-friendly description of the experiment.
      */
-    public Experiment(int number, String host, int port, String desc) {
+    public Experiment(int number, String host, int port, Config config, String desc) {
         this.number = number;
-        this.host = host;
-        this.port = port;
         this.description = desc;
+        this.game = new GameFactory().getGame(host, port, config);
         this.logger = GlobalLogger.getLogger().newSubLogger("Experiment " + number);
     }
 
@@ -95,6 +93,8 @@ public abstract class Experiment implements Runnable {
             } while (!isDone());
             after();
             logger.info("Experiment complete, exiting");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         } finally {
             if (dumper != null) {
                 dumper.stop();
@@ -143,21 +143,6 @@ public abstract class Experiment implements Runnable {
     }
 
     /**
-     * Creates a new {@link Client} in this experiment. If a {@link Statistics}
-     * has been set, the statistics will listen to client events. If a
-     * {@link WorkloadDumper} has been set, the dumper will dump client
-     * messages.
-     *
-     * @param name the client name.
-     * @return the client.
-     */
-    protected Client newClient(String host, int port, String name) {
-        Client client = new Client(host, port, new MinecraftProtocol(name), new TcpSessionFactory(true));
-        setupClient(client, name);
-        return client;
-    }
-
-    /**
      * Creates a new {@link Bot} in this experiment. If a {@link Statistics} has
      * been set, the statistics will listen to bot events. If a
      * {@link WorkloadDumper} has been set, the dumper will dump bot messages.
@@ -165,41 +150,36 @@ public abstract class Experiment implements Runnable {
      * @param name the client name.
      * @return the client.
      */
-    protected Bot newBot(String host, int port, String name) {
-        Bot bot = new Bot(new MinecraftProtocol(name), host, port);
-        setupClient(bot.getClient(), name);
-        return bot;
-    }
-
-    private void setupClient(Client client, String name) {
-        Session s = client.getSession();
-
-        // Logger
-        s.addListener(new LoggerSessionListener(logger.newSubLogger(name)));
-
-        // Statistics
+    protected Bot newBot(String name) {
+        var futureAddress = game.getAddressForPlayer();
+        InetSocketAddress address = null;
+        try {
+            address = futureAddress.get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+        Bot bot = new Bot(new MinecraftProtocol(name), address.getHostName(), address.getPort());
         if (stats != null) {
-            s.addListener(stats);
+            bot.addListener(stats);
         }
-
-        // Workload session listener
         if (dumper != null) {
-            s.addListener(new WorkloadSessionListener(dumper, name));
+            bot.addWorkloadListener(dumper);
         }
+        return bot;
     }
 
     /**
      * Called before the experiment starts.
      */
-    protected abstract void before();
+    protected abstract void before() throws InterruptedException;
 
     /**
      * Called during a bot tick.
      */
     protected abstract void tick();
 
-    protected Bot createBot() throws ConnectException {
-        Bot bot = newBot(host, port, UUID.randomUUID().toString().substring(0, 6));
+    protected Bot createBot() throws ConnectException, InterruptedException {
+        Bot bot = newBot(UUID.randomUUID().toString().substring(0, 6));
         bot.connect();
         int sleep = 1000;
         int tries = 10;

@@ -27,9 +27,9 @@ public class Experiment9Spike extends Experiment4MultiWalkAround {
     private Duration spikeDuration;
     private int spikePeakPlayers;
 
-    public Experiment9Spike(String host, int port) {
-        super(host, port, 9, "Operates bots according to experiment 4, but allows a temporary spike in players after " +
-                "set delay.");
+    public Experiment9Spike(String host, int port, Config config) {
+        super(host, port, 9, config, "Operates bots according to experiment 4, but allows a temporary spike in " +
+                "players after set delay.");
     }
 
     @Override

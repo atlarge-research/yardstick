@@ -52,12 +52,12 @@ public class Experiment4MultiWalkAround extends Experiment {
     private final Map<Bot, Vector3d> botSpawnLocations = new HashMap<>();
     private long lastJoin = System.currentTimeMillis();
 
-    public Experiment4MultiWalkAround(String host, int port) {
-        super(4, host, port, "Bots walking around based on a movement model for Second Life.");
+    public Experiment4MultiWalkAround(String host, int port, Config config) {
+        super(4, host, port, config, "Bots walking around based on a movement model for Second Life.");
     }
 
-    public Experiment4MultiWalkAround(String host, int port, int num, String desc) {
-        super(num, host, port, desc);
+    public Experiment4MultiWalkAround(String host, int port, int num, Config config, String desc) {
+        super(num, host, port, config, desc);
     }
 
     @Override
@@ -118,8 +118,9 @@ public class Experiment4MultiWalkAround extends Experiment {
                 Bot bot = createBot();
                 botSpawnLocations.put(bot, bot.getPlayer().getLocation());
                 return bot;
-            } catch (ConnectException e) {
-                logger.warning(String.format("Could not connect bot on %s:%d after %d ms.", host, port, System.currentTimeMillis() - startTime));
+            } catch (ConnectException | InterruptedException e) {
+                logger.warning(String.format("Could not connect bot after %d ms.",
+                        System.currentTimeMillis() - startTime));
             }
             return null;
         }));

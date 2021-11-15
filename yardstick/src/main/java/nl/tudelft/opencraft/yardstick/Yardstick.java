@@ -23,10 +23,11 @@ package nl.tudelft.opencraft.yardstick;
 import com.beust.jcommander.JCommander;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment10GenerationStressTest;
-import nl.tudelft.opencraft.yardstick.experiment.Experiment1SimpleJoin;
-import nl.tudelft.opencraft.yardstick.experiment.Experiment2ScheduledJoin;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment11Latency;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment3WalkAround;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment4MultiWalkAround;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment5SimpleWalk;
@@ -45,6 +46,7 @@ import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
 public class Yardstick {
 
     public static final GlobalLogger LOGGER = GlobalLogger.setupGlobalLogger("Yardstick");
+    public static final ScheduledExecutorService THREAD_POOL = Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
 
     public static void main(String[] args) {
         // Logger
@@ -77,38 +79,36 @@ public class Yardstick {
         String host = options.host;
         int port = options.port;
 
-        String experimentName = config.getString("benchmark.player-emulation.arguments.behavior.name");
+        Config experimentConfig = config.getConfig("benchmark.player-emulation.arguments");
+        String experimentName = config.getString("behavior.name");
         Experiment ex;
         switch (experimentName) {
-            case "1":
-                ex = new Experiment1SimpleJoin(host, port);
-                break;
-            case "2":
-                ex = new Experiment2ScheduledJoin(host, port);
-                break;
             case "3":
-                ex = new Experiment3WalkAround(host, port);
+                ex = new Experiment3WalkAround(host, port, experimentConfig);
                 break;
             case "4":
-                ex = new Experiment4MultiWalkAround(host, port);
+                ex = new Experiment4MultiWalkAround(host, port, experimentConfig);
                 break;
             case "5":
-                ex = new Experiment5SimpleWalk(host, port);
+                ex = new Experiment5SimpleWalk(host, port, experimentConfig);
                 break;
             case "6":
-                ex = new Experiment6InteractWalk(host, port);
+                ex = new Experiment6InteractWalk(host, port, experimentConfig);
                 break;
             case "7":
-                ex = new RemoteControlledExperiment(host, port);
+                ex = new RemoteControlledExperiment(host, port, experimentConfig);
                 break;
             case "8":
-                ex = new Experiment8BoxWalkAround(host, port);
+                ex = new Experiment8BoxWalkAround(host, port, experimentConfig);
                 break;
             case "9":
-                ex = new Experiment9Spike(host, port);
+                ex = new Experiment9Spike(host, port, experimentConfig);
                 break;
             case "10":
-                ex = new Experiment10GenerationStressTest(host, port);
+                ex = new Experiment10GenerationStressTest(host, port, experimentConfig);
+                break;
+            case "11":
+                ex = new Experiment11Latency(host, port, experimentConfig);
                 break;
             default:
                 System.out.println("Invalid experiment: " + experimentName);

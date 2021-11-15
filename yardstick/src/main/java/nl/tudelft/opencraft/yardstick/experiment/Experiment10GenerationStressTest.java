@@ -29,8 +29,8 @@ public class Experiment10GenerationStressTest extends Experiment {
     private Duration experimentDuration;
     private Duration delay;
 
-    public Experiment10GenerationStressTest(String host, int port) {
-        super(9, host, port, "Bots move away from the spawn location");
+    public Experiment10GenerationStressTest(String host, int port, Config config) {
+        super(9, host, port, config, "Bots move away from the spawn location");
     }
 
     @Override
@@ -129,7 +129,7 @@ public class Experiment10GenerationStressTest extends Experiment {
 
     @Override
     protected Bot createBot() {
-        return newBot(host, port, UUID.randomUUID().toString().substring(0, 6));
+        return newBot(UUID.randomUUID().toString().substring(0, 6));
     }
 
     @Override
