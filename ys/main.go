@@ -29,6 +29,7 @@ import (
 )
 
 var (
+	inspect    = kingpin.Flag("inspect", "Halts execution before cleanup to allow for manual inspection.").Short('i').Bool()
 	configPath = kingpin.Arg("configPath", "Path to configuration file.").String()
 	isWorker   = kingpin.Flag("worker", "This node is a worker.").Short('w').Bool()
 	port       = kingpin.Flag("port", "The worker port.").Short('p').Int()
@@ -135,8 +136,8 @@ func worker() {
 			return
 		}
 		filePath := filepath.Join(uuid, path, header.Filename)
-		if err = os.MkdirAll(filepath.Base(filePath), 0755); err != nil {
-			log.Printf("could not create path at %v\n", filepath.Base(filePath))
+		if err = os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
+			log.Printf("could not create path at %v\n", filepath.Dir(filePath))
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
@@ -161,7 +162,7 @@ func worker() {
 			c.AbortWithError(http.StatusBadRequest, err)
 			return
 		}
-		file, err := os.Create(json.LogFile)
+		file, err := os.Create(filepath.Join(uuid, json.LogFile))
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
@@ -328,6 +329,13 @@ func primary() {
 			panic(err)
 		}
 	}
+
+	if *inspect {
+		log.Println("inspection mode enabled. Waiting for user input to continue")
+		var input string
+		fmt.Scanln(&input)
+	}
+
 	for _, node := range nodes {
 		err := node.Close()
 		if err != nil {

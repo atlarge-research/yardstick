@@ -80,7 +80,7 @@ public class Yardstick {
         int port = options.port;
 
         Config experimentConfig = config.getConfig("benchmark.player-emulation.arguments");
-        String experimentName = config.getString("behavior.name");
+        String experimentName = experimentConfig.getString("behavior.name");
         Experiment ex;
         switch (experimentName) {
             case "3":
