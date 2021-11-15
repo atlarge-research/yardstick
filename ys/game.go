@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"net/url"
 	"path/filepath"
 
 	"github.com/jdonkervliet/hocon"
@@ -11,17 +9,14 @@ import (
 
 type Game struct {
 	Program
-	Endpoint *url.URL
+	Host string
+	Port int
 }
 
 func (game *Game) Deploy(node *Node) error {
 	// TODO support serverless game, uses an HTTP endpoint, port 443
-	// TODO avoid hard coding Minecraft port
-	gameURL, err := url.Parse(fmt.Sprintf("tcp://%v:25565", node.ipAddress))
-	if err != nil {
-		return err
-	}
-	game.Endpoint = gameURL
+	game.Host = node.ipAddress
+	game.Port = 25565 // TODO prevent hard coding MC port
 	return game.Program.Deploy(node)
 }
 
@@ -40,14 +35,12 @@ func GameFromConfig(basePath string, config *hocon.Config) *Game {
 			} else {
 				remote = ""
 			}
-			rel, err := filepath.Rel(basePath, local)
-			if err != nil {
-				panic(err)
-			}
+			rel := filepath.Join(basePath, local)
 			resourcesPaths[i] = LocalRemotePathFromStrings(rel, remote)
 		}
 		return &Game{
 			Program: &Jar{
+				name:         "mve",
 				JarPath:      LocalRemotePathFromConfig(basePath, config.GetConfig("jar.path")),
 				JVMArgs:      config.GetStringSlice("jar.jvm.options"),
 				JarArguments: config.GetStringSlice("jar.arguments"),

@@ -5,8 +5,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/schollz/progressbar/v3"
-
 	"github.com/jdonkervliet/hocon"
 )
 
@@ -25,11 +23,9 @@ func (p *StaticProvisioner) Provision(num int) ([]*Node, error) {
 	}
 	addresses := p.ips[p.count : p.count+num]
 	p.count += num
-	nodes := make([]*Node, len(addresses))
-	bar := progressbar.Default(int64(len(addresses)), "provisioning nodes")
+	nodes := make([]*Node, num)
 	for i, address := range addresses {
 		nodes[i] = NewNode(address)
-		bar.Add(1)
 	}
 	// Wait for node server to become active
 	// TODO make nicer

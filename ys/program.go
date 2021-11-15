@@ -7,18 +7,16 @@ import (
 	"time"
 
 	"github.com/jdonkervliet/hocon"
-
-	"github.com/schollz/progressbar/v3"
 )
 
 type Program interface {
+	Name() string
 	NeedsNode() bool
 	Deploy(node *Node) error
 	Start() error
 	Wait(timeout time.Duration) error
 	Stop() error
-	Logs() error
-	Status() error
+	Get(outputDirPath string, iteration int) error
 }
 
 type Status int
@@ -36,10 +34,7 @@ type LocalRemotePath struct {
 func LocalRemotePathFromConfig(basePath string, config *hocon.Config) (path LocalRemotePath) {
 	local := config.GetString("local")
 	remote := config.GetString("remote")
-	rel, err := filepath.Rel(basePath, local)
-	if err != nil {
-		panic(err)
-	}
+	rel := filepath.Join(basePath, local)
 	path = LocalRemotePathFromStrings(rel, remote)
 	return
 }
@@ -54,12 +49,17 @@ func LocalRemotePathFromStrings(local, remote string) (path LocalRemotePath) {
 }
 
 type Jar struct {
+	name         string
+	uuid         string
 	node         *Node
 	JarPath      LocalRemotePath
 	JarArguments []string
 	JVMArgs      []string
 	Resources    []LocalRemotePath
-	jarPID       int
+}
+
+func (jar *Jar) Name() string {
+	return jar.name
 }
 
 func (jar *Jar) NeedsNode() bool {
@@ -68,12 +68,10 @@ func (jar *Jar) NeedsNode() bool {
 
 func (jar *Jar) Deploy(node *Node) error {
 	jar.node = node
-	bar := progressbar.Default(int64(1+len(jar.Resources)), "deploying jar")
-	jar.node.UploadToPath(jar.JarPath.LocalPath, jar.JarPath.RemotePath)
-	bar.Add(1)
+	jar.uuid = jar.node.Create(jar.Name())
+	jar.node.UploadToPath(jar.uuid, jar.JarPath.LocalPath, jar.JarPath.RemotePath)
 	for _, resource := range jar.Resources {
-		jar.node.UploadToPath(resource.LocalPath, resource.RemotePath)
-		bar.Add(1)
+		jar.node.UploadToPath(jar.uuid, resource.LocalPath, resource.RemotePath)
 	}
 	return nil
 }
@@ -85,18 +83,15 @@ func (jar *Jar) Start() (err error) {
 	args = append(args, "-jar")
 	args = append(args, jar.JarPath.RemotePath)
 	args = append(args, jar.JarArguments...)
-	jar.jarPID = jar.node.Start("java", remoteLogFilePath, args...)
+	jar.node.Start(jar.uuid, "java", remoteLogFilePath, args...)
 	return
 }
 
 func (jar *Jar) Wait(timeout time.Duration) error {
-	if jar.jarPID == 0 {
-		return errors.New("program not started")
-	}
 	stopped := make(chan bool)
 	go func() {
 		for {
-			status := jar.node.Status(jar.jarPID)
+			status := jar.node.Status(jar.uuid)
 			if status == Stopped {
 				stopped <- true
 				break
@@ -113,17 +108,11 @@ func (jar *Jar) Wait(timeout time.Duration) error {
 }
 
 func (jar *Jar) Stop() (err error) {
-	jar.node.Stop(jar.jarPID)
+	jar.node.Stop(jar.uuid)
 	return
 }
 
-// FIXME implement
-func (jar *Jar) Logs() (err error) {
-	jar.node.Get()
-	return
-}
-
-// FIXME implement some kind of status
-func (jar *Jar) Status() (err error) {
-	return
+func (jar *Jar) Get(outputDirPath string, iteration int) error {
+	jar.node.Get(jar.uuid, outputDirPath, iteration)
+	return nil
 }

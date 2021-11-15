@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -9,6 +10,7 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -22,7 +24,7 @@ import (
 
 type Node struct {
 	ipAddress       string
-	endpoint        string
+	endpoint        *url.URL
 	client          *http.Client
 	sshClientConfig *ssh.ClientConfig
 	tmpDirPath      string
@@ -30,10 +32,17 @@ type Node struct {
 	tmpLogFilePath  string
 }
 
+var numNodes = 0
+
 func NewNode(ipAddress string) (node *Node) {
+	nodeURL, err := url.Parse(fmt.Sprintf("http://%v:%v", ipAddress, 8080+numNodes))
+	numNodes += 1 // TODO make thread safe
+	if err != nil {
+		panic(err)
+	}
 	node = &Node{}
 	node.ipAddress = ipAddress
-	node.endpoint = fmt.Sprintf("http://%v:8080", ipAddress)
+	node.endpoint = nodeURL
 	node.client = &http.Client{Timeout: 10 * time.Second}
 
 	// Prepare SSH authentication
@@ -63,8 +72,8 @@ func NewNode(ipAddress string) (node *Node) {
 	}
 	node.tmpDirPath = strings.TrimSpace(string(tmpDirBytes))
 	log.Printf("remote deployment at %v", node.tmpDirPath)
-	node.tmpFilePath = path.Join(node.tmpDirPath, "deploy")
-	node.tmpLogFilePath = path.Join(node.tmpDirPath, "deploy.log")
+	node.tmpFilePath = path.Join(node.tmpDirPath, "ys")
+	node.tmpLogFilePath = path.Join(node.tmpDirPath, "ys.log")
 
 	// Use SSH client to create SFTP client
 	sftpClient, err := sftp.NewClient(sshClient)
@@ -103,7 +112,7 @@ func NewNode(ipAddress string) (node *Node) {
 	if err := session.Start(
 		fmt.Sprintf("cd %v &&", node.tmpDirPath) +
 			fmt.Sprintf(" chmod +x %v &&", node.tmpFilePath) +
-			fmt.Sprintf(" nohup %v --worker", node.tmpFilePath) +
+			fmt.Sprintf(" nohup %v --worker --port %v", node.tmpFilePath, node.endpoint.Port()) +
 			fmt.Sprintf(" < /dev/null > %v 2>&1 &", node.tmpLogFilePath)); err != nil {
 		panic(err)
 	}
@@ -137,7 +146,20 @@ func (node *Node) Close() error {
 	return session.Run(fmt.Sprintf("rm -rf %v", node.tmpDirPath))
 }
 
-func (node *Node) UploadToPath(filePath, remotePath string) {
+func (node *Node) Create(name string) string {
+	response, err := node.client.Get(fmt.Sprintf("%v/program/create/%v", node.endpoint, name))
+	if err != nil {
+		panic(err)
+	}
+	defer response.Body.Close()
+	responseBytes, err := io.ReadAll(response.Body)
+	if err != nil {
+		panic(err)
+	}
+	return string(responseBytes)
+}
+
+func (node *Node) UploadToPath(uuid, filePath, remotePath string) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		panic(err)
@@ -162,7 +184,7 @@ func (node *Node) UploadToPath(filePath, remotePath string) {
 	if err = writer.Close(); err != nil {
 		panic(err)
 	}
-	response, err := node.client.Post(fmt.Sprintf("%v/upload", node.endpoint), writer.FormDataContentType(), body)
+	response, err := node.client.Post(fmt.Sprintf("%v/program/upload/%v", node.endpoint, uuid), writer.FormDataContentType(), body)
 	if err != nil {
 		panic(err)
 	}
@@ -176,11 +198,11 @@ func (node *Node) UploadToPath(filePath, remotePath string) {
 	}
 }
 
-func (node *Node) Upload(localPath string) {
-	node.UploadToPath(localPath, filepath.Base(localPath))
+func (node *Node) Upload(uuid, localPath string) {
+	node.UploadToPath(uuid, localPath, filepath.Base(localPath))
 }
 
-func (node *Node) Start(path, logFile string, args ...string) int {
+func (node *Node) Start(uuid, path, logFile string, args ...string) {
 	command := []string{path}
 	command = append(command, args...)
 	request := StartRequest{
@@ -192,7 +214,7 @@ func (node *Node) Start(path, logFile string, args ...string) int {
 	if err != nil {
 		panic(err)
 	}
-	response, err := node.client.Post(fmt.Sprintf("%v/start", node.endpoint),
+	response, err := node.client.Post(fmt.Sprintf("%v/program/start/%v", node.endpoint, uuid),
 		"application/json", bytes.NewBuffer(body))
 	if err != nil {
 		panic(err)
@@ -206,19 +228,10 @@ func (node *Node) Start(path, logFile string, args ...string) int {
 	if response.StatusCode != 200 {
 		log.Fatalln(responseString)
 	}
-	res, err := strconv.Atoi(responseString)
-	if err != nil {
-		panic(err)
-	}
-	return res
 }
 
-func (node *Node) Status(pid int) Status {
-	body, err := json.Marshal(map[string]int{"pid": pid})
-	if err != nil {
-		panic(err)
-	}
-	response, err := node.client.Post(fmt.Sprintf("%v/status", node.endpoint), "application/json", bytes.NewBuffer(body))
+func (node *Node) Status(uuid string) Status {
+	response, err := node.client.Get(fmt.Sprintf("%v/program/status/%v", node.endpoint, uuid))
 	if err != nil {
 		panic(err)
 	}
@@ -238,12 +251,8 @@ func (node *Node) Status(pid int) Status {
 	return Status(status)
 }
 
-func (node *Node) Stop(pid int) {
-	body, err := json.Marshal(map[string]int{"pid": pid})
-	if err != nil {
-		panic(err)
-	}
-	response, err := node.client.Post(fmt.Sprintf("%v/stop", node.endpoint), "application/json", bytes.NewBuffer(body))
+func (node *Node) Stop(uuid string) {
+	response, err := node.client.Get(fmt.Sprintf("%v/program/stop/%v", node.endpoint, uuid))
 	if err != nil {
 		panic(err)
 	}
@@ -258,6 +267,55 @@ func (node *Node) Stop(pid int) {
 	}
 }
 
-func (node *Node) Get() {
-	// FIXME implement
+func (node *Node) Get(uuid, outputDirPath string, iteration int) {
+	ip := strings.ReplaceAll(node.ipAddress, ".", "_")
+	dirPath := filepath.Join(outputDirPath, fmt.Sprintf("it-%v-%v-node-%v", iteration, uuid, ip))
+	if err := os.MkdirAll(dirPath, 0755); err != nil {
+		panic(err)
+	}
+	response, err := node.client.Get(fmt.Sprintf("%v/program/get/%v", node.endpoint, uuid))
+	if err != nil {
+		panic(err)
+	}
+	defer response.Body.Close()
+	buf := &bytes.Buffer{}
+	io.Copy(buf, response.Body)
+	zipReader, err := zip.NewReader(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
+	if err != nil {
+		panic(err)
+	}
+	for _, f := range zipReader.File {
+		filePath := filepath.Join(dirPath, f.Name)
+
+		if !strings.HasPrefix(filePath, filepath.Clean(outputDirPath)+string(os.PathSeparator)) {
+			panic(fmt.Sprintf("path join failed: %v\n", filePath))
+		}
+		if f.FileInfo().IsDir() {
+			if err := os.MkdirAll(filePath, os.ModePerm); err != nil {
+				panic(err)
+			}
+			continue
+		}
+
+		if err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
+			panic(err)
+		}
+
+		dstFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+		if err != nil {
+			panic(err)
+		}
+
+		fileInArchive, err := f.Open()
+		if err != nil {
+			panic(err)
+		}
+
+		if _, err := io.Copy(dstFile, fileInArchive); err != nil {
+			panic(err)
+		}
+
+		dstFile.Close()
+		fileInArchive.Close()
+	}
 }

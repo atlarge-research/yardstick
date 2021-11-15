@@ -1,9 +1,11 @@
 package main
 
 import (
+	"archive/zip"
 	"context"
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"log"
 	"net"
@@ -11,8 +13,11 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"time"
+
+	gonanoid "github.com/matoous/go-nanoid/v2"
 
 	"github.com/gin-gonic/gin"
 
@@ -26,16 +31,13 @@ import (
 var (
 	configPath = kingpin.Arg("configPath", "Path to configuration file.").String()
 	isWorker   = kingpin.Flag("worker", "This node is a worker.").Short('w').Bool()
+	port       = kingpin.Flag("port", "The worker port.").Short('p').Int()
 )
 
 type StartRequest struct {
 	Command string   `json:"command"`
 	Args    []string `json:"args"`
 	LogFile string   `json:"logFile"`
-}
-
-type StopRequest struct {
-	Pid int `json:"pid"`
 }
 
 func readPubKey(file string) ssh.AuthMethod {
@@ -59,12 +61,11 @@ type Process struct {
 }
 
 func worker() {
-	pidMap := make(map[int]Process)
-	pid := 1
+	uuidProcessMap := make(map[string]Process)
 
 	r := gin.Default()
 	srv := &http.Server{
-		Addr:    ":8080",
+		Addr:    fmt.Sprintf(":%v", *port),
 		Handler: r,
 	}
 	quit := make(chan os.Signal)
@@ -75,25 +76,85 @@ func worker() {
 			"message": "pong",
 		})
 	})
-	r.POST("/upload", func(c *gin.Context) {
+	r.GET("/program/create/:name", func(c *gin.Context) {
+		name := c.Param("name")
+		id, err := gonanoid.Generate("1234567890abcdef", 8)
+		if err != nil {
+			c.AbortWithError(http.StatusInternalServerError, err)
+			return
+		}
+		uuid := fmt.Sprintf("%v-%v", name, id)
+		if err = os.MkdirAll(uuid, 0755); err != nil {
+			c.AbortWithError(http.StatusInternalServerError, err)
+			return
+		}
+		r.StaticFS(fmt.Sprintf("/program/dir/%v", uuid), http.Dir(fmt.Sprintf("./%v", uuid)))
+		r.GET(fmt.Sprintf("/program/get/%v", uuid), func(c *gin.Context) {
+			c.Writer.Header().Set("Content-type", "application/octet-stream")
+			c.Writer.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename='%v.zip'", uuid))
+			zipWriter := zip.NewWriter(c.Writer)
+			defer zipWriter.Close()
+			err := filepath.WalkDir(uuid, func(path string, d fs.DirEntry, err error) error {
+				if err != nil {
+					return err
+				}
+				if !d.IsDir() {
+					relPath, err := filepath.Rel(uuid, path)
+					if err != nil {
+						return err
+					}
+					fileWriter, err := zipWriter.Create(relPath)
+					if err != nil {
+						return err
+					}
+					file, err := os.Open(path)
+					if err != nil {
+						return err
+					}
+					if _, err := io.Copy(fileWriter, file); err != nil {
+						return err
+					}
+				}
+				return nil
+			})
+			if err != nil {
+				log.Printf("error while creating zip file: %v", err)
+				c.AbortWithError(http.StatusInternalServerError, err)
+				return
+			}
+		})
+		c.String(http.StatusOK, uuid)
+	})
+	r.POST("/program/upload/:uuid", func(c *gin.Context) {
+		uuid := c.Param("uuid")
+		path := c.Request.FormValue("path")
 		file, header, err := c.Request.FormFile("file")
 		if err != nil {
+			log.Println("request does not contain file")
 			c.String(http.StatusBadRequest, fmt.Sprintf("file err : %s", err.Error()))
 			return
 		}
-		filename := header.Filename
-		out, err := os.Create(filename)
+		filePath := filepath.Join(uuid, path, header.Filename)
+		if err = os.MkdirAll(filepath.Base(filePath), 0755); err != nil {
+			log.Printf("could not create path at %v\n", filepath.Base(filePath))
+			c.AbortWithError(http.StatusInternalServerError, err)
+			return
+		}
+		out, err := os.Create(filePath)
 		if err != nil {
-			panic(err)
+			log.Printf("could not create file at %v\n", filePath)
+			c.AbortWithError(http.StatusInternalServerError, err)
+			return
 		}
 		defer out.Close()
 		_, err = io.Copy(out, file)
 		if err != nil {
 			panic(err)
 		}
-		c.JSON(http.StatusOK, gin.H{"filepath": filename})
+		c.JSON(http.StatusOK, gin.H{"filepath": filePath})
 	})
-	r.POST("/start", func(c *gin.Context) {
+	r.POST("/program/start/:uuid", func(c *gin.Context) {
+		uuid := c.Param("uuid")
 		var json StartRequest
 		err := c.BindJSON(&json)
 		if err != nil {
@@ -112,52 +173,42 @@ func worker() {
 		cmd := exec.Command(json.Command, json.Args...)
 		cmd.Stdout = file
 		cmd.Stderr = file
+		cmd.Dir = uuid
 		if err = cmd.Start(); err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 		}
-		pid += 1
 		process := Process{
 			Command: cmd,
 			LogFile: file,
 		}
-		pidMap[pid] = process
-		c.JSON(http.StatusOK, pid)
+		uuidProcessMap[uuid] = process
+		c.String(http.StatusOK, "started!")
 	})
-	r.POST("/status", func(c *gin.Context) {
-		var json StopRequest
-		err := c.BindJSON(&json)
-		if err != nil {
-			log.Println("stop received invalid request")
-			c.AbortWithError(http.StatusBadRequest, err)
-			return
-		}
-		process, ok := pidMap[json.Pid]
+	r.GET("/program/status/:uuid", func(c *gin.Context) {
+		uuid := c.Param("uuid")
+		process, ok := uuidProcessMap[uuid]
 		if !ok {
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("unknown pid: %v", json.Pid)})
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("unknown uuid: %v", uuid)})
 			return
 		}
 		var status Status
-		if process.Command.ProcessState.Exited() {
+		if process.Command != nil &&
+			process.Command.ProcessState != nil &&
+			process.Command.ProcessState.Exited() {
 			status = Stopped
 		} else {
 			status = Running
 		}
 		c.JSON(http.StatusOK, status)
 	})
-	r.POST("/stop", func(c *gin.Context) {
-		var json StopRequest
-		err := c.BindJSON(&json)
-		if err != nil {
-			log.Println("stop received invalid request")
-			c.AbortWithError(http.StatusBadRequest, err)
-			return
-		}
-		process, ok := pidMap[json.Pid]
+	r.GET("/program/stop/:uuid", func(c *gin.Context) {
+		uuid := c.Param("uuid")
+		process, ok := uuidProcessMap[uuid]
 		if !ok {
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("unknown pid: %v", json.Pid)})
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("unknown uuid: %v", uuid)})
 			return
 		}
-		err = process.Command.Process.Signal(os.Interrupt)
+		err := process.Command.Process.Signal(os.Interrupt)
 		if err != nil {
 			log.Println("something went wrong interrupting the process")
 			c.AbortWithError(http.StatusInternalServerError, err)
@@ -181,14 +232,11 @@ func worker() {
 		process.LogFile.Close()
 	})
 	r.GET("/close", func(c *gin.Context) {
-		log.Println("stopping working")
+		log.Println("stopping worker")
 		go func() {
 			time.Sleep(1 * time.Second)
 			quit <- os.Interrupt
 		}()
-	})
-	r.POST("/get", func(c *gin.Context) {
-		// FIXME allow file download (logs)
 	})
 
 	go func() {
@@ -235,16 +283,8 @@ func primary() {
 
 	playerEmulation := make([]Program, numPlayerEmulation)
 	for i := 0; i < numPlayerEmulation; i++ {
-		playerEmulation[i] = PlayerEmulationFromConfig(game.Endpoint, *configPath)
+		playerEmulation[i] = PlayerEmulationFromConfig(game.Host, game.Port, *configPath)
 	}
-	defer func() {
-		for _, node := range nodes {
-			err := node.Close()
-			if err != nil {
-				log.Printf("error stopping node at %v: %v", node.ipAddress, err)
-			}
-		}
-	}()
 	if err != nil {
 		panic(err)
 	}
@@ -252,7 +292,9 @@ func primary() {
 	if err = game.Start(); err != nil {
 		panic(err)
 	}
+	log.Println("game started, waiting 10 seconds to boot")
 	time.Sleep(10 * time.Second)
+
 	for i, program := range playerEmulation {
 		// TODO Deploy pecosa on this node
 		err = program.Deploy(nodes[1+i])
@@ -270,16 +312,27 @@ func primary() {
 		program.Wait(config.GetDuration("player-emulation.arguments.duration") + 1*time.Minute)
 	}
 	for _, program := range playerEmulation {
-		err = program.Stop()
-		if err != nil {
+		if err := program.Stop(); err != nil {
 			panic(err)
 		}
 	}
 	if err = game.Stop(); err != nil {
 		panic(err)
 	}
+	outputDir := config.GetString("directories.raw-output")
+	if err := game.Get(outputDir, 0); err != nil {
+		panic(err)
+	}
+	for _, program := range playerEmulation {
+		if err := program.Get(outputDir, 0); err != nil {
+			panic(err)
+		}
+	}
 	for _, node := range nodes {
-		node.Get()
+		err := node.Close()
+		if err != nil {
+			log.Printf("error stopping node at %v: %v", node.ipAddress, err)
+		}
 	}
 }
 
