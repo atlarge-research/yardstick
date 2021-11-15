@@ -23,7 +23,6 @@ package nl.tudelft.opencraft.yardstick;
 import com.beust.jcommander.JCommander;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-import java.net.URL;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment10GenerationStressTest;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment1SimpleJoin;
@@ -55,14 +54,15 @@ public class Yardstick {
         Options options = new Options();
         JCommander optParser = new JCommander(options);
         optParser.parse(args);
-        LOGGER.info("Effective Yardstick Configuration:");
-        Config config = ConfigFactory.load();
-        LOGGER.info(config.toString());
 
         if (options.help) {
             optParser.usage();
             return;
         }
+
+        LOGGER.info("Effective Yardstick Configuration:");
+        Config config = ConfigFactory.load();
+        LOGGER.info(config.toString());
 
         if (options.csvDump) {
             if (options.inFile == null || options.outFile == null) {
@@ -74,11 +74,10 @@ public class Yardstick {
             return;
         }
 
-        URL gameURL = options.url;
-        String host = gameURL.getHost();
-        int port = gameURL.getPort();
+        String host = options.host;
+        int port = options.port;
 
-        String experimentName = config.getString("benchmark.player-emulation.arguments.behavior");
+        String experimentName = config.getString("benchmark.player-emulation.arguments.behavior.name");
         Experiment ex;
         switch (experimentName) {
             case "1":
