@@ -19,6 +19,7 @@ import (
 	"time"
 
 	gonanoid "github.com/matoous/go-nanoid/v2"
+	"github.com/schollz/progressbar/v3"
 
 	"github.com/gin-gonic/gin"
 
@@ -259,14 +260,64 @@ func worker() {
 	log.Println("Server exiting")
 }
 
+type ExperimentConfig struct {
+	Name string
+	*hocon.Config
+}
+
 func primary() {
 	conf, err := hocon.ParseResource(*configPath)
 	if err != nil {
 		log.Fatal("error while reading configPath: ", err)
 	}
-	fmt.Println(conf)
 
-	config := conf.GetConfig("benchmark")
+	configDirPath := conf.GetString("benchmark.directories.configs")
+	configDir, err := os.Open(configDirPath)
+	if err != nil {
+		panic(err)
+	}
+	configDirEntries, err := configDir.ReadDir(0)
+	if err != nil {
+		panic(err)
+	}
+	configFiles := make([]ExperimentConfig, 0)
+	for _, f := range configDirEntries {
+		if !f.IsDir() && strings.HasSuffix(f.Name(), ".conf") {
+			c, err := hocon.ParseResource(f.Name())
+			if err != nil {
+				panic(err)
+			}
+			configFiles = append(configFiles, ExperimentConfig{
+				Name:   strings.TrimSuffix(filepath.Base(f.Name()), ".conf"),
+				Config: c.WithFallback(conf),
+			})
+		}
+	}
+	if len(configFiles) == 0 {
+		configFiles = append(configFiles, ExperimentConfig{
+			Name:   "default",
+			Config: conf,
+		})
+	}
+
+	fmt.Println(conf)
+	var totalIterations int64
+	for _, c := range configFiles {
+		for i := 0; i < c.GetInt("benchmark.iterations"); i++ {
+			totalIterations++
+		}
+	}
+	bar := progressbar.Default(totalIterations, "running experiment")
+	for _, c := range configFiles {
+		for i := 0; i < c.GetInt("benchmark.iterations"); i++ {
+			runExperimentIteration(c.Config, i)
+			bar.Add(1)
+		}
+	}
+	runDataScripts(conf)
+}
+
+func runExperimentIteration(config *hocon.Config, iteration int) {
 	prov := ProvisionerFromConfig(config.GetConfig("provisioning"))
 	game := GameFromConfig(config.GetString("directories.input"), config.GetConfig("game"))
 
@@ -339,12 +390,12 @@ func primary() {
 
 	log.Println("downloading mve output")
 	outputDir := config.GetString("directories.raw-output")
-	if err := game.Get(outputDir, 0); err != nil {
+	if err := game.Get(outputDir, iteration); err != nil {
 		panic(err)
 	}
 	log.Println("downloading player emulation output")
 	for _, program := range playerEmulation {
-		if err := program.Get(outputDir, 0); err != nil {
+		if err := program.Get(outputDir, iteration); err != nil {
 			panic(err)
 		}
 	}
@@ -355,12 +406,30 @@ func primary() {
 		fmt.Scanln(&input)
 	}
 
-	log.Println("stopping nodes")
+	log.Println("stopping workers")
 	for _, node := range nodes {
 		err := node.Close()
 		if err != nil {
 			log.Printf("error stopping node at %v: %v", node.ipAddress, err)
 		}
+	}
+}
+
+func runDataScripts(config *hocon.Config) {
+	inputDir := config.GetString("directories.raw-output")
+	scriptsDir := config.GetString("directories.raw-output-scripts")
+	outputDir := config.GetString("directories.output")
+	scripts, err := os.Open(scriptsDir)
+	if err != nil {
+		panic(err)
+	}
+	entries, err := scripts.ReadDir(0)
+	if err != nil {
+		panic(err)
+	}
+	for _, f := range entries {
+		exec.Command("chmod", "+x", f.Name()).Run()
+		exec.Command(f.Name(), inputDir, outputDir).Run()
 	}
 }
 
