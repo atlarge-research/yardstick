@@ -4,3 +4,6 @@
 
 .DS_Store
 .idea
+
+# Visual Studio Code
+.vscode
