@@ -15,6 +15,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	gonanoid "github.com/matoous/go-nanoid/v2"
@@ -303,27 +304,45 @@ func primary() {
 			panic(err)
 		}
 	}
+
+	log.Println("starting player emulation")
 	for _, program := range playerEmulation {
 		err = program.Start()
 		if err != nil {
 			panic(err)
 		}
 	}
+
+	log.Println("waiting for player emulation to finish")
+	var wg sync.WaitGroup
 	for _, program := range playerEmulation {
-		program.Wait(config.GetDuration("player-emulation.arguments.duration") + 1*time.Minute)
+		wg.Add(1)
+		program := program
+		go func() {
+			program.Wait(config.GetDuration("player-emulation.arguments.duration") + 1*time.Minute)
+			wg.Done()
+		}()
 	}
+	wg.Wait()
+
+	log.Println("stopping player emulation")
 	for _, program := range playerEmulation {
 		if err := program.Stop(); err != nil {
 			panic(err)
 		}
 	}
+
+	log.Println("stopping mve")
 	if err = game.Stop(); err != nil {
 		panic(err)
 	}
+
+	log.Println("downloading mve output")
 	outputDir := config.GetString("directories.raw-output")
 	if err := game.Get(outputDir, 0); err != nil {
 		panic(err)
 	}
+	log.Println("downloading player emulation output")
 	for _, program := range playerEmulation {
 		if err := program.Get(outputDir, 0); err != nil {
 			panic(err)
@@ -336,6 +355,7 @@ func primary() {
 		fmt.Scanln(&input)
 	}
 
+	log.Println("stopping nodes")
 	for _, node := range nodes {
 		err := node.Close()
 		if err != nil {
