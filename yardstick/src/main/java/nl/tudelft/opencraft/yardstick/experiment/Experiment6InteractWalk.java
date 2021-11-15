@@ -22,8 +22,9 @@ import nl.tudelft.opencraft.yardstick.model.MoveInteractModel;
 
 public class Experiment6InteractWalk extends AbstractModelExperiment {
 
-    public Experiment6InteractWalk() {
-        super(6, "Bots move around randomly and have a chance to break or place blocks", new MoveInteractModel());
+    public Experiment6InteractWalk(String host, int port) {
+        super(6, host, port, "Bots move around randomly and have a chance to break or place blocks",
+                new MoveInteractModel());
     }
 
 }

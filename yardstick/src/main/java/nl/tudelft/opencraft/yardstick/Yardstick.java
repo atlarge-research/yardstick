@@ -21,19 +21,9 @@
 package nl.tudelft.opencraft.yardstick;
 
 import com.beust.jcommander.JCommander;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Properties;
-import java.util.Scanner;
-import java.util.logging.Level;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import java.net.URL;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment10GenerationStressTest;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment1SimpleJoin;
@@ -47,8 +37,6 @@ import nl.tudelft.opencraft.yardstick.experiment.Experiment9Spike;
 import nl.tudelft.opencraft.yardstick.experiment.RemoteControlledExperiment;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SimpleTimeFormatter;
-import nl.tudelft.opencraft.yardstick.statistic.Statistics;
-import nl.tudelft.opencraft.yardstick.statistic.StatisticsPusher;
 import nl.tudelft.opencraft.yardstick.workload.CsvConverter;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
 
@@ -58,134 +46,82 @@ import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
 public class Yardstick {
 
     public static final GlobalLogger LOGGER = GlobalLogger.setupGlobalLogger("Yardstick");
-    public static final Options OPTIONS = new Options();
-    public static final StatisticsPusher PROMETHEUS = new StatisticsPusher();
 
     public static void main(String[] args) {
         // Logger
         LOGGER.setupConsoleLogging(new SimpleTimeFormatter());
 
-        // Let's go!
-        String version = null;
-        final Properties properties = new Properties();
-        try {
-            properties.load(Yardstick.class.getClassLoader().getResourceAsStream("project.properties"));
-            version = properties.getProperty("version");
-        } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Could not load project.properties. This JAR was not packaged correctly!");
-            System.exit(1);
-        }
-        LOGGER.info("Yardstick v" + version);
-
-        List<String> allArgs = new ArrayList<>();
-        // Parse options from config file
-        try (FileReader reader = new FileReader("yardstick.properties"); Scanner scanner = new Scanner(reader);) {
-            while (scanner.hasNext()) {
-                allArgs.add(scanner.next());
-            }
-        } catch (IOException e) {
-            // Never mind
-        }
-        Collections.addAll(allArgs, args);
-
-        File config = new File("yardstick.toml");
-        // Parse config options
-        OPTIONS.readTOML(config);
         // Parse command line options
-        JCommander optParser = new JCommander(OPTIONS);
-        optParser.parse(allArgs.toArray(new String[0]));
-        if (args.length > 0) {
-            LOGGER.warning("Yardstick configured using command-line options. Please use the config file.");
-            LOGGER.warning("Command-line options: " + Arrays.toString(args));
-        }
+        Options options = new Options();
+        JCommander optParser = new JCommander(options);
+        optParser.parse(args);
         LOGGER.info("Effective Yardstick Configuration:");
-        LOGGER.info(OPTIONS.toString());
+        Config config = ConfigFactory.load();
+        LOGGER.info(config.toString());
 
-        if (OPTIONS.help) {
+        if (options.help) {
             optParser.usage();
             return;
         }
 
-        if (OPTIONS.csvDump) {
-            if (OPTIONS.inFile == null || OPTIONS.outFile == null) {
+        if (options.csvDump) {
+            if (options.inFile == null || options.outFile == null) {
                 LOGGER.severe("CSV conversion requires both input and output files to be set.");
                 return;
             }
 
-            CsvConverter.convertCsv(OPTIONS.inFile, OPTIONS.outFile);
+            CsvConverter.convertCsv(options.inFile, options.outFile);
             return;
         }
 
-        if (OPTIONS.experiment < 1) {
-            LOGGER.severe("You must specify the experiment ID.");
-            return;
-        }
+        URL gameURL = options.url;
+        String host = gameURL.getHost();
+        int port = gameURL.getPort();
 
-        if (OPTIONS.start != null) {
-            LOGGER.info("Starting at: " + OPTIONS.start.format(DateTimeFormatter.ISO_LOCAL_TIME));
-
-            LocalTime now = LocalTime.now();
-
-            if (OPTIONS.start.isBefore(now)) {
-                LOGGER.warning("Indicated time is in the past.");
-            } else {
-                long ms = now.until(OPTIONS.start, ChronoUnit.MILLIS);
-                LOGGER.info("-> Sleeping " + ms + " milliseconds");
-                try {
-                    Thread.sleep(ms);
-                } catch (InterruptedException ex) {
-                    LOGGER.log(Level.WARNING, "Sleeping interrupted", ex);
-                }
-            }
-        }
-
+        String experimentName = config.getString("benchmark.player-emulation.arguments.behavior");
         Experiment ex;
-        switch (OPTIONS.experiment) {
-            case 1:
-                ex = new Experiment1SimpleJoin();
+        switch (experimentName) {
+            case "1":
+                ex = new Experiment1SimpleJoin(host, port);
                 break;
-            case 2:
-                ex = new Experiment2ScheduledJoin();
+            case "2":
+                ex = new Experiment2ScheduledJoin(host, port);
                 break;
-            case 3:
-                ex = new Experiment3WalkAround();
+            case "3":
+                ex = new Experiment3WalkAround(host, port);
                 break;
-            case 4:
-                ex = new Experiment4MultiWalkAround();
+            case "4":
+                ex = new Experiment4MultiWalkAround(host, port);
                 break;
-            case 5:
-                ex = new Experiment5SimpleWalk();
+            case "5":
+                ex = new Experiment5SimpleWalk(host, port);
                 break;
-            case 6:
-                ex = new Experiment6InteractWalk();
+            case "6":
+                ex = new Experiment6InteractWalk(host, port);
                 break;
-            case 7:
-                ex = new RemoteControlledExperiment();
+            case "7":
+                ex = new RemoteControlledExperiment(host, port);
                 break;
-            case 8:
-                ex = new Experiment8BoxWalkAround();
+            case "8":
+                ex = new Experiment8BoxWalkAround(host, port);
                 break;
-            case 9:
-                ex = new Experiment9Spike();
+            case "9":
+                ex = new Experiment9Spike(host, port);
                 break;
-            case 10:
-                ex = new Experiment10GenerationStressTest();
+            case "10":
+                ex = new Experiment10GenerationStressTest(host, port);
                 break;
             default:
-                System.out.println("Invalid experiment: " + OPTIONS.experiment);
+                System.out.println("Invalid experiment: " + experimentName);
                 return;
         }
 
-        if (OPTIONS.prometheusHost != null) {
-            ex.setStats(new Statistics(OPTIONS.prometheusHost, OPTIONS.prometheusPort));
-        }
-
-        if (OPTIONS.dumpWorkload) {
+        if (config.getBoolean("benchmark.player-emulation.arguments.packet-trace")) {
             ex.setWorkloadDumper(new WorkloadDumper());
         }
 
         Thread t = new Thread(ex);
-        t.setName("experiment-" + OPTIONS.experiment);
+        t.setName("experiment-" + experimentName);
 
         t.start();
     }

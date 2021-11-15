@@ -22,8 +22,9 @@ import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
 
 public class Experiment5SimpleWalk extends AbstractModelExperiment {
 
-    public Experiment5SimpleWalk() {
-        super(5, "Bots move around randomly. Based on a movement model for Half Life 2", new SimpleMovementModel());
+    public Experiment5SimpleWalk(String host, int port) {
+        super(5, host, port, "Bots move around randomly. Based on a movement model for Half Life 2",
+                new SimpleMovementModel());
     }
 
 }

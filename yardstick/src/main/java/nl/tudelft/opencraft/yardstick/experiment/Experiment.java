@@ -18,13 +18,9 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
-import science.atlarge.opencraft.packetlib.Client;
-import science.atlarge.opencraft.packetlib.Session;
-import science.atlarge.opencraft.packetlib.tcp.TcpSessionFactory;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import java.util.UUID;
-import nl.tudelft.opencraft.yardstick.Options;
-import nl.tudelft.opencraft.yardstick.Yardstick;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
@@ -33,6 +29,10 @@ import nl.tudelft.opencraft.yardstick.statistic.Statistics;
 import nl.tudelft.opencraft.yardstick.util.Scheduler;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadSessionListener;
+import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
+import science.atlarge.opencraft.packetlib.Client;
+import science.atlarge.opencraft.packetlib.Session;
+import science.atlarge.opencraft.packetlib.tcp.TcpSessionFactory;
 
 /**
  * A runnable Yardstick experiment.
@@ -43,12 +43,15 @@ public abstract class Experiment implements Runnable {
     //
     protected final int number;
     protected final String description;
-    protected final Options options = Yardstick.OPTIONS;
+    protected final Config config = ConfigFactory.load();
     protected final SubLogger logger;
 
     protected long tick = 0;
     private Statistics stats;
     private WorkloadDumper dumper;
+
+    protected final String host;
+    protected final int port;
 
     /**
      * Creates a new experiment.
@@ -56,14 +59,16 @@ public abstract class Experiment implements Runnable {
      * @param number The experiment number. Must be unique globally.
      * @param desc   A human-friendly description of the experiment.
      */
-    public Experiment(int number, String desc) {
+    public Experiment(int number, String host, int port, String desc) {
         this.number = number;
+        this.host = host;
+        this.port = port;
         this.description = desc;
         this.logger = GlobalLogger.getLogger().newSubLogger("Experiment " + number);
     }
 
     /**
-     * Runs the experiment. The experiment will use the {@link WorkLoadDumper}
+     * Runs the experiment. The experiment will use the {@link WorkloadDumper}
      * and {@link Statistics} if they have been set. A new scheduler will be
      * created to handle tick tasks for this experiment, such as model
      * interaction.
@@ -71,10 +76,6 @@ public abstract class Experiment implements Runnable {
     @Override
     public void run() {
         logger.info("Running: experiment " + number + " - " + description);
-
-        for (String key : options.experimentParams.keySet()) {
-            logger.info("Parameter - " + key + ": " + options.experimentParams.get(key));
-        }
 
         if (dumper != null) {
             dumper.start();
@@ -150,8 +151,8 @@ public abstract class Experiment implements Runnable {
      * @param name the client name.
      * @return the client.
      */
-    protected Client newClient(String name) {
-        Client client = new Client(options.host, options.port, new MinecraftProtocol(name), new TcpSessionFactory(true));
+    protected Client newClient(String host, int port, String name) {
+        Client client = new Client(host, port, new MinecraftProtocol(name), new TcpSessionFactory(true));
         setupClient(client, name);
         return client;
     }
@@ -164,8 +165,8 @@ public abstract class Experiment implements Runnable {
      * @param name the client name.
      * @return the client.
      */
-    protected Bot newBot(String name) {
-        Bot bot = new Bot(new MinecraftProtocol(name), options.host, options.port);
+    protected Bot newBot(String host, int port, String name) {
+        Bot bot = new Bot(new MinecraftProtocol(name), host, port);
         setupClient(bot.getClient(), name);
         return bot;
     }
@@ -198,7 +199,7 @@ public abstract class Experiment implements Runnable {
     protected abstract void tick();
 
     protected Bot createBot() throws ConnectException {
-        Bot bot = newBot(UUID.randomUUID().toString().substring(0, 6));
+        Bot bot = newBot(host, port, UUID.randomUUID().toString().substring(0, 6));
         bot.connect();
         int sleep = 1000;
         int tries = 10;

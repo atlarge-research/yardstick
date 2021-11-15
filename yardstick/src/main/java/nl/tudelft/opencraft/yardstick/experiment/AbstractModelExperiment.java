@@ -18,7 +18,11 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import java.util.*;
+import com.typesafe.config.Config;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Collectors;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
@@ -30,24 +34,19 @@ public abstract class AbstractModelExperiment extends Experiment {
     private final List<Bot> botList = Collections.synchronizedList(new ArrayList<>());
     private final BotModel model;
 
-    private int botsTotal = 0;
     private long startMillis;
-    private int durationInSeconds;
-    private int secondsBetweenJoin;
-    private int numberOfBotsPerJoin;
+    private Duration experimentDuration;
     private long lastJoin = System.currentTimeMillis();
 
-    public AbstractModelExperiment(int id, String description, BotModel model) {
-        super(id, description);
+    public AbstractModelExperiment(int id, String host, int port, String description, BotModel model) {
+        super(id, host, port, description);
         this.model = model;
     }
 
     @Override
     protected void before() {
-        this.botsTotal = Integer.parseInt(options.experimentParams.get("bots"));
-        this.durationInSeconds = Integer.parseInt(options.experimentParams.getOrDefault("duration", "600"));
-        this.secondsBetweenJoin = Integer.parseInt(options.experimentParams.getOrDefault("joininterval", "1"));
-        this.numberOfBotsPerJoin = Integer.parseInt(options.experimentParams.getOrDefault("numbotsperjoin", "1"));
+        Config arguments = config.getConfig("benchmark.player-emulation.arguments");
+        this.experimentDuration = arguments.getDuration("duration");
         this.startMillis = System.currentTimeMillis();
     }
 
@@ -65,19 +64,6 @@ public abstract class AbstractModelExperiment extends Experiment {
             }
         }
 
-        if (System.currentTimeMillis() - this.lastJoin > secondsBetweenJoin * 1000
-                && botList.size() <= this.botsTotal) {
-            lastJoin = System.currentTimeMillis();
-            int botsToConnect = Math.min(this.numberOfBotsPerJoin, this.botsTotal - botList.size());
-            for (int i = 0; i < botsToConnect; i++) {
-                Bot bot = createBot();
-                Thread connector = new Thread(newBotConnector(bot));
-                connector.setName("Connector-" + bot.getName());
-                connector.setDaemon(false);
-                connector.start();
-                botList.add(bot);
-            }
-        }
         synchronized (botList) {
             for (Bot bot : botList) {
                 botTick(bot);
@@ -96,34 +82,10 @@ public abstract class AbstractModelExperiment extends Experiment {
         }
     }
 
-    private Runnable newBotConnector(Bot bot) {
-        return () -> {
-            bot.connect();
-            int sleep = 1000;
-            int tries = 3;
-            while (tries-- > 0 && (bot.getPlayer() == null || !bot.isJoined())) {
-                try {
-                    Thread.sleep(sleep);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    break;
-                }
-            }
-            if (!bot.isJoined()) {
-                logger.warning(String.format("Could not connect bot %s:%d.", options.host, options.port));
-                bot.disconnect("Make sure to close all connections.");
-            }
-        };
-    }
-
-    protected Bot createBot() {
-        return newBot(UUID.randomUUID().toString().substring(0, 6));
-    }
-
     @Override
     protected boolean isDone() {
 
-        boolean timeUp = System.currentTimeMillis() - this.startMillis > this.durationInSeconds * 1_000;
+        boolean timeUp = System.currentTimeMillis() - this.startMillis > this.experimentDuration.toMillis();
         if (timeUp) {
             return true;
         } else if (botList.size() > 0) {

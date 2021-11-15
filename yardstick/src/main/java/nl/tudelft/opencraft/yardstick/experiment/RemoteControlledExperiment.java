@@ -18,21 +18,20 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import static io.javalin.apibuilder.ApiBuilder.get;
+import static io.javalin.apibuilder.ApiBuilder.path;
+import static io.javalin.apibuilder.ApiBuilder.post;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import io.javalin.Javalin;
 import io.javalin.core.validation.Validator;
 import io.javalin.http.Context;
 import io.javalin.plugin.json.JavalinJson;
+import java.util.HashMap;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkXZTask;
 import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
-import nl.tudelft.opencraft.yardstick.util.Vector3i;
-
-import java.util.HashMap;
-
-import static io.javalin.apibuilder.ApiBuilder.*;
 
 public class RemoteControlledExperiment extends Experiment {
 
@@ -43,8 +42,8 @@ public class RemoteControlledExperiment extends Experiment {
     /**
      * Creates a new experiment.
      */
-    public RemoteControlledExperiment() {
-        super(7, "Experiment Controlled Through REST API.");
+    public RemoteControlledExperiment(String host, int port) {
+        super(7, host, port, "Experiment Controlled Through REST API.");
     }
 
     @Override

@@ -25,17 +25,16 @@ public class Experiment1SimpleJoin extends Experiment {
     public static final long EXPERIMENT_DURATION = 10_000;
     //
     private Client client;
-    //
 
-    public Experiment1SimpleJoin() {
-        super(1,
+    public Experiment1SimpleJoin(String host, int port) {
+        super(1, host, port,
                 "A simple experiment. A bot joins the server and disconnects after 10 seconds. "
-                + "The amount of packets and bytes that are both sent and received are counted and reported.");
+                        + "The amount of packets and bytes that are both sent and received are counted and reported.");
     }
 
     @Override
     protected void before() {
-        client = newClient("YSBot-1");
+        client = newClient(host, port, "YSBot-1");
         client.getSession().connect();
     }
 

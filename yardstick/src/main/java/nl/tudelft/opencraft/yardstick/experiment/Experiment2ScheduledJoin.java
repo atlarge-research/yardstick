@@ -18,10 +18,12 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import science.atlarge.opencraft.packetlib.Client;
+import com.typesafe.config.Config;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import science.atlarge.opencraft.packetlib.Client;
 
 public class Experiment2ScheduledJoin extends Experiment {
 
@@ -34,8 +36,8 @@ public class Experiment2ScheduledJoin extends Experiment {
     // Total amount of bots to let the app instances join the server combined
     private int botsTotal;
 
-    // Interval between joins, in milliseconds
-    private int interval;
+    // Interval between joins
+    private Duration interval;
 
     // The amount of bots that have joined
     private int botsJoined = 0;
@@ -45,17 +47,17 @@ public class Experiment2ScheduledJoin extends Experiment {
 
     private Instant endTime;
 
-    public Experiment2ScheduledJoin() {
-        super(2, "Gradually lets bots join a server in a scheduled manner. Supports a clustered approach.");
+    public Experiment2ScheduledJoin(String host, int port) {
+        super(2, host, port, "Gradually lets bots join a server in a scheduled manner. Supports a clustered approach.");
     }
 
     @Override
     protected void before() {
         // Quick and dirty. TODO: Error handling
-        this.nodeId = Integer.parseInt(options.experimentParams.get("id"));
-        this.nodeCount = Integer.parseInt(options.experimentParams.get("nodes"));
-        this.botsTotal = Integer.parseInt(options.experimentParams.get("bots"));
-        this.interval = Integer.parseInt(options.experimentParams.get("interval"));
+        Config arguments = config.getConfig("benchmark.player-emulation.arguments");
+        this.nodeCount = config.getInt("benchmark.player-emulation.number-of-nodes");
+        this.botsTotal = arguments.getInt("behavior.2.bots");
+        this.interval = arguments.getDuration("behavior.2.interval");
     }
 
     @Override
@@ -71,7 +73,7 @@ public class Experiment2ScheduledJoin extends Experiment {
     @Override
     protected void tick() {
         // Calculate which bot should be joining on this tick
-        int step = (int) Math.floorDiv(tick, interval) + 1;
+        int step = (int) Math.floorDiv(tick, interval.toMillis()) + 1;
 
         // If the bot has already joined, or all bots have joined
         if (step <= botsJoined || step > botsTotal) {
@@ -90,7 +92,7 @@ public class Experiment2ScheduledJoin extends Experiment {
         logger.info("Bot " + botsJoined + " joining on node " + node + " (this node)");
 
         // Connect
-        Client client = newClient("YSBot-" + node + "-" + botsJoined);
+        Client client = newClient(host, port, "YSBot-" + node + "-" + botsJoined);
         client.getSession().connect();
 
         if (!client.getSession().isConnected()) {

@@ -18,6 +18,8 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import com.typesafe.config.Config;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -44,29 +46,30 @@ public class Experiment4MultiWalkAround extends Experiment {
 
     private int botsTotal = 0;
     private long startMillis;
-    private int durationInSeconds;
-    private int secondsBetweenJoin;
+    private Duration experimentDuration;
+    private Duration timeBetweenJoins;
     private int numberOfBotsPerJoin;
     private final Map<Bot, Vector3d> botSpawnLocations = new HashMap<>();
     private long lastJoin = System.currentTimeMillis();
 
-    public Experiment4MultiWalkAround() {
-        super(4, "Bots walking around based on a movement model for Second Life.");
+    public Experiment4MultiWalkAround(String host, int port) {
+        super(4, host, port, "Bots walking around based on a movement model for Second Life.");
     }
 
-    public Experiment4MultiWalkAround(int num, String desc) {
-        super(num, desc);
+    public Experiment4MultiWalkAround(String host, int port, int num, String desc) {
+        super(num, host, port, desc);
     }
 
     @Override
     protected void before() {
-        this.botsTotal = Integer.parseInt(options.experimentParams.get("bots"));
-        this.durationInSeconds = Integer.parseInt(options.experimentParams.getOrDefault("duration", "600"));
-        this.secondsBetweenJoin = Integer.parseInt(options.experimentParams.getOrDefault("joininterval", "1"));
-        this.numberOfBotsPerJoin = Integer.parseInt(options.experimentParams.getOrDefault("numbotsperjoin", "1"));
+        Config arguments = config.getConfig("benchmark.player-emulation.arguments");
+        this.botsTotal = arguments.getInt("behavior.4.bots");
+        this.experimentDuration = arguments.getDuration("duration");
+        this.timeBetweenJoins = arguments.getDuration("behavior.4.joininterval");
+        this.numberOfBotsPerJoin = arguments.getInt("behavior.4.numbotsperjoin");
         this.movement = new SimpleMovementModel(
-                Integer.parseInt(options.experimentParams.getOrDefault("boxDiameter", "32")),
-                Boolean.parseBoolean(options.experimentParams.getOrDefault("spawnAnchor", "false"))
+                arguments.getInt("behavior.4.boxDiameter"),
+                arguments.getBoolean("behavior.4.spawnAnchor")
         );
         this.startMillis = System.currentTimeMillis();
     }
@@ -94,7 +97,7 @@ public class Experiment4MultiWalkAround extends Experiment {
                 }
             });
         }
-        if (System.currentTimeMillis() - this.lastJoin > secondsBetweenJoin * 1000
+        if (System.currentTimeMillis() - this.lastJoin > timeBetweenJoins.toMillis() * 1000
                 && botList.size() <= this.botsTotal) {
             int botsToConnect = Math.min(this.numberOfBotsPerJoin, this.botsTotal - currentNumberOfBots());
             for (int i = 0; i < botsToConnect; i++) {
@@ -116,7 +119,7 @@ public class Experiment4MultiWalkAround extends Experiment {
                 botSpawnLocations.put(bot, bot.getPlayer().getLocation());
                 return bot;
             } catch (ConnectException e) {
-                logger.warning(String.format("Could not connect bot on %s:%d after %d ms.", options.host, options.port, System.currentTimeMillis() - startTime));
+                logger.warning(String.format("Could not connect bot on %s:%d after %d ms.", host, port, System.currentTimeMillis() - startTime));
             }
             return null;
         }));
@@ -135,7 +138,7 @@ public class Experiment4MultiWalkAround extends Experiment {
     @Override
     protected boolean isDone() {
 
-        boolean timeUp = System.currentTimeMillis() - this.startMillis > this.durationInSeconds * 1_000;
+        boolean timeUp = System.currentTimeMillis() - this.startMillis > this.experimentDuration.toMillis();
         if (timeUp) {
             return true;
         } else if (botList.size() > 0) {
@@ -174,7 +177,7 @@ public class Experiment4MultiWalkAround extends Experiment {
     }
 
     public int joinIntervalInSeconds() {
-        return secondsBetweenJoin;
+        return (int) timeBetweenJoins.getSeconds();
     }
 
     public int getBotsPerJoin() {

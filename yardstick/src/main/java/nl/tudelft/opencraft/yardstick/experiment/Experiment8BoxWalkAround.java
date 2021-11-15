@@ -18,6 +18,8 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import com.typesafe.config.Config;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -41,25 +43,26 @@ public class Experiment8BoxWalkAround extends Experiment {
 
     private int botsTotal = 0;
     private long startMillis;
-    private int durationInSeconds;
-    private int secondsBetweenJoin;
+    private Duration experimentDuration;
+    private Duration timeBetweenJoins;
     private int numberOfBotsPerJoin;
     private final Map<Bot, Vector3d> botSpawnLocations = new HashMap<>();
     private long lastJoin = System.currentTimeMillis();
 
-    public Experiment8BoxWalkAround() {
-        super(4, "Bots walking around based on a movement model for Second Life.");
+    public Experiment8BoxWalkAround(String host, int port) {
+        super(4, host, port, "Bots walking around based on a movement model for Second Life.");
     }
 
     @Override
     protected void before() {
-        this.botsTotal = Integer.parseInt(options.experimentParams.get("bots"));
-        this.durationInSeconds = Integer.parseInt(options.experimentParams.getOrDefault("duration", "600"));
-        this.secondsBetweenJoin = Integer.parseInt(options.experimentParams.getOrDefault("joininterval", "1"));
-        this.numberOfBotsPerJoin = Integer.parseInt(options.experimentParams.getOrDefault("numbotsperjoin", "1"));
+        Config arguments = config.getConfig("benchmark.player-behavior.arguments");
+        this.botsTotal = arguments.getInt("behavior.8.bots");
+        this.experimentDuration = arguments.getDuration("duration");
+        this.timeBetweenJoins = arguments.getDuration("behavior.8.joininterval");
+        this.numberOfBotsPerJoin = arguments.getInt("behavior.8.numbotsperjoin");
         this.movement = new BoundingBoxMovementModel(
-            Integer.parseInt(options.experimentParams.getOrDefault("boxDiameter", "32")),
-            Boolean.parseBoolean(options.experimentParams.getOrDefault("spawnAnchor", "false"))
+                arguments.getInt("behavior.8.boxDiameter"),
+                arguments.getBoolean("behavior.8.spawnAnchor")
         );
         this.startMillis = System.currentTimeMillis();
     }
@@ -68,13 +71,13 @@ public class Experiment8BoxWalkAround extends Experiment {
     protected void tick() {
         synchronized (botList) {
             List<Bot> disconnectedBots = botList.stream()
-                .filter(bot -> !bot.isJoined())
-                .collect(Collectors.toList());
+                    .filter(bot -> !bot.isJoined())
+                    .collect(Collectors.toList());
             disconnectedBots.forEach(bot -> bot.disconnect("Bot is not connected"));
             botList.removeAll(disconnectedBots);
         }
-        if (System.currentTimeMillis() - this.lastJoin > secondsBetweenJoin * 1000
-            && botList.size() <= this.botsTotal) {
+        if (System.currentTimeMillis() - this.lastJoin > timeBetweenJoins.toMillis()
+                && botList.size() <= this.botsTotal) {
             lastJoin = System.currentTimeMillis();
             int botsToConnect = Math.min(this.numberOfBotsPerJoin, this.botsTotal - botList.size());
             for (int i = 0; i < botsToConnect; i++) {
@@ -85,7 +88,7 @@ public class Experiment8BoxWalkAround extends Experiment {
                         botSpawnLocations.put(bot, bot.getPlayer().getLocation());
                         botList.add(bot);
                     } catch (ConnectException e) {
-                        logger.warning(String.format("Could not connect bot on %s:%d after %d ms.", options.host, options.port, System.currentTimeMillis() - startTime));
+                        logger.warning(String.format("Could not connect bot on %s:%d after %d ms.", host, port, System.currentTimeMillis() - startTime));
                     }
                 }).start();
             }
@@ -109,7 +112,7 @@ public class Experiment8BoxWalkAround extends Experiment {
     @Override
     protected boolean isDone() {
 
-        boolean timeUp = System.currentTimeMillis() - this.startMillis > this.durationInSeconds * 1_000;
+        boolean timeUp = System.currentTimeMillis() - this.startMillis > this.experimentDuration.toMillis();
         if (timeUp) {
             return true;
         } else if (botList.size() > 0) {

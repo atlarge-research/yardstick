@@ -18,29 +18,35 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import com.typesafe.config.Config;
+import java.time.Duration;
+
 public class Experiment9Spike extends Experiment4MultiWalkAround {
 
-    private int spikeDelayInSeconds;
-    private int spikeDurationInSeconds;
+    private Duration spikeDelay;
+    private Duration spikeDuration;
     private int spikePeakPlayers;
 
-    public Experiment9Spike() {
-        super(9, "Operates bots according to experiment 4, but allows a temporary spike in players after set delay.");
+    public Experiment9Spike(String host, int port) {
+        super(host, port, 9, "Operates bots according to experiment 4, but allows a temporary spike in players after " +
+                "set delay.");
     }
 
     @Override
     protected void before() {
         super.before();
-        spikeDelayInSeconds = Integer.parseInt(options.experimentParams.getOrDefault("spikeDelayInSeconds", "0"));
-        spikeDurationInSeconds = Integer.parseInt(options.experimentParams.getOrDefault("spikeDurationInSeconds", "0"));
-        spikePeakPlayers = Integer.parseInt(options.experimentParams.getOrDefault("spikePeakPlayers", String.valueOf(getBotsTotal())));
+        Config arguments = config.getConfig("benchmark.player-behavior.arguments");
+        spikeDelay = arguments.getDuration("behavior.9.spikeDelayInSeconds");
+        spikeDuration = arguments.getDuration("behavior.9.spikeDurationInSeconds");
+        spikePeakPlayers = arguments.getInt("behavior.9.spikePeakPlayers");
     }
 
     @Override
     protected void tick() {
         super.tick();
-        boolean spikeHasStarted = System.currentTimeMillis() - getStartMillis() >= spikeDelayInSeconds * 1000;
-        boolean spikeHasEnded = System.currentTimeMillis() - getStartMillis() >= (spikeDelayInSeconds + spikeDurationInSeconds) * 1000;
+        boolean spikeHasStarted = System.currentTimeMillis() - getStartMillis() >= spikeDelay.toMillis();
+        boolean spikeHasEnded =
+                System.currentTimeMillis() - getStartMillis() >= spikeDelay.plus(spikeDuration).toMillis();
         if (spikeHasStarted && !spikeHasEnded) {
             boolean reachedPlayerPeak = currentNumberOfBots() >= spikePeakPlayers;
             boolean joinIntervalElapsed = System.currentTimeMillis() > getLastJoined() + joinIntervalInSeconds() * 1000;
