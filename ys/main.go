@@ -219,16 +219,24 @@ func primary() {
 	config := conf.GetConfig("benchmark")
 	prov := ProvisionerFromConfig(config.GetConfig("provisioning"))
 	game := GameFromConfig(config.GetString("directories.input"), config.GetConfig("game"))
-	numPlayerEmulation := config.GetInt("player-emulation.number-of-nodes")
-	playerEmulation := make([]Program, numPlayerEmulation)
-	for i := 0; i < numPlayerEmulation; i++ {
-		playerEmulation[i] = PlayerEmulationFromConfig(game.Endpoint, *configPath)
-	}
+
 	gameNode := 0
 	if game.NeedsNode() {
 		gameNode = 1
 	}
+
+	numPlayerEmulation := config.GetInt("player-emulation.number-of-nodes")
 	nodes, err := prov.Provision(gameNode + numPlayerEmulation)
+
+	// TODO Deploy pecosa on game node
+	if err = game.Deploy(nodes[0]); err != nil {
+		panic(err)
+	}
+
+	playerEmulation := make([]Program, numPlayerEmulation)
+	for i := 0; i < numPlayerEmulation; i++ {
+		playerEmulation[i] = PlayerEmulationFromConfig(game.Endpoint, *configPath)
+	}
 	defer func() {
 		for _, node := range nodes {
 			err := node.Close()
@@ -240,10 +248,7 @@ func primary() {
 	if err != nil {
 		panic(err)
 	}
-	// TODO Deploy pecosa on game node
-	if err = game.Deploy(nodes[0]); err != nil {
-		panic(err)
-	}
+
 	if err = game.Start(); err != nil {
 		panic(err)
 	}
