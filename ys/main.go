@@ -339,7 +339,7 @@ func runExperimentIteration(config ExperimentConfig, iteration int) {
 
 	playerEmulation := make([]Program, numPlayerEmulation)
 	for i := 0; i < numPlayerEmulation; i++ {
-		playerEmulation[i] = PlayerEmulationFromConfig(game.Host, game.Port, *configPath)
+		playerEmulation[i] = PlayerEmulationFromConfig(game.Host(), game.Port(), *configPath)
 	}
 	if err != nil {
 		panic(err)
