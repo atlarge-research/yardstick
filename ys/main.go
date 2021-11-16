@@ -303,30 +303,33 @@ func primary() {
 	fmt.Println(conf)
 	var totalIterations int64
 	for _, c := range configFiles {
-		for i := 0; i < c.GetInt("benchmark.iterations"); i++ {
-			totalIterations++
-		}
+		totalIterations += int64(c.GetInt("benchmark.iterations"))
 	}
 	bar := progressbar.Default(totalIterations, "running experiment")
+	go func() {
+		// See https://github.com/schollz/progressbar/issues/81
+		time.Sleep(4 * time.Second)
+		bar.RenderBlank()
+	}()
 	for _, c := range configFiles {
 		for i := 0; i < c.GetInt("benchmark.iterations"); i++ {
-			runExperimentIteration(c.Config, i)
+			runExperimentIteration(c, i)
 			bar.Add(1)
 		}
 	}
-	runDataScripts(conf)
+	runDataScripts(conf.GetConfig("benchmark.directories"))
 }
 
-func runExperimentIteration(config *hocon.Config, iteration int) {
-	prov := ProvisionerFromConfig(config.GetConfig("provisioning"))
-	game := GameFromConfig(config.GetString("directories.input"), config.GetConfig("game"))
+func runExperimentIteration(config ExperimentConfig, iteration int) {
+	prov := ProvisionerFromConfig(config.GetConfig("benchmark.provisioning"))
+	game := GameFromConfig(config.GetString("benchmark.directories.input"), config.GetConfig("benchmark.game"))
 
 	gameNode := 0
 	if game.NeedsNode() {
 		gameNode = 1
 	}
 
-	numPlayerEmulation := config.GetInt("player-emulation.number-of-nodes")
+	numPlayerEmulation := config.GetInt("benchmark.player-emulation.number-of-nodes")
 	nodes, err := prov.Provision(gameNode + numPlayerEmulation)
 
 	// TODO Deploy pecosa on game node
@@ -370,7 +373,7 @@ func runExperimentIteration(config *hocon.Config, iteration int) {
 		wg.Add(1)
 		program := program
 		go func() {
-			program.Wait(config.GetDuration("player-emulation.arguments.duration") + 1*time.Minute)
+			program.Wait(config.GetDuration("benchmark.player-emulation.arguments.duration") + 1*time.Minute)
 			wg.Done()
 		}()
 	}
@@ -389,13 +392,13 @@ func runExperimentIteration(config *hocon.Config, iteration int) {
 	}
 
 	log.Println("downloading mve output")
-	outputDir := config.GetString("directories.raw-output")
-	if err := game.Get(outputDir, iteration); err != nil {
+	outputDir := config.GetString("benchmark.directories.raw-output")
+	if err := game.Get(outputDir, config.Name, iteration); err != nil {
 		panic(err)
 	}
 	log.Println("downloading player emulation output")
 	for _, program := range playerEmulation {
-		if err := program.Get(outputDir, iteration); err != nil {
+		if err := program.Get(outputDir, config.Name, iteration); err != nil {
 			panic(err)
 		}
 	}
@@ -416,9 +419,9 @@ func runExperimentIteration(config *hocon.Config, iteration int) {
 }
 
 func runDataScripts(config *hocon.Config) {
-	inputDir := config.GetString("directories.raw-output")
-	scriptsDir := config.GetString("directories.raw-output-scripts")
-	outputDir := config.GetString("directories.output")
+	inputDir := config.GetString("raw-output")
+	scriptsDir := config.GetString("raw-output-scripts")
+	outputDir := config.GetString("output")
 	scripts, err := os.Open(scriptsDir)
 	if err != nil {
 		panic(err)
@@ -428,8 +431,10 @@ func runDataScripts(config *hocon.Config) {
 		panic(err)
 	}
 	for _, f := range entries {
-		exec.Command("chmod", "+x", f.Name()).Run()
-		exec.Command(f.Name(), inputDir, outputDir).Run()
+		scriptPath := filepath.Join(scriptsDir, f.Name())
+		command := exec.Command(scriptPath, inputDir, outputDir)
+		log.Println(command)
+		command.Run()
 	}
 }
 

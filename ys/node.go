@@ -267,9 +267,10 @@ func (node *Node) Stop(uuid string) {
 	}
 }
 
-func (node *Node) Get(uuid, outputDirPath string, iteration int) {
+func (node *Node) Get(uuid, outputDirPath, config string, iteration int) {
 	ip := strings.ReplaceAll(node.ipAddress, ".", "_")
-	dirPath := filepath.Join(outputDirPath, fmt.Sprintf("it-%v-%v-node-%v", iteration, uuid, ip))
+	dirPath := filepath.Join(outputDirPath, fmt.Sprintf("i-%v-c-%v-%v-node-%v", iteration,
+		strings.ReplaceAll(config, "-", "_"), uuid, ip))
 	if err := os.MkdirAll(dirPath, 0755); err != nil {
 		panic(err)
 	}
