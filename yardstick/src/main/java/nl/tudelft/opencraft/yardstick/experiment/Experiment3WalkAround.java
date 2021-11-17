@@ -31,8 +31,8 @@ public class Experiment3WalkAround extends Experiment {
     private Bot bot;
     private final SimpleMovementModel movement = new SimpleMovementModel();
 
-    public Experiment3WalkAround(String host, int port, Config config) {
-        super(3, host, port, config, "A simple test demonstrating A* movement.");
+    public Experiment3WalkAround(String address, Config config) {
+        super(3, address, config, "A simple test demonstrating A* movement.");
     }
 
     @Override

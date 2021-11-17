@@ -45,8 +45,8 @@ public class Experiment8BoxWalkAround extends Experiment {
     private BotManager botManager;
     private ScheduledFuture<?> runningBotManager;
 
-    public Experiment8BoxWalkAround(String host, int port, Config config) {
-        super(4, host, port, config, "Bots walking around based on a movement model for Second Life.");
+    public Experiment8BoxWalkAround(String address, Config config) {
+        super(4, address, config, "Bots walking around based on a movement model for Second Life.");
     }
 
     @Override

@@ -28,11 +28,8 @@ public class Options {
     @Parameter(names = {"--help"}, help = true, description = "Shows help")
     public boolean help;
 
-    @Parameter(names = {"--host"}, description = "The hostname of the game.")
-    public String host;
-
-    @Parameter(names = {"--port"}, description = "The port of the game.")
-    public int port;
+    @Parameter(names = {"--address"}, description = "The hostname of the game.")
+    public String address;
 
     /**
      * CSV dumps
@@ -51,8 +48,7 @@ public class Options {
     public String toString() {
         final StringBuilder sb = new StringBuilder("Options{");
         sb.append("help=").append(help);
-        sb.append(", host='").append(host).append('\'');
-        sb.append(", port=").append(port);
+        sb.append(", address='").append(address).append('\'');
         sb.append(", csvDump=").append(csvDump);
         sb.append(", inFile='").append(inFile).append('\'');
         sb.append(", outFile='").append(outFile).append('\'');

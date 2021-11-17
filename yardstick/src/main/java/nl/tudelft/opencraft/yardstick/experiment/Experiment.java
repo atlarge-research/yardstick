@@ -58,10 +58,10 @@ public abstract class Experiment implements Runnable {
      * @param number The experiment number. Must be unique globally.
      * @param desc   A human-friendly description of the experiment.
      */
-    public Experiment(int number, String host, int port, Config config, String desc) {
+    public Experiment(int number, String address, Config config, String desc) {
         this.number = number;
         this.description = desc;
-        this.game = new GameFactory().getGame(host, port, config);
+        this.game = new GameFactory().getGame(address, config);
         this.logger = GlobalLogger.getLogger().newSubLogger("Experiment " + number);
     }
 

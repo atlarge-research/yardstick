@@ -76,39 +76,38 @@ public class Yardstick {
             return;
         }
 
-        String host = options.host;
-        int port = options.port;
+        String address = options.address;
 
         Config experimentConfig = config.getConfig("benchmark.player-emulation.arguments");
         String experimentName = experimentConfig.getString("behavior.name");
         Experiment ex;
         switch (experimentName) {
             case "3":
-                ex = new Experiment3WalkAround(host, port, experimentConfig);
+                ex = new Experiment3WalkAround(address, experimentConfig);
                 break;
             case "4":
-                ex = new Experiment4MultiWalkAround(host, port, experimentConfig);
+                ex = new Experiment4MultiWalkAround(address, experimentConfig);
                 break;
             case "5":
-                ex = new Experiment5SimpleWalk(host, port, experimentConfig);
+                ex = new Experiment5SimpleWalk(address, experimentConfig);
                 break;
             case "6":
-                ex = new Experiment6InteractWalk(host, port, experimentConfig);
+                ex = new Experiment6InteractWalk(address, experimentConfig);
                 break;
             case "7":
-                ex = new RemoteControlledExperiment(host, port, experimentConfig);
+                ex = new RemoteControlledExperiment(address, experimentConfig);
                 break;
             case "8":
-                ex = new Experiment8BoxWalkAround(host, port, experimentConfig);
+                ex = new Experiment8BoxWalkAround(address, experimentConfig);
                 break;
             case "9":
-                ex = new Experiment9Spike(host, port, experimentConfig);
+                ex = new Experiment9Spike(address, experimentConfig);
                 break;
             case "10":
-                ex = new Experiment10GenerationStressTest(host, port, experimentConfig);
+                ex = new Experiment10GenerationStressTest(address, experimentConfig);
                 break;
             case "11":
-                ex = new Experiment11Latency(host, port, experimentConfig);
+                ex = new Experiment11Latency(address, experimentConfig);
                 break;
             default:
                 System.out.println("Invalid experiment: " + experimentName);

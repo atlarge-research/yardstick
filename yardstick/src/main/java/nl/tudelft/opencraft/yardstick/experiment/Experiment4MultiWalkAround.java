@@ -52,12 +52,12 @@ public class Experiment4MultiWalkAround extends Experiment {
     private final Map<Bot, Vector3d> botSpawnLocations = new HashMap<>();
     private long lastJoin = System.currentTimeMillis();
 
-    public Experiment4MultiWalkAround(String host, int port, Config config) {
-        super(4, host, port, config, "Bots walking around based on a movement model for Second Life.");
+    public Experiment4MultiWalkAround(String address, Config config) {
+        super(4, address, config, "Bots walking around based on a movement model for Second Life.");
     }
 
-    public Experiment4MultiWalkAround(String host, int port, int num, Config config, String desc) {
-        super(num, host, port, config, desc);
+    public Experiment4MultiWalkAround(String address, int num, Config config, String desc) {
+        super(num, address, config, desc);
     }
 
     @Override

@@ -39,8 +39,8 @@ public abstract class AbstractModelExperiment extends Experiment {
     private Duration experimentDuration;
     private long lastJoin = System.currentTimeMillis();
 
-    public AbstractModelExperiment(int id, String host, int port, Config config, String description, BotModel model) {
-        super(id, host, port, config, description);
+    public AbstractModelExperiment(int id, String address, Config config, String description, BotModel model) {
+        super(id, address, config, description);
         this.model = model;
     }
 

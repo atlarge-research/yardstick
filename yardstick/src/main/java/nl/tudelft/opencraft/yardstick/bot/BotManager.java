@@ -96,7 +96,7 @@ public class BotManager implements Runnable {
                     }
                 }));
             }
-        } else if (playerCount > playerCountTarget) {
+        } else if (playerCount > playerCountTarget && connectedBots.size() > 0) {
             int numPlayersToDisconnect = playerStepDecrease < 1 ? playerSurplus : Math.min(playerStepDecrease, playerSurplus);
             for (int i = 0; i < numPlayersToDisconnect; i++) {
                 connectedBots.remove(0).disconnect(String.format("Too many players connected. Is %d, should be %d", playerCount, playerCountTarget));
