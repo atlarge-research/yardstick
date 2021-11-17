@@ -324,22 +324,26 @@ func runExperimentIteration(config ExperimentConfig, iteration int) {
 	prov := ProvisionerFromConfig(config.GetConfig("benchmark.provisioning"))
 	game := GameFromConfig(config.GetString("benchmark.directories.input"), config.GetConfig("benchmark.game"))
 
-	gameNode := 0
+	var gameNode *Node
 	if game.NeedsNode() {
-		gameNode = 1
+		nodes, err := prov.Provision(1)
+		if err != nil {
+			panic(err)
+		}
+		gameNode = nodes[0]
 	}
 
 	numPlayerEmulation := config.GetInt("benchmark.player-emulation.number-of-nodes")
-	nodes, err := prov.Provision(gameNode + numPlayerEmulation)
+	playerEmulationNodes, err := prov.Provision(numPlayerEmulation)
 
 	// TODO Deploy pecosa on game node
-	if err = game.Deploy(nodes[0]); err != nil {
+	if err = game.Deploy(gameNode); err != nil {
 		panic(err)
 	}
 
 	playerEmulation := make([]Program, numPlayerEmulation)
 	for i := 0; i < numPlayerEmulation; i++ {
-		playerEmulation[i] = PlayerEmulationFromConfig(game.Host(), game.Port(), *configPath)
+		playerEmulation[i] = PlayerEmulationFromConfig(game.Address(), *configPath)
 	}
 	if err != nil {
 		panic(err)
@@ -353,7 +357,7 @@ func runExperimentIteration(config ExperimentConfig, iteration int) {
 
 	for i, program := range playerEmulation {
 		// TODO Deploy pecosa on this node
-		err = program.Deploy(nodes[1+i])
+		err = program.Deploy(playerEmulationNodes[i])
 		if err != nil {
 			panic(err)
 		}
@@ -410,7 +414,12 @@ func runExperimentIteration(config ExperimentConfig, iteration int) {
 	}
 
 	log.Println("stopping workers")
-	for _, node := range nodes {
+	if gameNode != nil {
+		if err := gameNode.Close(); err != nil {
+			panic(err)
+		}
+	}
+	for _, node := range playerEmulationNodes {
 		err := node.Close()
 		if err != nil {
 			log.Printf("error stopping node at %v: %v", node.ipAddress, err)

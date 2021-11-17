@@ -2,12 +2,11 @@ package main
 
 import (
 	"path/filepath"
-	"strconv"
 
 	"github.com/jdonkervliet/hocon"
 )
 
-func PlayerEmulationFromConfig(host string, port int, configPath string) Program {
+func PlayerEmulationFromConfig(address string, configPath string) Program {
 	config, err := hocon.ParseResource(configPath)
 	if err != nil {
 		panic(err)
@@ -18,7 +17,7 @@ func PlayerEmulationFromConfig(host string, port int, configPath string) Program
 	return &Jar{
 		name:         "playerEmulation",
 		JarPath:      LocalRemotePathFromStrings(jarPath, ""),
-		JarArguments: []string{"--host", host, "--port", strconv.Itoa(port)},
+		JarArguments: []string{"--address", address},
 		JVMArgs:      append(jvmArgs, config.GetStringSlice("benchmark.player-emulation.jvm.options")...),
 		// FIXME this config cannot be copied, but must be written to disk bc it can be the merge of multiple configs!
 		Resources: []LocalRemotePath{LocalRemotePathFromStrings(configPath, "")},

@@ -2,25 +2,27 @@ package main
 
 import (
 	"bufio"
-	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
-	"strconv"
+	"strings"
 	"time"
+
+	gonanoid "github.com/matoous/go-nanoid/v2"
 
 	"github.com/jdonkervliet/hocon"
 )
 
 type Game interface {
 	Architecture() string
-	Host() string
-	Port() int
+	Address() string
 	Program
 }
 
@@ -41,12 +43,8 @@ func (game *JarGame) Architecture() string {
 	return "jar"
 }
 
-func (game *JarGame) Host() string {
-	return game.host
-}
-
-func (game *JarGame) Port() int {
-	return game.port
+func (game *JarGame) Address() string {
+	return fmt.Sprintf("%v:%v", game.host, game.port)
 }
 
 func GameFromConfig(basePath string, config *hocon.Config) Game {
@@ -74,6 +72,7 @@ func gameFromServo(config *hocon.Config) Game {
 		repo:   config.GetString("servo.build.git"),
 		commit: config.GetString("servo.build.commit"),
 		env:    env,
+		config: config.GetConfig("servo.app"),
 	}
 }
 
@@ -107,6 +106,7 @@ type ServoAWS struct {
 	repo     string
 	commit   string
 	env      []string
+	config   *hocon.Config
 	Endpoint *url.URL
 }
 
@@ -119,60 +119,75 @@ func (s *ServoAWS) NeedsNode() bool {
 }
 
 func (s *ServoAWS) Deploy(node *Node) error {
-	tmpDir, err := os.MkdirTemp("", "")
-	if err != nil {
+	id, err := gonanoid.Generate("1234567890abcdef", 8)
+	tmpDir := filepath.Join("/tmp", fmt.Sprintf("servo-%v", id))
+
+	// Clone Servo repo
+	log.Printf("cloning servo into %v\n", tmpDir)
+	gitCloneCmd := exec.Command("git", "clone", s.repo, tmpDir)
+	if _, err := gitCloneCmd.Output(); err != nil {
 		panic(err)
 	}
-	if _, err := exec.Command("git", "clone", s.repo, tmpDir).Output(); err != nil {
+
+	// Write application.conf for Servo to use
+	if err := ioutil.WriteFile(filepath.Join(tmpDir, "application.conf"), []byte(s.config.String()), 0644); err != nil {
 		panic(err)
 	}
-	checkoutCmd := exec.Command("git", "checkout", s.commit)
-	checkoutCmd.Dir = tmpDir
-	if _, err := checkoutCmd.Output(); err != nil {
+
+	// Checkout correct Servo commit
+	gitCheckoutCmd := exec.Command("git", "checkout", s.commit)
+	gitCheckoutCmd.Dir = tmpDir
+	if _, err := gitCheckoutCmd.Output(); err != nil {
 		panic(err)
 	}
+
 	deployScriptPath := filepath.Join(tmpDir, "deployment-scripts/aws/deploy")
-	fmt.Println(deployScriptPath)
-	cmd := exec.Command(deployScriptPath)
-	cmd.Dir = filepath.Dir(deployScriptPath)
-	env := make([]string, 0)
-	env = append(env, s.env...)
-	f, err := os.Create(filepath.Join(filepath.Dir(deployScriptPath), "deployment-parameters"))
+	deployScriptDirPath := filepath.Dir(deployScriptPath)
+
+	// Create and write deployment parameters file, read by deploy script
+	f, err := os.Create(filepath.Join(deployScriptDirPath, "deployment-parameters"))
 	if err != nil {
 		panic(err)
 	}
-	defer f.Close()
 	w := bufio.NewWriter(f)
-	defer w.Flush()
-	for _, line := range env {
+	for _, line := range s.env {
 		_, _ = w.WriteString(line + "\n")
 	}
-	buf := &bytes.Buffer{}
-	cmd.Stdout = buf
-	cmd.Stderr = buf
-	if err := cmd.Start(); err != nil {
+	w.Flush()
+	f.Close()
+
+	// Run deploy script
+	servoDeployCmd := exec.Command(deployScriptPath)
+	servoDeployCmd.Dir = tmpDir
+	if output, err := servoDeployCmd.CombinedOutput(); err != nil {
+		log.Println("something went wrong when deploying servo")
+		log.Println(string(output))
 		panic(err)
 	}
-	scanner := bufio.NewScanner(buf)
-	re := regexp.MustCompile(`\s*POST\s+-\s+(https://.+)$`)
-	for scanner.Scan() {
-		line := string(scanner.Bytes())
-		if s.Endpoint != nil {
-			// endpoint already set, but keep scanning to process command output
-			continue
-		}
-		matches := re.FindStringSubmatch(line)
-		if len(matches) == 2 {
-			gameURL, err := url.Parse(matches[1])
-			if err != nil {
-				panic(err)
-			}
-			s.Endpoint = gameURL
-		}
-	}
-	if err := cmd.Wait(); err != nil {
+	namingUrlFile, err := os.Open(filepath.Join(deployScriptDirPath, "stack.json"))
+	if err != nil {
 		panic(err)
 	}
+	defer namingUrlFile.Close()
+	b, err := io.ReadAll(namingUrlFile)
+	if err != nil {
+		panic(err)
+	}
+	log.Println(string(b))
+	var m map[string]interface{}
+	json.Unmarshal(b, &m)
+	message, ok := m["HttpApiUrl"]
+	if !ok {
+		panic("stack.json does not contain field 'HttpApiUrl'")
+	}
+	rawURL := message.(string)
+	log.Println(rawURL)
+	gameURL, err := url.Parse(fmt.Sprintf("%v/naming", strings.TrimSpace(rawURL)))
+	if err != nil {
+		panic(err)
+	}
+	s.Endpoint = gameURL
+	log.Println(s.Endpoint)
 	os.RemoveAll(tmpDir)
 	return nil
 }
@@ -200,14 +215,6 @@ func (s *ServoAWS) Architecture() string {
 	return s.Name()
 }
 
-func (s *ServoAWS) Host() string {
-	return s.Endpoint.Hostname()
-}
-
-func (s *ServoAWS) Port() int {
-	port, err := strconv.Atoi(s.Endpoint.Port())
-	if err != nil {
-		panic(err)
-	}
-	return port
+func (s *ServoAWS) Address() string {
+	return s.Endpoint.String()
 }
