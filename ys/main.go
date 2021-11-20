@@ -427,7 +427,7 @@ func runExperimentIteration(config ExperimentConfig, iteration int) {
 	for _, node := range playerEmulationNodes {
 		err := node.Close()
 		if err != nil {
-			log.Printf("error stopping node at %v: %v", node.ipAddress, err)
+			log.Printf("error stopping node at %v: %v", node.host, err)
 		}
 	}
 }

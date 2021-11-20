@@ -23,7 +23,7 @@ import (
 )
 
 type Node struct {
-	ipAddress       string
+	host            string
 	endpoint        *url.URL
 	client          *http.Client
 	sshClientConfig *ssh.ClientConfig
@@ -38,7 +38,7 @@ func NewNode(user, keyFilePath, ipAddress string, port int, binary string) (node
 		panic(err)
 	}
 	node = &Node{}
-	node.ipAddress = ipAddress
+	node.host = ipAddress
 	node.endpoint = nodeURL
 	node.client = &http.Client{Timeout: 10 * time.Second}
 
@@ -123,7 +123,7 @@ func (node *Node) Close() error {
 		return errors.New(string(bodyString))
 	}
 	time.Sleep(2 * time.Second)
-	sshClient, err := ssh.Dial("tcp", fmt.Sprintf("%v:22", node.ipAddress), node.sshClientConfig)
+	sshClient, err := ssh.Dial("tcp", fmt.Sprintf("%v:22", node.host), node.sshClientConfig)
 	if err != nil {
 		return err
 	}
@@ -258,7 +258,7 @@ func (node *Node) Stop(uuid string) {
 }
 
 func (node *Node) Get(uuid, outputDirPath, config string, iteration int) {
-	ip := strings.ReplaceAll(node.ipAddress, ".", "_")
+	ip := strings.ReplaceAll(node.host, ".", "_")
 	// TODO the node should receive the full output directory, and not create it itself
 	configName := strings.TrimSuffix(strings.ReplaceAll(config, "-", "_"), ".conf")
 	dirPath := filepath.Join(outputDirPath, fmt.Sprintf("i-%v-c-%v-%v-node-%v", iteration,

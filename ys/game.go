@@ -34,7 +34,7 @@ type JarGame struct {
 
 func (game *JarGame) Deploy(node *Node) error {
 	// TODO support serverless game, uses an HTTP endpoint, port 443
-	game.host = node.ipAddress
+	game.host = node.host
 	game.port = 25565 // TODO prevent hard coding MC port
 	return game.Jar.Deploy(node)
 }
