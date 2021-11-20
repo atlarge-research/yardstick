@@ -283,7 +283,7 @@ func primary() {
 	configFiles := make([]ExperimentConfig, 0)
 	for _, f := range configDirEntries {
 		if !f.IsDir() && strings.HasSuffix(f.Name(), ".conf") {
-			c, err := hocon.ParseResource(f.Name())
+			c, err := hocon.ParseResource(filepath.Join(configDirPath, f.Name()))
 			if err != nil {
 				panic(err)
 			}
@@ -321,20 +321,25 @@ func primary() {
 }
 
 func runExperimentIteration(config ExperimentConfig, iteration int) {
-	prov := ProvisionerFromConfig(config.GetConfig("benchmark.provisioning"))
-	game := GameFromConfig(config.GetString("benchmark.directories.input"), config.GetConfig("benchmark.game"))
+	inputDirectoryPath := config.GetString("benchmark.directories.input")
+	prov := ProvisionerFromConfig(config.GetConfig("benchmark.provisioning"), inputDirectoryPath)
+	game := GameFromConfig(inputDirectoryPath, config.GetConfig("benchmark.game"))
 
+	basePort := 8080
 	var gameNode *Node
 	if game.NeedsNode() {
-		nodes, err := prov.Provision(1)
+		nodes, err := prov.Provision(1, basePort)
 		if err != nil {
 			panic(err)
 		}
 		gameNode = nodes[0]
 	}
 
+	if gameNode != nil {
+		basePort++
+	}
 	numPlayerEmulation := config.GetInt("benchmark.player-emulation.number-of-nodes")
-	playerEmulationNodes, err := prov.Provision(numPlayerEmulation)
+	playerEmulationNodes, err := prov.Provision(numPlayerEmulation, basePort)
 
 	// TODO Deploy pecosa on game node
 	if err = game.Deploy(gameNode); err != nil {

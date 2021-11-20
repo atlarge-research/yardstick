@@ -32,11 +32,8 @@ type Node struct {
 	tmpLogFilePath  string
 }
 
-var numNodes = 0
-
-func NewNode(ipAddress string) (node *Node) {
-	nodeURL, err := url.Parse(fmt.Sprintf("http://%v:%v", ipAddress, 8080+numNodes))
-	numNodes += 1 // TODO make thread safe
+func NewNode(user, keyFilePath, ipAddress string, port int, binary string) (node *Node) {
+	nodeURL, err := url.Parse(fmt.Sprintf("http://%v:%v", ipAddress, port))
 	if err != nil {
 		panic(err)
 	}
@@ -46,11 +43,9 @@ func NewNode(ipAddress string) (node *Node) {
 	node.client = &http.Client{Timeout: 10 * time.Second}
 
 	// Prepare SSH authentication
-	// FIXME from configPath
-	key := readPubKey("/Users/jesse/.ssh/id_rsa")
+	key := readPubKey(keyFilePath)
 	node.sshClientConfig = &ssh.ClientConfig{
-		// FIXME from configPath
-		User: "jesse",
+		User: user,
 		Auth: []ssh.AuthMethod{
 			key,
 		},
@@ -80,31 +75,26 @@ func NewNode(ipAddress string) (node *Node) {
 	if err != nil {
 		panic(err)
 	}
-	defer sftpClient.Close()
 
 	// Open tmp file on remote
 	dstFile, err := sftpClient.Create(node.tmpFilePath)
 	if err != nil {
 		panic(err)
 	}
-	defer dstFile.Close()
 
-	// TODO make it work if the remote architecture is not the local architecture
-	// Open current binary file
-	exe, err := os.Executable()
+	srcFile, err := os.Open(binary)
 	if err != nil {
 		panic(err)
 	}
-	srcFile, err := os.Open(exe)
-	if err != nil {
-		panic(err)
-	}
-	defer srcFile.Close()
 
 	// Write current binary into remote tmp file
 	if _, err := dstFile.ReadFrom(srcFile); err != nil {
 		panic(err)
 	}
+
+	srcFile.Close()
+	dstFile.Close()
+	sftpClient.Close()
 
 	// Make remote tmp file executable and run it
 	session, err := sshClient.NewSession()
@@ -269,8 +259,10 @@ func (node *Node) Stop(uuid string) {
 
 func (node *Node) Get(uuid, outputDirPath, config string, iteration int) {
 	ip := strings.ReplaceAll(node.ipAddress, ".", "_")
+	// TODO the node should receive the full output directory, and not create it itself
+	configName := strings.TrimSuffix(strings.ReplaceAll(config, "-", "_"), ".conf")
 	dirPath := filepath.Join(outputDirPath, fmt.Sprintf("i-%v-c-%v-%v-node-%v", iteration,
-		strings.ReplaceAll(config, "-", "_"), uuid, ip))
+		configName, uuid, ip))
 	if err := os.MkdirAll(dirPath, 0755); err != nil {
 		panic(err)
 	}

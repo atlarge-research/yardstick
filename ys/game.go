@@ -149,6 +149,7 @@ func (s *ServoAWS) Deploy(node *Node) error {
 	if err != nil {
 		panic(err)
 	}
+	// We also pass the variables through the environment. See `servoDeployCmd.Env` below
 	w := bufio.NewWriter(f)
 	for _, line := range s.env {
 		_, _ = w.WriteString(line + "\n")
@@ -159,6 +160,7 @@ func (s *ServoAWS) Deploy(node *Node) error {
 	// Run deploy script
 	servoDeployCmd := exec.Command(deployScriptPath)
 	servoDeployCmd.Dir = tmpDir
+	servoDeployCmd.Env = append(os.Environ(), s.env...)
 	if output, err := servoDeployCmd.CombinedOutput(); err != nil {
 		log.Println("something went wrong when deploying servo")
 		log.Println(string(output))
