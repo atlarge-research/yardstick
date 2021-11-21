@@ -6,7 +6,6 @@ require (
 	github.com/gin-gonic/gin v1.7.4
 	github.com/jdonkervliet/hocon v1.2.3-0.20211111150818-4f40faa9e15f
 	github.com/matoous/go-nanoid/v2 v2.0.0
-	github.com/pkg/sftp v1.13.4
 	github.com/schollz/progressbar/v3 v3.8.3
 	golang.org/x/crypto v0.0.0-20211108221036-ceb1ce70b4fa
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
@@ -22,7 +21,6 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/kr/fs v0.1.0 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect

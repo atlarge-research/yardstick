@@ -300,7 +300,7 @@ func primary() {
 		})
 	}
 
-	fmt.Println(conf)
+	log.Println(conf)
 	var totalIterations int64
 	for _, c := range configFiles {
 		totalIterations += int64(c.GetInt("benchmark.iterations"))
@@ -486,10 +486,10 @@ func handle(client net.Conn, sshClient *ssh.Client, remoteAddr string) {
 func main() {
 	kingpin.Parse()
 	if *isWorker {
-		fmt.Println("worker")
+		log.Println("worker")
 		worker()
 	} else {
-		fmt.Println("primary")
+		log.Println("primary")
 		primary()
 	}
 }

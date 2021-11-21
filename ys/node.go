@@ -12,56 +12,82 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
-
-	"github.com/pkg/sftp"
-	"golang.org/x/crypto/ssh"
 )
 
 type Node struct {
-	host            string
-	endpoint        *url.URL
-	client          *http.Client
-	sshClientConfig *ssh.ClientConfig
-	tmpDirPath      string
-	tmpFilePath     string
-	tmpLogFilePath  string
+	// User used to log in to the remote node
+	user string
+	// Host or IP of the remote node, reachable from the sshClient.
+	host string
+	// A jump host proxy used to reach the node
+	jumpHost string
+	// The remote port on which YS is running.
+	remotePort uint64
+	// The command that keeps open a local tunnel to the remote HTTP server
+	tunnel *exec.Cmd
+	// The local address tunneled to the remote node via SSH.
+	localAddress *url.URL
+	// The client used to make HTTP call on the localAddress.
+	client *http.Client
+	// Remote location of YS
+	tmpDirPath string
+	// Remote location of the YS executable
+	tmpFilePath string
+	// Remote location of the YS log file
+	tmpLogFilePath string
 }
 
-func NewNode(user, keyFilePath, ipAddress string, port int, binary string) (node *Node) {
-	nodeURL, err := url.Parse(fmt.Sprintf("http://%v:%v", ipAddress, port))
-	if err != nil {
-		panic(err)
+var portCounter uint64 = 9000
+
+func nextPort() uint64 {
+	return atomic.AddUint64(&portCounter, 1)
+}
+
+func ResetPort() {
+	portCounter = 9000
+}
+
+func (node *Node) command(program, command string, args ...string) *exec.Cmd {
+	commandArgs := make([]string, 0)
+	commandArgs = append(commandArgs, fmt.Sprintf("%v@%v", node.user, node.host))
+	if node.jumpHost != "" {
+		commandArgs = append(commandArgs, fmt.Sprintf("-J %v", node.jumpHost))
 	}
-	node = &Node{}
-	node.host = ipAddress
-	node.endpoint = nodeURL
-	node.client = &http.Client{Timeout: 10 * time.Second}
+	commandArgs = append(commandArgs, command)
+	commandArgs = append(commandArgs, args...)
+	return exec.Command(program, commandArgs...)
+}
 
-	// Prepare SSH authentication
-	key := readPubKey(keyFilePath)
-	node.sshClientConfig = &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{
-			key,
-		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // XXX: Security issue
+func (node *Node) scpCommand(local, remote string) *exec.Cmd {
+	args := make([]string, 0)
+	if node.jumpHost != "" {
+		args = append(args, "-J", node.jumpHost)
 	}
+	args = append(args, local, remote)
+	return exec.Command("scp", args...)
+}
 
-	// Create SSH client
-	sshClient, err := ssh.Dial("tcp", fmt.Sprintf("%v:22", ipAddress), node.sshClientConfig)
+func (node *Node) sshCommand(command string, args ...string) *exec.Cmd {
+	return node.command("ssh", command, args...)
+}
 
+func NewNode(user, host, proxy, binary string) *Node {
+	node := &Node{
+		user:     user,
+		host:     host,
+		jumpHost: proxy,
+		client:   &http.Client{Timeout: 10 * time.Second},
+	}
 	// Create remote file using SSH client
-	tmpFileSession, err := sshClient.NewSession()
-	if err != nil {
-		panic(err)
-	}
-	defer tmpFileSession.Close()
-	tmpDirBytes, err := tmpFileSession.Output("mktemp -d")
+	mktempCmd := node.sshCommand("mktemp", "-d")
+	tmpDirBytes, err := mktempCmd.Output()
 	if err != nil {
 		panic(err)
 	}
@@ -71,46 +97,45 @@ func NewNode(user, keyFilePath, ipAddress string, port int, binary string) (node
 	node.tmpLogFilePath = path.Join(node.tmpDirPath, "ys.log")
 
 	// Use SSH client to create SFTP client
-	sftpClient, err := sftp.NewClient(sshClient)
-	if err != nil {
+	scpCmd := node.scpCommand(binary, fmt.Sprintf("%v@%v:%v", user, host, node.tmpFilePath))
+	if err := scpCmd.Run(); err != nil {
 		panic(err)
 	}
 
-	// Open tmp file on remote
-	dstFile, err := sftpClient.Create(node.tmpFilePath)
-	if err != nil {
-		panic(err)
-	}
-
-	srcFile, err := os.Open(binary)
-	if err != nil {
-		panic(err)
-	}
-
-	// Write current binary into remote tmp file
-	if _, err := dstFile.ReadFrom(srcFile); err != nil {
-		panic(err)
-	}
-
-	srcFile.Close()
-	dstFile.Close()
-	sftpClient.Close()
-
+	node.remotePort = nextPort()
 	// Make remote tmp file executable and run it
-	session, err := sshClient.NewSession()
-	defer session.Close()
-	if err := session.Start(
-		fmt.Sprintf("cd %v &&", node.tmpDirPath) +
-			fmt.Sprintf(" chmod +x %v &&", node.tmpFilePath) +
-			fmt.Sprintf(" nohup %v --worker --port %v", node.tmpFilePath, node.endpoint.Port()) +
-			fmt.Sprintf(" < /dev/null > %v 2>&1 &", node.tmpLogFilePath)); err != nil {
+	startCmd := node.sshCommand("cd", node.tmpDirPath, ";",
+		"chmod", "+x", node.tmpFilePath, ";",
+		"nohup", node.tmpFilePath, "--worker", "--port", strconv.Itoa(int(node.remotePort)),
+		"<", "/dev/null", ">", node.tmpLogFilePath, "2>&1", "&")
+	if err := startCmd.Run(); err != nil {
 		panic(err)
 	}
-	return
+
+	var jump string
+	if proxy == "" {
+		jump = "localhost"
+	} else {
+		jump = proxy
+	}
+	nodeLocalPort := nextPort()
+	tunnelCmd := exec.Command("ssh", "-N", "-L", fmt.Sprintf("%v:%v:%v", nodeLocalPort, host, node.remotePort), jump)
+	if err := tunnelCmd.Start(); err != nil {
+		panic(err)
+	}
+	node.tunnel = tunnelCmd
+
+	laddr, err := url.Parse(fmt.Sprintf("http://localhost:%v", nodeLocalPort))
+	if err != nil {
+		panic(err)
+	}
+	node.localAddress = laddr
+	return node
 }
 
 func (node *Node) Close() error {
-	resp, err := node.client.Get(fmt.Sprintf("%v/close", node.endpoint))
+	defer node.tunnel.Process.Signal(os.Interrupt)
+	resp, err := node.client.Get(fmt.Sprintf("%v/close", node.localAddress))
 	if err != nil {
 		return err
 	}
@@ -123,21 +148,14 @@ func (node *Node) Close() error {
 		return errors.New(string(bodyString))
 	}
 	time.Sleep(2 * time.Second)
-	sshClient, err := ssh.Dial("tcp", fmt.Sprintf("%v:22", node.host), node.sshClientConfig)
-	if err != nil {
+	if err := node.sshCommand("rm", "-rf", node.tmpDirPath).Run(); err != nil {
 		return err
 	}
-	defer sshClient.Close()
-	session, err := sshClient.NewSession()
-	if err != nil {
-		return err
-	}
-	defer session.Close()
-	return session.Run(fmt.Sprintf("rm -rf %v", node.tmpDirPath))
+	return nil
 }
 
 func (node *Node) Create(name string) string {
-	response, err := node.client.Get(fmt.Sprintf("%v/program/create/%v", node.endpoint, name))
+	response, err := node.client.Get(fmt.Sprintf("%v/program/create/%v", node.localAddress, name))
 	if err != nil {
 		panic(err)
 	}
@@ -174,7 +192,7 @@ func (node *Node) UploadToPath(uuid, filePath, remotePath string) {
 	if err = writer.Close(); err != nil {
 		panic(err)
 	}
-	response, err := node.client.Post(fmt.Sprintf("%v/program/upload/%v", node.endpoint, uuid), writer.FormDataContentType(), body)
+	response, err := node.client.Post(fmt.Sprintf("%v/program/upload/%v", node.localAddress, uuid), writer.FormDataContentType(), body)
 	if err != nil {
 		panic(err)
 	}
@@ -204,7 +222,7 @@ func (node *Node) Start(uuid, path, logFile string, args ...string) {
 	if err != nil {
 		panic(err)
 	}
-	response, err := node.client.Post(fmt.Sprintf("%v/program/start/%v", node.endpoint, uuid),
+	response, err := node.client.Post(fmt.Sprintf("%v/program/start/%v", node.localAddress, uuid),
 		"application/json", bytes.NewBuffer(body))
 	if err != nil {
 		panic(err)
@@ -221,7 +239,7 @@ func (node *Node) Start(uuid, path, logFile string, args ...string) {
 }
 
 func (node *Node) Status(uuid string) Status {
-	response, err := node.client.Get(fmt.Sprintf("%v/program/status/%v", node.endpoint, uuid))
+	response, err := node.client.Get(fmt.Sprintf("%v/program/status/%v", node.localAddress, uuid))
 	if err != nil {
 		panic(err)
 	}
@@ -232,7 +250,7 @@ func (node *Node) Status(uuid string) Status {
 	}
 	responseString := strings.TrimSpace(string(responseBody))
 	if response.StatusCode != 200 {
-		log.Fatalln(responseString)
+		panic(responseString)
 	}
 	status, err := strconv.Atoi(responseString)
 	if err != nil {
@@ -242,7 +260,7 @@ func (node *Node) Status(uuid string) Status {
 }
 
 func (node *Node) Stop(uuid string) {
-	response, err := node.client.Get(fmt.Sprintf("%v/program/stop/%v", node.endpoint, uuid))
+	response, err := node.client.Get(fmt.Sprintf("%v/program/stop/%v", node.localAddress, uuid))
 	if err != nil {
 		panic(err)
 	}
@@ -266,7 +284,7 @@ func (node *Node) Get(uuid, outputDirPath, config string, iteration int) {
 	if err := os.MkdirAll(dirPath, 0755); err != nil {
 		panic(err)
 	}
-	response, err := node.client.Get(fmt.Sprintf("%v/program/get/%v", node.endpoint, uuid))
+	response, err := node.client.Get(fmt.Sprintf("%v/program/get/%v", node.localAddress, uuid))
 	if err != nil {
 		panic(err)
 	}
