@@ -29,6 +29,8 @@ import (
 	"github.com/jdonkervliet/hocon"
 )
 
+const defaultConfig = "default"
+
 var (
 	inspect    = kingpin.Flag("inspect", "Halts execution before cleanup to allow for manual inspection.").Short('i').Bool()
 	configPath = kingpin.Arg("configPath", "Path to configuration file.").String()
@@ -261,7 +263,7 @@ func worker() {
 
 type ExperimentConfig struct {
 	Name string
-	*hocon.Config
+	Path string
 }
 
 func primary() {
@@ -282,27 +284,39 @@ func primary() {
 	configFiles := make([]ExperimentConfig, 0)
 	for _, f := range configDirEntries {
 		if !f.IsDir() && strings.HasSuffix(f.Name(), ".conf") {
-			c, err := hocon.ParseResource(filepath.Join(configDirPath, f.Name()))
+			iterationConf := filepath.Join(configDirPath, f.Name())
+			tempConf, err := mergeConfFiles(*configPath, iterationConf)
 			if err != nil {
 				panic(err)
 			}
 			configFiles = append(configFiles, ExperimentConfig{
-				Name:   strings.TrimSuffix(filepath.Base(f.Name()), ".conf"),
-				Config: c.WithFallback(conf),
+				Name: strings.TrimSuffix(filepath.Base(f.Name()), ".conf"),
+				Path: tempConf,
 			})
 		}
 	}
 	if len(configFiles) == 0 {
 		configFiles = append(configFiles, ExperimentConfig{
-			Name:   "default",
-			Config: conf,
+			Name: defaultConfig,
+			Path: *configPath,
 		})
 	}
+	defer func() {
+		for _, cf := range configFiles {
+			if cf.Name != defaultConfig {
+				os.RemoveAll(cf.Path)
+			}
+		}
+	}()
 
 	log.Println(conf)
 	var totalIterations int64
 	for _, c := range configFiles {
-		totalIterations += int64(c.GetInt("benchmark.iterations"))
+		parsedConf, err := hocon.ParseResource(c.Path)
+		if err != nil {
+			panic(err)
+		}
+		totalIterations += int64(parsedConf.GetInt("benchmark.iterations"))
 	}
 	bar := progressbar.Default(totalIterations, "running experiment")
 	go func() {
@@ -311,7 +325,11 @@ func primary() {
 		bar.RenderBlank()
 	}()
 	for _, c := range configFiles {
-		for i := 0; i < c.GetInt("benchmark.iterations"); i++ {
+		parsedConf, err := hocon.ParseResource(c.Path)
+		if err != nil {
+			panic(err)
+		}
+		for i := 0; i < parsedConf.GetInt("benchmark.iterations"); i++ {
 			ResetPort()
 			if err := runExperimentIteration(c, i); err != nil {
 				panic(err)
@@ -322,9 +340,46 @@ func primary() {
 	runDataScripts(conf.GetConfig("benchmark.directories"))
 }
 
-func runExperimentIteration(config ExperimentConfig, iteration int) error {
+func mergeConfFiles(base string, others ...string) (string, error) {
+	tmpFile, err := os.CreateTemp("", "")
+	if err != nil {
+		return "", err
+	}
+	defer tmpFile.Close()
+	if err := writeFromFile(tmpFile, base); err != nil {
+		return "", err
+	}
+	if _, err := tmpFile.WriteString("\n"); err != nil {
+		return "", err
+	}
+	for _, other := range others {
+		if err := writeFromFile(tmpFile, other); err != nil {
+			return "", err
+		}
+		if _, err := tmpFile.WriteString("\n"); err != nil {
+			return "", err
+		}
+	}
+	return tmpFile.Name(), nil
+}
+
+func writeFromFile(w io.Writer, path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = io.Copy(w, f)
+	return err
+}
+
+func runExperimentIteration(expConfig ExperimentConfig, iteration int) error {
+	config, err := hocon.ParseResource(expConfig.Path)
+	if err != nil {
+		return err
+	}
 	outputDir := config.GetString("benchmark.directories.raw-output")
-	configName := strings.TrimSuffix(strings.ReplaceAll(config.Name, "-", "_"), ".conf")
+	configName := strings.TrimSuffix(strings.ReplaceAll(expConfig.Name, "-", "_"), ".conf")
 	prefix := fmt.Sprintf("i-%v-c-%v", iteration, configName)
 	entries, err := os.ReadDir(outputDir)
 	if err != nil {
@@ -369,13 +424,8 @@ func runExperimentIteration(config ExperimentConfig, iteration int) error {
 	}
 
 	playerEmulation := make([]Program, numPlayerEmulation)
-	configFile, err := writeConfigToFile(config)
-	if err != nil {
-		return fmt.Errorf("could not write config to file: %w", err)
-	}
-	defer os.Remove(configFile)
 	for i := 0; i < numPlayerEmulation; i++ {
-		pe, err := PlayerEmulationFromConfig(game.Address(), configFile)
+		pe, err := PlayerEmulationFromConfig(game.Address(), expConfig.Path)
 		if err != nil {
 			return fmt.Errorf("could not create player emulation from config %v: %w", config, err)
 		}
@@ -458,18 +508,6 @@ func runExperimentIteration(config ExperimentConfig, iteration int) error {
 		}
 	}
 	return nil
-}
-
-func writeConfigToFile(config ExperimentConfig) (string, error) {
-	configFile, err := os.CreateTemp("", "")
-	if err != nil {
-		return "", fmt.Errorf("could not create tmp file for config: %w", err)
-	}
-	defer configFile.Close()
-	if _, err := configFile.WriteString(config.String()); err != nil {
-		return "", fmt.Errorf("could not write config to file: %w", err)
-	}
-	return configFile.Name(), nil
 }
 
 func runDataScripts(config *hocon.Config) {
