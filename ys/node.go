@@ -137,72 +137,72 @@ func (node *Node) Close() error {
 	defer node.tunnel.Process.Signal(os.Interrupt)
 	resp, err := node.client.Get(fmt.Sprintf("%v/close", node.localAddress))
 	if err != nil {
-		return err
+		return fmt.Errorf("could not GET from node: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		bodyString, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not read response from node: %w", err)
 		}
-		return errors.New(string(bodyString))
+		return fmt.Errorf("node returned non-200: %v", string(bodyString))
 	}
 	time.Sleep(2 * time.Second)
 	if err := node.sshCommand("rm", "-rf", node.tmpDirPath).Run(); err != nil {
-		return err
+		return fmt.Errorf("could not remote tmp dir on node: %w", err)
 	}
 	return nil
 }
 
-func (node *Node) Create(name string) string {
+func (node *Node) Create(name string) (string, error) {
 	response, err := node.client.Get(fmt.Sprintf("%v/program/create/%v", node.localAddress, name))
 	if err != nil {
-		panic(err)
+		return "", fmt.Errorf("could not GET from node: %w", err)
 	}
 	defer response.Body.Close()
 	responseBytes, err := io.ReadAll(response.Body)
 	if err != nil {
-		panic(err)
+		return "", fmt.Errorf("could not read response from node: %w", err)
 	}
-	return string(responseBytes)
+	return string(responseBytes), nil
 }
 
 func (node *Node) UploadToPath(uuid, filePath, remotePath string) error {
 	file, err := os.Open(filePath)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("could not open file: %w", err)
 	}
 	defer file.Close()
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	pathPart, err := writer.CreateFormField("path")
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("could not create form field: %w", err)
 	}
 	if _, err := pathPart.Write([]byte(filepath.Dir(remotePath))); err != nil {
-		panic(err)
+		return fmt.Errorf("could not write remote dir: %w", err)
 	}
 	filePart, err := writer.CreateFormFile("file", filepath.Base(remotePath))
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("could not create file form field: %w", err)
 	}
 	if _, err = io.Copy(filePart, file); err != nil {
-		panic(err)
+		return fmt.Errorf("could not copy file: %w", err)
 	}
 	if err = writer.Close(); err != nil {
-		panic(err)
+		return fmt.Errorf("could not close writer: %w", err)
 	}
 	response, err := node.client.Post(fmt.Sprintf("%v/program/upload/%v", node.localAddress, uuid), writer.FormDataContentType(), body)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("could not POST to node: %w", err)
 	}
 	defer response.Body.Close()
 	if response.StatusCode != 200 {
 		responseBody, err := io.ReadAll(response.Body)
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("could not read node response: %w", err)
 		}
-		return errors.New(string(responseBody))
+		return fmt.Errorf(string(responseBody))
 	}
 	return nil
 }

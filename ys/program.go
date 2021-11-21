@@ -1,7 +1,7 @@
 package main
 
 import (
-	"errors"
+	"fmt"
 	"log"
 	"path/filepath"
 	"strings"
@@ -69,7 +69,11 @@ func (jar *Jar) NeedsNode() bool {
 
 func (jar *Jar) Deploy(node *Node) error {
 	jar.node = node
-	jar.uuid = jar.node.Create(jar.Name())
+	uuid, err := jar.node.Create(jar.Name())
+	if err != nil {
+		return err
+	}
+	jar.uuid = uuid
 	jar.node.UploadToPath(jar.uuid, jar.JarPath.LocalPath, jar.JarPath.RemotePath)
 	for _, resource := range jar.Resources {
 		jar.node.UploadToPath(jar.uuid, resource.LocalPath, resource.RemotePath)
@@ -110,7 +114,7 @@ func (jar *Jar) Wait(timeout time.Duration) error {
 	case <-stopped:
 		return nil
 	case <-time.After(timeout):
-		return errors.New("player emulation timed out")
+		return fmt.Errorf("player emulation timed out")
 	}
 }
 

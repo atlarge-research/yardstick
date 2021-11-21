@@ -303,7 +303,6 @@ func primary() {
 	var totalIterations int64
 	for _, c := range configFiles {
 		totalIterations += int64(c.GetInt("benchmark.iterations"))
-
 	}
 	bar := progressbar.Default(totalIterations, "running experiment")
 	go func() {
@@ -314,7 +313,9 @@ func primary() {
 	for _, c := range configFiles {
 		for i := 0; i < c.GetInt("benchmark.iterations"); i++ {
 			ResetPort()
-			runExperimentIteration(c, i)
+			if err := runExperimentIteration(c, i); err != nil {
+				panic(err)
+			}
 			bar.Add(1)
 		}
 	}
@@ -327,7 +328,7 @@ func runExperimentIteration(config ExperimentConfig, iteration int) error {
 	prefix := fmt.Sprintf("i-%v-c-%v", iteration, configName)
 	entries, err := os.ReadDir(outputDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not read output dir: %w", err)
 	}
 	for _, entry := range entries {
 		if strings.HasPrefix(entry.Name(), prefix) {
@@ -339,11 +340,11 @@ func runExperimentIteration(config ExperimentConfig, iteration int) error {
 	inputDirectoryPath := config.GetString("benchmark.directories.input")
 	prov, err := ProvisionerFromConfig(config.GetConfig("benchmark.provisioning"), inputDirectoryPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not create provisioner: %w", err)
 	}
 	game, err := GameFromConfig(inputDirectoryPath, config.GetConfig("benchmark.game"))
 	if err != nil {
-		return err
+		return fmt.Errorf("could not create game: %w", err)
 	}
 
 	basePort := 8080
@@ -351,7 +352,7 @@ func runExperimentIteration(config ExperimentConfig, iteration int) error {
 	if game.NeedsNode() {
 		nodes, err := prov.Provision(1, basePort)
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("could not provision nodes: %w", err)
 		}
 		gameNode = nodes[0]
 	}
@@ -364,25 +365,25 @@ func runExperimentIteration(config ExperimentConfig, iteration int) error {
 
 	// TODO Deploy pecosa on game node
 	if err = game.Deploy(gameNode); err != nil {
-		panic(err)
+		return fmt.Errorf("could not deploy game: %w", err)
 	}
 
 	playerEmulation := make([]Program, numPlayerEmulation)
 	configFile, err := writeConfigToFile(config)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not write config to file: %w", err)
 	}
 	defer os.Remove(configFile)
 	for i := 0; i < numPlayerEmulation; i++ {
 		pe, err := PlayerEmulationFromConfig(game.Address(), configFile)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not create player emulation from config %v: %w", config, err)
 		}
 		playerEmulation[i] = pe
 	}
 
 	if err = game.Start(); err != nil {
-		panic(err)
+		return fmt.Errorf("could not start game: %w", err)
 	}
 	log.Println("game started, waiting 10 seconds to boot")
 	time.Sleep(10 * time.Second)
@@ -391,7 +392,7 @@ func runExperimentIteration(config ExperimentConfig, iteration int) error {
 		// TODO Deploy pecosa on this node
 		err = program.Deploy(playerEmulationNodes[i])
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("could not deploy player emulation: %w", err)
 		}
 	}
 
@@ -399,7 +400,7 @@ func runExperimentIteration(config ExperimentConfig, iteration int) error {
 	for _, program := range playerEmulation {
 		err = program.Start()
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("could not start player emulation: %w", err)
 		}
 	}
 
@@ -418,23 +419,23 @@ func runExperimentIteration(config ExperimentConfig, iteration int) error {
 	log.Println("stopping player emulation")
 	for _, program := range playerEmulation {
 		if err := program.Stop(); err != nil {
-			panic(err)
+			return fmt.Errorf("could not stop player emulation: %w", err)
 		}
 	}
 
 	log.Println("stopping mve")
 	if err = game.Stop(); err != nil {
-		panic(err)
+		return fmt.Errorf("could not stop game: %w", err)
 	}
 
 	log.Println("downloading mve output")
 	if err := game.Get(outputDir, prefix); err != nil {
-		panic(err)
+		return fmt.Errorf("could not get game data: %w", err)
 	}
 	log.Println("downloading player emulation output")
 	for _, program := range playerEmulation {
 		if err := program.Get(outputDir, prefix); err != nil {
-			panic(err)
+			return fmt.Errorf("could not get player emulation data: %w", err)
 		}
 	}
 
@@ -447,7 +448,7 @@ func runExperimentIteration(config ExperimentConfig, iteration int) error {
 	log.Println("stopping workers")
 	if gameNode != nil {
 		if err := gameNode.Close(); err != nil {
-			panic(err)
+			return fmt.Errorf("could not close game: %w", err)
 		}
 	}
 	for _, node := range playerEmulationNodes {

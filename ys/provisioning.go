@@ -130,10 +130,10 @@ func waitForReservationReady(host, user, reservationNumber string) error {
 	for {
 		fields, err := getReservation(host, user, reservationNumber)
 		if err != nil {
-			return err
+			return fmt.Errorf("waiting for reservation failed: %w", err)
 		}
 		if len(fields) < 7 {
-			return errors.New("invalid reservation: " + strings.Join(fields, " "))
+			return fmt.Errorf("invalid reservation: %v", strings.Join(fields, " "))
 		}
 		if fields[6] == "R" {
 			return nil // Ready!
