@@ -304,6 +304,7 @@ func primary() {
 	var totalIterations int64
 	for _, c := range configFiles {
 		totalIterations += int64(c.GetInt("benchmark.iterations"))
+
 	}
 	bar := progressbar.Default(totalIterations, "running experiment")
 	go func() {
@@ -354,11 +355,17 @@ func runExperimentIteration(config ExperimentConfig, iteration int) error {
 	}
 
 	playerEmulation := make([]Program, numPlayerEmulation)
-	for i := 0; i < numPlayerEmulation; i++ {
-		playerEmulation[i] = PlayerEmulationFromConfig(game.Address(), *configPath)
-	}
+	configFile, err := writeConfigToFile(config)
 	if err != nil {
-		panic(err)
+		return err
+	}
+	defer os.Remove(configFile)
+	for i := 0; i < numPlayerEmulation; i++ {
+		pe, err := PlayerEmulationFromConfig(game.Address(), configFile)
+		if err != nil {
+			return err
+		}
+		playerEmulation[i] = pe
 	}
 
 	if err = game.Start(); err != nil {
@@ -438,6 +445,18 @@ func runExperimentIteration(config ExperimentConfig, iteration int) error {
 		}
 	}
 	return nil
+}
+
+func writeConfigToFile(config ExperimentConfig) (string, error) {
+	configFile, err := os.CreateTemp("", "")
+	if err != nil {
+		return "", fmt.Errorf("could not create tmp file for config: %w", err)
+	}
+	defer configFile.Close()
+	if _, err := configFile.WriteString(config.String()); err != nil {
+		return "", fmt.Errorf("could not write config to file: %w", err)
+	}
+	return configFile.Name(), nil
 }
 
 func runDataScripts(config *hocon.Config) {

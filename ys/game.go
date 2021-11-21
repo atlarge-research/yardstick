@@ -90,10 +90,14 @@ func gameFromJar(basePath string, config *hocon.Config) (*JarGame, error) {
 		rel := filepath.Join(basePath, local)
 		resourcesPaths[i] = LocalRemotePathFromStrings(rel, remote)
 	}
+	lrJarPath := LocalRemotePathFromConfig(basePath, config.GetConfig("jar.path"))
+	if _, err := os.Stat(lrJarPath.LocalPath); errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("game jar does not exist: %w", err)
+	}
 	return &JarGame{
 		Jar: &Jar{
 			name:         "mve",
-			JarPath:      LocalRemotePathFromConfig(basePath, config.GetConfig("jar.path")),
+			JarPath:      lrJarPath,
 			JVMArgs:      config.GetStringSlice("jar.jvm.options"),
 			JarArguments: config.GetStringSlice("jar.arguments"),
 			Resources:    resourcesPaths,
