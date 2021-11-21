@@ -313,6 +313,7 @@ func primary() {
 	}()
 	for _, c := range configFiles {
 		for i := 0; i < c.GetInt("benchmark.iterations"); i++ {
+			ResetPort()
 			runExperimentIteration(c, i)
 			bar.Add(1)
 		}
