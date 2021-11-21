@@ -323,6 +323,20 @@ func primary() {
 }
 
 func runExperimentIteration(config ExperimentConfig, iteration int) error {
+	outputDir := config.GetString("benchmark.directories.raw-output")
+	configName := strings.TrimSuffix(strings.ReplaceAll(config.Name, "-", "_"), ".conf")
+	prefix := fmt.Sprintf("i-%v-c-%v", iteration, configName)
+	entries, err := os.ReadDir(outputDir)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		if strings.HasPrefix(entry.Name(), prefix) {
+			log.Printf("directory with prefix %v exists. Skipping...\n", prefix)
+			return nil
+		}
+	}
+
 	inputDirectoryPath := config.GetString("benchmark.directories.input")
 	prov, err := ProvisionerFromConfig(config.GetConfig("benchmark.provisioning"), inputDirectoryPath)
 	if err != nil {
@@ -415,13 +429,12 @@ func runExperimentIteration(config ExperimentConfig, iteration int) error {
 	}
 
 	log.Println("downloading mve output")
-	outputDir := config.GetString("benchmark.directories.raw-output")
-	if err := game.Get(outputDir, config.Name, iteration); err != nil {
+	if err := game.Get(outputDir, prefix); err != nil {
 		panic(err)
 	}
 	log.Println("downloading player emulation output")
 	for _, program := range playerEmulation {
-		if err := program.Get(outputDir, config.Name, iteration); err != nil {
+		if err := program.Get(outputDir, prefix); err != nil {
 			panic(err)
 		}
 	}

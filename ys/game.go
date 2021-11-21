@@ -221,7 +221,7 @@ func (s *ServoAWS) Stop() error {
 	return nil
 }
 
-func (s *ServoAWS) Get(outputDirPath, config string, iteration int) error {
+func (s *ServoAWS) Get(outputDirPath, prefix string) error {
 	// TODO get metrics from servo
 	return nil
 }

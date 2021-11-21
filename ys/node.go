@@ -278,12 +278,9 @@ func (node *Node) Stop(uuid string) error {
 	return nil
 }
 
-func (node *Node) Get(uuid, outputDirPath, config string, iteration int) error {
+func (node *Node) Get(uuid, outputDirPath, prefix string) error {
 	ip := strings.ReplaceAll(node.host, ".", "_")
-	// TODO the node should receive the full output directory, and not create it itself
-	configName := strings.TrimSuffix(strings.ReplaceAll(config, "-", "_"), ".conf")
-	dirPath := filepath.Join(outputDirPath, fmt.Sprintf("i-%v-c-%v-%v-node-%v", iteration,
-		configName, uuid, ip))
+	dirPath := filepath.Join(outputDirPath, fmt.Sprintf("%v-%v-node-%v", prefix, uuid, ip))
 	if err := os.MkdirAll(dirPath, 0755); err != nil {
 		panic(err)
 	}

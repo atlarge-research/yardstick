@@ -17,7 +17,7 @@ type Program interface {
 	Start() error
 	Wait(timeout time.Duration) error
 	Stop() error
-	Get(outputDirPath, config string, iteration int) error
+	Get(outputDirPath, prefix string) error
 }
 
 type Status int
@@ -119,7 +119,7 @@ func (jar *Jar) Stop() (err error) {
 	return
 }
 
-func (jar *Jar) Get(outputDirPath, config string, iteration int) error {
-	jar.node.Get(jar.uuid, outputDirPath, config, iteration)
+func (jar *Jar) Get(outputDirPath, prefix string) error {
+	jar.node.Get(jar.uuid, outputDirPath, prefix)
 	return nil
 }
