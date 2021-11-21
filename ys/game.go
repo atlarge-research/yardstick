@@ -144,17 +144,10 @@ func (s *ServoAWS) Deploy(node *Node) error {
 	deployScriptDirPath := filepath.Dir(deployScriptPath)
 
 	// Create and write deployment parameters file, read by deploy script
-	f, err := os.Create(filepath.Join(deployScriptDirPath, "deployment-parameters"))
-	if err != nil {
+	paramsFilePath := filepath.Join(deployScriptDirPath, "deployment-parameters")
+	if err := s.writeEnvToFile(paramsFilePath); err != nil {
 		panic(err)
 	}
-	// We also pass the variables through the environment. See `servoDeployCmd.Env` below
-	w := bufio.NewWriter(f)
-	for _, line := range s.env {
-		_, _ = w.WriteString(line + "\n")
-	}
-	w.Flush()
-	f.Close()
 
 	// Run deploy script
 	servoDeployCmd := exec.Command(deployScriptPath)
@@ -190,6 +183,23 @@ func (s *ServoAWS) Deploy(node *Node) error {
 	s.Endpoint = gameURL
 	log.Println(s.Endpoint)
 	os.RemoveAll(tmpDir)
+	return nil
+}
+
+func (s *ServoAWS) writeEnvToFile(paramsFilePath string) error {
+	f, err := os.Create(paramsFilePath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	// We also pass the variables through the environment. See `servoDeployCmd.Env` below
+	w := bufio.NewWriter(f)
+	defer w.Flush()
+	for _, line := range s.env {
+		if _, err = w.WriteString(line + "\n"); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
