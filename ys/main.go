@@ -8,7 +8,6 @@ import (
 	"io/fs"
 	"io/ioutil"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -490,37 +489,6 @@ func runDataScripts(config *hocon.Config) {
 		log.Println(command)
 		command.Run()
 	}
-}
-
-func handle(client net.Conn, sshClient *ssh.Client, remoteAddr string) {
-	remote, err := sshClient.Dial("tcp", remoteAddr)
-	if err != nil {
-		panic(err)
-	}
-	defer remote.Close()
-
-	defer client.Close()
-	chDone := make(chan bool)
-
-	// Start remote -> local data transfer
-	go func() {
-		_, err := io.Copy(client, remote)
-		if err != nil {
-			log.Println("error while copy remote->local:", err)
-		}
-		chDone <- true
-	}()
-
-	// Start local -> remote data transfer
-	go func() {
-		_, err := io.Copy(remote, client)
-		if err != nil {
-			log.Println(err)
-		}
-		chDone <- true
-	}()
-
-	<-chDone
 }
 
 func main() {
