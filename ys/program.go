@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"log"
 	"path/filepath"
 	"strings"
 	"time"
@@ -91,7 +92,13 @@ func (jar *Jar) Wait(timeout time.Duration) error {
 	stopped := make(chan bool)
 	go func() {
 		for {
-			status := jar.node.Status(jar.uuid)
+			status, err := jar.node.Status(jar.uuid)
+			if err != nil {
+				log.Println("could not get status for program", jar.uuid)
+				log.Println("assuming program has stopped")
+				log.Println(err)
+				status = Stopped
+			}
 			if status == Stopped {
 				stopped <- true
 				break

@@ -167,7 +167,7 @@ func (node *Node) Create(name string) string {
 	return string(responseBytes)
 }
 
-func (node *Node) UploadToPath(uuid, filePath, remotePath string) {
+func (node *Node) UploadToPath(uuid, filePath, remotePath string) error {
 	file, err := os.Open(filePath)
 	if err != nil {
 		panic(err)
@@ -202,15 +202,16 @@ func (node *Node) UploadToPath(uuid, filePath, remotePath string) {
 		if err != nil {
 			panic(err)
 		}
-		log.Fatalln(string(responseBody))
+		return errors.New(string(responseBody))
 	}
+	return nil
 }
 
-func (node *Node) Upload(uuid, localPath string) {
-	node.UploadToPath(uuid, localPath, filepath.Base(localPath))
+func (node *Node) Upload(uuid, localPath string) error {
+	return node.UploadToPath(uuid, localPath, filepath.Base(localPath))
 }
 
-func (node *Node) Start(uuid, path, logFile string, args ...string) {
+func (node *Node) Start(uuid, path, logFile string, args ...string) error {
 	command := []string{path}
 	command = append(command, args...)
 	request := StartRequest{
@@ -234,32 +235,33 @@ func (node *Node) Start(uuid, path, logFile string, args ...string) {
 	}
 	responseString := strings.TrimSpace(string(responseBody))
 	if response.StatusCode != 200 {
-		log.Fatalln(responseString)
+		return errors.New(responseString)
 	}
+	return nil
 }
 
-func (node *Node) Status(uuid string) Status {
+func (node *Node) Status(uuid string) (Status, error) {
 	response, err := node.client.Get(fmt.Sprintf("%v/program/status/%v", node.localAddress, uuid))
 	if err != nil {
-		panic(err)
+		return 0, err
 	}
 	defer response.Body.Close()
 	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
-		panic(err)
+		return 0, err
 	}
 	responseString := strings.TrimSpace(string(responseBody))
 	if response.StatusCode != 200 {
-		panic(responseString)
+		return 0, errors.New(responseString)
 	}
 	status, err := strconv.Atoi(responseString)
 	if err != nil {
-		panic(err)
+		return 0, err
 	}
-	return Status(status)
+	return Status(status), nil
 }
 
-func (node *Node) Stop(uuid string) {
+func (node *Node) Stop(uuid string) error {
 	response, err := node.client.Get(fmt.Sprintf("%v/program/stop/%v", node.localAddress, uuid))
 	if err != nil {
 		panic(err)
@@ -271,11 +273,12 @@ func (node *Node) Stop(uuid string) {
 			panic(err)
 		}
 		responseString := strings.TrimSpace(string(responseBody))
-		log.Fatalln(responseString)
+		return errors.New(responseString)
 	}
+	return nil
 }
 
-func (node *Node) Get(uuid, outputDirPath, config string, iteration int) {
+func (node *Node) Get(uuid, outputDirPath, config string, iteration int) error {
 	ip := strings.ReplaceAll(node.host, ".", "_")
 	// TODO the node should receive the full output directory, and not create it itself
 	configName := strings.TrimSuffix(strings.ReplaceAll(config, "-", "_"), ".conf")
@@ -296,37 +299,43 @@ func (node *Node) Get(uuid, outputDirPath, config string, iteration int) {
 		panic(err)
 	}
 	for _, f := range zipReader.File {
-		filePath := filepath.Join(dirPath, f.Name)
-
-		if !strings.HasPrefix(filePath, filepath.Clean(outputDirPath)+string(os.PathSeparator)) {
-			panic(fmt.Sprintf("path join failed: %v\n", filePath))
+		if err := unzipToDir(dirPath, f, outputDirPath); err != nil {
+			return err
 		}
-		if f.FileInfo().IsDir() {
-			if err := os.MkdirAll(filePath, os.ModePerm); err != nil {
-				panic(err)
-			}
-			continue
-		}
+	}
+	return nil
+}
 
+func unzipToDir(dirPath string, f *zip.File, outputDirPath string) error {
+	filePath := filepath.Join(dirPath, f.Name)
+
+	if !strings.HasPrefix(filePath, filepath.Clean(outputDirPath)+string(os.PathSeparator)) {
+		panic(fmt.Sprintf("path join failed: %v\n", filePath))
+	}
+	if f.FileInfo().IsDir() {
+		if err := os.MkdirAll(filePath, os.ModePerm); err != nil {
+			return err
+		}
+	} else {
 		if err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
 			panic(err)
 		}
 
 		dstFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
 		if err != nil {
-			panic(err)
+			return err
 		}
+		defer dstFile.Close()
 
 		fileInArchive, err := f.Open()
 		if err != nil {
-			panic(err)
+			return err
 		}
+		defer fileInArchive.Close()
 
 		if _, err := io.Copy(dstFile, fileInArchive); err != nil {
-			panic(err)
+			return err
 		}
-
-		dstFile.Close()
-		fileInArchive.Close()
 	}
+	return nil
 }

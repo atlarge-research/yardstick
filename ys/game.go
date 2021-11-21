@@ -47,7 +47,7 @@ func (game *JarGame) Address() string {
 	return fmt.Sprintf("%v:%v", game.host, game.port)
 }
 
-func GameFromConfig(basePath string, config *hocon.Config) Game {
+func GameFromConfig(basePath string, config *hocon.Config) (Game, error) {
 	archi := config.GetString("architecture")
 	switch archi {
 	case "jar":
@@ -55,12 +55,11 @@ func GameFromConfig(basePath string, config *hocon.Config) Game {
 	case "servo":
 		return gameFromServo(config)
 	default:
-		log.Fatalf("game architecture '%v' not supported\n", archi)
+		return nil, errors.New(fmt.Sprintf("game architecture '%v' not supported", archi))
 	}
-	return nil
 }
 
-func gameFromServo(config *hocon.Config) Game {
+func gameFromServo(config *hocon.Config) (Game, error) {
 	envParams := config.GetStringMapString("servo.environment")
 	env := make([]string, len(envParams))
 	i := 0
@@ -73,10 +72,10 @@ func gameFromServo(config *hocon.Config) Game {
 		commit: config.GetString("servo.build.commit"),
 		env:    env,
 		config: config.GetConfig("servo.app"),
-	}
+	}, nil
 }
 
-func gameFromJar(basePath string, config *hocon.Config) *JarGame {
+func gameFromJar(basePath string, config *hocon.Config) (*JarGame, error) {
 	resources := config.GetArray("jar.resources")
 	resourcesPaths := make([]LocalRemotePath, len(resources))
 	for i, resource := range resources {
@@ -99,7 +98,7 @@ func gameFromJar(basePath string, config *hocon.Config) *JarGame {
 			JarArguments: config.GetStringSlice("jar.arguments"),
 			Resources:    resourcesPaths,
 		},
-	}
+	}, nil
 }
 
 type ServoAWS struct {

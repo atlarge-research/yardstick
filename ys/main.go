@@ -255,7 +255,7 @@ func worker() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatal("Server Shutdown:", err)
+		panic(err)
 	}
 	log.Println("Server exiting")
 }
@@ -320,10 +320,16 @@ func primary() {
 	runDataScripts(conf.GetConfig("benchmark.directories"))
 }
 
-func runExperimentIteration(config ExperimentConfig, iteration int) {
+func runExperimentIteration(config ExperimentConfig, iteration int) error {
 	inputDirectoryPath := config.GetString("benchmark.directories.input")
-	prov := ProvisionerFromConfig(config.GetConfig("benchmark.provisioning"), inputDirectoryPath)
-	game := GameFromConfig(inputDirectoryPath, config.GetConfig("benchmark.game"))
+	prov, err := ProvisionerFromConfig(config.GetConfig("benchmark.provisioning"), inputDirectoryPath)
+	if err != nil {
+		return err
+	}
+	game, err := GameFromConfig(inputDirectoryPath, config.GetConfig("benchmark.game"))
+	if err != nil {
+		return err
+	}
 
 	basePort := 8080
 	var gameNode *Node
@@ -430,6 +436,7 @@ func runExperimentIteration(config ExperimentConfig, iteration int) {
 			log.Printf("error stopping node at %v: %v", node.host, err)
 		}
 	}
+	return nil
 }
 
 func runDataScripts(config *hocon.Config) {

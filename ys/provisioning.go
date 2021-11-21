@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -47,7 +46,7 @@ func (p *StaticProvisioner) Close() {
 	// Do nothing
 }
 
-func ProvisionerFromConfig(config *hocon.Config, inputDirectoryPath string) Provisioner {
+func ProvisionerFromConfig(config *hocon.Config, inputDirectoryPath string) (Provisioner, error) {
 	method := config.GetString("method")
 	binary := config.GetString("worker-binary")
 	if binary == "" {
@@ -66,7 +65,8 @@ func ProvisionerFromConfig(config *hocon.Config, inputDirectoryPath string) Prov
 			panic(err)
 		}
 		ips := config.GetStringSlice("static.ips")
-		return &StaticProvisioner{count: 0, user: user, key: key, ips: ips, workerBinaryPath: filepath.Join(inputDirectoryPath, binary)}
+		return &StaticProvisioner{count: 0, user: user, key: key, ips: ips,
+			workerBinaryPath: filepath.Join(inputDirectoryPath, binary)}, nil
 	} else if method == "das5" {
 		user := config.GetString("das5.user")
 		if user == "" {
@@ -80,10 +80,9 @@ func ProvisionerFromConfig(config *hocon.Config, inputDirectoryPath string) Prov
 			user:             user,
 			host:             host,
 			workerBinaryPath: filepath.Join(inputDirectoryPath, binary),
-		}
+		}, nil
 	}
-	log.Fatalf("provisioning method '%v' not supported", method)
-	return nil
+	return nil, errors.New("provisioning method '%v' not supported")
 }
 
 type DAS5Provisioner struct {
