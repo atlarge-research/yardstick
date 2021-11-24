@@ -18,11 +18,11 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import com.typesafe.config.Config;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
+import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
@@ -31,8 +31,8 @@ public class Experiment3WalkAround extends Experiment {
     private Bot bot;
     private final SimpleMovementModel movement = new SimpleMovementModel();
 
-    public Experiment3WalkAround(int id, String address, Config config) {
-        super(3, id, address, config, "A simple test demonstrating A* movement.");
+    public Experiment3WalkAround(int id, GameArchitecture game) {
+        super(3, id, game, "A simple test demonstrating A* movement.");
     }
 
     @Override

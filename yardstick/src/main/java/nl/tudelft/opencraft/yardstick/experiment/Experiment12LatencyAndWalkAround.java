@@ -1,16 +1,17 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
 import com.typesafe.config.Config;
+import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 
 public class Experiment12LatencyAndWalkAround extends Experiment {
 
-    private Experiment11Latency latencyExperiment;
-    private Experiment8BoxWalkAround walkExperiment;
+    private final Experiment11Latency latencyExperiment;
+    private final Experiment8BoxWalkAround walkExperiment;
 
-    public Experiment12LatencyAndWalkAround(int nodeID, String address, Config config) {
-        super(12, nodeID, address, config, "latency and walk experiment");
-        latencyExperiment = new Experiment11Latency(nodeID, address, config);
-        walkExperiment = new Experiment8BoxWalkAround(nodeID, address, config);
+    public Experiment12LatencyAndWalkAround(int nodeID, GameArchitecture game, Config config) {
+        super(12, nodeID, game, "latency and walk experiment");
+        latencyExperiment = new Experiment11Latency(nodeID, game, config);
+        walkExperiment = new Experiment8BoxWalkAround(nodeID, game, config);
     }
 
     @Override

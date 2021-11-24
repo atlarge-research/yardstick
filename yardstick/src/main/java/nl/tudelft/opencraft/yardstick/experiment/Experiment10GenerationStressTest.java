@@ -13,10 +13,12 @@ import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.FlyTaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
+import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public class Experiment10GenerationStressTest extends Experiment {
 
+    private final Config behaviorConfig;
     private final List<Bot> botList = Collections.synchronizedList(new ArrayList<>());
     private final Set<Bot> targetSet = Collections.synchronizedSet(new HashSet<>());
 
@@ -29,17 +31,17 @@ public class Experiment10GenerationStressTest extends Experiment {
     private Duration experimentDuration;
     private Duration delay;
 
-    public Experiment10GenerationStressTest(int nodeID, String address, Config config) {
-        super(9, nodeID, address, config, "Bots move away from the spawn location");
+    public Experiment10GenerationStressTest(int nodeID, GameArchitecture game, Config config) {
+        super(9, nodeID, game, "Bots move away from the spawn location");
+        this.behaviorConfig = config;
     }
 
     @Override
     protected void before() {
-        Config arguments = config.getConfig("benchmark.player-emulation.arguments");
-        int botsTotal = arguments.getInt("behavior.10.bots");
-        this.experimentDuration = arguments.getDuration("duration");
-        this.delay = arguments.getDuration("delay");
-        this.botSpeed = arguments.getDouble("bot-speed");
+        int botsTotal = behaviorConfig.getInt("bots");
+        this.experimentDuration = behaviorConfig.getDuration("duration");
+        this.delay = behaviorConfig.getDuration("startDelay");
+        this.botSpeed = behaviorConfig.getDouble("bot-speed");
         this.startMillis = System.currentTimeMillis();
         this.increment = 2 * Math.PI / botsTotal;
         this.targetDistance = ((int) (1000 / TICK_MS) * experimentDuration.getSeconds()) * botSpeed;

@@ -13,6 +13,7 @@ import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.BotManager;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkLocation;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
+import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import org.jetbrains.annotations.NotNull;
 import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.ItemStack;
@@ -107,8 +108,8 @@ public class Experiment11Latency extends Experiment {
         }
     };
 
-    public Experiment11Latency(int nodeID, String address, Config config) {
-        super(11, nodeID, address, config, "latency experiment");
+    public Experiment11Latency(int nodeID, GameArchitecture game, Config config) {
+        super(11, nodeID, game, "latency experiment");
         this.startMillis = System.currentTimeMillis();
         this.experimentDuration = config.getDuration("duration");
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {

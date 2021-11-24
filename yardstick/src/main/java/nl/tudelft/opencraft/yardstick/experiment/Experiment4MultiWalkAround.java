@@ -34,12 +34,14 @@ import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
+import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public class Experiment4MultiWalkAround extends Experiment {
 
+    private final Config behaviorConfig;
     private final List<Bot> botList = Collections.synchronizedList(new ArrayList<>());
     private final List<Future<Bot>> connectingBots = new ArrayList<>();
     private SimpleMovementModel movement;
@@ -52,24 +54,26 @@ public class Experiment4MultiWalkAround extends Experiment {
     private final Map<Bot, Vector3d> botSpawnLocations = new HashMap<>();
     private long lastJoin = System.currentTimeMillis();
 
-    public Experiment4MultiWalkAround(int nodeID, String address, Config config) {
-        super(4, nodeID, address, config, "Bots walking around based on a movement model for Second Life.");
+    public Experiment4MultiWalkAround(int nodeID, GameArchitecture game, Config behaviorConfig) {
+        super(4, nodeID, game, "Bots walking around based on a movement model for Second Life.");
+        this.behaviorConfig = behaviorConfig;
     }
 
-    public Experiment4MultiWalkAround(int experimentID, int nodeID, String address, Config config, String desc) {
-        super(experimentID, nodeID, address, config, desc);
+    public Experiment4MultiWalkAround(int experimentID, int nodeID, GameArchitecture game,
+            Config behaviorConfig, String desc) {
+        super(experimentID, nodeID, game, desc);
+        this.behaviorConfig = behaviorConfig;
     }
 
     @Override
     protected void before() {
-        Config arguments = config.getConfig("benchmark.player-emulation.arguments");
-        this.botsTotal = arguments.getInt("behavior.4.bots");
-        this.experimentDuration = arguments.getDuration("duration");
-        this.timeBetweenJoins = arguments.getDuration("behavior.4.joininterval");
-        this.numberOfBotsPerJoin = arguments.getInt("behavior.4.numbotsperjoin");
+        this.botsTotal = behaviorConfig.getInt("bots");
+        this.experimentDuration = behaviorConfig.getDuration("duration");
+        this.timeBetweenJoins = behaviorConfig.getDuration("joininterval");
+        this.numberOfBotsPerJoin = behaviorConfig.getInt("numbotsperjoin");
         this.movement = new SimpleMovementModel(
-                arguments.getInt("behavior.4.boxDiameter"),
-                arguments.getBoolean("behavior.4.spawnAnchor")
+                behaviorConfig.getInt("boxDiameter"),
+                behaviorConfig.getBoolean("spawnAnchor")
         );
         this.startMillis = System.currentTimeMillis();
     }

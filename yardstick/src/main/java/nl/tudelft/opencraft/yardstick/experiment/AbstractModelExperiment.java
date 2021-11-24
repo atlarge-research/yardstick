@@ -18,7 +18,6 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import com.typesafe.config.Config;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,6 +27,7 @@ import java.util.stream.Collectors;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
+import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 import nl.tudelft.opencraft.yardstick.model.BotModel;
 
 public abstract class AbstractModelExperiment extends Experiment {
@@ -36,19 +36,18 @@ public abstract class AbstractModelExperiment extends Experiment {
     private final BotModel model;
 
     private long startMillis;
-    private Duration experimentDuration;
-    private long lastJoin = System.currentTimeMillis();
+    private final Duration experimentDuration;
 
-    public AbstractModelExperiment(int experimentID, int nodeID, String address, Config config, String description,
+    public AbstractModelExperiment(int experimentID, int nodeID, GameArchitecture game,
+            Duration experimentDuration, String description,
             BotModel model) {
-        super(experimentID, nodeID, address, config, description);
+        super(experimentID, nodeID, game, description);
         this.model = model;
+        this.experimentDuration = experimentDuration;
     }
 
     @Override
     protected void before() {
-        Config arguments = config.getConfig("benchmark.player-emulation.arguments");
-        this.experimentDuration = arguments.getDuration("duration");
         this.startMillis = System.currentTimeMillis();
     }
 
@@ -56,7 +55,7 @@ public abstract class AbstractModelExperiment extends Experiment {
     protected void tick() {
         synchronized (botList) {
             List<Bot> disconnectedBots = botList.stream()
-                    .filter(bot -> bot.hasBeenDisconnected())
+                    .filter(Bot::hasBeenDisconnected)
                     .collect(Collectors.toList());
             disconnectedBots.forEach(bot -> bot.disconnect("Bot is not connected"));
             if (disconnectedBots.size() > 0) {

@@ -28,11 +28,14 @@ import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.BotManager;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
+import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 import nl.tudelft.opencraft.yardstick.model.box.BoundingBoxMovementBuilder;
 import nl.tudelft.opencraft.yardstick.model.box.BoundingBoxMovementModel;
 
 // TODO remove this class once we have a good BotModel interface.
 public class Experiment8BoxWalkAround extends Experiment {
+
+    private final Config behaviorConfig;
 
     private BoundingBoxMovementModel movement;
 
@@ -44,17 +47,18 @@ public class Experiment8BoxWalkAround extends Experiment {
     private BotManager botManager;
     private ScheduledFuture<?> runningBotManager;
 
-    public Experiment8BoxWalkAround(int nodeID, String address, Config config) {
-        super(4, nodeID, address, config, "Bots walking around based on a movement model for Second Life.");
+    public Experiment8BoxWalkAround(int nodeID, GameArchitecture game, Config behaviorConfig) {
+        super(4, nodeID, game, "Bots walking around based on a movement model for Second Life.");
+        this.behaviorConfig = behaviorConfig;
     }
 
     @Override
     protected void before() {
-        this.experimentDuration = config.getDuration("duration");
-        int botsTotal = config.getInt("behavior.8.bots");
-        this.timeBetweenJoins = config.getDuration("behavior.8.joininterval");
-        this.numberOfBotsPerJoin = config.getInt("behavior.8.numbotsperjoin");
-        this.movement = new BoundingBoxMovementBuilder().fromConfig(config.getConfig("behavior.8.box"));
+        this.experimentDuration = behaviorConfig.getDuration("duration");
+        int botsTotal = behaviorConfig.getInt("bots");
+        this.timeBetweenJoins = behaviorConfig.getDuration("joininterval");
+        this.numberOfBotsPerJoin = behaviorConfig.getInt("numbotsperjoin");
+        this.movement = new BoundingBoxMovementBuilder().fromConfig(behaviorConfig.getConfig("box"));
         this.startMillis = System.currentTimeMillis();
 
         botManager = new BotManager(game);

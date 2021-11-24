@@ -20,25 +20,27 @@ package nl.tudelft.opencraft.yardstick.experiment;
 
 import com.typesafe.config.Config;
 import java.time.Duration;
+import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 
 public class Experiment9Spike extends Experiment4MultiWalkAround {
 
+    private final Config behaviorConfig;
     private Duration spikeDelay;
     private Duration spikeDuration;
     private int spikePeakPlayers;
 
-    public Experiment9Spike(int nodeID, String address, Config config) {
-        super(9, nodeID, address, config, "Operates bots according to experiment 4, but allows a temporary spike in " +
+    public Experiment9Spike(int nodeID, GameArchitecture game, Config config) {
+        super(9, nodeID, game, config, "Operates bots according to experiment 4, but allows a temporary spike in " +
                 "players after set delay.");
+        this.behaviorConfig = config;
     }
 
     @Override
     protected void before() {
         super.before();
-        Config arguments = config.getConfig("benchmark.player-behavior.arguments");
-        spikeDelay = arguments.getDuration("behavior.9.spikeDelayInSeconds");
-        spikeDuration = arguments.getDuration("behavior.9.spikeDurationInSeconds");
-        spikePeakPlayers = arguments.getInt("behavior.9.spikePeakPlayers");
+        spikeDelay = behaviorConfig.getDuration("spikeDelayInSeconds");
+        spikeDuration = behaviorConfig.getDuration("spikeDurationInSeconds");
+        spikePeakPlayers = behaviorConfig.getInt("spikePeakPlayers");
     }
 
     @Override

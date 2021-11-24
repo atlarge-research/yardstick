@@ -24,7 +24,6 @@ import static io.javalin.apibuilder.ApiBuilder.post;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.typesafe.config.Config;
 import io.javalin.Javalin;
 import io.javalin.core.validation.Validator;
 import io.javalin.http.Context;
@@ -33,6 +32,7 @@ import java.util.HashMap;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
 import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
+import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 
 public class RemoteControlledExperiment extends Experiment {
 
@@ -43,8 +43,8 @@ public class RemoteControlledExperiment extends Experiment {
     /**
      * Creates a new experiment.
      */
-    public RemoteControlledExperiment(int nodeID, String address, Config config) {
-        super(7, nodeID, address, config, "Experiment Controlled Through REST API.");
+    public RemoteControlledExperiment(int nodeID, GameArchitecture game) {
+        super(7, nodeID, game, "Experiment Controlled Through REST API.");
     }
 
     @Override

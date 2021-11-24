@@ -18,15 +18,12 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
 import java.net.InetSocketAddress;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
 import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
-import nl.tudelft.opencraft.yardstick.game.GameFactory;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 import nl.tudelft.opencraft.yardstick.statistic.Statistics;
@@ -44,7 +41,6 @@ public abstract class Experiment implements Runnable {
     protected final int number;
     protected final int nodeID;
     protected final String description;
-    protected final Config config = ConfigFactory.load();
     protected final SubLogger logger;
 
     protected long tick = 0;
@@ -59,11 +55,11 @@ public abstract class Experiment implements Runnable {
      * @param number The experiment number. Must be unique globally.
      * @param desc   A human-friendly description of the experiment.
      */
-    public Experiment(int number, int nodeID, String address, Config config, String desc) {
+    public Experiment(int number, int nodeID, GameArchitecture game, String desc) {
         this.number = number;
         this.nodeID = nodeID;
         this.description = desc;
-        this.game = new GameFactory().getGame(address, config);
+        this.game = game;
         this.logger = GlobalLogger.getLogger().newSubLogger("Experiment " + number);
     }
 

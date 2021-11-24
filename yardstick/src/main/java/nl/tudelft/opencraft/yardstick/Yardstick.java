@@ -23,6 +23,7 @@ package nl.tudelft.opencraft.yardstick;
 import com.beust.jcommander.JCommander;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import java.time.Duration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment;
@@ -36,6 +37,8 @@ import nl.tudelft.opencraft.yardstick.experiment.Experiment6InteractWalk;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment8BoxWalkAround;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment9Spike;
 import nl.tudelft.opencraft.yardstick.experiment.RemoteControlledExperiment;
+import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
+import nl.tudelft.opencraft.yardstick.game.GameFactory;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SimpleTimeFormatter;
 import nl.tudelft.opencraft.yardstick.workload.CsvConverter;
@@ -80,41 +83,46 @@ public class Yardstick {
         String address = options.address;
 
         Config experimentConfig = config.getConfig("benchmark.player-emulation.arguments");
-        String experimentName = experimentConfig.getString("behavior.name");
+        GameArchitecture game = new GameFactory().getGame(address, experimentConfig);
+
+        String behaviorName = experimentConfig.getString("behavior.name");
+        Config behaviorConfig = experimentConfig.getConfig(behaviorName);
+        Duration experimentDuration = experimentConfig.getDuration("duration");
+
         Experiment ex;
-        switch (experimentName) {
+        switch (behaviorName) {
             case "3":
-                ex = new Experiment3WalkAround(id, address, experimentConfig);
+                ex = new Experiment3WalkAround(id, game);
                 break;
             case "4":
-                ex = new Experiment4MultiWalkAround(id, address, experimentConfig);
+                ex = new Experiment4MultiWalkAround(id, game, behaviorConfig);
                 break;
             case "5":
-                ex = new Experiment5SimpleWalk(id, address, experimentConfig);
+                ex = new Experiment5SimpleWalk(id, game, experimentDuration);
                 break;
             case "6":
-                ex = new Experiment6InteractWalk(id, address, experimentConfig);
+                ex = new Experiment6InteractWalk(id, game, experimentDuration);
                 break;
             case "7":
-                ex = new RemoteControlledExperiment(id, address, experimentConfig);
+                ex = new RemoteControlledExperiment(id, game);
                 break;
             case "8":
-                ex = new Experiment8BoxWalkAround(id, address, experimentConfig);
+                ex = new Experiment8BoxWalkAround(id, game, behaviorConfig);
                 break;
             case "9":
-                ex = new Experiment9Spike(id, address, experimentConfig);
+                ex = new Experiment9Spike(id, game, behaviorConfig);
                 break;
             case "10":
-                ex = new Experiment10GenerationStressTest(id, address, experimentConfig);
+                ex = new Experiment10GenerationStressTest(id, game, behaviorConfig);
                 break;
             case "11":
-                ex = new Experiment11Latency(id, address, experimentConfig);
+                ex = new Experiment11Latency(id, game, behaviorConfig);
                 break;
             case "12":
-                ex = new Experiment12LatencyAndWalkAround(id, address, experimentConfig);
+                ex = new Experiment12LatencyAndWalkAround(id, game, behaviorConfig);
                 break;
             default:
-                System.out.println("Invalid experiment: " + experimentName);
+                System.out.println("Invalid experiment: " + behaviorName);
                 return;
         }
 
@@ -123,7 +131,7 @@ public class Yardstick {
         }
 
         Thread t = new Thread(ex);
-        t.setName("experiment-" + experimentName);
+        t.setName("experiment-" + behaviorName);
 
         t.start();
     }

@@ -18,13 +18,14 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import com.typesafe.config.Config;
+import java.time.Duration;
+import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
 
 public class Experiment5SimpleWalk extends AbstractModelExperiment {
 
-    public Experiment5SimpleWalk(int nodeID, String address, Config config) {
-        super(5, nodeID, address, config, "Bots move around randomly. Based on a movement model for Half Life 2",
+    public Experiment5SimpleWalk(int nodeID, GameArchitecture game, Duration duration) {
+        super(5, nodeID, game, duration, "Bots move around randomly. Based on a movement model for Half Life 2",
                 new SimpleMovementModel());
     }
 

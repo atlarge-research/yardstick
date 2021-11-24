@@ -18,13 +18,14 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import com.typesafe.config.Config;
+import java.time.Duration;
+import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 import nl.tudelft.opencraft.yardstick.model.MoveInteractModel;
 
 public class Experiment6InteractWalk extends AbstractModelExperiment {
 
-    public Experiment6InteractWalk(int nodeID, String address, Config config) {
-        super(6, nodeID, address, config, "Bots move around randomly and have a chance to break or place blocks",
+    public Experiment6InteractWalk(int nodeID, GameArchitecture game, Duration duration) {
+        super(6, nodeID, game, duration, "Bots move around randomly and have a chance to break or place blocks",
                 new MoveInteractModel());
     }
 
