@@ -43,8 +43,8 @@ public class RemoteControlledExperiment extends Experiment {
     /**
      * Creates a new experiment.
      */
-    public RemoteControlledExperiment(String address, Config config) {
-        super(7, address, config, "Experiment Controlled Through REST API.");
+    public RemoteControlledExperiment(int nodeID, String address, Config config) {
+        super(7, nodeID, address, config, "Experiment Controlled Through REST API.");
     }
 
     @Override

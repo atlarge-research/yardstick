@@ -16,16 +16,29 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package nl.tudelft.opencraft.yardstick.experiment;
+package nl.tudelft.opencraft.yardstick.model.box;
 
-import com.typesafe.config.Config;
-import nl.tudelft.opencraft.yardstick.model.MoveInteractModel;
+import java.util.Random;
+import nl.tudelft.opencraft.yardstick.bot.Bot;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
+import nl.tudelft.opencraft.yardstick.model.BotModel;
 
-public class Experiment6InteractWalk extends AbstractModelExperiment {
+/**
+ * Represents a model which moves the bot randomly to short and long distance
+ * locations.
+ */
+public class BoundingBoxMovementModel implements BotModel {
 
-    public Experiment6InteractWalk(int nodeID, String address, Config config) {
-        super(6, nodeID, address, config, "Bots move around randomly and have a chance to break or place blocks",
-                new MoveInteractModel());
+    private static final Random RANDOM = new Random(System.nanoTime());
+    private final Box2D box;
+
+    public BoundingBoxMovementModel(Box2D box) {
+        this.box = box;
     }
 
+    @Override
+    public TaskExecutor newTask(Bot bot) {
+        return new WalkTaskExecutor(bot, box.computeNewLocation(bot));
+    }
 }

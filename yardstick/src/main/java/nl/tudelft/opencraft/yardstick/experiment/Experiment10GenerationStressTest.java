@@ -29,8 +29,8 @@ public class Experiment10GenerationStressTest extends Experiment {
     private Duration experimentDuration;
     private Duration delay;
 
-    public Experiment10GenerationStressTest(String address, Config config) {
-        super(9, address, config, "Bots move away from the spawn location");
+    public Experiment10GenerationStressTest(int nodeID, String address, Config config) {
+        super(9, nodeID, address, config, "Bots move away from the spawn location");
     }
 
     @Override

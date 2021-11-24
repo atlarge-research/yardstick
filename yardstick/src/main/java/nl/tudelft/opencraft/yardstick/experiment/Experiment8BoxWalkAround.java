@@ -29,7 +29,8 @@ import nl.tudelft.opencraft.yardstick.bot.BotManager;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
-import nl.tudelft.opencraft.yardstick.model.BoundingBoxMovementModel;
+import nl.tudelft.opencraft.yardstick.model.box.BoundingBoxMovementBuilder;
+import nl.tudelft.opencraft.yardstick.model.box.BoundingBoxMovementModel;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 // TODO remove this class once we have a good BotModel interface.
@@ -45,8 +46,8 @@ public class Experiment8BoxWalkAround extends Experiment {
     private BotManager botManager;
     private ScheduledFuture<?> runningBotManager;
 
-    public Experiment8BoxWalkAround(String address, Config config) {
-        super(4, address, config, "Bots walking around based on a movement model for Second Life.");
+    public Experiment8BoxWalkAround(int nodeID, String address, Config config) {
+        super(4, nodeID, address, config, "Bots walking around based on a movement model for Second Life.");
     }
 
     @Override
@@ -55,10 +56,7 @@ public class Experiment8BoxWalkAround extends Experiment {
         int botsTotal = config.getInt("behavior.8.bots");
         this.timeBetweenJoins = config.getDuration("behavior.8.joininterval");
         this.numberOfBotsPerJoin = config.getInt("behavior.8.numbotsperjoin");
-        this.movement = new BoundingBoxMovementModel(
-                config.getInt("behavior.8.boxDiameter"),
-                config.getBoolean("behavior.8.spawnAnchor")
-        );
+        this.movement = new BoundingBoxMovementBuilder().fromConfig(config.getConfig("behavior.8.box"));
         this.startMillis = System.currentTimeMillis();
 
         botManager = new BotManager(game);

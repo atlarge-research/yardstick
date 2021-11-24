@@ -27,8 +27,8 @@ public class Experiment9Spike extends Experiment4MultiWalkAround {
     private Duration spikeDuration;
     private int spikePeakPlayers;
 
-    public Experiment9Spike(String address, Config config) {
-        super(address, 9, config, "Operates bots according to experiment 4, but allows a temporary spike in " +
+    public Experiment9Spike(int nodeID, String address, Config config) {
+        super(9, nodeID, address, config, "Operates bots according to experiment 4, but allows a temporary spike in " +
                 "players after set delay.");
     }
 

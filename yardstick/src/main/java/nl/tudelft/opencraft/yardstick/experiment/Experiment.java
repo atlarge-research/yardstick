@@ -42,6 +42,7 @@ public abstract class Experiment implements Runnable {
     public static final int TICK_MS = 50;
 
     protected final int number;
+    protected final int nodeID;
     protected final String description;
     protected final Config config = ConfigFactory.load();
     protected final SubLogger logger;
@@ -58,8 +59,9 @@ public abstract class Experiment implements Runnable {
      * @param number The experiment number. Must be unique globally.
      * @param desc   A human-friendly description of the experiment.
      */
-    public Experiment(int number, String address, Config config, String desc) {
+    public Experiment(int number, int nodeID, String address, Config config, String desc) {
         this.number = number;
+        this.nodeID = nodeID;
         this.description = desc;
         this.game = new GameFactory().getGame(address, config);
         this.logger = GlobalLogger.getLogger().newSubLogger("Experiment " + number);

@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/jdonkervliet/hocon"
 )
 
-func PlayerEmulationFromConfig(address, configFilePath string) (Program, error) {
+func PlayerEmulationFromConfig(address, configFilePath string, num int) (Program, error) {
 	config, err := hocon.ParseResource(configFilePath)
 	if err != nil {
 		return nil, err
@@ -28,7 +29,7 @@ func PlayerEmulationFromConfig(address, configFilePath string) (Program, error) 
 	return &Jar{
 		name:         "playerEmulation",
 		JarPath:      lrJarPath,
-		JarArguments: []string{"--address", address},
+		JarArguments: []string{"--address", address, "--nodeID", strconv.Itoa(num)},
 		JVMArgs:      append(jvmArgs, config.GetStringSlice("benchmark.player-emulation.jvm.options")...),
 		Resources:    []LocalRemotePath{lrConfigPath},
 	}, nil

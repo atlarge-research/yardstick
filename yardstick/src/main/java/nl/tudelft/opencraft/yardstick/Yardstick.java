@@ -28,6 +28,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment10GenerationStressTest;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment11Latency;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment12LatencyAndWalkAround;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment3WalkAround;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment4MultiWalkAround;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment5SimpleWalk;
@@ -75,7 +76,7 @@ public class Yardstick {
             CsvConverter.convertCsv(options.inFile, options.outFile);
             return;
         }
-
+        int id = options.nodeID;
         String address = options.address;
 
         Config experimentConfig = config.getConfig("benchmark.player-emulation.arguments");
@@ -83,31 +84,34 @@ public class Yardstick {
         Experiment ex;
         switch (experimentName) {
             case "3":
-                ex = new Experiment3WalkAround(address, experimentConfig);
+                ex = new Experiment3WalkAround(id, address, experimentConfig);
                 break;
             case "4":
-                ex = new Experiment4MultiWalkAround(address, experimentConfig);
+                ex = new Experiment4MultiWalkAround(id, address, experimentConfig);
                 break;
             case "5":
-                ex = new Experiment5SimpleWalk(address, experimentConfig);
+                ex = new Experiment5SimpleWalk(id, address, experimentConfig);
                 break;
             case "6":
-                ex = new Experiment6InteractWalk(address, experimentConfig);
+                ex = new Experiment6InteractWalk(id, address, experimentConfig);
                 break;
             case "7":
-                ex = new RemoteControlledExperiment(address, experimentConfig);
+                ex = new RemoteControlledExperiment(id, address, experimentConfig);
                 break;
             case "8":
-                ex = new Experiment8BoxWalkAround(address, experimentConfig);
+                ex = new Experiment8BoxWalkAround(id, address, experimentConfig);
                 break;
             case "9":
-                ex = new Experiment9Spike(address, experimentConfig);
+                ex = new Experiment9Spike(id, address, experimentConfig);
                 break;
             case "10":
-                ex = new Experiment10GenerationStressTest(address, experimentConfig);
+                ex = new Experiment10GenerationStressTest(id, address, experimentConfig);
                 break;
             case "11":
-                ex = new Experiment11Latency(address, experimentConfig);
+                ex = new Experiment11Latency(id, address, experimentConfig);
+                break;
+            case "12":
+                ex = new Experiment12LatencyAndWalkAround(id, address, experimentConfig);
                 break;
             default:
                 System.out.println("Invalid experiment: " + experimentName);

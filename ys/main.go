@@ -425,7 +425,7 @@ func runExperimentIteration(expConfig ExperimentConfig, iteration int) error {
 
 	playerEmulation := make([]Program, numPlayerEmulation)
 	for i := 0; i < numPlayerEmulation; i++ {
-		pe, err := PlayerEmulationFromConfig(game.Address(), expConfig.Path)
+		pe, err := PlayerEmulationFromConfig(game.Address(), expConfig.Path, i)
 		if err != nil {
 			return fmt.Errorf("could not create player emulation from config %v: %w", config, err)
 		}

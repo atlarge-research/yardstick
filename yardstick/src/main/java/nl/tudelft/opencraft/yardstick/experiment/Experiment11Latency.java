@@ -107,8 +107,8 @@ public class Experiment11Latency extends Experiment {
         }
     };
 
-    public Experiment11Latency(String address, Config config) {
-        super(11, address, config, "latency experiment");
+    public Experiment11Latency(int nodeID, String address, Config config) {
+        super(11, nodeID, address, config, "latency experiment");
         this.startMillis = System.currentTimeMillis();
         this.experimentDuration = config.getDuration("duration");
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {

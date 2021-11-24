@@ -31,6 +31,9 @@ public class Options {
     @Parameter(names = {"--address"}, description = "The hostname of the game.")
     public String address;
 
+    @Parameter(names = {"--nodeID"}, description = "The ID of this node, in [0, #nodes-1]")
+    public int nodeID;
+
     /**
      * CSV dumps
      */
