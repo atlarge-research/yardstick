@@ -82,7 +82,7 @@ public class Yardstick {
         int id = options.nodeID;
         String address = options.address;
 
-        Config experimentConfig = config.getConfig("benchmark.player-emulation.arguments");
+        Config experimentConfig = config.getConfig("yardstick.player-emulation.arguments");
         GameArchitecture game = new GameFactory().getGame(address, experimentConfig);
 
         String behaviorName = experimentConfig.getString("behavior.name");
@@ -126,7 +126,7 @@ public class Yardstick {
                 return;
         }
 
-        if (config.getBoolean("benchmark.player-emulation.arguments.packet-trace")) {
+        if (config.getBoolean("yardstick.player-emulation.arguments.packet-trace")) {
             ex.setWorkloadDumper(new WorkloadDumper());
         }
 

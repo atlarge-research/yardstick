@@ -15,7 +15,7 @@ func PlayerEmulationFromConfig(address, configFilePath string, num int) (Program
 	if err != nil {
 		return nil, err
 	}
-	basePath := config.GetString("benchmark.directories.input")
+	basePath := config.GetString("yardstick.directories.input")
 	jarPath := filepath.Join(basePath, config.GetString("benchmark.player-emulation.path"))
 	if _, err := os.Stat(jarPath); errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf("player emulation jar does not exist: %w", err)
