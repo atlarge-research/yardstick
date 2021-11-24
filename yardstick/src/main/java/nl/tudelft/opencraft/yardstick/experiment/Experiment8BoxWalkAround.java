@@ -28,10 +28,8 @@ import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.BotManager;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
 import nl.tudelft.opencraft.yardstick.model.box.BoundingBoxMovementBuilder;
 import nl.tudelft.opencraft.yardstick.model.box.BoundingBoxMovementModel;
-import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 // TODO remove this class once we have a good BotModel interface.
 public class Experiment8BoxWalkAround extends Experiment {
@@ -79,9 +77,7 @@ public class Experiment8BoxWalkAround extends Experiment {
     private void botTick(Bot bot) {
         TaskExecutor t = bot.getTaskExecutor();
         if (t == null || t.getStatus().getType() != TaskStatus.StatusType.IN_PROGRESS) {
-            Vector3i newLocation = movement.newTargetLocation(bot);
-            bot.getLogger().info(String.format("Setting task for bot to walk to %s", newLocation));
-            bot.setTaskExecutor(new WalkTaskExecutor(bot, newLocation));
+            bot.setTaskExecutor(movement.newTask(bot));
         }
     }
 
