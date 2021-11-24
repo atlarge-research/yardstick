@@ -21,7 +21,7 @@ func PlayerEmulationFromConfig(address, configFilePath string) (Program, error) 
 	}
 	lrJarPath := LocalRemotePathFromStrings(jarPath, "")
 	jvmArgs := []string{"-Dconfig.file=application.conf"}
-	lrConfigPath := LocalRemotePathFromStrings(configFilePath, "")
+	lrConfigPath := LocalRemotePathFromStrings(configFilePath, "application.conf")
 	if _, err := os.Stat(lrConfigPath.LocalPath); errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf("player emulation config does not exist: %w", err)
 	}
@@ -30,7 +30,6 @@ func PlayerEmulationFromConfig(address, configFilePath string) (Program, error) 
 		JarPath:      lrJarPath,
 		JarArguments: []string{"--address", address},
 		JVMArgs:      append(jvmArgs, config.GetStringSlice("benchmark.player-emulation.jvm.options")...),
-		// FIXME this config cannot be copied, but must be written to disk bc it can be the merge of multiple configs!
-		Resources: []LocalRemotePath{lrConfigPath},
+		Resources:    []LocalRemotePath{lrConfigPath},
 	}, nil
 }

@@ -397,7 +397,7 @@ func runExperimentIteration(expConfig ExperimentConfig, iteration int) error {
 	if err != nil {
 		return fmt.Errorf("could not create provisioner: %w", err)
 	}
-	game, err := GameFromConfig(inputDirectoryPath, config.GetConfig("benchmark.game"))
+	game, err := GameFromConfig(inputDirectoryPath, config.GetConfig("benchmark.game"), expConfig.Path)
 	if err != nil {
 		return fmt.Errorf("could not create game: %w", err)
 	}

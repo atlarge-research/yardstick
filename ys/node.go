@@ -134,7 +134,19 @@ func NewNode(user, host, proxy, binary string) *Node {
 }
 
 func (node *Node) Close() error {
-	defer node.tunnel.Process.Signal(os.Interrupt)
+	defer func() {
+		node.tunnel.Process.Signal(os.Interrupt)
+		qChan := make(chan error)
+		go func() {
+			_, err := node.tunnel.Process.Wait()
+			qChan <- err
+		}()
+		select {
+		case <-qChan:
+		case <-time.After(3 * time.Second):
+			node.tunnel.Process.Kill()
+		}
+	}()
 	resp, err := node.client.Get(fmt.Sprintf("%v/close", node.localAddress))
 	if err != nil {
 		return fmt.Errorf("could not GET from node: %w", err)

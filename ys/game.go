@@ -47,19 +47,19 @@ func (game *JarGame) Address() string {
 	return fmt.Sprintf("%v:%v", game.host, game.port)
 }
 
-func GameFromConfig(basePath string, config *hocon.Config) (Game, error) {
+func GameFromConfig(basePath string, config *hocon.Config, rootConfigPath string) (Game, error) {
 	archi := config.GetString("architecture")
 	switch archi {
 	case "jar":
 		return gameFromJar(basePath, config)
 	case "servo":
-		return gameFromServo(config)
+		return gameFromServo(config, rootConfigPath)
 	default:
 		return nil, errors.New(fmt.Sprintf("game architecture '%v' not supported", archi))
 	}
 }
 
-func gameFromServo(config *hocon.Config) (Game, error) {
+func gameFromServo(config *hocon.Config, configPath string) (Game, error) {
 	envParams := config.GetStringMapString("servo.environment")
 	env := make([]string, len(envParams))
 	i := 0
@@ -71,7 +71,7 @@ func gameFromServo(config *hocon.Config) (Game, error) {
 		repo:   config.GetString("servo.build.git"),
 		commit: config.GetString("servo.build.commit"),
 		env:    env,
-		config: config.GetConfig("servo.app"),
+		config: configPath,
 	}, nil
 }
 
@@ -109,7 +109,7 @@ type ServoAWS struct {
 	repo     string
 	commit   string
 	env      []string
-	config   *hocon.Config
+	config   string
 	Endpoint *url.URL
 }
 
@@ -133,7 +133,11 @@ func (s *ServoAWS) Deploy(node *Node) error {
 	}
 
 	// Write application.conf for Servo to use
-	if err := ioutil.WriteFile(filepath.Join(tmpDir, "application.conf"), []byte(s.config.String()), 0644); err != nil {
+	bConfig, err := ioutil.ReadFile(s.config)
+	if err != nil {
+		panic(err)
+	}
+	if err := ioutil.WriteFile(filepath.Join(tmpDir, "application.conf"), bConfig, 0644); err != nil {
 		panic(err)
 	}
 
