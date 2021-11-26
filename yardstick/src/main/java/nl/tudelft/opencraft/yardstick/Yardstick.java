@@ -86,7 +86,7 @@ public class Yardstick {
         GameArchitecture game = new GameFactory().getGame(address, experimentConfig);
 
         String behaviorName = experimentConfig.getString("behavior.name");
-        Config behaviorConfig = experimentConfig.getConfig(behaviorName);
+        Config behaviorConfig = experimentConfig.getConfig("behavior." + behaviorName);
         Duration experimentDuration = experimentConfig.getDuration("duration");
 
         Experiment ex;
