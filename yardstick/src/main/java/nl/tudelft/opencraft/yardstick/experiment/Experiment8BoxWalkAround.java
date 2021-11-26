@@ -69,9 +69,9 @@ public class Experiment8BoxWalkAround extends Experiment {
     protected void tick() {
         List<Bot> bots = botManager.getConnectedBots();
         synchronized (bots) {
-            for (Bot bot : bots) {
-                botTick(bot);
-            }
+            bots.stream()
+                    .filter(Bot::isJoined)
+                    .forEach(this::botTick);
         }
     }
 
