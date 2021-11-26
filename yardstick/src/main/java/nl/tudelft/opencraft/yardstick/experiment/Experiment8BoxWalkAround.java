@@ -41,9 +41,6 @@ public class Experiment8BoxWalkAround extends Experiment {
 
     private long startMillis;
     private Duration experimentDuration;
-    private Duration timeBetweenJoins;
-    private int numberOfBotsPerJoin;
-    private long lastJoin = System.currentTimeMillis();
     private BotManager botManager;
     private ScheduledFuture<?> runningBotManager;
 
@@ -56,8 +53,8 @@ public class Experiment8BoxWalkAround extends Experiment {
     protected void before() {
         this.experimentDuration = behaviorConfig.getDuration("duration");
         int botsTotal = behaviorConfig.getInt("bots");
-        this.timeBetweenJoins = behaviorConfig.getDuration("joininterval");
-        this.numberOfBotsPerJoin = behaviorConfig.getInt("numbotsperjoin");
+        Duration timeBetweenJoins = behaviorConfig.getDuration("joininterval");
+        int numberOfBotsPerJoin = behaviorConfig.getInt("numbotsperjoin");
         this.movement = new BoundingBoxMovementBuilder().fromConfig(behaviorConfig.getConfig("box"));
         this.startMillis = System.currentTimeMillis();
 
