@@ -10,6 +10,7 @@ import nl.tudelft.opencraft.yardstick.util.Vector2i;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import nl.tudelft.opencraft.yardstick.util.ZigZagRange;
+import org.jetbrains.annotations.NotNull;
 
 public class TargetLocation {
 
@@ -36,7 +37,7 @@ public class TargetLocation {
 
     // TODO make sure this also uses the getStartingLoc Function
     // TODO remove bot from param list
-    private Vector3i getTargetAt(Bot bot, int x, int z) {
+    private Vector3i getTargetAt(@NotNull Bot bot, int x, int z) {
         Vector3d botLoc = bot.getPlayer().getLocation();
 
         int y = -1;

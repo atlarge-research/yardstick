@@ -18,7 +18,6 @@
 
 package nl.tudelft.opencraft.yardstick.model.box;
 
-import java.util.Random;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
@@ -30,7 +29,6 @@ import nl.tudelft.opencraft.yardstick.model.BotModel;
  */
 public class BoundingBoxMovementModel implements BotModel {
 
-    private static final Random RANDOM = new Random(System.nanoTime());
     private final Box2D box;
 
     public BoundingBoxMovementModel(Box2D box) {
