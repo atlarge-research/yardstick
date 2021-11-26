@@ -52,6 +52,7 @@ public class Options {
         final StringBuilder sb = new StringBuilder("Options{");
         sb.append("help=").append(help);
         sb.append(", address='").append(address).append('\'');
+        sb.append(", nodeID=").append(nodeID);
         sb.append(", csvDump=").append(csvDump);
         sb.append(", inFile='").append(inFile).append('\'');
         sb.append(", outFile='").append(outFile).append('\'');

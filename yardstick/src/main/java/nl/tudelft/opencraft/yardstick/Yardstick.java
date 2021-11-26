@@ -69,6 +69,7 @@ public class Yardstick {
         LOGGER.info("Effective Yardstick Configuration:");
         Config config = ConfigFactory.load();
         LOGGER.info(config.toString());
+        LOGGER.info(options.toString());
 
         if (options.csvDump) {
             if (options.inFile == null || options.outFile == null) {
