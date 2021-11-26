@@ -16,7 +16,7 @@ func PlayerEmulationFromConfig(address, configFilePath string, num int) (Program
 		return nil, err
 	}
 	basePath := config.GetString("yardstick.directories.input")
-	jarPath := filepath.Join(basePath, config.GetString("benchmark.player-emulation.path"))
+	jarPath := filepath.Join(basePath, config.GetString("yardstick.player-emulation.path"))
 	if _, err := os.Stat(jarPath); errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf("player emulation jar does not exist: %w", err)
 	}
@@ -30,7 +30,7 @@ func PlayerEmulationFromConfig(address, configFilePath string, num int) (Program
 		name:         "playerEmulation",
 		JarPath:      lrJarPath,
 		JarArguments: []string{"--address", address, "--nodeID", strconv.Itoa(num)},
-		JVMArgs:      append(jvmArgs, config.GetStringSlice("benchmark.player-emulation.jvm.options")...),
+		JVMArgs:      append(jvmArgs, config.GetStringSlice("yardstick.player-emulation.jvm.options")...),
 		Resources:    []LocalRemotePath{lrConfigPath},
 	}, nil
 }

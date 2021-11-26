@@ -272,7 +272,7 @@ func primary() {
 		log.Fatal("error while reading configPath: ", err)
 	}
 
-	configDirPath := conf.GetString("benchmark.directories.configs")
+	configDirPath := conf.GetString("yardstick.directories.configs")
 	configDir, err := os.Open(configDirPath)
 	if err != nil {
 		panic(err)
@@ -316,7 +316,7 @@ func primary() {
 		if err != nil {
 			panic(err)
 		}
-		totalIterations += int64(parsedConf.GetInt("benchmark.iterations"))
+		totalIterations += int64(parsedConf.GetInt("yardstick.iterations"))
 	}
 	bar := progressbar.Default(totalIterations, "running experiment")
 	go func() {
@@ -329,7 +329,7 @@ func primary() {
 		if err != nil {
 			panic(err)
 		}
-		for i := 0; i < parsedConf.GetInt("benchmark.iterations"); i++ {
+		for i := 0; i < parsedConf.GetInt("yardstick.iterations"); i++ {
 			ResetPort()
 			if err := runExperimentIteration(c, i); err != nil {
 				panic(err)
@@ -337,7 +337,7 @@ func primary() {
 			bar.Add(1)
 		}
 	}
-	runDataScripts(conf.GetConfig("benchmark.directories"))
+	runDataScripts(conf.GetConfig("yardstick.directories"))
 }
 
 func mergeConfFiles(base string, others ...string) (string, error) {
@@ -378,7 +378,7 @@ func runExperimentIteration(expConfig ExperimentConfig, iteration int) error {
 	if err != nil {
 		return err
 	}
-	outputDir := config.GetString("benchmark.directories.raw-output")
+	outputDir := config.GetString("yardstick.directories.raw-output")
 	configName := strings.TrimSuffix(strings.ReplaceAll(expConfig.Name, "-", "_"), ".conf")
 	prefix := fmt.Sprintf("i-%v-c-%v", iteration, configName)
 	entries, err := os.ReadDir(outputDir)
@@ -392,12 +392,12 @@ func runExperimentIteration(expConfig ExperimentConfig, iteration int) error {
 		}
 	}
 
-	inputDirectoryPath := config.GetString("benchmark.directories.input")
-	prov, err := ProvisionerFromConfig(config.GetConfig("benchmark.provisioning"), inputDirectoryPath)
+	inputDirectoryPath := config.GetString("yardstick.directories.input")
+	prov, err := ProvisionerFromConfig(config.GetConfig("yardstick.provisioning"), inputDirectoryPath)
 	if err != nil {
 		return fmt.Errorf("could not create provisioner: %w", err)
 	}
-	game, err := GameFromConfig(inputDirectoryPath, config.GetConfig("benchmark.game"), expConfig.Path)
+	game, err := GameFromConfig(inputDirectoryPath, config.GetConfig("yardstick.game"), expConfig.Path)
 	if err != nil {
 		return fmt.Errorf("could not create game: %w", err)
 	}
@@ -415,7 +415,7 @@ func runExperimentIteration(expConfig ExperimentConfig, iteration int) error {
 	if gameNode != nil {
 		basePort++
 	}
-	numPlayerEmulation := config.GetInt("benchmark.player-emulation.number-of-nodes")
+	numPlayerEmulation := config.GetInt("yardstick.player-emulation.number-of-nodes")
 	playerEmulationNodes, err := prov.Provision(numPlayerEmulation, basePort)
 
 	// TODO Deploy pecosa on game node
@@ -460,7 +460,7 @@ func runExperimentIteration(expConfig ExperimentConfig, iteration int) error {
 		wg.Add(1)
 		program := program
 		go func() {
-			program.Wait(config.GetDuration("benchmark.player-emulation.arguments.duration") + 1*time.Minute)
+			program.Wait(config.GetDuration("yardstick.player-emulation.arguments.duration") + 1*time.Minute)
 			wg.Done()
 		}()
 	}
