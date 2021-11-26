@@ -54,17 +54,6 @@ func ResetPort() {
 	portCounter = 9000
 }
 
-func (node *Node) command(program, command string, args ...string) *exec.Cmd {
-	commandArgs := make([]string, 0)
-	commandArgs = append(commandArgs, fmt.Sprintf("%v@%v", node.user, node.host))
-	if node.jumpHost != "" {
-		commandArgs = append(commandArgs, fmt.Sprintf("-J %v", node.jumpHost))
-	}
-	commandArgs = append(commandArgs, command)
-	commandArgs = append(commandArgs, args...)
-	return exec.Command(program, commandArgs...)
-}
-
 func (node *Node) scpCommand(local, remote string) *exec.Cmd {
 	args := make([]string, 0)
 	if node.jumpHost != "" {
@@ -75,7 +64,15 @@ func (node *Node) scpCommand(local, remote string) *exec.Cmd {
 }
 
 func (node *Node) sshCommand(command string, args ...string) *exec.Cmd {
-	return node.command("ssh", command, args...)
+	commandArgs := make([]string, 0)
+	commandArgs = append(commandArgs, "-o", "StrictHostKeyChecking=accept-new")
+	if node.jumpHost != "" {
+		commandArgs = append(commandArgs, fmt.Sprintf("-J %v", node.jumpHost))
+	}
+	commandArgs = append(commandArgs, fmt.Sprintf("%v@%v", node.user, node.host))
+	commandArgs = append(commandArgs, command)
+	commandArgs = append(commandArgs, args...)
+	return exec.Command("ssh", commandArgs...)
 }
 
 func NewNode(user, host, proxy, binary string) *Node {
@@ -119,7 +116,8 @@ func NewNode(user, host, proxy, binary string) *Node {
 		jump = proxy
 	}
 	nodeLocalPort := nextPort()
-	tunnelCmd := exec.Command("ssh", "-N", "-L", fmt.Sprintf("%v:%v:%v", nodeLocalPort, host, node.remotePort), jump)
+	tunnelCmd := exec.Command("ssh", "-o", "StrictHostKeyChecking=accept-new", "-N", "-L",
+		fmt.Sprintf("%v:%v:%v", nodeLocalPort, host, node.remotePort), jump)
 	if err := tunnelCmd.Start(); err != nil {
 		panic(err)
 	}
