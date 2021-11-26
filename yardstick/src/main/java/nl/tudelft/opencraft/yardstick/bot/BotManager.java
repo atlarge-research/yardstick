@@ -19,6 +19,7 @@ import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 import nl.tudelft.opencraft.yardstick.game.SingleServer;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
+import org.apache.commons.collections4.list.UnmodifiableList;
 import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
 
 /**
@@ -41,7 +42,6 @@ public class BotManager implements Runnable {
     private int playerStepDecrease = 0;
     @Getter
     private final GameArchitecture game;
-    @Getter
     private final List<Bot> connectedBots = Collections.synchronizedList(new ArrayList<>());
     private final List<Future<Bot>> connectingBots = Collections.synchronizedList(new ArrayList<>());
     private final Policy<Bot> retryPolicy = new RetryPolicy<Bot>()
@@ -70,6 +70,10 @@ public class BotManager implements Runnable {
 
     public void setPlayerCountTarget(int playerCountTarget) {
         this.playerCountTarget = playerCountTarget;
+    }
+
+    public List<Bot> getConnectedBots() {
+        return UnmodifiableList.unmodifiableList(new ArrayList<>(connectedBots));
     }
 
     @Override
