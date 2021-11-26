@@ -15,9 +15,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gurkankaymak/hocon"
 	gonanoid "github.com/matoous/go-nanoid/v2"
-
-	"github.com/jdonkervliet/hocon"
 )
 
 type Game interface {

@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gurkankaymak/hocon"
 	gonanoid "github.com/matoous/go-nanoid/v2"
 	"github.com/schollz/progressbar/v3"
 
@@ -25,8 +26,6 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"golang.org/x/crypto/ssh"
-
-	"github.com/jdonkervliet/hocon"
 )
 
 const defaultConfig = "default"

@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/gin-gonic/gin v1.7.4
-	github.com/jdonkervliet/hocon v1.2.3-0.20211121183042-63b74b7991c2
+	github.com/gurkankaymak/hocon v1.2.3
 	github.com/matoous/go-nanoid/v2 v2.0.0
 	github.com/schollz/progressbar/v3 v3.8.3
 	golang.org/x/crypto v0.0.0-20211108221036-ceb1ce70b4fa

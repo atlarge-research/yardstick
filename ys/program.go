@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jdonkervliet/hocon"
+	"github.com/gurkankaymak/hocon"
 )
 
 type Program interface {

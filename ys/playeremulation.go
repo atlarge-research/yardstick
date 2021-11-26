@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/jdonkervliet/hocon"
+	"github.com/gurkankaymak/hocon"
 )
 
 func PlayerEmulationFromConfig(address, configFilePath string, num int) (Program, error) {

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jdonkervliet/hocon"
+	"github.com/gurkankaymak/hocon"
 )
 
 type Provisioner interface {
