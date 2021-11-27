@@ -38,21 +38,19 @@ public class TargetLocation {
         Vector3d botLoc = bot.getPlayer().getLocation();
 
         int y = -1;
-        try {
-            for (ZigZagRange it = new ZigZagRange(0, 255, (int) botLoc.getY()); it.hasNext(); ) {
-                y = it.next();
-                Block test = bot.getWorld().getBlockAt(x, y, z);
-                if (test.getMaterial().isTraversable()
-                        && !test.getRelative(BlockFace.BOTTOM).getMaterial().isTraversable()) {
-                    break;
-                }
+        for (ZigZagRange it = new ZigZagRange(0, 255, (int) botLoc.getY()); it.hasNext(); ) {
+            y = it.next();
+            Block test = bot.getWorld().getBlockAt(x, y, z);
+            if (test.getMaterial().isTraversable()
+                    && !test.getRelative(BlockFace.BOTTOM).getMaterial().isTraversable()) {
+                break;
             }
-
-            if (y < 0 || y > 255) {
-                return botLoc.intVector();
-            }
-
-            return new Vector3i(x, y, z);
         }
+
+        if (y < 0 || y > 255) {
+            return botLoc.intVector();
+        }
+
+        return new Vector3i(x, y, z);
     }
 }
