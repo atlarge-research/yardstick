@@ -28,7 +28,6 @@ import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.BotManager;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
-import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 import nl.tudelft.opencraft.yardstick.model.box.BoundingBoxMovementBuilder;
 import nl.tudelft.opencraft.yardstick.model.box.BoundingBoxMovementModel;
@@ -76,13 +75,8 @@ public class Experiment8BoxWalkAround extends Experiment {
     private void botTick(Bot bot) {
         TaskExecutor t = bot.getTaskExecutor();
         if (t == null || t.getStatus().getType() != TaskStatus.StatusType.IN_PROGRESS) {
-            try {
-                var task = movement.newTask(bot);
-                bot.setTaskExecutor(task);
-            } catch (ChunkNotLoadedException e) {
-                // TODO use retry mechanism with backoff
-                // ignore, for now
-            }
+            var futureTaskExecutor = movement.newTask(bot);
+            bot.setTaskExecutor(futureTaskExecutor);
         }
     }
 

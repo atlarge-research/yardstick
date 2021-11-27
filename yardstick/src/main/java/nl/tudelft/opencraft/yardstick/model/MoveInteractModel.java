@@ -20,6 +20,7 @@ package nl.tudelft.opencraft.yardstick.model;
 
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
+import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 
 /**
  * Represents a model which moves and interacts with the environment.
@@ -32,7 +33,7 @@ public class MoveInteractModel implements BotModel {
     private final BotModel movement = new SimpleMovementModel();
 
     @Override
-    public TaskExecutor newTask(Bot bot) {
+    public TaskExecutor newTask(Bot bot) throws ChunkNotLoadedException {
         TaskExecutor taskExecutor;
         if (Math.random() < INTERACT_TO_MOVEMENT) {
             // Interact

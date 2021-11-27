@@ -18,6 +18,7 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import java.text.MessageFormat;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,6 +28,7 @@ import java.util.stream.Collectors;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
+import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 import nl.tudelft.opencraft.yardstick.model.BotModel;
 
@@ -79,7 +81,12 @@ public abstract class AbstractModelExperiment extends Experiment {
 
         TaskExecutor t = bot.getTaskExecutor();
         if (t == null || t.getStatus().getType() != TaskStatus.StatusType.IN_PROGRESS) {
-            bot.setTaskExecutor(model.newTask(bot));
+            try {
+                bot.setTaskExecutor(model.newTask(bot));
+            } catch (ChunkNotLoadedException e) {
+                logger.warning(MessageFormat.format("could not set new task for bot {0}: {1}", bot.getName(),
+                        e.getMessage()));
+            }
         }
     }
 

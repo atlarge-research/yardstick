@@ -52,9 +52,7 @@ public class LoggerSessionListener extends SessionAdapter {
 
     @Override
     public void disconnected(DisconnectedEvent de) {
-        if (de.getCause() != null) {
-            logger.log(Level.SEVERE, "Connection closed unexpectedly!", de.getReason());
-        }
+        logger.log(Level.WARNING, "Connection closed unexpectedly!", de.getReason());
     }
 
 }

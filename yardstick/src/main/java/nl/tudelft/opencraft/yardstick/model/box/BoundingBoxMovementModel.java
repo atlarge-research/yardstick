@@ -18,10 +18,12 @@
 
 package nl.tudelft.opencraft.yardstick.model.box;
 
+import java.time.temporal.ChronoUnit;
+import net.jodah.failsafe.Failsafe;
+import net.jodah.failsafe.RetryPolicy;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.FutureTaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
-import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.model.BotModel;
 
 /**
@@ -37,7 +39,11 @@ public class BoundingBoxMovementModel implements BotModel {
     }
 
     @Override
-    public TaskExecutor newTask(Bot bot) throws ChunkNotLoadedException {
-        return new WalkTaskExecutor(bot, box.computeNewLocation(bot));
+    public FutureTaskExecutor newTask(Bot bot) {
+        var policy = new RetryPolicy<>()
+                .withMaxAttempts(-1)
+                .withBackoff(1, 16, ChronoUnit.SECONDS);
+        var future = Failsafe.with(policy).getAsync(() -> new WalkTaskExecutor(bot, box.computeNewLocation(bot)));
+        return new FutureTaskExecutor(future);
     }
 }
