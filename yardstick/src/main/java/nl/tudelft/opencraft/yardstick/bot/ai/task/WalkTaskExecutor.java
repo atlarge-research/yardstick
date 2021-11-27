@@ -41,6 +41,7 @@
 
 package nl.tudelft.opencraft.yardstick.bot.ai.task;
 
+import java.text.MessageFormat;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -107,6 +108,7 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
             try {
                 nextStep = pathFuture.get();
                 ticksSinceStepChange = 0;
+                logger.info(MessageFormat.format("bot {0} walking towards {1}", bot.getName(), target));
             } catch (InterruptedException e) {
                 return TaskStatus.forFailure(e.getMessage(), e);
             } catch (ExecutionException e) {
