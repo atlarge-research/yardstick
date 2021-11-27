@@ -21,6 +21,7 @@ package nl.tudelft.opencraft.yardstick.model.box;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
+import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.model.BotModel;
 
 /**
@@ -36,7 +37,7 @@ public class BoundingBoxMovementModel implements BotModel {
     }
 
     @Override
-    public TaskExecutor newTask(Bot bot) {
+    public TaskExecutor newTask(Bot bot) throws ChunkNotLoadedException {
         return new WalkTaskExecutor(bot, box.computeNewLocation(bot));
     }
 }

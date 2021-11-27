@@ -1,6 +1,5 @@
 package nl.tudelft.opencraft.yardstick.model;
 
-import java.text.MessageFormat;
 import java.util.Random;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.world.Block;
@@ -22,7 +21,7 @@ public class TargetLocation {
      * @return New random location in a field that has the original location at
      * its center.
      */
-    public Vector3i newTargetLocation(Vector2i center, int diameter, Bot bot) {
+    public Vector3i newTargetLocation(Vector2i center, int diameter, Bot bot) throws ChunkNotLoadedException {
         int radius = diameter / 2;
         int maxx = center.getX() + radius;
         int minx = center.getX() - radius;
@@ -35,9 +34,7 @@ public class TargetLocation {
         return getTargetAt(bot, newX, newZ);
     }
 
-    // TODO make sure this also uses the getStartingLoc Function
-    // TODO remove bot from param list
-    private Vector3i getTargetAt(@NotNull Bot bot, int x, int z) {
+    private Vector3i getTargetAt(@NotNull Bot bot, int x, int z) throws ChunkNotLoadedException {
         Vector3d botLoc = bot.getPlayer().getLocation();
 
         int y = -1;
@@ -56,9 +53,6 @@ public class TargetLocation {
             }
 
             return new Vector3i(x, y, z);
-        } catch (ChunkNotLoadedException ex) {
-            bot.getLogger().warning(MessageFormat.format("Bot target not loaded: ({0},{1},{2})", x, y, z));
-            return botLoc.intVector();
         }
     }
 }

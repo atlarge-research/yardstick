@@ -73,7 +73,9 @@ public class BotManager implements Runnable {
     }
 
     public List<Bot> getConnectedBots() {
-        return UnmodifiableList.unmodifiableList(new ArrayList<>(connectedBots));
+        synchronized (connectedBots) {
+            return UnmodifiableList.unmodifiableList(new ArrayList<>(connectedBots));
+        }
     }
 
     @Override
