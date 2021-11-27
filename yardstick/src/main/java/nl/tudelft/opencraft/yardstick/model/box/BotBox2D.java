@@ -3,6 +3,7 @@ package nl.tudelft.opencraft.yardstick.model.box;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
+import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.model.TargetLocation;
 import nl.tudelft.opencraft.yardstick.util.Vector2i;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
@@ -18,7 +19,7 @@ public class BotBox2D implements Box2D {
     }
 
     @Override
-    public Vector3i computeNewLocation(Bot bot) {
+    public Vector3i computeNewLocation(Bot bot) throws ChunkNotLoadedException {
         return targetLocation.newTargetLocation(
                 anchorMap.computeIfAbsent(bot, b -> {
                     var pos = b.getPlayer().getLocation().intVector();
