@@ -47,10 +47,7 @@ public class ServerlessHttpGame implements GameArchitecture {
                 throw new RuntimeException(e);
             }
             return new Gson().fromJson(rawResponse.body(), NamingResponse.class);
-        }).thenApply(n -> {
-            var res = new InetSocketAddress(n.getHostname(), n.getPort());
-            return res;
-        });
+        }).thenApply(n -> new InetSocketAddress(n.getHostname(), n.getPort()));
     }
 
     private enum Source {

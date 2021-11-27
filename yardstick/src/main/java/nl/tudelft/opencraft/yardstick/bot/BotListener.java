@@ -18,6 +18,23 @@
 
 package nl.tudelft.opencraft.yardstick.bot;
 
+import java.util.UUID;
+import java.util.logging.Logger;
+import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
+import nl.tudelft.opencraft.yardstick.bot.entity.Entity;
+import nl.tudelft.opencraft.yardstick.bot.entity.ExperienceOrb;
+import nl.tudelft.opencraft.yardstick.bot.entity.LightningStrike;
+import nl.tudelft.opencraft.yardstick.bot.entity.Mob;
+import nl.tudelft.opencraft.yardstick.bot.entity.ObjectEntity;
+import nl.tudelft.opencraft.yardstick.bot.entity.Painting;
+import nl.tudelft.opencraft.yardstick.bot.entity.Player;
+import nl.tudelft.opencraft.yardstick.bot.world.Block;
+import nl.tudelft.opencraft.yardstick.bot.world.Chunk;
+import nl.tudelft.opencraft.yardstick.bot.world.ChunkLocation;
+import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
+import nl.tudelft.opencraft.yardstick.bot.world.Dimension;
+import nl.tudelft.opencraft.yardstick.bot.world.World;
+import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
 import science.atlarge.opencraft.mcprotocollib.data.SubProtocol;
 import science.atlarge.opencraft.mcprotocollib.data.game.chunk.Column;
@@ -110,24 +127,6 @@ import science.atlarge.opencraft.packetlib.event.session.PacketSendingEvent;
 import science.atlarge.opencraft.packetlib.event.session.PacketSentEvent;
 import science.atlarge.opencraft.packetlib.event.session.SessionListener;
 import science.atlarge.opencraft.packetlib.packet.Packet;
-import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
-import nl.tudelft.opencraft.yardstick.bot.entity.Entity;
-import nl.tudelft.opencraft.yardstick.bot.entity.ExperienceOrb;
-import nl.tudelft.opencraft.yardstick.bot.entity.LightningStrike;
-import nl.tudelft.opencraft.yardstick.bot.entity.Mob;
-import nl.tudelft.opencraft.yardstick.bot.entity.ObjectEntity;
-import nl.tudelft.opencraft.yardstick.bot.entity.Painting;
-import nl.tudelft.opencraft.yardstick.bot.entity.Player;
-import nl.tudelft.opencraft.yardstick.bot.world.Block;
-import nl.tudelft.opencraft.yardstick.bot.world.Chunk;
-import nl.tudelft.opencraft.yardstick.bot.world.ChunkLocation;
-import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
-import nl.tudelft.opencraft.yardstick.bot.world.Dimension;
-import nl.tudelft.opencraft.yardstick.bot.world.World;
-import nl.tudelft.opencraft.yardstick.util.Vector3d;
 
 /**
  * Handles basic bot network traffic.
@@ -746,9 +745,6 @@ public class BotListener implements SessionListener {
     @Override
     public void disconnected(DisconnectedEvent de) {
         logger.info("Disconnected: " + de.getReason());
-        if (de.getCause() != null) {
-            logger.log(Level.WARNING, "Connection closed unexpectedly!", de.getCause());
-        }
     }
 
 }
