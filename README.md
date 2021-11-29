@@ -52,6 +52,15 @@ Both components use HOCON for their configuration and look for an `application.c
 
 Yardstick's player emulation emulates players that connect to a Minecraft-like service and perform certain behavior. How many players are emulated, and which kind of behavior the players perform, depends on you configure Yardstick.
 
+Next to the player emulation configuration provided in an `application.conf` file, the player emulation requires two command line arguments:
+
+1. `--address` specifies the address of the Minecraft-like service.
+	2. For traditional Minecraft-like services, this is the IP address and port number on which to connect Minecraft players.
+	3. For the Serverless game prototype, this is an HTTP URL pointing to the game's naming service.
+4. `--nodeID` specifies the ID of the player emulation node. This is used by some [player emulation programs](#player-emulation-programs) to coordinate behavior when running on multiple nodes.
+
+When using the benchmark runner, these command line arguments are provided automatically.
+
 Although Yardstick's player emulation has been used to evaluate Minecraft-like services with varying protocol versions, only its compatibility is only guaranteed for the protocol version used in Minecraft 1.12. Other protocol versions are not guaranteed to work out-of-the-box and may require modifying the Yardstick source code.
 
 #### Player Emulation Programs
