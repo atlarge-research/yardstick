@@ -1,5 +1,7 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import com.typesafe.config.Config;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -11,10 +13,12 @@ import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.FlyTaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
+import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public class Experiment10GenerationStressTest extends Experiment {
 
+    private final Config behaviorConfig;
     private final List<Bot> botList = Collections.synchronizedList(new ArrayList<>());
     private final Set<Bot> targetSet = Collections.synchronizedSet(new HashSet<>());
 
@@ -24,22 +28,23 @@ public class Experiment10GenerationStressTest extends Experiment {
     private double botSpeed;
 
     private long startMillis;
-    private int durationInSeconds;
-    private int delay;
+    private Duration experimentDuration;
+    private Duration delay;
 
-    public Experiment10GenerationStressTest() {
-        super(9, "Bots move away from the spawn location");
+    public Experiment10GenerationStressTest(int nodeID, GameArchitecture game, Config config) {
+        super(9, nodeID, game, "Bots move away from the spawn location");
+        this.behaviorConfig = config;
     }
 
     @Override
     protected void before() {
-        int botsTotal = Integer.parseInt(options.experimentParams.get("bots"));
-        this.durationInSeconds = Integer.parseInt(options.experimentParams.getOrDefault("duration", "600"));
-        this.delay = Integer.parseInt(options.experimentParams.getOrDefault("delay", "0")) * 1000;
-        this.botSpeed = Double.parseDouble(options.experimentParams.getOrDefault("speed", "0.3"));
+        int botsTotal = behaviorConfig.getInt("bots");
+        this.experimentDuration = behaviorConfig.getDuration("duration");
+        this.delay = behaviorConfig.getDuration("startDelay");
+        this.botSpeed = behaviorConfig.getDouble("bot-speed");
         this.startMillis = System.currentTimeMillis();
         this.increment = 2 * Math.PI / botsTotal;
-        this.targetDistance = ((int) (1000 / TICK_MS) * durationInSeconds) * botSpeed;
+        this.targetDistance = ((int) (1000 / TICK_MS) * experimentDuration.getSeconds()) * botSpeed;
 
         // connect the bots; todo: synchronized?
         for (int i = 0; i < botsTotal; i++) {
@@ -54,7 +59,7 @@ public class Experiment10GenerationStressTest extends Experiment {
 
     @Override
     protected void tick() {
-        if (System.currentTimeMillis() - startMillis < delay) {
+        if (System.currentTimeMillis() - startMillis < delay.toMillis()) {
             return;
         }
 
@@ -118,7 +123,7 @@ public class Experiment10GenerationStressTest extends Experiment {
                 }
             }
             if (!bot.isJoined()) {
-                logger.warning(String.format("Could not connect bot %s:%d.", options.host, options.port));
+                logger.warning("Could not connect bot");
                 bot.disconnect("Make sure to close all connections.");
             }
         };
@@ -131,7 +136,7 @@ public class Experiment10GenerationStressTest extends Experiment {
 
     @Override
     protected boolean isDone() {
-        boolean timeUp = System.currentTimeMillis() - this.startMillis > this.durationInSeconds * 1_000;
+        boolean timeUp = System.currentTimeMillis() - this.startMillis > this.experimentDuration.toMillis();
         if (timeUp) {
             return true;
         } else if (botList.size() > 0) {

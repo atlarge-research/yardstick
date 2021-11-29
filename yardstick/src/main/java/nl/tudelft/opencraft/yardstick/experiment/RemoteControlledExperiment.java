@@ -32,6 +32,7 @@ import java.util.HashMap;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
 import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
+import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 
 public class RemoteControlledExperiment extends Experiment {
 
@@ -42,8 +43,8 @@ public class RemoteControlledExperiment extends Experiment {
     /**
      * Creates a new experiment.
      */
-    public RemoteControlledExperiment() {
-        super(7, "Experiment Controlled Through REST API.");
+    public RemoteControlledExperiment(int nodeID, GameArchitecture game) {
+        super(7, nodeID, game, "Experiment Controlled Through REST API.");
     }
 
     @Override

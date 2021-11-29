@@ -19,6 +19,7 @@ import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 import nl.tudelft.opencraft.yardstick.game.SingleServer;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
+import org.apache.commons.collections4.list.UnmodifiableList;
 import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
 
 /**
@@ -41,7 +42,6 @@ public class BotManager implements Runnable {
     private int playerStepDecrease = 0;
     @Getter
     private final GameArchitecture game;
-    @Getter
     private final List<Bot> connectedBots = Collections.synchronizedList(new ArrayList<>());
     private final List<Future<Bot>> connectingBots = Collections.synchronizedList(new ArrayList<>());
     private final Policy<Bot> retryPolicy = new RetryPolicy<Bot>()
@@ -72,6 +72,12 @@ public class BotManager implements Runnable {
         this.playerCountTarget = playerCountTarget;
     }
 
+    public List<Bot> getConnectedBots() {
+        synchronized (connectedBots) {
+            return UnmodifiableList.unmodifiableList(new ArrayList<>(connectedBots));
+        }
+    }
+
     @Override
     public void run() {
         connectedBots.removeIf(b -> !b.isConnected());
@@ -96,7 +102,7 @@ public class BotManager implements Runnable {
                     }
                 }));
             }
-        } else if (playerCount > playerCountTarget) {
+        } else if (playerCount > playerCountTarget && connectedBots.size() > 0) {
             int numPlayersToDisconnect = playerStepDecrease < 1 ? playerSurplus : Math.min(playerStepDecrease, playerSurplus);
             for (int i = 0; i < numPlayersToDisconnect; i++) {
                 connectedBots.remove(0).disconnect(String.format("Too many players connected. Is %d, should be %d", playerCount, playerCountTarget));

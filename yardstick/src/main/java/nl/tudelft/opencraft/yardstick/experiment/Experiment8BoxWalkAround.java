@@ -18,6 +18,8 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import com.typesafe.config.Config;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -26,65 +28,61 @@ import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.BotManager;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
-import nl.tudelft.opencraft.yardstick.game.GameFactory;
-import nl.tudelft.opencraft.yardstick.model.BoundingBoxMovementModel;
-import nl.tudelft.opencraft.yardstick.util.Vector3i;
+import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
+import nl.tudelft.opencraft.yardstick.model.box.BoundingBoxMovementBuilder;
+import nl.tudelft.opencraft.yardstick.model.box.BoundingBoxMovementModel;
 
 // TODO remove this class once we have a good BotModel interface.
 public class Experiment8BoxWalkAround extends Experiment {
 
+    private final Config behaviorConfig;
+
     private BoundingBoxMovementModel movement;
 
     private long startMillis;
-    private int durationInSeconds;
+    private Duration experimentDuration;
     private BotManager botManager;
     private ScheduledFuture<?> runningBotManager;
 
-    public Experiment8BoxWalkAround() {
-        super(4, "Bots walking around based on a movement model for Second Life.");
+    public Experiment8BoxWalkAround(int nodeID, GameArchitecture game, Config behaviorConfig) {
+        super(4, nodeID, game, "Bots walking around based on a movement model for Second Life.");
+        this.behaviorConfig = behaviorConfig;
     }
 
     @Override
     protected void before() {
-        int botsTotal = Integer.parseInt(options.experimentParams.get("bots"));
-        this.durationInSeconds = Integer.parseInt(options.experimentParams.getOrDefault("duration", "600"));
-        int secondsBetweenJoin = Integer.parseInt(options.experimentParams.getOrDefault("joininterval", "1"));
-        int numberOfBotsPerJoin = Integer.parseInt(options.experimentParams.getOrDefault("numbotsperjoin", "1"));
-        this.movement = new BoundingBoxMovementModel(
-                Integer.parseInt(options.experimentParams.getOrDefault("boxDiameter", "32")),
-                Boolean.parseBoolean(options.experimentParams.getOrDefault("spawnAnchor", "false"))
-        );
+        this.experimentDuration = behaviorConfig.getDuration("duration");
+        int botsTotal = behaviorConfig.getInt("bots");
+        Duration timeBetweenJoins = behaviorConfig.getDuration("joininterval");
+        int numberOfBotsPerJoin = behaviorConfig.getInt("numbotsperjoin");
+        this.movement = new BoundingBoxMovementBuilder().fromConfig(behaviorConfig.getConfig("box"));
         this.startMillis = System.currentTimeMillis();
 
-        botManager = new BotManager(new GameFactory().getGame(options.host, options.port, options.gameParams));
+        botManager = new BotManager(game);
         botManager.setPlayerStepIncrease(numberOfBotsPerJoin);
         botManager.setPlayerCountTarget(botsTotal);
-        runningBotManager = Yardstick.THREAD_POOL.scheduleAtFixedRate(botManager, 0, secondsBetweenJoin, TimeUnit.SECONDS);
+        runningBotManager = Yardstick.THREAD_POOL.scheduleAtFixedRate(botManager, 0, timeBetweenJoins.getSeconds(),
+                TimeUnit.SECONDS);
     }
 
     @Override
     protected void tick() {
-        List<Bot> bots = botManager.getConnectedBots();
-        synchronized (bots) {
-            for (Bot bot : bots) {
-                botTick(bot);
-            }
-        }
+        botManager.getConnectedBots().stream()
+                .filter(Bot::isJoined)
+                .forEach(this::botTick);
     }
 
     private void botTick(Bot bot) {
         TaskExecutor t = bot.getTaskExecutor();
         if (t == null || t.getStatus().getType() != TaskStatus.StatusType.IN_PROGRESS) {
-            Vector3i newLocation = movement.newTargetLocation(bot);
-            bot.getLogger().info(String.format("Setting task for bot to walk to %s", newLocation));
-            bot.setTaskExecutor(new WalkTaskExecutor(bot, newLocation));
+            var futureTaskExecutor = movement.newTask(bot);
+            bot.setTaskExecutor(futureTaskExecutor);
         }
     }
 
     @Override
     protected boolean isDone() {
-        return System.currentTimeMillis() - this.startMillis > this.durationInSeconds * 1_000L;
+        return System.currentTimeMillis() - this.startMillis > this.experimentDuration.toMillis();
     }
 
     @Override

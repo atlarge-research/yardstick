@@ -41,11 +41,11 @@
 
 package nl.tudelft.opencraft.yardstick.bot.ai.task;
 
+import java.text.MessageFormat;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import nl.tudelft.opencraft.yardstick.Yardstick;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.PathNode;
 import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
@@ -59,7 +59,6 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
 
     private static double speed = 0.15, jumpFactor = 3, fallFactor = 4, liquidFactor = 0.5;
     private static int defaultTimeout = 6000;
-    private static final ExecutorService service = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
     private final Vector3i target;
 
@@ -70,7 +69,7 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
     private int ticksSinceStepChange = 0;
     private int timeout = defaultTimeout;
 
-    private Callable<PathNode> task = new Callable<PathNode>() {
+    private Callable<PathNode> task = new Callable<>() {
         @Override
         public PathNode call() throws Exception {
             BotPlayer player = bot.getPlayer();
@@ -86,7 +85,7 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
         if (bot.getPlayer().getLocation().intVector().equals(target)) {
             logger.warning("Useless walk task. Bot and given target location equal.");
         }
-        pathFuture = service.submit(task);
+        pathFuture = Yardstick.THREAD_POOL.submit(task);
         startTime = System.currentTimeMillis();
     }
 
@@ -109,6 +108,7 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
             try {
                 nextStep = pathFuture.get();
                 ticksSinceStepChange = 0;
+                logger.info(MessageFormat.format("bot {0} walking towards {1}", bot.getName(), target));
             } catch (InterruptedException e) {
                 return TaskStatus.forFailure(e.getMessage(), e);
             } catch (ExecutionException e) {

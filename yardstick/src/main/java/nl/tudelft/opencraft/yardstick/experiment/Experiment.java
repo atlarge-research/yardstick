@@ -21,12 +21,9 @@ package nl.tudelft.opencraft.yardstick.experiment;
 import java.net.InetSocketAddress;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
-import nl.tudelft.opencraft.yardstick.Options;
-import nl.tudelft.opencraft.yardstick.Yardstick;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
 import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
-import nl.tudelft.opencraft.yardstick.game.GameFactory;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 import nl.tudelft.opencraft.yardstick.statistic.Statistics;
@@ -42,15 +39,15 @@ public abstract class Experiment implements Runnable {
     public static final int TICK_MS = 50;
 
     protected final int number;
+    protected final int nodeID;
     protected final String description;
-    protected final Options options = Yardstick.OPTIONS;
     protected final SubLogger logger;
 
     protected long tick = 0;
     private Statistics stats;
     private WorkloadDumper dumper;
 
-    private final GameArchitecture game;
+    protected final GameArchitecture game;
 
     /**
      * Creates a new experiment.
@@ -58,10 +55,11 @@ public abstract class Experiment implements Runnable {
      * @param number The experiment number. Must be unique globally.
      * @param desc   A human-friendly description of the experiment.
      */
-    public Experiment(int number, String desc) {
+    public Experiment(int number, int nodeID, GameArchitecture game, String desc) {
         this.number = number;
+        this.nodeID = nodeID;
         this.description = desc;
-        this.game = new GameFactory().getGame(options.host, options.port, options.gameParams);
+        this.game = game;
         this.logger = GlobalLogger.getLogger().newSubLogger("Experiment " + number);
     }
 
@@ -74,10 +72,6 @@ public abstract class Experiment implements Runnable {
     @Override
     public void run() {
         logger.info("Running: experiment " + number + " - " + description);
-
-        for (String key : options.experimentParams.keySet()) {
-            logger.info("Parameter - " + key + ": " + options.experimentParams.get(key));
-        }
 
         if (dumper != null) {
             dumper.start();

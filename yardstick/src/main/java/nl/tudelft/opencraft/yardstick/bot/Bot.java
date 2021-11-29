@@ -19,9 +19,15 @@
 package nl.tudelft.opencraft.yardstick.bot;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.util.Random;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import nl.tudelft.opencraft.yardstick.Yardstick;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.SimpleAStar;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.heuristic.EuclideanHeuristic;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
 import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
 import nl.tudelft.opencraft.yardstick.bot.world.SimpleWorldPhysics;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
@@ -49,7 +55,7 @@ public class Bot {
     private final MinecraftProtocol protocol;
     private final String name;
     @JsonIgnore
-    private final BotTicker ticker;
+    private ScheduledFuture<?> ticker;
     @JsonIgnore
     private final Client client;
     @JsonIgnore
@@ -86,11 +92,9 @@ public class Bot {
         this.name = protocol.getProfile().getName();
         this.logger = GlobalLogger.getLogger().newSubLogger("Bot").newSubLogger(name);
         this.protocol = protocol;
-        this.ticker = new BotTicker(this);
         this.client = client;
         this.client.getSession().addListener(new BotListener(this));
         this.controller = new BotController(this);
-
         // Set disconnected field
         this.client.getSession().addListener(new SessionAdapter() {
             @Override
@@ -123,7 +127,27 @@ public class Bot {
         }
         session.addListener(new LoggerSessionListener(logger.newSubLogger(name)));
         session.connect();
-        ticker.start();
+
+        initializeTaskTicker();
+    }
+
+    private void initializeTaskTicker() {
+        var random = new Random();
+        this.ticker = Yardstick.THREAD_POOL.scheduleAtFixedRate(() -> {
+            var taskExecutor = this.getTaskExecutor();
+            if (taskExecutor != null
+                    && taskExecutor.getStatus().getType() == TaskStatus.StatusType.IN_PROGRESS) {
+                TaskStatus status = taskExecutor.tick();
+                if (status.getType() == TaskStatus.StatusType.FAILURE) {
+                    if (status.getThrowable() != null) {
+                        logger.log(Level.FINE, "Task Failure: " + status.getMessage(), status.getThrowable());
+                    } else {
+                        logger.warning("Task Failure: " + status.getMessage());
+                    }
+                    this.setTaskExecutor(null);
+                }
+            }
+        }, random.nextInt(50), 50, TimeUnit.MILLISECONDS);
     }
 
     public void addWorkloadListener(WorkloadDumper dumper) {
@@ -177,7 +201,7 @@ public class Bot {
      */
     public void disconnect(String reason) {
         if (this.ticker != null) {
-            this.ticker.stop();
+            this.ticker.cancel(false);
         }
         if (this.taskExecutor != null) {
             this.taskExecutor.stop();

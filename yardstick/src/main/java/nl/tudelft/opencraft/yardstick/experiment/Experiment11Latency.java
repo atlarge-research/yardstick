@@ -1,5 +1,7 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import com.typesafe.config.Config;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -11,7 +13,7 @@ import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.BotManager;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkLocation;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
-import nl.tudelft.opencraft.yardstick.game.GameFactory;
+import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import org.jetbrains.annotations.NotNull;
 import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.ItemStack;
@@ -48,7 +50,7 @@ public class Experiment11Latency extends Experiment {
     private Position blockPos = null;
     private boolean placedBlock = false;
 
-    private long durationInSeconds;
+    private Duration experimentDuration;
     private long startMillis;
 
     private final SessionListener listener = new SessionListener() {
@@ -106,10 +108,10 @@ public class Experiment11Latency extends Experiment {
         }
     };
 
-    public Experiment11Latency() {
-        super(11, "latency experiment");
+    public Experiment11Latency(int nodeID, GameArchitecture game, Config config) {
+        super(11, nodeID, game, "latency experiment");
         this.startMillis = System.currentTimeMillis();
-        this.durationInSeconds = Integer.parseInt(options.experimentParams.getOrDefault("duration", "-1"));
+        this.experimentDuration = config.getDuration("duration");
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             logger.info(String.format("latency ping sent %d", countSent));
             logger.info(String.format("latency ping received %d", countReceived));
@@ -118,7 +120,7 @@ public class Experiment11Latency extends Experiment {
 
     @Override
     protected void before() throws InterruptedException {
-        botManager = new BotManager(new GameFactory().getGame(options.host, options.port, options.gameParams));
+        botManager = new BotManager(game);
         int numberOfBots = 2;
         botManager.setPlayerStepIncrease(numberOfBots);
         botManager.setPlayerCountTarget(numberOfBots);
@@ -193,7 +195,8 @@ public class Experiment11Latency extends Experiment {
 
     @Override
     protected boolean isDone() {
-        return this.durationInSeconds > 0 && System.currentTimeMillis() - this.startMillis > this.durationInSeconds * 1_000L;
+        return this.experimentDuration.getSeconds() > 0
+                && System.currentTimeMillis() - this.startMillis > this.experimentDuration.toMillis();
     }
 
     @Override

@@ -21,24 +21,15 @@
 package nl.tudelft.opencraft.yardstick;
 
 import com.beust.jcommander.JCommander;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Properties;
-import java.util.Scanner;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import java.time.Duration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.logging.Level;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment10GenerationStressTest;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment11Latency;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment12LatencyAndWalkAround;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment3WalkAround;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment4MultiWalkAround;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment5SimpleWalk;
@@ -46,10 +37,10 @@ import nl.tudelft.opencraft.yardstick.experiment.Experiment6InteractWalk;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment8BoxWalkAround;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment9Spike;
 import nl.tudelft.opencraft.yardstick.experiment.RemoteControlledExperiment;
+import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
+import nl.tudelft.opencraft.yardstick.game.GameFactory;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SimpleTimeFormatter;
-import nl.tudelft.opencraft.yardstick.statistic.Statistics;
-import nl.tudelft.opencraft.yardstick.statistic.StatisticsPusher;
 import nl.tudelft.opencraft.yardstick.workload.CsvConverter;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
 
@@ -59,132 +50,89 @@ import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
 public class Yardstick {
 
     public static final GlobalLogger LOGGER = GlobalLogger.setupGlobalLogger("Yardstick");
-    public static final Options OPTIONS = new Options();
-    public static final StatisticsPusher PROMETHEUS = new StatisticsPusher();
     public static final ScheduledExecutorService THREAD_POOL = Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
 
     public static void main(String[] args) {
         // Logger
         LOGGER.setupConsoleLogging(new SimpleTimeFormatter());
 
-        // Let's go!
-        String version = null;
-        final Properties properties = new Properties();
-        try {
-            properties.load(Yardstick.class.getClassLoader().getResourceAsStream("project.properties"));
-            version = properties.getProperty("version");
-        } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Could not load project.properties. This JAR was not packaged correctly!");
-            System.exit(1);
-        }
-        LOGGER.info("Yardstick v" + version);
-
-        List<String> allArgs = new ArrayList<>();
-        // Parse options from config file
-        try (FileReader reader = new FileReader("yardstick.properties"); Scanner scanner = new Scanner(reader);) {
-            while (scanner.hasNext()) {
-                allArgs.add(scanner.next());
-            }
-        } catch (IOException e) {
-            // Never mind
-        }
-        Collections.addAll(allArgs, args);
-
-        File config = new File("yardstick.toml");
-        // Parse config options
-        OPTIONS.readTOML(config);
         // Parse command line options
-        JCommander optParser = new JCommander(OPTIONS);
-        optParser.parse(allArgs.toArray(new String[0]));
-        if (args.length > 0) {
-            LOGGER.warning("Yardstick configured using command-line options. Please use the config file.");
-            LOGGER.warning("Command-line options: " + Arrays.toString(args));
-        }
-        LOGGER.info("Effective Yardstick Configuration:");
-        LOGGER.info(OPTIONS.toString());
+        Options options = new Options();
+        JCommander optParser = new JCommander(options);
+        optParser.parse(args);
 
-        if (OPTIONS.help) {
+        if (options.help) {
             optParser.usage();
             return;
         }
 
-        if (OPTIONS.csvDump) {
-            if (OPTIONS.inFile == null || OPTIONS.outFile == null) {
+        LOGGER.info("Effective Yardstick Configuration:");
+        Config config = ConfigFactory.load();
+        LOGGER.info(config.toString());
+        LOGGER.info(options.toString());
+
+        if (options.csvDump) {
+            if (options.inFile == null || options.outFile == null) {
                 LOGGER.severe("CSV conversion requires both input and output files to be set.");
                 return;
             }
 
-            CsvConverter.convertCsv(OPTIONS.inFile, OPTIONS.outFile);
+            CsvConverter.convertCsv(options.inFile, options.outFile);
             return;
         }
+        int id = options.nodeID;
+        String address = options.address;
 
-        if (OPTIONS.experiment < 1) {
-            LOGGER.severe("You must specify the experiment ID.");
-            return;
-        }
+        Config experimentConfig = config.getConfig("yardstick.player-emulation.arguments");
+        GameArchitecture game = new GameFactory().getGame(address, experimentConfig);
 
-        if (OPTIONS.start != null) {
-            LOGGER.info("Starting at: " + OPTIONS.start.format(DateTimeFormatter.ISO_LOCAL_TIME));
-
-            LocalTime now = LocalTime.now();
-
-            if (OPTIONS.start.isBefore(now)) {
-                LOGGER.warning("Indicated time is in the past.");
-            } else {
-                long ms = now.until(OPTIONS.start, ChronoUnit.MILLIS);
-                LOGGER.info("-> Sleeping " + ms + " milliseconds");
-                try {
-                    Thread.sleep(ms);
-                } catch (InterruptedException ex) {
-                    LOGGER.log(Level.WARNING, "Sleeping interrupted", ex);
-                }
-            }
-        }
+        String behaviorName = experimentConfig.getString("behavior.name");
+        Config behaviorConfig = experimentConfig.getConfig("behavior." + behaviorName);
+        Duration experimentDuration = experimentConfig.getDuration("duration");
 
         Experiment ex;
-        switch (OPTIONS.experiment) {
-            case 3:
-                ex = new Experiment3WalkAround();
+        switch (behaviorName) {
+            case "3":
+                ex = new Experiment3WalkAround(id, game);
                 break;
-            case 4:
-                ex = new Experiment4MultiWalkAround();
+            case "4":
+                ex = new Experiment4MultiWalkAround(id, game, behaviorConfig);
                 break;
-            case 5:
-                ex = new Experiment5SimpleWalk();
+            case "5":
+                ex = new Experiment5SimpleWalk(id, game, experimentDuration);
                 break;
-            case 6:
-                ex = new Experiment6InteractWalk();
+            case "6":
+                ex = new Experiment6InteractWalk(id, game, experimentDuration);
                 break;
-            case 7:
-                ex = new RemoteControlledExperiment();
+            case "7":
+                ex = new RemoteControlledExperiment(id, game);
                 break;
-            case 8:
-                ex = new Experiment8BoxWalkAround();
+            case "8":
+                ex = new Experiment8BoxWalkAround(id, game, behaviorConfig);
                 break;
-            case 9:
-                ex = new Experiment9Spike();
+            case "9":
+                ex = new Experiment9Spike(id, game, behaviorConfig);
                 break;
-            case 10:
-                ex = new Experiment10GenerationStressTest();
+            case "10":
+                ex = new Experiment10GenerationStressTest(id, game, behaviorConfig);
                 break;
-            case 11:
-                ex = new Experiment11Latency();
+            case "11":
+                ex = new Experiment11Latency(id, game, behaviorConfig);
+                break;
+            case "12":
+                ex = new Experiment12LatencyAndWalkAround(id, game, behaviorConfig);
                 break;
             default:
-                System.out.println("Invalid experiment: " + OPTIONS.experiment);
+                System.out.println("Invalid experiment: " + behaviorName);
                 return;
         }
 
-        if (OPTIONS.prometheusHost != null) {
-            ex.setStats(new Statistics(OPTIONS.prometheusHost, OPTIONS.prometheusPort));
-        }
-
-        if (OPTIONS.dumpWorkload) {
+        if (config.getBoolean("yardstick.player-emulation.arguments.packet-trace")) {
             ex.setWorkloadDumper(new WorkloadDumper());
         }
 
         Thread t = new Thread(ex);
-        t.setName("experiment-" + OPTIONS.experiment);
+        t.setName("experiment-" + behaviorName);
 
         t.start();
     }

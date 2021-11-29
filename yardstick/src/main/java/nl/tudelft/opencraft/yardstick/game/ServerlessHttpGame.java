@@ -26,18 +26,20 @@ public class ServerlessHttpGame implements GameArchitecture {
     @Override
     public CompletableFuture<InetSocketAddress> getAddressForPlayer() {
         String id = String.valueOf(random.nextInt());
+        var client = HttpClient.newHttpClient();
+        NamingRequest namingRequest = new NamingRequest("servo/player:NAME" +
+                "=" + id, Action.GET, Source.EXTERNAL);
+        var request = HttpRequest.newBuilder(address)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(new Gson().toJson(namingRequest)))
+                .build();
         var retryPolicy = new RetryPolicy<NamingResponse>()
                 .withMaxAttempts(-1)
                 .withMaxDuration(Duration.ofMinutes(1))
                 .withDelay(Duration.ofSeconds(3))
-                .handleResultIf(r -> r.getStatus() != Status.RUN);
+                .handleResultIf(r -> r.getStatus() != Status.RUN)
+                .handleResultIf(r -> r.getHostname().isBlank());
         return Failsafe.with(retryPolicy).getAsync(() -> {
-            var client = HttpClient.newHttpClient();
-            var request = HttpRequest.newBuilder(address)
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(new Gson().toJson(new NamingRequest("servo/player:NAME" +
-                            "=" + id, Action.GET, Source.EXTERNAL))))
-                    .build();
             HttpResponse<String> rawResponse;
             try {
                 rawResponse = client.send(request, HttpResponse.BodyHandlers.ofString());
