@@ -79,7 +79,7 @@ If your evaluation requires player behavior different from the behavior provided
 
 #### Player Emulation as a Library
 
-Yardstick's player emulation works by running the "[experiments](#player-emulation-experiments)" mentioned above and is currently not available as a stand-alone library. Pull requests that make Yardstick's player emulation available as a stand-alone library are welcome.
+Yardstick's player emulation works by running the "[experiments](#player-emulation-programs)" mentioned above and is currently not available as a stand-alone library. Pull requests that make Yardstick's player emulation available as a stand-alone library are welcome.
 
 ### Benchmark Runner
 
