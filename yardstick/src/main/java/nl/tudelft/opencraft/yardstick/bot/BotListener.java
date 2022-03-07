@@ -32,7 +32,6 @@ import nl.tudelft.opencraft.yardstick.bot.world.ChunkLocation;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.bot.world.Dimension;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
-import nl.tudelft.opencraft.yardstick.experiment.Experiment12RandomE2E;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
 import science.atlarge.opencraft.mcprotocollib.data.SubProtocol;
@@ -127,7 +126,6 @@ import science.atlarge.opencraft.packetlib.event.session.PacketSentEvent;
 import science.atlarge.opencraft.packetlib.event.session.SessionListener;
 import science.atlarge.opencraft.packetlib.packet.Packet;
 
-import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
@@ -317,34 +315,6 @@ public class BotListener implements SessionListener {
             // 0x0F Chat Message
             ServerChatPacket p = (ServerChatPacket) packet;
             // TODO
-
-            // log time
-            long end = System.currentTimeMillis();
-
-            String key = null;
-            if (p.getMessage().getText().startsWith("There are")) {
-                key = "banlist";
-            }
-            if (p.getMessage().getText().startsWith("Banned player")) {
-                key = "ban";
-            }
-            if (p.getMessage().getText().startsWith("Unbanned")) {
-                key = "unban";
-            }
-            if (p.getMessage().getText().startsWith("Changing to clear")) {
-                key = "clear";
-            }
-            if (p.getMessage().getText().startsWith("Changing to rain and thunder")) {
-                key = "thunder";
-            }
-            try {
-                if (key != null) {
-                    Experiment12RandomE2E.fw.write(end + "\t" + key + "\t" + (end - Experiment12RandomE2E.GMStartTime) + "\n");
-                    Experiment12RandomE2E.fw.flush();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
 
         } else if (packet instanceof ServerMultiBlockChangePacket) {
             // 0x10 Multi Block Change
