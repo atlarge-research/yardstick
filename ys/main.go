@@ -265,20 +265,20 @@ type ExperimentConfig struct {
 	Path string
 }
 
-func primary() {
+func primary() error {
 	conf, err := hocon.ParseResource(*configPath)
 	if err != nil {
-		log.Fatal("error while reading configPath: ", err)
+		return fmt.Errorf("error while reading config %v: %w", *configPath, err)
 	}
 
 	configDirPath := conf.GetString("yardstick.directories.configs")
 	configDir, err := os.Open(configDirPath)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("configs dir not found at %v: %w", configDirPath, err)
 	}
 	configDirEntries, err := configDir.ReadDir(0)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("could not read configs directory: %w", err)
 	}
 	configFiles := make([]ExperimentConfig, 0)
 	for _, f := range configDirEntries {
@@ -286,7 +286,7 @@ func primary() {
 			iterationConf := filepath.Join(configDirPath, f.Name())
 			tempConf, err := mergeConfFiles(*configPath, iterationConf)
 			if err != nil {
-				panic(err)
+				return fmt.Errorf("could not merge config files %v and %v: %w", *configPath, iterationConf, err)
 			}
 			configFiles = append(configFiles, ExperimentConfig{
 				Name: strings.TrimSuffix(filepath.Base(f.Name()), ".conf"),
@@ -313,7 +313,7 @@ func primary() {
 	for _, c := range configFiles {
 		parsedConf, err := hocon.ParseResource(c.Path)
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("could not parse config at %v: %w", c.Path, err)
 		}
 		totalIterations += int64(parsedConf.GetInt("yardstick.iterations"))
 	}
@@ -326,17 +326,18 @@ func primary() {
 	for _, c := range configFiles {
 		parsedConf, err := hocon.ParseResource(c.Path)
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("could not parse config at %v: %w", c.Path, err)
 		}
 		for i := 0; i < parsedConf.GetInt("yardstick.iterations"); i++ {
 			ResetPort()
 			if err := runExperimentIteration(c, i); err != nil {
-				panic(err)
+				return fmt.Errorf("experiment config %v iteration %v failed: %w", c, i, err)
 			}
 			bar.Add(1)
 		}
 	}
 	runDataScripts(conf.GetConfig("yardstick.directories"))
+	return nil
 }
 
 func mergeConfFiles(base string, others ...string) (string, error) {
@@ -536,6 +537,8 @@ func main() {
 		worker()
 	} else {
 		log.Println("primary")
-		primary()
+		if err := primary(); err != nil {
+			panic(err)
+		}
 	}
 }

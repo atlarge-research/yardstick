@@ -114,3 +114,4 @@ fabric.properties
 # End of https://www.toptal.com/developers/gitignore/api/go,goland
 
 application.conf
+ys/ys-linux-amd64
