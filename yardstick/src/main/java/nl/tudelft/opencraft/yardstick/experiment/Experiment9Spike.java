@@ -19,8 +19,9 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
 import com.typesafe.config.Config;
-import java.time.Duration;
 import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
+
+import java.time.Duration;
 
 public class Experiment9Spike extends Experiment4MultiWalkAround {
 

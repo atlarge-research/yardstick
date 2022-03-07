@@ -1,13 +1,14 @@
 package nl.tudelft.opencraft.yardstick.game;
 
 import com.typesafe.config.Config;
+import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
+import nl.tudelft.opencraft.yardstick.logging.SubLogger;
+
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.MessageFormat;
 import java.util.Objects;
-import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
-import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 
 public class GameFactory {
 

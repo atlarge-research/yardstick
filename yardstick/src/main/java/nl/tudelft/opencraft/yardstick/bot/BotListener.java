@@ -18,8 +18,6 @@
 
 package nl.tudelft.opencraft.yardstick.bot;
 
-import java.util.UUID;
-import java.util.logging.Logger;
 import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
 import nl.tudelft.opencraft.yardstick.bot.entity.Entity;
 import nl.tudelft.opencraft.yardstick.bot.entity.ExperienceOrb;
@@ -127,6 +125,9 @@ import science.atlarge.opencraft.packetlib.event.session.PacketSendingEvent;
 import science.atlarge.opencraft.packetlib.event.session.PacketSentEvent;
 import science.atlarge.opencraft.packetlib.event.session.SessionListener;
 import science.atlarge.opencraft.packetlib.packet.Packet;
+
+import java.util.UUID;
+import java.util.logging.Logger;
 
 /**
  * Handles basic bot network traffic.

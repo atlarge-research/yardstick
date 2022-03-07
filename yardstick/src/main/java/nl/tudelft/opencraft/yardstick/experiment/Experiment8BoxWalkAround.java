@@ -19,10 +19,6 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
 import com.typesafe.config.Config;
-import java.time.Duration;
-import java.util.List;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 import nl.tudelft.opencraft.yardstick.Yardstick;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.BotManager;
@@ -31,6 +27,11 @@ import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
 import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 import nl.tudelft.opencraft.yardstick.model.box.BoundingBoxMovementBuilder;
 import nl.tudelft.opencraft.yardstick.model.box.BoundingBoxMovementModel;
+
+import java.time.Duration;
+import java.util.List;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 // TODO remove this class once we have a good BotModel interface.
 public class Experiment8BoxWalkAround extends Experiment {

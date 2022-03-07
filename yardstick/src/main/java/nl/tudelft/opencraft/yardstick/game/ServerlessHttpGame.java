@@ -1,6 +1,10 @@
 package nl.tudelft.opencraft.yardstick.game;
 
 import com.google.gson.Gson;
+import lombok.Data;
+import net.jodah.failsafe.Failsafe;
+import net.jodah.failsafe.RetryPolicy;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -10,9 +14,6 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
-import lombok.Data;
-import net.jodah.failsafe.Failsafe;
-import net.jodah.failsafe.RetryPolicy;
 
 public class ServerlessHttpGame implements GameArchitecture {
 

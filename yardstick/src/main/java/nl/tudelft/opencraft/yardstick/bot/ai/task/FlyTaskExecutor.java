@@ -74,8 +74,12 @@ public class FlyTaskExecutor extends AbstractTaskExecutor {
             }
 
             // account for direction
-            if (target.getX() < nextLocation.getX()) moveX *= -1;
-            if (target.getZ() < nextLocation.getZ()) moveZ *= -1;
+            if (target.getX() < nextLocation.getX()) {
+                moveX *= -1;
+            }
+            if (target.getZ() < nextLocation.getZ()) {
+                moveZ *= -1;
+            }
 
             nextLocation = nextLocation.add(moveX, 0, moveZ);
         }
@@ -86,5 +90,6 @@ public class FlyTaskExecutor extends AbstractTaskExecutor {
     }
 
     @Override
-    protected void onStop() {}
+    protected void onStop() {
+    }
 }

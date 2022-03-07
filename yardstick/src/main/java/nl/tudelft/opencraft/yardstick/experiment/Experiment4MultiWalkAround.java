@@ -19,6 +19,16 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
 import com.typesafe.config.Config;
+import nl.tudelft.opencraft.yardstick.bot.Bot;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
+import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
+import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
+import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
+import nl.tudelft.opencraft.yardstick.util.Vector3d;
+import nl.tudelft.opencraft.yardstick.util.Vector3i;
+
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,15 +39,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
-import nl.tudelft.opencraft.yardstick.bot.Bot;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
-import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
-import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
-import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
-import nl.tudelft.opencraft.yardstick.util.Vector3d;
-import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public class Experiment4MultiWalkAround extends Experiment {
 

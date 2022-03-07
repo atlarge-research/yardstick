@@ -18,9 +18,10 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import java.time.Duration;
 import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
+
+import java.time.Duration;
 
 public class Experiment5SimpleWalk extends AbstractModelExperiment {
 

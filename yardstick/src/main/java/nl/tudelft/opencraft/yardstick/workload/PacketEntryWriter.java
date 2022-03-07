@@ -18,6 +18,9 @@
 
 package nl.tudelft.opencraft.yardstick.workload;
 
+import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
+import nl.tudelft.opencraft.yardstick.logging.SubLogger;
+
 import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -27,8 +30,6 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
 import java.util.zip.GZIPOutputStream;
-import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
-import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 
 /**
  * Represents a concurrent buffer for writing {@link PacketEntry} objects to a

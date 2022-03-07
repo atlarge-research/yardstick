@@ -1,6 +1,13 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
 import com.typesafe.config.Config;
+import nl.tudelft.opencraft.yardstick.bot.Bot;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.FlyTaskExecutor;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
+import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
+import nl.tudelft.opencraft.yardstick.util.Vector3i;
+
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -9,12 +16,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import nl.tudelft.opencraft.yardstick.bot.Bot;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.FlyTaskExecutor;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
-import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
-import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public class Experiment10GenerationStressTest extends Experiment {
 

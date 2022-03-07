@@ -19,10 +19,6 @@
 package nl.tudelft.opencraft.yardstick.bot;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import java.util.Random;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 import nl.tudelft.opencraft.yardstick.Yardstick;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.SimpleAStar;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.heuristic.EuclideanHeuristic;
@@ -43,6 +39,11 @@ import science.atlarge.opencraft.packetlib.event.session.DisconnectedEvent;
 import science.atlarge.opencraft.packetlib.event.session.SessionAdapter;
 import science.atlarge.opencraft.packetlib.event.session.SessionListener;
 import science.atlarge.opencraft.packetlib.tcp.TcpSessionFactory;
+
+import java.util.Random;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 /**
  * Represents a Minecraft simulated bot.

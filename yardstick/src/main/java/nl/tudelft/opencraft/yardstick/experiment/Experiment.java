@@ -18,9 +18,6 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import java.net.InetSocketAddress;
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
 import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
@@ -30,6 +27,10 @@ import nl.tudelft.opencraft.yardstick.statistic.Statistics;
 import nl.tudelft.opencraft.yardstick.util.Scheduler;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
 import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
+
+import java.net.InetSocketAddress;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 
 /**
  * A runnable Yardstick experiment.

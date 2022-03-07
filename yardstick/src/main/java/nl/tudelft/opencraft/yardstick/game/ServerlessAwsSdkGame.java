@@ -1,16 +1,17 @@
 package nl.tudelft.opencraft.yardstick.game;
 
-import java.net.InetSocketAddress;
-import java.text.MessageFormat;
-import java.time.Duration;
-import java.util.Random;
-import java.util.concurrent.CompletableFuture;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.lambda.LambdaAsyncClient;
 import software.amazon.awssdk.services.lambda.model.InvokeRequest;
 import software.amazon.awssdk.services.lambda.model.InvokeResponse;
+
+import java.net.InetSocketAddress;
+import java.text.MessageFormat;
+import java.time.Duration;
+import java.util.Random;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Represents a serverless Minecraft-like game, which does not have a central server.

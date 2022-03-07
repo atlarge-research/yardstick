@@ -18,8 +18,9 @@
 
 package nl.tudelft.opencraft.yardstick.bot.entity;
 
-import java.util.UUID;
 import science.atlarge.opencraft.mcprotocollib.data.game.entity.type.MobType;
+
+import java.util.UUID;
 
 public class Mob extends Entity {
 

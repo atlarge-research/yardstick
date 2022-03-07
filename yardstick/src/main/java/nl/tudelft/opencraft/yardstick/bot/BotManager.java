@@ -1,14 +1,5 @@
 package nl.tudelft.opencraft.yardstick.bot;
 
-import java.net.InetSocketAddress;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 import lombok.Getter;
 import lombok.Setter;
 import net.jodah.failsafe.Failsafe;
@@ -21,6 +12,16 @@ import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 import org.apache.commons.collections4.list.UnmodifiableList;
 import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
+
+import java.net.InetSocketAddress;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 /**
  * Connects the specified number of bots to the game server

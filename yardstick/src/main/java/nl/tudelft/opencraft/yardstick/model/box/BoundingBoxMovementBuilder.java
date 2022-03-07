@@ -1,9 +1,10 @@
 package nl.tudelft.opencraft.yardstick.model.box;
 
 import com.typesafe.config.Config;
-import java.text.MessageFormat;
 import nl.tudelft.opencraft.yardstick.model.MovementModelBuilder;
 import nl.tudelft.opencraft.yardstick.util.Vector2i;
+
+import java.text.MessageFormat;
 
 public class BoundingBoxMovementBuilder implements MovementModelBuilder {
     @Override

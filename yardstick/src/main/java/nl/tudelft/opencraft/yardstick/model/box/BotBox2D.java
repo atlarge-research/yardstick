@@ -1,12 +1,13 @@
 package nl.tudelft.opencraft.yardstick.model.box;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.model.TargetLocation;
 import nl.tudelft.opencraft.yardstick.util.Vector2i;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class BotBox2D implements Box2D {
 

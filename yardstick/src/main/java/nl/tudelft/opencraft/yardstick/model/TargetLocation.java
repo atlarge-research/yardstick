@@ -1,6 +1,5 @@
 package nl.tudelft.opencraft.yardstick.model;
 
-import java.util.Random;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.world.Block;
 import nl.tudelft.opencraft.yardstick.bot.world.BlockFace;
@@ -10,6 +9,8 @@ import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import nl.tudelft.opencraft.yardstick.util.ZigZagRange;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Random;
 
 public class TargetLocation {
 

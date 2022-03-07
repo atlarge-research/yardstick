@@ -1,7 +1,8 @@
 package nl.tudelft.opencraft.yardstick.model;
 
-import java.text.MessageFormat;
 import nl.tudelft.opencraft.yardstick.model.box.BoundingBoxMovementBuilder;
+
+import java.text.MessageFormat;
 
 public class MovementModelFactory {
     MovementModelBuilder fromName(String name) {

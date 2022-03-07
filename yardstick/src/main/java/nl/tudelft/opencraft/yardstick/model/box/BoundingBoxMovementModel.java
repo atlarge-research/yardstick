@@ -18,13 +18,14 @@
 
 package nl.tudelft.opencraft.yardstick.model.box;
 
-import java.time.temporal.ChronoUnit;
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.RetryPolicy;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.FutureTaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
 import nl.tudelft.opencraft.yardstick.model.BotModel;
+
+import java.time.temporal.ChronoUnit;
 
 /**
  * Represents a model which moves the bot randomly to short and long distance
