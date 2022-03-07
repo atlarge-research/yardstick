@@ -170,7 +170,6 @@ public class BotListener implements SessionListener {
         }
 
         Packet packet = pre.getPacket();
-//        System.out.println(packet.getClass().getName());
         if (packet instanceof ServerSpawnObjectPacket) {
             // 0x00 Spawn Object
             ServerSpawnObjectPacket p = (ServerSpawnObjectPacket) packet;
@@ -489,7 +488,6 @@ public class BotListener implements SessionListener {
             ServerJoinGamePacket p = (ServerJoinGamePacket) packet;
             // TODO: Reduced debug info field?
 
-//            System.out.println(p);
             // Init the game
             this.world = new World(Dimension.forId(p.getDimension()), p.getWorldType());
             bot.setWorld(world);
@@ -776,10 +774,9 @@ public class BotListener implements SessionListener {
             ServerEntityEffectPacket p = (ServerEntityEffectPacket) packet;
             // TODO
 
+        } else {
+            logger.fine("Received unhandled packet: " + packet.getClass().getName());
         }
-//        else {
-//            logger.warning("Received unhandled packet: " + packet.getClass().getName());
-//        }
     }
 
     @Override
