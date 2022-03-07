@@ -19,7 +19,6 @@ public class StandExecutor extends AbstractTaskExecutor {
     @Override
     protected TaskStatus onTick() {
         long nowTime = System.currentTimeMillis();
-//        logger.info("standing, remaing time=" + (timeout+startTime - nowTime));
         if (nowTime - startTime >= timeout) {
             return TaskStatus.forSuccess();
         } else {
