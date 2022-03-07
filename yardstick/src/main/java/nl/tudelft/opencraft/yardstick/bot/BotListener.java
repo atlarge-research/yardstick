@@ -126,10 +126,9 @@ import science.atlarge.opencraft.packetlib.event.session.PacketSentEvent;
 import science.atlarge.opencraft.packetlib.event.session.SessionListener;
 import science.atlarge.opencraft.packetlib.packet.Packet;
 
-import java.util.Iterator;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 /**
@@ -144,8 +143,7 @@ public class BotListener implements SessionListener {
     private Server server;
     private World world;
 
-    private ConcurrentHashMap<Integer, PacketReceivedEvent> unhandledRecvPkt = new ConcurrentHashMap<>();
-    private int pktCounter = 0;
+    private final List<PacketReceivedEvent> unhandledRecvPkt = new ArrayList<>();
     private boolean serverJoinGame;
 
     /**
@@ -473,13 +471,10 @@ public class BotListener implements SessionListener {
 
             // Replay the unhandled packet events before receiving server join game
             serverJoinGame = true;
-            Iterator<Map.Entry<Integer, PacketReceivedEvent>> iter = unhandledRecvPkt.entrySet().iterator();
-            while (iter.hasNext()) {
-                Map.Entry<Integer, PacketReceivedEvent> entry = iter.next();
-                packetReceived(entry.getValue());
-                iter.remove();
+            for (PacketReceivedEvent packetReceivedEvent : unhandledRecvPkt) {
+                packetReceived(packetReceivedEvent);
             }
-
+            unhandledRecvPkt.clear();
         } else if (packet instanceof ServerMapDataPacket) {
             // 0x24 Map
             ServerMapDataPacket p = (ServerMapDataPacket) packet;
@@ -532,8 +527,7 @@ public class BotListener implements SessionListener {
         // ServerJoinGame packet is received after a few Player packets.
         // Save them to handle later
         else if (!serverJoinGame) {
-            unhandledRecvPkt.put(++pktCounter, pre);
-            return;
+            unhandledRecvPkt.add(pre);
         } else if (packet instanceof ServerPlayerAbilitiesPacket) {
 
             // 0x2B Player Abilities
