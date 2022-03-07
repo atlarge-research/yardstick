@@ -2,7 +2,7 @@ package nl.tudelft.opencraft.yardstick.bot.ai.task;
 
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 
-public class StandExecutor extends AbstractTaskExecutor{
+public class StandExecutor extends AbstractTaskExecutor {
     private int timeout = 1000;
     private final long startTime;
 

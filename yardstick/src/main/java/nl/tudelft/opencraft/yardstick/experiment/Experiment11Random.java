@@ -20,8 +20,6 @@ package nl.tudelft.opencraft.yardstick.experiment;
 
 import nl.tudelft.opencraft.yardstick.model.RandomModel;
 
-import java.io.FileWriter;
-
 public class Experiment11Random extends AbstractModelExperiment {
 
     public Experiment11Random() {

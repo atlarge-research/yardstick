@@ -58,8 +58,8 @@ public class PacketUtil {
      * Returns the packet class corresponding to a packet integer identifier in
      * a {@link PacketProtocol}.
      *
-     * @param prot the packet protocol.
-     * @param id the ID of the packet.
+     * @param prot     the packet protocol.
+     * @param id       the ID of the packet.
      * @param outgoing whether the packet is client->server.
      * @return The packet class.
      * @throws Exception upon failure of any sort.

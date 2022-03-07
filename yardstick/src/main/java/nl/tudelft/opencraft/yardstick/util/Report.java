@@ -43,8 +43,8 @@ public class Report {
     /**
      * Puts a new key-value pair in the report.
      *
-     * @param id The key of the key-value pair.
-     * @param name The meaning of the key-value pair, in human readable form.
+     * @param id    The key of the key-value pair.
+     * @param name  The meaning of the key-value pair, in human readable form.
      * @param value The value of the key-value pair.
      */
     public void put(String id, String name, Object value) {
@@ -90,7 +90,7 @@ public class Report {
         /**
          * Creates a new report entry.
          *
-         * @param name the name of the entry.
+         * @param name  the name of the entry.
          * @param value the value of the entry.
          */
         public Entry(String name, String value) {

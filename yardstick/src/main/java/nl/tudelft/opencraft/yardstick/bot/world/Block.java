@@ -18,13 +18,13 @@
 
 package nl.tudelft.opencraft.yardstick.bot.world;
 
-import science.atlarge.opencraft.mcprotocollib.data.game.chunk.BlockStorage;
-import science.atlarge.opencraft.mcprotocollib.data.game.chunk.Column;
-import science.atlarge.opencraft.mcprotocollib.data.game.world.block.BlockState;
 import com.google.common.base.Preconditions;
 import java.util.Objects;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
+import science.atlarge.opencraft.mcprotocollib.data.game.chunk.BlockStorage;
+import science.atlarge.opencraft.mcprotocollib.data.game.chunk.Column;
+import science.atlarge.opencraft.mcprotocollib.data.game.world.block.BlockState;
 
 public class Block {
 

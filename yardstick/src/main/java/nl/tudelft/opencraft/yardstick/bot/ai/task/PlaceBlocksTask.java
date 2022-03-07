@@ -18,11 +18,10 @@
 
 package nl.tudelft.opencraft.yardstick.bot.ai.task;
 
+import java.util.List;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.world.Material;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
-
-import java.util.List;
 
 public class PlaceBlocksTask implements Task {
 

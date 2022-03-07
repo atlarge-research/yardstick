@@ -24,11 +24,11 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
+import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
+import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 import science.atlarge.opencraft.packetlib.event.session.PacketReceivedEvent;
 import science.atlarge.opencraft.packetlib.event.session.PacketSentEvent;
 import science.atlarge.opencraft.packetlib.packet.Packet;
-import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
-import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 
 /**
  * Handles {@link PacketSentEvent}s and {@link PacketReceivedEvent}s for
@@ -86,7 +86,7 @@ public class WorkloadDumper {
      * Handles a PacketSentEvent for a given bot.
      *
      * @param botName the name of the bot.
-     * @param pse the event.
+     * @param pse     the event.
      */
     public void packetSent(String botName, PacketSentEvent pse) {
         handlePacket(botName, pse.getPacket(), true);
@@ -96,7 +96,7 @@ public class WorkloadDumper {
      * Handles a PacketReceivedEvent for a given bot.
      *
      * @param botName the name of the bot.
-     * @param pre the event.
+     * @param pre     the event.
      */
     public void packetReceived(String botName, PacketReceivedEvent pre) {
         handlePacket(botName, pre.getPacket(), false);
@@ -122,8 +122,8 @@ public class WorkloadDumper {
     /**
      * Stops the dumper thread.
      *
-     * @see #start()
      * @throws IllegalStateException if the thread has not been started.
+     * @see #start()
      */
     public void stop() {
         if (!running.getAndSet(false)) {

@@ -1,10 +1,9 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import nl.tudelft.opencraft.yardstick.bot.Bot;
-import nl.tudelft.opencraft.yardstick.model.RandomModel;
-
 import java.io.FileWriter;
 import java.util.UUID;
+import nl.tudelft.opencraft.yardstick.bot.Bot;
+import nl.tudelft.opencraft.yardstick.model.RandomModel;
 
 public class Experiment12RandomE2E extends AbstractModelExperiment {
     public static FileWriter fw;
@@ -29,7 +28,7 @@ public class Experiment12RandomE2E extends AbstractModelExperiment {
     }
 
     protected Bot createBot() {
-        if (!GMjoined && GMuser!=null) {
+        if (!GMjoined && GMuser != null) {
             GMjoined = true;
             return newBot(GMuser);
         } else {

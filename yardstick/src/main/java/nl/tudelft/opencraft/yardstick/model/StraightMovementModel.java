@@ -18,6 +18,8 @@
 
 package nl.tudelft.opencraft.yardstick.model;
 
+import java.util.HashMap;
+import java.util.Random;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
@@ -27,9 +29,6 @@ import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import nl.tudelft.opencraft.yardstick.util.ZigZagRange;
-
-import java.util.HashMap;
-import java.util.Random;
 
 /**
  * Represents a model which moves the bot randomly to short and long distance
@@ -47,8 +46,9 @@ public class StraightMovementModel implements BotModel {
     @Override
     public TaskExecutor newTask(Bot bot) {
         WalkTaskExecutor exe = new WalkTaskExecutor(bot, newTargetLocation(bot));
-        if (walkSpeed != 0.15)
+        if (walkSpeed != 0.15) {
             exe.setSpeed(walkSpeed);
+        }
         return exe;
     }
 
@@ -62,46 +62,47 @@ public class StraightMovementModel implements BotModel {
         int botId = Integer.parseInt(bot.getName().split("-")[1]);
 
         double factor = 0;
-        if (botId > 7)
+        if (botId > 7) {
             factor = botId / 8.0;
+        }
 
         switch (botId % 8) {
             case 0:
-                newX+=dis;
-                newZ+=(int)factor*dis;
+                newX += dis;
+                newZ += (int) factor * dis;
                 break;
             case 1:
-                newZ+=dis;
-                newX+=(int)factor*dis;
+                newZ += dis;
+                newX += (int) factor * dis;
                 break;
             case 2:
-                newX-=dis;
-                newZ-=(int)factor*dis;
+                newX -= dis;
+                newZ -= (int) factor * dis;
                 break;
             case 3:
-                newZ-=dis;
-                newX-=(int)factor*dis;
+                newZ -= dis;
+                newX -= (int) factor * dis;
                 break;
             case 4:
-                newX+=dis+(int)factor*dis;
-                newZ+=dis+(int)factor*dis;
+                newX += dis + (int) factor * dis;
+                newZ += dis + (int) factor * dis;
                 break;
             case 5:
-                newX-=dis-(int)factor*dis;
-                newZ-=dis-(int)factor*dis;
+                newX -= dis - (int) factor * dis;
+                newZ -= dis - (int) factor * dis;
                 break;
             case 6:
-                newX+=dis+(int)factor*dis;
-                newZ-=dis-(int)factor*dis;
+                newX += dis + (int) factor * dis;
+                newZ -= dis - (int) factor * dis;
                 break;
             case 7:
-                newX-=dis-(int)factor*dis;
-                newZ+=dis+(int)factor*dis;
+                newX -= dis - (int) factor * dis;
+                newZ += dis + (int) factor * dis;
                 break;
         }
 
         Vector3i prevTarget = botsTarget.get(bot);
-        if (prevTarget!=null && (int)prevTarget.getX() == newX && (int)prevTarget.getZ() == newZ) {
+        if (prevTarget != null && (int) prevTarget.getX() == newX && (int) prevTarget.getZ() == newZ) {
             newX = (int) (originalLocation.getX() + random.nextInt(8) * (random.nextBoolean() ? -1 : 1) * random.nextDouble());
             newZ = (int) (originalLocation.getZ() + random.nextInt(8) * (random.nextBoolean() ? -1 : 1) * random.nextDouble());
         }
@@ -124,7 +125,7 @@ public class StraightMovementModel implements BotModel {
                 y = it.next();
                 Block test = bot.getWorld().getBlockAt(x, y, z);
                 if (test.getMaterial().isTraversable()
-                        && !test.getRelative(BlockFace.BOTTOM).getMaterial().isTraversable()) {
+                    && !test.getRelative(BlockFace.BOTTOM).getMaterial().isTraversable()) {
                     break;
                 }
             }

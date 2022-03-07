@@ -18,10 +18,6 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
-import science.atlarge.opencraft.packetlib.Client;
-import science.atlarge.opencraft.packetlib.Session;
-import science.atlarge.opencraft.packetlib.tcp.TcpSessionFactory;
 import java.util.UUID;
 import nl.tudelft.opencraft.yardstick.Options;
 import nl.tudelft.opencraft.yardstick.Yardstick;
@@ -33,6 +29,10 @@ import nl.tudelft.opencraft.yardstick.statistic.Statistics;
 import nl.tudelft.opencraft.yardstick.util.Scheduler;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadSessionListener;
+import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
+import science.atlarge.opencraft.packetlib.Client;
+import science.atlarge.opencraft.packetlib.Session;
+import science.atlarge.opencraft.packetlib.tcp.TcpSessionFactory;
 
 /**
  * A runnable Yardstick experiment.

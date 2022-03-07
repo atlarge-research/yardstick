@@ -18,9 +18,9 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import java.util.UUID;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.model.StraightMovementModel;
-import java.util.UUID;
 
 
 public class Experiment10WalkStraight extends AbstractModelExperiment {
@@ -40,8 +40,8 @@ public class Experiment10WalkStraight extends AbstractModelExperiment {
     }
 
     protected Bot createBot() {
-        Bot bot = newBot(UUID.randomUUID().toString().substring(0, 6)+"-"+(currBotId));
-        currBotId+=clientCount;
+        Bot bot = newBot(UUID.randomUUID().toString().substring(0, 6) + "-" + (currBotId));
+        currBotId += clientCount;
         return bot;
     }
 }

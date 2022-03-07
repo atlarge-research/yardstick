@@ -18,9 +18,9 @@
 
 package nl.tudelft.opencraft.yardstick.bot.ai.task;
 
+import com.beust.jcommander.internal.Lists;
 import java.util.Iterator;
 import java.util.List;
-import com.beust.jcommander.internal.Lists;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.BotController;
 import nl.tudelft.opencraft.yardstick.bot.world.Block;
@@ -42,7 +42,7 @@ public class BreakBlocksTaskExecutor extends AbstractTaskExecutor {
      * Creates a new BreakBlocksTask. The blocks must be in reach and visible to
      * the bot.
      *
-     * @param bot the bot of the task.
+     * @param bot    the bot of the task.
      * @param blocks the blocks that must be broken.
      */
     public BreakBlocksTaskExecutor(Bot bot, List<Block> blocks) {

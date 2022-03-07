@@ -1,16 +1,14 @@
 package nl.tudelft.opencraft.yardstick.model;
 
-import nl.tudelft.opencraft.yardstick.Options;
+import java.util.ArrayList;
+import java.util.Random;
+import java.util.UUID;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.StandExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.world.Material;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment12RandomE2E;
-
-import java.util.ArrayList;
-import java.util.Random;
-import java.util.UUID;
 
 
 public class RandomModel implements BotModel {
@@ -21,12 +19,12 @@ public class RandomModel implements BotModel {
     private long GMInterval;
     private ArrayList<String> bannedUser = new ArrayList<>();
 
-    public RandomModel(){
+    public RandomModel() {
 
     }
 
     @Override
-    public TaskExecutor newTask(Bot bot)  {
+    public TaskExecutor newTask(Bot bot) {
         TaskExecutor taskExecutor = null;
         Random RANDOM = new Random(System.nanoTime());
         double random = RANDOM.nextDouble();
@@ -38,12 +36,15 @@ public class RandomModel implements BotModel {
 
                 switch (Experiment12RandomE2E.GMCommand) {
                     case "weather":
-                        if (random < 1/2.0)
+                        if (random < 1 / 2.0) {
                             command = "/weather clear";
-                        else command = "/weather thunder";
+                        } else {
+                            command = "/weather thunder";
+                        }
                         break;
 
-                    case "random": default:
+                    case "random":
+                    default:
                         if (random < 1 / 2.0) {
                             if (RANDOM.nextDouble() < 1 / 2.0) {
                                 String target = UUID.randomUUID().toString().substring(0, 6);
@@ -71,27 +72,27 @@ public class RandomModel implements BotModel {
         if (random <= 0.3) {
             // Interact
             taskExecutor = interact.newTask(bot);
-        }
-        else if (random > 0.3 && random <= 0.7) {
+        } else if (random > 0.3 && random <= 0.7) {
             // Movement
             taskExecutor = movement.newTask(bot);
 
             // random walk speed between [0.1, 0.4]
             double walkSpeed = RANDOM.nextDouble() * 0.4;
-            if (walkSpeed < 0.1)
+            if (walkSpeed < 0.1) {
                 walkSpeed = 0.15;
+            }
             ((WalkTaskExecutor) taskExecutor).setSpeed(walkSpeed);
-        }
-
-        else if (random > 0.7 && random <= 0.8) {
+        } else if (random > 0.7 && random <= 0.8) {
             // send msg
-            if (RANDOM.nextDouble() < 0.5)
+            if (RANDOM.nextDouble() < 0.5) {
                 bot.getController().sendChatMsg("hey");
+            }
             // get item
             else {
                 Material mt = Material.getById(RANDOM.nextInt(187));
-                if (mt != Material.UNKNOWN)
+                if (mt != Material.UNKNOWN) {
                     bot.getController().creativeInventoryAction(mt, RANDOM.nextInt(9) + 1);
+                }
             }
             StandExecutor stand = new StandExecutor(bot);
             stand.setTimeout(500);

@@ -18,7 +18,29 @@
 
 package nl.tudelft.opencraft.yardstick.bot;
 
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
+import nl.tudelft.opencraft.yardstick.bot.entity.Entity;
+import nl.tudelft.opencraft.yardstick.bot.entity.ExperienceOrb;
+import nl.tudelft.opencraft.yardstick.bot.entity.LightningStrike;
+import nl.tudelft.opencraft.yardstick.bot.entity.Mob;
+import nl.tudelft.opencraft.yardstick.bot.entity.ObjectEntity;
+import nl.tudelft.opencraft.yardstick.bot.entity.Painting;
+import nl.tudelft.opencraft.yardstick.bot.entity.Player;
+import nl.tudelft.opencraft.yardstick.bot.world.Block;
+import nl.tudelft.opencraft.yardstick.bot.world.Chunk;
+import nl.tudelft.opencraft.yardstick.bot.world.ChunkLocation;
+import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
+import nl.tudelft.opencraft.yardstick.bot.world.Dimension;
+import nl.tudelft.opencraft.yardstick.bot.world.World;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment12RandomE2E;
+import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
 import science.atlarge.opencraft.mcprotocollib.data.SubProtocol;
 import science.atlarge.opencraft.mcprotocollib.data.game.chunk.Column;
@@ -26,7 +48,6 @@ import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.Positio
 import science.atlarge.opencraft.mcprotocollib.data.game.entity.type.GlobalEntityType;
 import science.atlarge.opencraft.mcprotocollib.data.game.world.block.BlockChangeRecord;
 import science.atlarge.opencraft.mcprotocollib.packet.ingame.client.player.ClientPlayerPositionRotationPacket;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.client.world.ClientTeleportConfirmPacket;
 import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerBossBarPacket;
 import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerChatPacket;
 import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerCombatPacket;
@@ -112,31 +133,6 @@ import science.atlarge.opencraft.packetlib.event.session.PacketSendingEvent;
 import science.atlarge.opencraft.packetlib.event.session.PacketSentEvent;
 import science.atlarge.opencraft.packetlib.event.session.SessionListener;
 import science.atlarge.opencraft.packetlib.packet.Packet;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Future;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
-import nl.tudelft.opencraft.yardstick.bot.entity.Entity;
-import nl.tudelft.opencraft.yardstick.bot.entity.ExperienceOrb;
-import nl.tudelft.opencraft.yardstick.bot.entity.LightningStrike;
-import nl.tudelft.opencraft.yardstick.bot.entity.Mob;
-import nl.tudelft.opencraft.yardstick.bot.entity.ObjectEntity;
-import nl.tudelft.opencraft.yardstick.bot.entity.Painting;
-import nl.tudelft.opencraft.yardstick.bot.entity.Player;
-import nl.tudelft.opencraft.yardstick.bot.world.Block;
-import nl.tudelft.opencraft.yardstick.bot.world.Chunk;
-import nl.tudelft.opencraft.yardstick.bot.world.ChunkLocation;
-import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
-import nl.tudelft.opencraft.yardstick.bot.world.Dimension;
-import nl.tudelft.opencraft.yardstick.bot.world.World;
-import nl.tudelft.opencraft.yardstick.util.Vector3d;
 
 /**
  * Handles basic bot network traffic.
@@ -327,16 +323,21 @@ public class BotListener implements SessionListener {
             long end = System.currentTimeMillis();
 
             String key = null;
-            if (p.getMessage().getText().startsWith("There are"))
+            if (p.getMessage().getText().startsWith("There are")) {
                 key = "banlist";
-            if (p.getMessage().getText().startsWith("Banned player"))
+            }
+            if (p.getMessage().getText().startsWith("Banned player")) {
                 key = "ban";
-            if (p.getMessage().getText().startsWith("Unbanned"))
+            }
+            if (p.getMessage().getText().startsWith("Unbanned")) {
                 key = "unban";
-            if (p.getMessage().getText().startsWith("Changing to clear"))
+            }
+            if (p.getMessage().getText().startsWith("Changing to clear")) {
                 key = "clear";
-            if (p.getMessage().getText().startsWith("Changing to rain and thunder"))
+            }
+            if (p.getMessage().getText().startsWith("Changing to rain and thunder")) {
                 key = "thunder";
+            }
             try {
                 if (key != null) {
                     Experiment12RandomE2E.fw.write(end + "\t" + key + "\t" + (end - Experiment12RandomE2E.GMStartTime) + "\n");
@@ -565,9 +566,7 @@ public class BotListener implements SessionListener {
         else if (!serverJoinGame) {
             unhandledRecvPkt.put(++pktCounter, pre);
             return;
-        }
-
-        else if (packet instanceof ServerPlayerAbilitiesPacket) {
+        } else if (packet instanceof ServerPlayerAbilitiesPacket) {
 
             // 0x2B Player Abilities
             ServerPlayerAbilitiesPacket p = (ServerPlayerAbilitiesPacket) packet;
@@ -604,7 +603,7 @@ public class BotListener implements SessionListener {
 
             Session session = bot.getClient().getSession();
 //            session.send(new ClientTeleportConfirmPacket(p.getTeleportId()));
-            session.send(new ClientPlayerPositionRotationPacket(true, p.getX(), p.getY(),p.getZ(),p.getYaw(),p.getPitch()));
+            session.send(new ClientPlayerPositionRotationPacket(true, p.getX(), p.getY(), p.getZ(), p.getYaw(), p.getPitch()));
             logger.info("Received new Player position: " + player.getLocation());
 
         } else if (packet instanceof ServerPlayerUseBedPacket) {

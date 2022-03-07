@@ -18,12 +18,11 @@
 
 package nl.tudelft.opencraft.yardstick.bot.ai.task;
 
+import java.util.Random;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.util.Vector2i;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
-
-import java.util.Random;
 
 public class RandomSquareWalkXZTask implements Task {
 

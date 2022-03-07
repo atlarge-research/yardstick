@@ -19,7 +19,10 @@
 package nl.tudelft.opencraft.yardstick.experiment;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
@@ -106,7 +109,7 @@ public abstract class AbstractModelExperiment extends Experiment {
             if (number == 12 && bot.isConnected()) {
                 long end = System.currentTimeMillis();
                 try {
-                    Experiment12RandomE2E.fw.write(end + "\t" + "login\t" + (end-start) + "\n");
+                    Experiment12RandomE2E.fw.write(end + "\t" + "login\t" + (end - start) + "\n");
                     Experiment12RandomE2E.fw.flush();
                 } catch (IOException e) {
                     e.printStackTrace();

@@ -18,11 +18,11 @@
 
 package nl.tudelft.opencraft.yardstick.model;
 
+import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-import com.google.common.collect.Lists;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.BreakBlocksTaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.PlaceBlocksTaskExecutor;

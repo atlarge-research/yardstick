@@ -15,6 +15,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 package nl.tudelft.opencraft.yardstick.logging;
 
 import java.io.File;
@@ -36,7 +37,7 @@ public class SimpleFileHandler extends Handler {
      * file exists, it will be permanently deleted.
      *
      * @param formatter the formatter to use.
-     * @param file the file to write to.
+     * @param file      the file to write to.
      */
     public SimpleFileHandler(Formatter formatter, File file) {
         this(formatter, file.getPath());
@@ -51,7 +52,7 @@ public class SimpleFileHandler extends Handler {
      * the file exists, it will be permanently deleted.
      *
      * @param formatter the formatter to use.
-     * @param name the file to write to.
+     * @param name      the file to write to.
      */
     public SimpleFileHandler(Formatter formatter, String name) {
         Handler fileHandler = null;

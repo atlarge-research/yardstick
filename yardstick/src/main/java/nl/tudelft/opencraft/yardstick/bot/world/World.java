@@ -18,14 +18,14 @@
 
 package nl.tudelft.opencraft.yardstick.bot.world;
 
-import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.Position;
-import science.atlarge.opencraft.mcprotocollib.data.game.world.WorldType;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import nl.tudelft.opencraft.yardstick.bot.entity.Entity;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import org.jetbrains.annotations.NotNull;
+import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.Position;
+import science.atlarge.opencraft.mcprotocollib.data.game.world.WorldType;
 
 /**
  * Represents world-related data visible to the bot.

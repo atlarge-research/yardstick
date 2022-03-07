@@ -30,7 +30,7 @@ public class Experiment1SimpleJoin extends Experiment {
     public Experiment1SimpleJoin() {
         super(1,
                 "A simple experiment. A bot joins the server and disconnects after 10 seconds. "
-                + "The amount of packets and bytes that are both sent and received are counted and reported.");
+                        + "The amount of packets and bytes that are both sent and received are counted and reported.");
     }
 
     @Override

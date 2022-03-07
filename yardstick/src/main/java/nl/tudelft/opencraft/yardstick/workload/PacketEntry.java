@@ -21,8 +21,8 @@ package nl.tudelft.opencraft.yardstick.workload;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import science.atlarge.opencraft.packetlib.packet.Packet;
 import nl.tudelft.opencraft.yardstick.util.PacketUtil;
+import science.atlarge.opencraft.packetlib.packet.Packet;
 
 /**
  * Represents a snapshot of information of a specific message between the
@@ -39,10 +39,10 @@ public class PacketEntry {
      * Creates a new PacketEntry.
      *
      * @param timestamp the unix nanotime that the message was sent or did
-     * arrive.
-     * @param packet a shorthand name for the message type.
-     * @param outgoing true if the message was client->server, false otherwise.
-     * @param length the length of the message in bytes.
+     *                  arrive.
+     * @param packet    a shorthand name for the message type.
+     * @param outgoing  true if the message was client->server, false otherwise.
+     * @param length    the length of the message in bytes.
      */
     public PacketEntry(long timestamp, String packet, boolean outgoing, int length) {
         this.timestamp = timestamp;
@@ -82,7 +82,7 @@ public class PacketEntry {
     /**
      * Converts a {@link Packet} to a PacketEntry.
      *
-     * @param packet the packet.
+     * @param packet   the packet.
      * @param outgoing whether the packet was client->server.
      * @return the PacketEntry.
      */

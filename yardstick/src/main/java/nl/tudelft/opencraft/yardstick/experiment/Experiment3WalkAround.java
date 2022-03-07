@@ -18,11 +18,11 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
+import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public class Experiment3WalkAround extends Experiment {

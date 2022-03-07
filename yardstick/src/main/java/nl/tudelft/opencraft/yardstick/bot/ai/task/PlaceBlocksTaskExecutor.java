@@ -18,11 +18,11 @@
 
 package nl.tudelft.opencraft.yardstick.bot.ai.task;
 
+import com.beust.jcommander.internal.Lists;
+import com.beust.jcommander.internal.Sets;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import com.beust.jcommander.internal.Lists;
-import com.beust.jcommander.internal.Sets;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.world.Block;
 import nl.tudelft.opencraft.yardstick.bot.world.BlockFace;
@@ -45,9 +45,9 @@ public class PlaceBlocksTaskExecutor extends AbstractTaskExecutor {
      * Creates a new PlaceBlocksTask. The locations must be visible and
      * reachable to the bot.
      *
-     * @param bot the bot for the task.
+     * @param bot       the bot for the task.
      * @param locations the locations at which to place blocks.
-     * @param material the material type of the blocks.
+     * @param material  the material type of the blocks.
      */
     public PlaceBlocksTaskExecutor(Bot bot, List<Vector3i> locations, Material material) {
         super(bot);
@@ -156,9 +156,9 @@ public class PlaceBlocksTaskExecutor extends AbstractTaskExecutor {
      * Returns the hit point from a point to the center of a block face of a
      * block.
      *
-     * @param from The viewpoint or origin of the ray trace.
+     * @param from    The viewpoint or origin of the ray trace.
      * @param support The block to ray trace to.
-     * @param face The face of the block.
+     * @param face    The face of the block.
      * @return The hit point if the ray trace was successful, null if a
      * occluding block was found.
      */
