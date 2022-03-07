@@ -40,7 +40,7 @@ import science.atlarge.opencraft.mcprotocollib.data.game.chunk.Column;
 import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.Position;
 import science.atlarge.opencraft.mcprotocollib.data.game.entity.type.GlobalEntityType;
 import science.atlarge.opencraft.mcprotocollib.data.game.world.block.BlockChangeRecord;
-import science.atlarge.opencraft.mcprotocollib.packet.ingame.client.player.ClientPlayerPositionRotationPacket;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.client.world.ClientTeleportConfirmPacket;
 import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerBossBarPacket;
 import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerChatPacket;
 import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerCombatPacket;
@@ -600,8 +600,7 @@ public class BotListener implements SessionListener {
             player.setOnGround(true);
 
             Session session = bot.getClient().getSession();
-//            session.send(new ClientTeleportConfirmPacket(p.getTeleportId()));
-            session.send(new ClientPlayerPositionRotationPacket(true, p.getX(), p.getY(), p.getZ(), p.getYaw(), p.getPitch()));
+            session.send(new ClientTeleportConfirmPacket(p.getTeleportId()));
             logger.info("Received new Player position: " + player.getLocation());
 
         } else if (packet instanceof ServerPlayerUseBedPacket) {
