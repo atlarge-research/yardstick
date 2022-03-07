@@ -18,14 +18,15 @@
 
 package nl.tudelft.opencraft.yardstick.util;
 
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.util.Map;
-import java.util.Map.Entry;
 import science.atlarge.opencraft.packetlib.io.NetOutput;
 import science.atlarge.opencraft.packetlib.io.stream.StreamNetOutput;
 import science.atlarge.opencraft.packetlib.packet.Packet;
 import science.atlarge.opencraft.packetlib.packet.PacketProtocol;
+
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  * Represents packet-related utilities.

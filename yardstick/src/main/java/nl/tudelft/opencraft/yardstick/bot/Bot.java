@@ -19,20 +19,31 @@
 package nl.tudelft.opencraft.yardstick.bot;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import nl.tudelft.opencraft.yardstick.Yardstick;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.SimpleAStar;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.heuristic.EuclideanHeuristic;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
 import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
 import nl.tudelft.opencraft.yardstick.bot.world.SimpleWorldPhysics;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
+import nl.tudelft.opencraft.yardstick.experiment.LoggerSessionListener;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
+import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
+import nl.tudelft.opencraft.yardstick.workload.WorkloadSessionListener;
 import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
 import science.atlarge.opencraft.packetlib.Client;
+import science.atlarge.opencraft.packetlib.Session;
 import science.atlarge.opencraft.packetlib.event.session.DisconnectedEvent;
 import science.atlarge.opencraft.packetlib.event.session.SessionAdapter;
 import science.atlarge.opencraft.packetlib.event.session.SessionListener;
 import science.atlarge.opencraft.packetlib.tcp.TcpSessionFactory;
+
+import java.util.Random;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 /**
  * Represents a Minecraft simulated bot.
@@ -45,7 +56,7 @@ public class Bot {
     private final MinecraftProtocol protocol;
     private final String name;
     @JsonIgnore
-    private final BotTicker ticker;
+    private ScheduledFuture<?> ticker;
     @JsonIgnore
     private final Client client;
     @JsonIgnore
@@ -69,14 +80,22 @@ public class Bot {
      * @param port     the port of the Minecraft server.
      */
     public Bot(MinecraftProtocol protocol, String host, int port) {
+        this(protocol, new Client(host, port, protocol, new TcpSessionFactory(true)));
+    }
+
+    /**
+     * Creates a new bot with the given {@link MinecraftProtocol} and {@link Client}.
+     *
+     * @param protocol the protocol.
+     * @param client   the Minecraft client.
+     */
+    public Bot(MinecraftProtocol protocol, Client client) {
         this.name = protocol.getProfile().getName();
         this.logger = GlobalLogger.getLogger().newSubLogger("Bot").newSubLogger(name);
         this.protocol = protocol;
-        this.ticker = new BotTicker(this);
-        this.client = new Client(host, port, protocol, new TcpSessionFactory(true));
+        this.client = client;
         this.client.getSession().addListener(new BotListener(this));
         this.controller = new BotController(this);
-
         // Set disconnected field
         this.client.getSession().addListener(new SessionAdapter() {
             @Override
@@ -103,11 +122,45 @@ public class Bot {
      * @throws IllegalStateException if the bot is already connected.
      */
     public void connect() {
-        if (client.getSession().isConnected()) {
+        Session session = client.getSession();
+        if (session.isConnected()) {
             throw new IllegalStateException("Can not start connection. Bot already isConnected!");
         }
-        client.getSession().connect();
-        ticker.start();
+        session.addListener(new LoggerSessionListener(logger.newSubLogger(name)));
+        session.connect();
+
+        initializeTaskTicker();
+    }
+
+    private void initializeTaskTicker() {
+        var random = new Random();
+        this.ticker = Yardstick.THREAD_POOL.scheduleAtFixedRate(() -> {
+            var taskExecutor = this.getTaskExecutor();
+            if (taskExecutor != null
+                    && taskExecutor.getStatus().getType() == TaskStatus.StatusType.IN_PROGRESS) {
+                TaskStatus status = taskExecutor.tick();
+                if (status.getType() == TaskStatus.StatusType.FAILURE) {
+                    if (status.getThrowable() != null) {
+                        logger.log(Level.FINE, "Task Failure: " + status.getMessage(), status.getThrowable());
+                    } else {
+                        logger.warning("Task Failure: " + status.getMessage());
+                    }
+                    this.setTaskExecutor(null);
+                }
+            }
+        }, random.nextInt(50), 50, TimeUnit.MILLISECONDS);
+    }
+
+    public void addWorkloadListener(WorkloadDumper dumper) {
+        addListener(new WorkloadSessionListener(dumper, name));
+    }
+
+    public void addListener(SessionListener listener) {
+        client.getSession().addListener(listener);
+    }
+
+    public boolean hasListener(SessionListener listener) {
+        return client.getSession().getListeners().contains(listener);
     }
 
     /**
@@ -149,7 +202,7 @@ public class Bot {
      */
     public void disconnect(String reason) {
         if (this.ticker != null) {
-            this.ticker.stop();
+            this.ticker.cancel(false);
         }
         if (this.taskExecutor != null) {
             this.taskExecutor.stop();

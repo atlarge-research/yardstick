@@ -20,10 +20,11 @@ package nl.tudelft.opencraft.yardstick.statistic;
 
 import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.exporter.PushGateway;
+import nl.tudelft.opencraft.yardstick.Yardstick;
+
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
-import nl.tudelft.opencraft.yardstick.Yardstick;
 
 /**
  * Represents a runnable pusher which pushes a {@link CollectorRegistry} to a

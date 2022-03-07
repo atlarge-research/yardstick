@@ -19,13 +19,14 @@
 package nl.tudelft.opencraft.yardstick.bot.ai.task;
 
 import com.beust.jcommander.internal.Lists;
-import java.util.Iterator;
-import java.util.List;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.BotController;
 import nl.tudelft.opencraft.yardstick.bot.world.Block;
 import nl.tudelft.opencraft.yardstick.bot.world.BlockFace;
 import nl.tudelft.opencraft.yardstick.util.WorldUtil;
+
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * Represents a task for breaking blocks.

@@ -18,8 +18,9 @@
 
 package nl.tudelft.opencraft.yardstick.bot.entity;
 
-import java.util.UUID;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
+
+import java.util.UUID;
 
 public class Player extends Living {
 

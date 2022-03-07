@@ -18,14 +18,15 @@
 
 package nl.tudelft.opencraft.yardstick.bot.world;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 import nl.tudelft.opencraft.yardstick.bot.entity.Entity;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import org.jetbrains.annotations.NotNull;
 import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.Position;
 import science.atlarge.opencraft.mcprotocollib.data.game.world.WorldType;
+
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Represents world-related data visible to the bot.
@@ -86,6 +87,13 @@ public class World {
         return new ChunkLocation(chunkX, chunkZ);
     }
 
+    /**
+     * TODO replace exception with Optional.
+     *
+     * @param location location of the chunk to retrieve
+     * @return the chunk at the given location
+     * @throws ChunkNotLoadedException if the chunk is not loaded
+     */
     @NotNull
     public Chunk getChunk(ChunkLocation location) throws ChunkNotLoadedException {
         Chunk chunk = chunks.get(location);

@@ -18,17 +18,18 @@
 
 package nl.tudelft.opencraft.yardstick.workload;
 
+import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
+import nl.tudelft.opencraft.yardstick.logging.SubLogger;
+import science.atlarge.opencraft.packetlib.event.session.PacketReceivedEvent;
+import science.atlarge.opencraft.packetlib.event.session.PacketSentEvent;
+import science.atlarge.opencraft.packetlib.packet.Packet;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
-import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
-import nl.tudelft.opencraft.yardstick.logging.SubLogger;
-import science.atlarge.opencraft.packetlib.event.session.PacketReceivedEvent;
-import science.atlarge.opencraft.packetlib.event.session.PacketSentEvent;
-import science.atlarge.opencraft.packetlib.packet.Packet;
 
 /**
  * Handles {@link PacketSentEvent}s and {@link PacketReceivedEvent}s for

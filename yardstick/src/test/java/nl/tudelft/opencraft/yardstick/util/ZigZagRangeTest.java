@@ -18,11 +18,12 @@
 
 package nl.tudelft.opencraft.yardstick.util;
 
-import java.util.Arrays;
-import java.util.Collections;
 import org.apache.commons.collections4.IteratorUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.util.Arrays;
+import java.util.Collections;
 
 class ZigZagRangeTest {
     @Test

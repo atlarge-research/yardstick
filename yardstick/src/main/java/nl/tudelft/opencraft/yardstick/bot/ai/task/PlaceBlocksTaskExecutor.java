@@ -20,9 +20,6 @@ package nl.tudelft.opencraft.yardstick.bot.ai.task;
 
 import com.beust.jcommander.internal.Lists;
 import com.beust.jcommander.internal.Sets;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.world.Block;
 import nl.tudelft.opencraft.yardstick.bot.world.BlockFace;
@@ -31,6 +28,10 @@ import nl.tudelft.opencraft.yardstick.bot.world.Material;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import nl.tudelft.opencraft.yardstick.util.WorldUtil;
+
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Represents a task to place blocks.

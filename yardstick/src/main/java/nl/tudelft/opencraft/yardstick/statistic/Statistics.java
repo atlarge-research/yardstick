@@ -22,9 +22,6 @@ import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.Summary;
-import java.io.IOException;
-import java.util.HashSet;
-import java.util.logging.Level;
 import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
 import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 import nl.tudelft.opencraft.yardstick.util.CountingOutputStream;
@@ -44,6 +41,10 @@ import science.atlarge.opencraft.packetlib.event.session.SessionListener;
 import science.atlarge.opencraft.packetlib.io.NetOutput;
 import science.atlarge.opencraft.packetlib.io.stream.StreamNetOutput;
 import science.atlarge.opencraft.packetlib.packet.Packet;
+
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.logging.Level;
 
 /**
  * Represents a {@link SessionListener} for collecting Yardstick statistics and
@@ -81,52 +82,52 @@ public class Statistics implements SessionListener {
 
         CollectorRegistry registry = pusher.getRegistry();
         connected = Gauge.build()
-            .namespace("yardstick")
-            .name("bots_connected")
-            .help("Amount of isConnected bots")
-            .register(registry);
+                .namespace("yardstick")
+                .name("bots_connected")
+                .help("Amount of isConnected bots")
+                .register(registry);
 
         packIn = Counter.build()
-            .namespace("yardstick")
-            .name("packets_in")
-            .help("Packets received")
-            .register(registry);
+                .namespace("yardstick")
+                .name("packets_in")
+                .help("Packets received")
+                .register(registry);
 
         packOut = Counter.build()
-            .namespace("yardstick")
-            .name("packets_out")
-            .help("Packets sent")
-            .register(registry);
+                .namespace("yardstick")
+                .name("packets_out")
+                .help("Packets sent")
+                .register(registry);
 
         bytesIn = Summary.build()
-            .namespace("yardstick")
-            .name("bytes_in")
-            .help("Bytes received")
-            .register(registry);
+                .namespace("yardstick")
+                .name("bytes_in")
+                .help("Bytes received")
+                .register(registry);
 
         bytesOut = Summary.build()
-            .namespace("yardstick")
-            .name("bytes_out")
-            .help("Bytes sent")
-            .register(registry);
+                .namespace("yardstick")
+                .name("bytes_out")
+                .help("Bytes sent")
+                .register(registry);
 
         errors = Counter.build()
-            .namespace("yardstick")
-            .name("disconnect_errors")
-            .help("Amount of disconnects due to errors")
-            .register(registry);
+                .namespace("yardstick")
+                .name("disconnect_errors")
+                .help("Amount of disconnects due to errors")
+                .register(registry);
 
         keepAliveIn = Counter.build()
-            .namespace("yardstick")
-            .name("keep_alive_packets_in")
-            .help("The amount of Keep Alive packets received from the server.")
-            .register(registry);
+                .namespace("yardstick")
+                .name("keep_alive_packets_in")
+                .help("The amount of Keep Alive packets received from the server.")
+                .register(registry);
 
         entityPositionUpdate = Counter.build()
-            .namespace("yardstick")
-            .name("entity_position_updates")
-            .help("Number of packets received that update the location or rotation of an entity.")
-            .register(registry);
+                .namespace("yardstick")
+                .name("entity_position_updates")
+                .help("Number of packets received that update the location or rotation of an entity.")
+                .register(registry);
     }
 
     /**

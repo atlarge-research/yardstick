@@ -20,6 +20,8 @@ package nl.tudelft.opencraft.yardstick.workload;
 
 import com.google.common.io.CountingInputStream;
 import com.google.common.io.CountingOutputStream;
+import nl.tudelft.opencraft.yardstick.Yardstick;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
@@ -33,7 +35,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
-import nl.tudelft.opencraft.yardstick.Yardstick;
 
 /**
  * Utility class to convert binary capture files to CSV-formatted files.

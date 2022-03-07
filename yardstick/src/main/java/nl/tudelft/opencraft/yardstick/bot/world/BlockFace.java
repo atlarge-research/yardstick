@@ -18,9 +18,10 @@
 
 package nl.tudelft.opencraft.yardstick.bot.world;
 
+import nl.tudelft.opencraft.yardstick.util.Vector3i;
+
 import java.util.EnumMap;
 import java.util.HashMap;
-import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public enum BlockFace {
 

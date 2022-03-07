@@ -19,10 +19,6 @@
 package nl.tudelft.opencraft.yardstick.model;
 
 import com.google.common.collect.Lists;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.BreakBlocksTaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.PlaceBlocksTaskExecutor;
@@ -34,6 +30,11 @@ import nl.tudelft.opencraft.yardstick.bot.world.Material;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import nl.tudelft.opencraft.yardstick.util.WorldUtil;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Represents a model which places and breaks blocks randomly.

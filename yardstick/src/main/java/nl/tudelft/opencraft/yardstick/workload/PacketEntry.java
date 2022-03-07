@@ -18,11 +18,12 @@
 
 package nl.tudelft.opencraft.yardstick.workload;
 
+import nl.tudelft.opencraft.yardstick.util.PacketUtil;
+import science.atlarge.opencraft.packetlib.packet.Packet;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import nl.tudelft.opencraft.yardstick.util.PacketUtil;
-import science.atlarge.opencraft.packetlib.packet.Packet;
 
 /**
  * Represents a snapshot of information of a specific message between the
