@@ -25,7 +25,6 @@ import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 import nl.tudelft.opencraft.yardstick.model.BotModel;
 
-import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -93,17 +92,6 @@ public abstract class AbstractModelExperiment extends Experiment {
         return () -> {
             long start = System.currentTimeMillis();
             bot.connect();
-
-            // log login time if the bot is connected (exp12)
-            if (number == 12 && bot.isConnected()) {
-                long end = System.currentTimeMillis();
-                try {
-                    Experiment12RandomE2E.fw.write(end + "\t" + "login\t" + (end - start) + "\n");
-                    Experiment12RandomE2E.fw.flush();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
 
             int sleep = 2000;
             int tries = 3;
