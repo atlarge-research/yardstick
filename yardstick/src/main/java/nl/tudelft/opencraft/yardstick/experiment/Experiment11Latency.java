@@ -7,6 +7,8 @@ import nl.tudelft.opencraft.yardstick.bot.BotManager;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkLocation;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
+import nl.tudelft.opencraft.yardstick.telemetry.Gauge;
+import nl.tudelft.opencraft.yardstick.telemetry.Timer;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import org.jetbrains.annotations.NotNull;
 import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.ItemStack;
@@ -44,15 +46,16 @@ public class Experiment11Latency extends Experiment {
 
     private BotManager botManager;
     private ScheduledFuture<?> runningBotManager;
-    private long packetSent = 0L;
     private boolean waitingForReply = false;
-    private int countReceived;
-    private int countSent;
     private Position blockPos = null;
     private boolean placedBlock = false;
 
     private Duration experimentDuration;
     private long startMillis;
+
+    private final Timer latencyTimer = new Timer("latency");
+    private final Gauge probesSent = new Gauge("latency_probes_sent");
+    private final Gauge probesRecv = new Gauge("latency_probes_recv");
 
     private final SessionListener listener = new SessionListener() {
         @Override
@@ -71,13 +74,12 @@ public class Experiment11Latency extends Experiment {
                     }
                 }
                 if (blockPositions.stream().anyMatch(b -> b.equals(blockPos))) {
-                    countReceived++;
-                    var duration = System.currentTimeMillis() - packetSent;
-                    logger.info(String.format("latency %d ms", duration));
+                    probesRecv.inc();
+                    latencyTimer.stop();
                     waitingForReply = false;
                 } else {
                     for (Position blockPosition : blockPositions) {
-                        logger.info("expected block at " + blockPos + " but got " + blockPosition);
+                        logger.warn("expected block at " + blockPos + " but got " + blockPosition);
                     }
                 }
             }
@@ -113,10 +115,6 @@ public class Experiment11Latency extends Experiment {
         super(11, nodeID, game, "latency experiment");
         this.startMillis = System.currentTimeMillis();
         this.experimentDuration = config.getDuration("duration");
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            logger.info(String.format("latency ping sent %d", countSent));
-            logger.info(String.format("latency ping received %d", countReceived));
-        }));
     }
 
     @Override
@@ -144,7 +142,7 @@ public class Experiment11Latency extends Experiment {
                 }
                 waitingForReply = true;
                 CompletableFuture.delayedExecutor(random.nextInt(TICK_MS + 1), TimeUnit.MILLISECONDS).execute(() -> {
-                    packetSent = System.currentTimeMillis();
+                    latencyTimer.start();
                     var playerLoc = botB.getPlayer().getLocation().intVector();
                     var placePos = new Position(playerLoc.getX() + 1, playerLoc.getY() - 1, playerLoc.getZ());
                     blockPos = new Position(playerLoc.getX() + 1, playerLoc.getY(), playerLoc.getZ());
@@ -160,7 +158,7 @@ public class Experiment11Latency extends Experiment {
                                 BlockFace.UP, Hand.MAIN_HAND, .5f, 1f, .5f));
                         placedBlock = true;
                     }
-                    countSent++;
+                    probesSent.inc();
                 });
             }
         }

@@ -32,6 +32,7 @@ import nl.tudelft.opencraft.yardstick.bot.world.ChunkLocation;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.bot.world.Dimension;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
+import nl.tudelft.opencraft.yardstick.telemetry.GlobalMetrics;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -737,6 +738,7 @@ public class BotListener implements SessionListener {
 
     @Override
     public void connected(ConnectedEvent ce) {
+        GlobalMetrics.CONNECTED_PLAYERS.inc();
     }
 
     @Override
@@ -745,6 +747,7 @@ public class BotListener implements SessionListener {
 
     @Override
     public void disconnected(DisconnectedEvent de) {
+        GlobalMetrics.CONNECTED_PLAYERS.dec();
         logger.info("Disconnected: {}", de.getReason());
     }
 

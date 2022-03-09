@@ -3,8 +3,13 @@
         <Console name="Console" target="SYSTEM_OUT">
             <PatternLayout pattern="%d{HH:mm:ss.SSS} [%highlight{%-5level}] %logger{36} - %msg%n"/>
         </Console>
+        <File name="Metrics" fileName="yardstick-metrics.log" append="false">
+        </File>
     </Appenders>
     <Loggers>
+        <Logger name="nl.tudelft.opencraft.yardstick.telemetry" level="info" additivity="false">
+            <AppenderRef ref="Metrics"/>
+        </Logger>
         <Root level="info">
             <AppenderRef ref="Console"/>
         </Root>
