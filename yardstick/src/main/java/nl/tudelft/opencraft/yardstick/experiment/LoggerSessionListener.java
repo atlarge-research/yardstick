@@ -18,13 +18,11 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
+import org.slf4j.Logger;
 import science.atlarge.opencraft.packetlib.event.session.ConnectedEvent;
 import science.atlarge.opencraft.packetlib.event.session.DisconnectedEvent;
 import science.atlarge.opencraft.packetlib.event.session.DisconnectingEvent;
 import science.atlarge.opencraft.packetlib.event.session.SessionAdapter;
-
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * A {@link SessionAdapter} for logging bot events to a {@link Logger}.
@@ -53,7 +51,7 @@ public class LoggerSessionListener extends SessionAdapter {
 
     @Override
     public void disconnected(DisconnectedEvent de) {
-        logger.log(Level.WARNING, "Connection closed unexpectedly!", de.getReason());
+        logger.warn("Connection closed unexpectedly! Reason: {}", de.getReason());
     }
 
 }

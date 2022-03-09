@@ -33,6 +33,8 @@ import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.bot.world.Dimension;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
 import science.atlarge.opencraft.mcprotocollib.data.SubProtocol;
 import science.atlarge.opencraft.mcprotocollib.data.game.chunk.Column;
@@ -127,7 +129,6 @@ import science.atlarge.opencraft.packetlib.event.session.SessionListener;
 import science.atlarge.opencraft.packetlib.packet.Packet;
 
 import java.util.UUID;
-import java.util.logging.Logger;
 
 /**
  * Handles basic bot network traffic.
@@ -135,7 +136,7 @@ import java.util.logging.Logger;
 public class BotListener implements SessionListener {
 
     private final Bot bot;
-    private final Logger logger;
+    private final Logger logger = LoggerFactory.getLogger(BotListener.class);
     //
     private BotPlayer player;
     private Server server;
@@ -148,7 +149,6 @@ public class BotListener implements SessionListener {
      */
     public BotListener(Bot bot) {
         this.bot = bot;
-        this.logger = bot.getLogger();
     }
 
     @Override
@@ -167,7 +167,7 @@ public class BotListener implements SessionListener {
             // TODO
 
             if (p.getEntityId() == 0) {
-                logger.warning("Received spawn object with EID == 0: " + p.getType());
+                logger.warn("Received spawn object with EID == 0: {}", p.getType());
                 return;
             }
 
@@ -196,7 +196,7 @@ public class BotListener implements SessionListener {
             ServerSpawnGlobalEntityPacket p = (ServerSpawnGlobalEntityPacket) packet;
 
             if (p.getType() != GlobalEntityType.LIGHTNING_BOLT) {
-                logger.warning("Received spawn global entity for non-lightning strike");
+                logger.warn("Received spawn global entity for non-lightning strike");
                 return;
             }
 
@@ -274,7 +274,7 @@ public class BotListener implements SessionListener {
 
             if (pos.getY() > 255) {
                 // https://github.com/Steveice10/MCProtocolLib/issues/347
-                logger.warning("Ignoring BlockChange: (" + pos.getX() + "," + pos.getY() + "," + pos.getZ() + ")");
+                logger.warn("Ignoring BlockChange: ({},{},{})", pos.getX(), pos.getY(), pos.getZ());
                 return;
             }
 
@@ -282,7 +282,7 @@ public class BotListener implements SessionListener {
             try {
                 b = bot.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
             } catch (ChunkNotLoadedException e) {
-                logger.fine("Received BlockChange for block in unloaded chunk: " + pos);
+                logger.trace("Received BlockChange for block in unloaded chunk: {}", pos);
                 return;
             }
 
@@ -321,7 +321,7 @@ public class BotListener implements SessionListener {
                 try {
                     b = bot.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
                 } catch (ChunkNotLoadedException e) {
-                    logger.fine("Received MultiBlockChange for block in unloaded chunk: " + pos);
+                    logger.trace("Received MultiBlockChange for block in unloaded chunk: {}", pos);
                     return;
                 }
 
@@ -722,7 +722,7 @@ public class BotListener implements SessionListener {
             // TODO
 
         } else {
-            logger.warning("Received unhandled packet: " + packet.getClass().getName());
+            logger.warn("Received unhandled packet: {}", packet.getClass().getName());
         }
     }
 
@@ -745,7 +745,7 @@ public class BotListener implements SessionListener {
 
     @Override
     public void disconnected(DisconnectedEvent de) {
-        logger.info("Disconnected: " + de.getReason());
+        logger.info("Disconnected: {}", de.getReason());
     }
 
 }

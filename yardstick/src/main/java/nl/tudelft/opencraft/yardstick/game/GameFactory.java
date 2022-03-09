@@ -1,18 +1,17 @@
 package nl.tudelft.opencraft.yardstick.game;
 
 import com.typesafe.config.Config;
-import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
-import nl.tudelft.opencraft.yardstick.logging.SubLogger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.text.MessageFormat;
 import java.util.Objects;
 
 public class GameFactory {
 
-    private final SubLogger logger = GlobalLogger.getLogger().newSubLogger("Bot").newSubLogger(GameFactory.class.getSimpleName());
+    private final Logger logger = LoggerFactory.getLogger(GameFactory.class);
 
     public GameArchitecture getGame(String address, Config config) {
         Objects.requireNonNull(address);
@@ -27,8 +26,8 @@ public class GameFactory {
                 var port = Integer.parseInt(parts[1]);
                 res = new SingleServer(new InetSocketAddress(host, port));
             }
-            logger.info(MessageFormat.format("created game {0} based on architecture ''{1}''",
-                    res.getClass().getSimpleName(), architecture));
+            logger.info("created game {} based on architecture ''{}''",
+                    res.getClass().getSimpleName(), architecture);
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }

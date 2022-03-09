@@ -78,7 +78,7 @@ public class BreakBlocksTaskExecutor extends AbstractTaskExecutor {
             // Find a block face
             face = WorldUtil.getVisibleBlockFace(bot.getPlayer(), current);
             if (face == null) {
-                logger.severe("Could not find block face for block: " + current.getLocation().toString());
+                logger.error("Could not find block face for block: {}", current.getLocation().toString());
 
                 // Couldn't find one, next block
                 current = null;

@@ -8,9 +8,9 @@ import net.jodah.failsafe.RetryPolicy;
 import nl.tudelft.opencraft.yardstick.Yardstick;
 import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 import nl.tudelft.opencraft.yardstick.game.SingleServer;
-import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
-import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 import org.apache.commons.collections4.list.UnmodifiableList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
 
 import java.net.InetSocketAddress;
@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 
 /**
  * Connects the specified number of bots to the game server
@@ -30,7 +29,7 @@ import java.util.logging.Level;
  */
 public class BotManager implements Runnable {
 
-    private final SubLogger logger = GlobalLogger.getLogger().newSubLogger(BotManager.class.getSimpleName());
+    private final Logger logger = LoggerFactory.getLogger(BotManager.class);
 
     @Getter
     @Setter
@@ -52,7 +51,6 @@ public class BotManager implements Runnable {
             .withMaxDuration(Duration.ofSeconds(60));
 
     public static void main(String[] args) throws InterruptedException {
-        var a = Yardstick.LOGGER;
         var addr = new InetSocketAddress("::1", 25565);
         var botmanager = new BotManager(new SingleServer(addr), 2, 2, 1);
         Yardstick.THREAD_POOL.scheduleAtFixedRate(botmanager, 0, 5, TimeUnit.SECONDS);
@@ -97,7 +95,7 @@ public class BotManager implements Runnable {
                     return bot;
                 })).whenComplete((bot, ex) -> {
                     if (ex != null) {
-                        logger.log(Level.WARNING, ex.getMessage(), ex);
+                        logger.warn(ex.getMessage(), ex);
                     } else {
                         connectedBots.add(bot);
                     }

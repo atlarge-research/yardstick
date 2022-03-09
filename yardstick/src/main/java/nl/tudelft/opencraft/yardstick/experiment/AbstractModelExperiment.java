@@ -25,7 +25,6 @@ import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 import nl.tudelft.opencraft.yardstick.model.BotModel;
 
-import java.text.MessageFormat;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -62,8 +61,7 @@ public abstract class AbstractModelExperiment extends Experiment {
                     .collect(Collectors.toList());
             disconnectedBots.forEach(bot -> bot.disconnect("Bot is not connected"));
             if (disconnectedBots.size() > 0) {
-                logger.warning("Bots disconnected: "
-                        + disconnectedBots.stream().map(Bot::getName).reduce("", (a, b) -> a + ", " + b));
+                logger.warn("Bots disconnected: {}", disconnectedBots.stream().map(Bot::getName).reduce("", (a, b) -> a + ", " + b));
                 botList.removeAll(disconnectedBots);
             }
         }
@@ -85,8 +83,7 @@ public abstract class AbstractModelExperiment extends Experiment {
             try {
                 bot.setTaskExecutor(model.newTask(bot));
             } catch (ChunkNotLoadedException e) {
-                logger.warning(MessageFormat.format("could not set new task for bot {0}: {1}", bot.getName(),
-                        e.getMessage()));
+                logger.warn("could not set new task for bot {}: {}", bot.getName(), e.getMessage());
             }
         }
     }
@@ -107,7 +104,7 @@ public abstract class AbstractModelExperiment extends Experiment {
             if (!bot.isJoined()) {
                 String host = bot.getClient().getHost();
                 int port = bot.getClient().getPort();
-                logger.warning(String.format("Could not connect bot %s:%d.", host, port));
+                logger.warn("Could not connect bot {}:{}.", host, port);
                 bot.disconnect("Make sure to close all connections.");
             }
         };

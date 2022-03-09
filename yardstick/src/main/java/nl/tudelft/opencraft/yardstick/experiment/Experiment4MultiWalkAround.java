@@ -28,6 +28,8 @@ import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -42,6 +44,7 @@ import java.util.stream.Collectors;
 
 public class Experiment4MultiWalkAround extends Experiment {
 
+    private final Logger logger = LoggerFactory.getLogger(Experiment4MultiWalkAround.class);
     private final Config behaviorConfig;
     private final List<Bot> botList = Collections.synchronizedList(new ArrayList<>());
     private final List<Future<Bot>> connectingBots = new ArrayList<>();
@@ -124,8 +127,8 @@ public class Experiment4MultiWalkAround extends Experiment {
                 botSpawnLocations.put(bot, bot.getPlayer().getLocation());
                 return bot;
             } catch (ConnectException | InterruptedException e) {
-                logger.warning(String.format("Could not connect bot after %d ms.",
-                        System.currentTimeMillis() - startTime));
+                logger.warn("Could not connect bot after {} ms.",
+                        System.currentTimeMillis() - startTime);
             }
             return null;
         }));
@@ -136,7 +139,7 @@ public class Experiment4MultiWalkAround extends Experiment {
         TaskExecutor t = bot.getTaskExecutor();
         if (t == null || t.getStatus().getType() != TaskStatus.StatusType.IN_PROGRESS) {
             Vector3i newLocation = movement.newTargetLocation(bot);
-            bot.getLogger().info(String.format("Setting task for bot to walk to %s", newLocation));
+            logger.info("Setting task for bot to walk to {}", newLocation);
             bot.setTaskExecutor(new WalkTaskExecutor(bot, newLocation));
         }
     }

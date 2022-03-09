@@ -7,6 +7,8 @@ import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
 import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -19,6 +21,7 @@ import java.util.stream.Collectors;
 
 public class Experiment10GenerationStressTest extends Experiment {
 
+    private final Logger logger = LoggerFactory.getLogger(Experiment10GenerationStressTest.class);
     private final Config behaviorConfig;
     private final List<Bot> botList = Collections.synchronizedList(new ArrayList<>());
     private final Set<Bot> targetSet = Collections.synchronizedSet(new HashSet<>());
@@ -70,8 +73,7 @@ public class Experiment10GenerationStressTest extends Experiment {
                     .collect(Collectors.toList());
             disconnectedBots.forEach(bot -> bot.disconnect("Bot is not connected"));
             if (disconnectedBots.size() > 0) {
-                logger.warning("Bots disconnected: "
-                        + disconnectedBots.stream().map(Bot::getName).reduce("", (a, b) -> a + ", " + b));
+                logger.warn("Bots disconnected: {}", disconnectedBots.stream().map(Bot::getName).reduce("", (a, b) -> a + ", " + b));
                 botList.removeAll(disconnectedBots);
             }
         }
@@ -98,7 +100,7 @@ public class Experiment10GenerationStressTest extends Experiment {
             Vector3i botTarget = new Vector3i(finalX, FlyTaskExecutor.maxY, finalZ);
 
             // move bot towards target
-            bot.getLogger().info(String.format("Moving bot towards final target (%d, %d)", finalX, finalZ));
+            logger.info("Moving bot towards final target ({}, {}})", finalX, finalZ);
             bot.setTaskExecutor(new FlyTaskExecutor(bot, botTarget, botSpeed));
             targetSet.add(bot);
         }
@@ -124,7 +126,7 @@ public class Experiment10GenerationStressTest extends Experiment {
                 }
             }
             if (!bot.isJoined()) {
-                logger.warning("Could not connect bot");
+                logger.warn("Could not connect bot");
                 bot.disconnect("Make sure to close all connections.");
             }
         };
