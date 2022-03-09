@@ -18,8 +18,8 @@
 
 package nl.tudelft.opencraft.yardstick.workload;
 
-import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
-import nl.tudelft.opencraft.yardstick.logging.SubLogger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import science.atlarge.opencraft.packetlib.event.session.PacketReceivedEvent;
 import science.atlarge.opencraft.packetlib.event.session.PacketSentEvent;
 import science.atlarge.opencraft.packetlib.packet.Packet;
@@ -29,7 +29,6 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.Level;
 
 /**
  * Handles {@link PacketSentEvent}s and {@link PacketReceivedEvent}s for
@@ -38,7 +37,7 @@ import java.util.logging.Level;
  */
 public class WorkloadDumper {
 
-    private static final SubLogger LOGGER = GlobalLogger.getLogger().newSubLogger("WorkloadDumper");
+    private final Logger logger = LoggerFactory.getLogger(WorkloadDumper.class);
     private final File dumpFolder = new File("workload");
     private final Map<String, PacketEntryWriter> queues = new ConcurrentHashMap<>();
     //
@@ -50,15 +49,15 @@ public class WorkloadDumper {
      */
     public WorkloadDumper() {
         if (!dumpFolder.exists() && !dumpFolder.mkdirs()) {
-            LOGGER.severe("Could not create folder: " + dumpFolder.getPath());
+            logger.error("Could not create folder '{}'", dumpFolder.getPath());
             throw new RuntimeException(new IOException("Could not create folder: " + dumpFolder.getPath()));
         }
 
         // Clear the previous dumps
         for (File file : dumpFolder.listFiles()) {
-            LOGGER.info("Deleting previous dump: " + file.getName());
+            logger.info("Deleting previous dump: " + file.getName());
             if (!file.delete()) {
-                LOGGER.warning("Could not delete file: " + file.getPath());
+                logger.warn("Could not delete file '{}'", file.getPath());
             }
         }
     }
@@ -75,7 +74,7 @@ public class WorkloadDumper {
         try {
             dumper = new PacketEntryWriter(dumpFile);
         } catch (IOException ex) {
-            LOGGER.log(Level.SEVERE, "Could not create file stream: " + dumpFile.getPath(), ex);
+            logger.error("Could not create file stream: " + dumpFile.getPath(), ex);
             return null;
         }
 
@@ -134,7 +133,7 @@ public class WorkloadDumper {
         try {
             writerThread.join(2000);
         } catch (InterruptedException ex) {
-            LOGGER.log(Level.SEVERE, null, ex);
+            logger.error("", ex);
         }
 
         if (writerThread.isAlive()) {
@@ -145,7 +144,7 @@ public class WorkloadDumper {
             try {
                 dos.close();
             } catch (Exception ex) {
-                LOGGER.log(Level.SEVERE, null, ex);
+                logger.error("", ex);
             }
         }
 
@@ -164,7 +163,7 @@ public class WorkloadDumper {
 
     private class WriteRunnable implements Runnable {
 
-        private final SubLogger logger = WorkloadDumper.LOGGER.newSubLogger("WriteThread");
+        private final Logger logger = LoggerFactory.getLogger(WriteRunnable.class);
 
         @Override
         public void run() {
@@ -179,7 +178,7 @@ public class WorkloadDumper {
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException ex) {
-                    logger.log(Level.SEVERE, null, ex);
+                    logger.error("", ex);
                 }
             }
 

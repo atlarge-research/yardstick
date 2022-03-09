@@ -22,7 +22,7 @@ public class FlyTaskExecutor extends AbstractTaskExecutor {
 
         this.target = targetLocation;
         if (bot.getPlayer().getLocation().intVector().equals(target)) {
-            logger.warning("Useless fly task. Bot and given target location equal.");
+            logger.warn("Useless fly task. Bot and given target location equal.");
         }
 
         speedXZ = speed;

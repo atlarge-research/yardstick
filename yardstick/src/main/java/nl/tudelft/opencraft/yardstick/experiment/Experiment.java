@@ -21,11 +21,11 @@ package nl.tudelft.opencraft.yardstick.experiment;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
 import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
-import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
-import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 import nl.tudelft.opencraft.yardstick.statistic.Statistics;
 import nl.tudelft.opencraft.yardstick.util.Scheduler;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
 
 import java.net.InetSocketAddress;
@@ -42,7 +42,7 @@ public abstract class Experiment implements Runnable {
     protected final int number;
     protected final int nodeID;
     protected final String description;
-    protected final SubLogger logger;
+    protected final Logger logger = LoggerFactory.getLogger(Experiment.class);
 
     protected long tick = 0;
     private Statistics stats;
@@ -61,7 +61,6 @@ public abstract class Experiment implements Runnable {
         this.nodeID = nodeID;
         this.description = desc;
         this.game = game;
-        this.logger = GlobalLogger.getLogger().newSubLogger("Experiment " + number);
     }
 
     /**

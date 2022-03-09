@@ -28,10 +28,11 @@ import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
 import nl.tudelft.opencraft.yardstick.bot.world.SimpleWorldPhysics;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
 import nl.tudelft.opencraft.yardstick.experiment.LoggerSessionListener;
-import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
-import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadSessionListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
 import science.atlarge.opencraft.packetlib.Client;
 import science.atlarge.opencraft.packetlib.Session;
@@ -43,7 +44,6 @@ import science.atlarge.opencraft.packetlib.tcp.TcpSessionFactory;
 import java.util.Random;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 
 /**
  * Represents a Minecraft simulated bot.
@@ -51,7 +51,7 @@ import java.util.logging.Level;
 public class Bot {
 
     @JsonIgnore
-    private final SubLogger logger;
+    private final Logger logger = LoggerFactory.getLogger(Bot.class);
     @JsonIgnore
     private final MinecraftProtocol protocol;
     private final String name;
@@ -91,7 +91,6 @@ public class Bot {
      */
     public Bot(MinecraftProtocol protocol, Client client) {
         this.name = protocol.getProfile().getName();
-        this.logger = GlobalLogger.getLogger().newSubLogger("Bot").newSubLogger(name);
         this.protocol = protocol;
         this.client = client;
         this.client.getSession().addListener(new BotListener(this));
@@ -126,7 +125,7 @@ public class Bot {
         if (session.isConnected()) {
             throw new IllegalStateException("Can not start connection. Bot already isConnected!");
         }
-        session.addListener(new LoggerSessionListener(logger.newSubLogger(name)));
+        session.addListener(new LoggerSessionListener(logger));
         session.connect();
 
         initializeTaskTicker();
@@ -135,19 +134,21 @@ public class Bot {
     private void initializeTaskTicker() {
         var random = new Random();
         this.ticker = Yardstick.THREAD_POOL.scheduleAtFixedRate(() -> {
+            MDC.put("name", name);
             var taskExecutor = this.getTaskExecutor();
             if (taskExecutor != null
                     && taskExecutor.getStatus().getType() == TaskStatus.StatusType.IN_PROGRESS) {
                 TaskStatus status = taskExecutor.tick();
                 if (status.getType() == TaskStatus.StatusType.FAILURE) {
                     if (status.getThrowable() != null) {
-                        logger.log(Level.FINE, "Task Failure: " + status.getMessage(), status.getThrowable());
+                        logger.trace("Task Failure: " + status.getMessage(), status.getThrowable());
                     } else {
-                        logger.warning("Task Failure: " + status.getMessage());
+                        logger.warn("Task Failure: " + status.getMessage());
                     }
                     this.setTaskExecutor(null);
                 }
             }
+            MDC.clear();
         }, random.nextInt(50), 50, TimeUnit.MILLISECONDS);
     }
 
@@ -232,16 +233,6 @@ public class Bot {
      */
     public TaskExecutor getTaskExecutor() {
         return this.taskExecutor;
-    }
-
-    /**
-     * Returns the logger of this bot. This will be null if the world has not
-     * been set.
-     *
-     * @return the logger.
-     */
-    public SubLogger getLogger() {
-        return logger;
     }
 
     /**

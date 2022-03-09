@@ -20,7 +20,8 @@ package nl.tudelft.opencraft.yardstick.workload;
 
 import com.google.common.io.CountingInputStream;
 import com.google.common.io.CountingOutputStream;
-import nl.tudelft.opencraft.yardstick.Yardstick;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -32,8 +33,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 
 /**
@@ -41,7 +40,7 @@ import java.util.zip.GZIPInputStream;
  */
 public class CsvConverter {
 
-    private static final Logger LOGGER = Yardstick.LOGGER.newSubLogger("CSV Converter");
+    private static final Logger logger = LoggerFactory.getLogger(CsvConverter.class);
 
     private CsvConverter() {
     }
@@ -58,7 +57,7 @@ public class CsvConverter {
         File outFile = new File(outFileName);
 
         if (!inFile.exists() || !inFile.isFile()) {
-            LOGGER.severe("File does not exist: " + inFileName);
+            logger.error("File does not exist: {}", inFileName);
             return;
         }
 
@@ -72,7 +71,7 @@ public class CsvConverter {
             BufferedInputStream bos2 = new BufferedInputStream(gos);
             in = new DataInputStream(bos2);
         } catch (IOException ex) {
-            LOGGER.log(Level.SEVERE, "Could not read from file: " + inFileName, ex);
+            logger.error("Could not read from file: " + inFileName, ex);
             return;
         }
 
@@ -85,11 +84,11 @@ public class CsvConverter {
             outCos = new CountingOutputStream(fos);
             out = new BufferedOutputStream(outCos);
         } catch (IOException ex) {
-            LOGGER.log(Level.SEVERE, "Could not write to file: " + outFileName, ex);
+            logger.error("Could not write to file: " + outFileName, ex);
             return;
         }
 
-        LOGGER.info("Converting: " + inFileName);
+        logger.info("Converting: {}", inFileName);
         int packets = 0;
         try {
             writeString(out, "timestamp,outgoing,name,length\n");
@@ -116,9 +115,9 @@ public class CsvConverter {
             }
 
             String compression = String.format("%.1f", ((double) outCos.getCount()) / inCos.getCount());
-            LOGGER.info("Converted " + packets + " packets. Compression ratio: " + compression);
+            logger.info("Converted {} packets. Compression ratio: {}", packets, compression);
         } catch (Exception ex) {
-            LOGGER.log(Level.SEVERE, "Could not convert to CSV: " + outFileName + ". At packet: " + packets, ex);
+            logger.error("Could not convert to CSV: {}. At packet: {}", outFileName, packets, ex);
         } finally {
             try {
                 in.close();

@@ -79,7 +79,7 @@ public class RemoteControlledExperiment extends Experiment {
         PlayerStatusRequest rq = validator.getOrNull();
         synchronized (bots) {
             if (rq == null) {
-                logger.warning(String.format("Received invalid PlayerStatusRequest: %s", context.body()));
+                logger.warn("Received invalid PlayerStatusRequest: {}", context.body());
                 context.status(400);
             } else if (bots.containsKey(rq.getPlayerName())) {
                 context.result(JavalinJson.toJson(bots.get(rq.getPlayerName())));

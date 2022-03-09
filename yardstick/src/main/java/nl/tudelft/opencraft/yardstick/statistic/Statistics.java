@@ -22,9 +22,9 @@ import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.Summary;
-import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
-import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 import nl.tudelft.opencraft.yardstick.util.CountingOutputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerJoinGamePacket;
 import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.ServerKeepAlivePacket;
 import science.atlarge.opencraft.mcprotocollib.packet.ingame.server.entity.ServerEntityHeadLookPacket;
@@ -44,7 +44,6 @@ import science.atlarge.opencraft.packetlib.packet.Packet;
 
 import java.io.IOException;
 import java.util.HashSet;
-import java.util.logging.Level;
 
 /**
  * Represents a {@link SessionListener} for collecting Yardstick statistics and
@@ -54,7 +53,7 @@ import java.util.logging.Level;
  */
 public class Statistics implements SessionListener {
 
-    private final SubLogger logger;
+    private final Logger logger = LoggerFactory.getLogger(Statistics.class);
     private final StatisticsPusher pusher = new StatisticsPusher();
     //
     private final CountingOutputStream cos = new CountingOutputStream();
@@ -77,7 +76,6 @@ public class Statistics implements SessionListener {
      * @param port the port of the Prometheus push gateway.
      */
     public Statistics(String host, int port) {
-        this.logger = GlobalLogger.getLogger().newSubLogger("Statistics");
         this.pusher.setup(host, port);
 
         CollectorRegistry registry = pusher.getRegistry();
@@ -168,7 +166,7 @@ public class Statistics implements SessionListener {
             packet.write(cno);
             cno.flush();
         } catch (IOException ex) {
-            logger.log(Level.SEVERE, "Exception counting received packet bytes", ex);
+            logger.error("Exception counting received packet bytes", ex);
         }
 
         bytesIn.observe(cos.getCount());
@@ -189,7 +187,7 @@ public class Statistics implements SessionListener {
             pse.getPacket().write(cno);
             cno.flush();
         } catch (IOException ex) {
-            logger.log(Level.SEVERE, "Exception counting sent packet bytes", ex);
+            logger.error("Exception counting sent packet bytes", ex);
         }
 
         bytesOut.observe(cos.getCount());

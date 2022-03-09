@@ -84,7 +84,7 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
         this.target = target;
 
         if (bot.getPlayer().getLocation().intVector().equals(target)) {
-            logger.warning("Useless walk task. Bot and given target location equal.");
+            logger.warn("Useless walk task. Bot and given target location equal.");
         }
         pathFuture = Yardstick.THREAD_POOL.submit(task);
         startTime = System.currentTimeMillis();
@@ -163,8 +163,8 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
             thisBlock = bot.getWorld().getBlockAt(blockLoc);
         } catch (ChunkNotLoadedException e) {
             // TODO: Fix: Wait until chunk is loaded.
-            logger.warning(String.format("Block under player: %s", blockLoc));
-            logger.warning(String.format("Player at %s", moveLoc));
+            logger.warn("Block under player: {}", blockLoc);
+            logger.warn("Player at {}", moveLoc);
             return TaskStatus.forFailure(e.getMessage());
         }
 

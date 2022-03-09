@@ -76,18 +76,18 @@ public class PlaceBlocksTaskExecutor extends AbstractTaskExecutor {
         try {
             toPlace = bot.getWorld().getBlockAt(placeAt);
         } catch (ChunkNotLoadedException ex) {
-            logger.warning("Could not get block: " + placeAt);
+            logger.warn("Could not get block: {}", placeAt);
             return onTick();
         }
 
         if (toPlace.getMaterial() != Material.AIR) {
-            logger.warning("Block not air: " + placeAt);
+            logger.warn("Block not air: {}", placeAt);
             return onTick();
         }
 
         Hitpoint hit = tryGetHitpoint(bot.getPlayer().getEyeLocation(), toPlace);
         if (hit == null) {
-            logger.warning("Could not place block -- player: " + bot.getPlayer().getLocation() + ", block: " + placeAt);
+            logger.warn("Could not place block -- player: {}, block: {}", bot.getPlayer().getLocation(), placeAt);
             return onTick();
         }
 
@@ -116,7 +116,7 @@ public class PlaceBlocksTaskExecutor extends AbstractTaskExecutor {
             try {
                 support = placeAt.getRelative(placeFace);
             } catch (ChunkNotLoadedException ex) {
-                logger.warning("Could not get block: " + placeAt.getLocation().add(placeFace.getOffset()));
+                logger.warn("Could not get block: " + placeAt.getLocation().add(placeFace.getOffset()));
                 continue;
             }
 

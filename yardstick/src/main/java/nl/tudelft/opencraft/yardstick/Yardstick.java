@@ -40,10 +40,10 @@ import nl.tudelft.opencraft.yardstick.experiment.Experiment9Spike;
 import nl.tudelft.opencraft.yardstick.experiment.RemoteControlledExperiment;
 import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
 import nl.tudelft.opencraft.yardstick.game.GameFactory;
-import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
-import nl.tudelft.opencraft.yardstick.logging.SimpleTimeFormatter;
 import nl.tudelft.opencraft.yardstick.workload.CsvConverter;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.concurrent.Executors;
@@ -54,13 +54,11 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 public class Yardstick {
 
-    public static final GlobalLogger LOGGER = GlobalLogger.setupGlobalLogger("Yardstick");
     public static final ScheduledExecutorService THREAD_POOL = Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
 
-    public static void main(String[] args) {
-        // Logger
-        LOGGER.setupConsoleLogging(new SimpleTimeFormatter());
+    private final static Logger LOGGER = LoggerFactory.getLogger(Yardstick.class);
 
+    public static void main(String[] args) {
         // Parse command line options
         Options options = new Options();
         JCommander optParser = new JCommander(options);
@@ -78,7 +76,7 @@ public class Yardstick {
 
         if (options.csvDump) {
             if (options.inFile == null || options.outFile == null) {
-                LOGGER.severe("CSV conversion requires both input and output files to be set.");
+                LOGGER.error("CSV conversion requires both input and output files to be set.");
                 return;
             }
 
