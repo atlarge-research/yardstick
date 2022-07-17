@@ -1,59 +1,49 @@
-﻿using System;
-using System.IO;
-using System.Reflection;
+﻿using System.Reflection;
 
-namespace TrProtocol
+namespace TrProtocol;
+
+public abstract class NumericFieldSerializer<T> : FieldSerializer<T>, IConfigurable
 {
-    public abstract class NumFieldSerializer<T> : FieldSerializer<T>, IConfigurable
+    private int upper, lower;
+    private T zero;
+    private bool interrupt, enabled;
+    public override void Write(BinaryWriter bw, object o)
     {
-        private int upper, lower;
-        private T zero;
-        private bool interrupt, enabled;
-        public override void Write(BinaryWriter bw, object o)
+        if (enabled)
         {
-            if (enabled)
+            var o2 = Convert.ToInt32(o);
+            if (o2 > upper || o2 < lower)
             {
-                var o2 = Convert.ToInt32(o);
-                if (o2 > upper || o2 < lower)
-                {
-                    if (interrupt)
-                        throw new BadBoundException(
-                            $"packet ignored due to field {typeof(T)} = {o2} outer bound ({lower}, {upper})");
-                    o = zero;
-                }
+                if (interrupt)
+                    throw new OutOfBoundsException(
+                        $"Packet ignored due to field {typeof(T)} = {o2} out of bounds ({lower}, {upper})");
+                o = zero;
             }
-            _Write(bw, (T)o);
         }
-
-        public IFieldSerializer Configure(PropertyInfo prop, string version)
-        {
-            var instance = (NumFieldSerializer<T>) MemberwiseClone();
-            foreach (var bound in prop.GetCustomAttributes<BoundAttribute>())
-            {
-                if (bound.version != version) continue; ;
-                instance.zero = (T)Convert.ChangeType(0, prop.PropertyType);
-                instance.upper = bound.upper;
-                instance.lower = bound.lower;
-                instance.interrupt = bound.interrupt;
-                instance.enabled = true;
-            }
-            return instance;
-        }
+        WriteOverride(bw, (T)o);
     }
-    public abstract class FieldSerializer<T> : IFieldSerializer
+
+    public void Configure(PropertyInfo prop, string version)
     {
-        protected abstract T _Read(BinaryReader br);
-
-        protected abstract void _Write(BinaryWriter bw, T t);
-
-        public virtual object Read(BinaryReader br)
+        foreach (var bounds in prop.GetCustomAttributes<BoundsAttribute>())
         {
-            return _Read(br);
-        }
-
-        public virtual void Write(BinaryWriter bw, object o)
-        {
-            _Write(bw, (T)o);
+            if (bounds.Version != version) 
+                continue;
+            zero = (T)Convert.ChangeType(0, prop.PropertyType);
+            upper = bounds.UpperBound;
+            lower = bounds.LowerBound;
+            interrupt = bounds.Interrupt;
+            enabled = true;
         }
     }
 }
+public abstract class FieldSerializer<T> : IFieldSerializer
+{
+    protected abstract T ReadOverride(BinaryReader br);
+
+    protected abstract void WriteOverride(BinaryWriter bw, T t);
+
+		public virtual object Read(BinaryReader br) => ReadOverride(br);
+
+		public virtual void Write(BinaryWriter bw, object o) => WriteOverride(bw, (T)o);
+	}

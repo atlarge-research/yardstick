@@ -1,9 +1,8 @@
-﻿namespace TrProtocol.Packets
+﻿namespace TrProtocol.Packets;
+
+public class PlayerPvP : Packet, IPlayerSlot
 {
-    public class PlayerPvP : Packet, IPlayerSlot
-    {
-        public override MessageID Type => MessageID.PlayerPvP;
-        public byte PlayerSlot { get; set; }
-        public bool Pvp { get; set; }
-    }
+    public override MessageID Type => MessageID.PlayerPvP;
+    public byte PlayerSlot { get; set; }
+    public bool Pvp { get; set; }
 }

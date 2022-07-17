@@ -12,18 +12,18 @@ using TrProtocol.Packets.Modules;
 
 namespace TrClient
 {
-    public class TClient
+	public class TClient
     {
         private TcpClient client;
 
         public byte PlayerSlot { get; private set; }
-        public string CurRelease = "Terraria194";
+        public string CurRelease = "Terraria248";
         public string Username = "";
         public bool IsPlaying { get; private set; }
 
         private BinaryReader br;
         private BinaryWriter bw;
-        private PacketSerializer mgr = new PacketSerializer(true);
+        private readonly PacketSerializer mgr = new(true);
 
         public void Connect(string hostname, int port)
         {
@@ -48,28 +48,26 @@ namespace TrClient
 
             //Console.WriteLine("Proxy connected to " + proxy.ToString());
             var encoding = new UTF8Encoding(false, true);
-            using (var sw = new StreamWriter(client.GetStream(), encoding, 4096, true) { NewLine = "\r\n" })
-            using (var sr = new StreamReader(client.GetStream(), encoding, false, 4096, true))
-            {
-                sw.WriteLine($"CONNECT {server.ToString()} HTTP/1.1");
-                sw.WriteLine("User-Agent: Java/1.8.0_192");
-                sw.WriteLine($"Host: {server.ToString()}");
-                sw.WriteLine("Accept: text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2");
-                sw.WriteLine("Proxy-Connection: keep-alive");
-                sw.WriteLine();
-                sw.Flush();
+			using var sw = new StreamWriter(client.GetStream(), encoding, 4096, true) { NewLine = "\r\n" };
+			using var sr = new StreamReader(client.GetStream(), encoding, false, 4096, true);
+			sw.WriteLine($"CONNECT {server} HTTP/1.1");
+			sw.WriteLine("User-Agent: Java/1.8.0_192");
+			sw.WriteLine($"Host: {server}");
+			sw.WriteLine("Accept: text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2");
+			sw.WriteLine("Proxy-Connection: keep-alive");
+			sw.WriteLine();
+			sw.Flush();
 
-                var resp = sr.ReadLine();
-                Console.WriteLine("Proxy connection; " + resp);
-                if (!resp.StartsWith("HTTP/1.1 200")) throw new Exception();
+			var resp = sr.ReadLine();
+			Console.WriteLine("Proxy connection; " + resp);
+			if (!resp.StartsWith("HTTP/1.1 200")) throw new Exception();
 
-                while (true)
-                {
-                    resp = sr.ReadLine();
-                    if (string.IsNullOrEmpty(resp)) break;
-                }
-            }
-        }
+			while (true)
+			{
+				resp = sr.ReadLine();
+				if (string.IsNullOrEmpty(resp)) break;
+			}
+		}
 
         public void KillServer()
         {
@@ -127,7 +125,7 @@ namespace TrClient
         public event Action<TClient, string> OnMessage;
         public Func<bool> shouldExit = () => false;
 
-        private Dictionary<Type, Action<Packet>> handlers = new();
+        private readonly Dictionary<Type, Action<Packet>> handlers = new();
 
         public void On<T>(Action<T> handler) where T : Packet
         {

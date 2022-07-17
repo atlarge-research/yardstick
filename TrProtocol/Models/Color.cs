@@ -1,16 +1,19 @@
-﻿namespace TrProtocol.Models
-{
-    // Token: 0x02000854 RID: 2132
-    public partial struct Color
-    {
-        public int R, G, B;
-        public Color(byte r, byte g, byte b)
-        {
-            R = r;
-            G = g;
-            B = b;
-        }
+﻿using System.Runtime.InteropServices;
 
-        public static Color White = new Color(0xff, 0xff, 0xff);
-    }
+namespace TrProtocol.Models;
+
+[StructLayout(LayoutKind.Sequential)]
+public partial struct Color
+{
+	public int R;
+	public int G;
+	public int B;
+	public Color(byte r, byte g, byte b)
+	{
+		R = r;
+		G = g;
+		B = b;
+	}
+
+	public static readonly Color White = new(0xFF, 0xFF, 0xFF);
 }

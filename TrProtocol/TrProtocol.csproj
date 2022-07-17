@@ -1,20 +1,16 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Library</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
-    <ApplicationIcon />
-    <StartupObject />
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<TargetFramework>net6.0</TargetFramework>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <Compile Remove="Serializers\TileEntitiesSerializer\**" />
-    <EmbeddedResource Remove="Serializers\TileEntitiesSerializer\**" />
-    <None Remove="Serializers\TileEntitiesSerializer\**" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Remove="Serializers\TileEntitySerializer.cs" />
-  </ItemGroup>
+	
+	<ItemGroup>
+		<Using Include="TrProtocol.Models" />
+		<Using Include="TrProtocol.Packets" />
+	</ItemGroup>
 
 </Project>

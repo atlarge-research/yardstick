@@ -16,8 +16,8 @@ namespace TrClientTest
             var port = ushort.Parse(Console.ReadLine());
             Console.Write("password>");
             var password = Console.ReadLine();
-            Console.Write("curRelaese>");
-            client.CurRelease = Console.ReadLine();
+            /*Console.Write("curRelaese>");
+            client.CurRelease = Console.ReadLine();*/
             Console.Write("username>");
             client.Username = Console.ReadLine();
 

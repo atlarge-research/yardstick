@@ -1,20 +1,17 @@
-﻿using System.IO;
+﻿namespace TrProtocol.Models.TileEntities;
 
-namespace TrProtocol.Models.TileEntities
+public partial class TEItemFrame : TileEntity
 {
-    public partial class TEItemFrame : TileEntity
+    public override TileEntityType EntityType => TileEntityType.TEItemFrame;
+    public override void WriteExtraData(BinaryWriter writer)
     {
-        public override TileEntityType EntityType => TileEntityType.TEItemFrame;
-        public override void WriteExtraData(BinaryWriter writer)
-        {
-            Item.Write(writer);
-        }
-
-        public override TEItemFrame ReadExtraData(BinaryReader reader)
-        {
-            Item = new(reader);
-            return this;
-        }
-        public ItemData Item { get; set; }
+        Item.Write(writer);
     }
+
+    public override TEItemFrame ReadExtraData(BinaryReader reader)
+    {
+        Item = new(reader);
+        return this;
+    }
+    public ItemData Item { get; set; }
 }

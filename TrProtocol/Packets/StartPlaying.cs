@@ -1,7 +1,6 @@
-﻿namespace TrProtocol.Packets
+﻿namespace TrProtocol.Packets;
+
+public class StartPlaying : Packet
 {
-    public class StartPlaying : Packet
-    {
-        public override MessageID Type => MessageID.StartPlaying;
-    }
+    public override MessageID Type => MessageID.StartPlaying;
 }
