@@ -1,6 +1,4 @@
-﻿using TrProtocol.Models;
-
-namespace TrProtocol.Packets;
+﻿namespace TrProtocol.Packets;
 
 public class PlayerDeathV2 : Packet, IPlayerSlot
 {

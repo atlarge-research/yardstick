@@ -1,6 +1,4 @@
-﻿using TrProtocol.Models;
-
-namespace TrProtocol.Packets.Modules
+﻿namespace TrProtocol.Packets.Modules
 {
     public class NetCreativeUnlocksPlayerReportModule : NetModulesPacket
     {

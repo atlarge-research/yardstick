@@ -27,7 +27,7 @@ public abstract class NumericFieldSerializer<T> : FieldSerializer<T>, IConfigura
     {
         foreach (var bounds in prop.GetCustomAttributes<BoundsAttribute>())
         {
-            if (bounds.Version != version) 
+            if (bounds.Version != version)
                 continue;
             zero = (T)Convert.ChangeType(0, prop.PropertyType);
             upper = bounds.UpperBound;
@@ -43,7 +43,7 @@ public abstract class FieldSerializer<T> : IFieldSerializer
 
     protected abstract void WriteOverride(BinaryWriter bw, T t);
 
-		public virtual object Read(BinaryReader br) => ReadOverride(br);
+    public virtual object Read(BinaryReader br) => ReadOverride(br);
 
-		public virtual void Write(BinaryWriter bw, object o) => WriteOverride(bw, (T)o);
-	}
+    public virtual void Write(BinaryWriter bw, object o) => WriteOverride(bw, (T)o);
+}

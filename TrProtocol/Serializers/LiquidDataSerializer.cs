@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading.Channels;
-
-namespace TrProtocol.Models;
+﻿namespace TrProtocol.Models;
 
 [Serializer(typeof(LiquidDataSerializer))]
 public partial struct LiquidData

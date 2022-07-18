@@ -2,6 +2,7 @@
 
 namespace TrProtocol.Models;
 
+[Serializer(typeof(TileEntitySerializer))]
 public abstract partial class TileEntity
 {
     private static readonly Dictionary<TileEntityType, Type> tileEntityDict = new()
