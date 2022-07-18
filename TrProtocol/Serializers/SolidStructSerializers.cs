@@ -1,53 +1,27 @@
 ﻿namespace TrProtocol.Models;
 
-[Serializer(typeof(BitsByteSerializer))]
+
+[Serializer(typeof(PrimitiveFieldSerializer<BitsByte>))]
 public partial struct BitsByte
 {
-	private class BitsByteSerializer : PrimitiveFieldSerializer<BitsByte>
-	{
-	}
 }
 
-[Serializer(typeof(ColorSerailizer))]
-public partial struct Color
-{
-	private class ColorSerailizer : FieldSerializer<Color>
-	{
-		protected override Color ReadOverride(BinaryReader br)
-		{
-			return new Color(br.ReadByte(), br.ReadByte(), br.ReadByte());
-		}
-
-		protected override void WriteOverride(BinaryWriter bw, Color t)
-		{
-			bw.Write((byte)t.R);
-			bw.Write((byte)t.G);
-			bw.Write((byte)t.B);
-		}
-	}
-}
-
-[Serializer(typeof(Vector2Serailizer))]
+[Serializer(typeof(PrimitiveFieldSerializer<Vector2>))]
 public partial struct Vector2
 {
-	public class Vector2Serailizer : PrimitiveFieldSerializer<Vector2>
-	{
-	}
 }
 
-[Serializer(typeof(ShortPositionSerializer))]
+[Serializer(typeof(PrimitiveFieldSerializer<ShortPosition>))]
 public partial struct ShortPosition
 {
-	private class ShortPositionSerializer : PrimitiveFieldSerializer<ShortPosition>
-	{
-	}
 }
 
-[Serializer(typeof(UShortPositionSerializer))]
+[Serializer(typeof(PrimitiveFieldSerializer<UShortPosition>))]
 public partial struct UShortPosition
 {
-	private class UShortPositionSerializer : PrimitiveFieldSerializer<UShortPosition>
-	{
-	}
 }
 
+[Serializer(typeof(PrimitiveFieldSerializer<Position>))]
+public partial struct Position
+{
+}
