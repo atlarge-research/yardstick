@@ -1,9 +1,8 @@
-﻿namespace TrProtocol.Packets
+﻿namespace TrProtocol.Packets;
+
+public class ItemOwner : Packet, IItemSlot, IOtherPlayerSlot
 {
-    public class ItemOwner : Packet, IItemSlot, IOtherPlayerSlot
-    {
-        public override MessageID Type => MessageID.ItemOwner;
-        public short ItemSlot { get; set; }
-        public byte OtherPlayerSlot { get; set; }
-    }
+    public override MessageID Type => MessageID.ItemOwner;
+    public short ItemSlot { get; set; }
+    public byte OtherPlayerSlot { get; set; }
 }

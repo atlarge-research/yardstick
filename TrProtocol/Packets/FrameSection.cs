@@ -1,11 +1,10 @@
 ﻿using TrProtocol.Models;
 
-namespace TrProtocol.Packets
+namespace TrProtocol.Packets;
+
+public class FrameSection : Packet
 {
-    public class FrameSection : Packet
-    {
-        public override MessageID Type => MessageID.FrameSection;
-        public ShortPosition Start { get; set; }
-        public ShortPosition End { get; set; }
-    }
+    public override MessageID Type => MessageID.FrameSection;
+    public ShortPosition Start { get; set; }
+    public ShortPosition End { get; set; }
 }

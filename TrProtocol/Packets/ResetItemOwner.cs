@@ -1,8 +1,7 @@
-﻿namespace TrProtocol.Packets
+﻿namespace TrProtocol.Packets;
+
+public class ResetItemOwner : Packet, IItemSlot
 {
-    public class ResetItemOwner : Packet, IItemSlot
-    {
-        public override MessageID Type => MessageID.ResetItemOwner;
-        public short ItemSlot { get; set; }
-    }
+    public override MessageID Type => MessageID.ResetItemOwner;
+    public short ItemSlot { get; set; }
 }

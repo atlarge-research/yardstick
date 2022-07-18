@@ -1,8 +1,7 @@
-﻿namespace TrProtocol.Packets
+﻿namespace TrProtocol.Packets;
+
+public class SendPassword : Packet
 {
-    public class SendPassword : Packet
-    {
-        public override MessageID Type => MessageID.SendPassword;
-        public string Password { get; set; }
-    }
+    public override MessageID Type => MessageID.SendPassword;
+    public string Password { get; set; }
 }

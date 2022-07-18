@@ -1,17 +1,13 @@
-﻿using TrProtocol.Serializers;
+﻿namespace TrProtocol.Models;
 
-namespace TrProtocol.Models
+public enum LogicCheckType : byte
 {
-    
-    public enum LogicCheckType : byte
-    {
-        None,
-        Day,
-        Night,
-        PlayerAbove,
-        Water,
-        Lava,
-        Honey,
-        Liquid
-    }
+    None,
+    Day,
+    Night,
+    PlayerAbove,
+    Water,
+    Lava,
+    Honey,
+    Liquid
 }

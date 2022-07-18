@@ -1,8 +1,7 @@
-﻿namespace TrProtocol.Packets
+﻿namespace TrProtocol.Packets;
+
+public class ClientHello : Packet
 {
-    public class ClientHello : Packet
-    {
-        public override MessageID Type => MessageID.ClientHello;
-        public string Version { get; set; }
-    }
+    public override MessageID Type => MessageID.ClientHello;
+    public string Version { get; set; }
 }

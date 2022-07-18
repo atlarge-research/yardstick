@@ -1,7 +1,6 @@
-﻿namespace TrProtocol.Packets
+﻿namespace TrProtocol.Packets;
+
+public class CrystalInvasionWipeAllTheThingsss : Packet
 {
-    public class CrystalInvasionWipeAllTheThingsss : Packet
-    {
-        public override MessageID Type => MessageID.CrystalInvasionWipeAllTheThings;
-    }
+    public override MessageID Type => MessageID.CrystalInvasionWipeAllTheThings;
 }

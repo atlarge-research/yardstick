@@ -1,8 +1,7 @@
-﻿namespace TrProtocol.Packets
+﻿namespace TrProtocol.Packets;
+
+public class DeadPlayer : Packet, IOtherPlayerSlot
 {
-    public class DeadPlayer : Packet, IOtherPlayerSlot
-    {
-        public override MessageID Type => MessageID.DeadPlayer;
-        public byte OtherPlayerSlot { get; set; }
-    }
+    public override MessageID Type => MessageID.DeadPlayer;
+    public byte OtherPlayerSlot { get; set; }
 }

@@ -1,7 +1,6 @@
-﻿namespace TrProtocol.Packets
+﻿namespace TrProtocol.Packets;
+
+public class RequestWorldInfo : Packet
 {
-    public class RequestWorldInfo : Packet
-    {
-        public override MessageID Type => MessageID.RequestWorldInfo;
-    }
+    public override MessageID Type => MessageID.RequestWorldInfo;
 }

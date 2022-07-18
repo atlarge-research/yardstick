@@ -1,13 +1,9 @@
-﻿using TrProtocol.Serializers;
+﻿namespace TrProtocol.Models;
 
-namespace TrProtocol.Models
+public enum TileChangeType : byte
 {
-    
-    public enum TileChangeType : byte
-    {
-        None,
-        LavaWater,
-        HoneyWater,
-        HoneyLava
-    }
+    None,
+    LavaWater,
+    HoneyWater,
+    HoneyLava
 }

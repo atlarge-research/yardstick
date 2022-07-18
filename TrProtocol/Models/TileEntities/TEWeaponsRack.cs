@@ -1,20 +1,17 @@
-﻿using System.IO;
+﻿namespace TrProtocol.Models.TileEntities;
 
-namespace TrProtocol.Models.TileEntities
+public partial class TEWeaponsRack : TileEntity
 {
-    public partial class TEWeaponsRack : TileEntity
+    public override TileEntityType EntityType => TileEntityType.TEWeaponsRack;
+    public override void WriteExtraData(BinaryWriter writer)
     {
-        public override TileEntityType EntityType => TileEntityType.TEWeaponsRack;
-        public override void WriteExtraData(BinaryWriter writer)
-        {
-            Item.Write(writer);
-        }
-
-        public override TEWeaponsRack ReadExtraData(BinaryReader reader)
-        {
-            Item = new(reader);
-            return this;
-        }
-        public ItemData Item { get; set; }
+        Item.Write(writer);
     }
+
+    public override TEWeaponsRack ReadExtraData(BinaryReader reader)
+    {
+        Item = new(reader);
+        return this;
+    }
+    public ItemData Item { get; set; }
 }
