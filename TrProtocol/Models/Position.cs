@@ -1,5 +1,8 @@
-﻿namespace TrProtocol.Models;
+﻿using System.Runtime.InteropServices;
 
+namespace TrProtocol.Models;
+
+[StructLayout(LayoutKind.Sequential)]
 public partial struct Position
 {
     public Position(int x, int y)
