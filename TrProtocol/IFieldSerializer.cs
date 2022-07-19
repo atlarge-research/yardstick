@@ -4,11 +4,11 @@ namespace TrProtocol;
 
 public interface IFieldSerializer
 {
-	object Read(BinaryReader br);
-	void Write(BinaryWriter bw, object o);
+    object Read(BinaryReader br);
+    void Write(BinaryWriter bw, object o);
 }
 
 public interface IConfigurable
 {
-	void Configure(PropertyInfo prop, string version);
+    void Configure(PropertyInfo prop, string version);
 }

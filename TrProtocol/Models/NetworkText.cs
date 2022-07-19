@@ -19,9 +19,9 @@ public partial class NetworkText
         NetworkText[] array = new NetworkText[substitutions.Length];
         for (int i = 0; i < substitutions.Length; i++)
         {
-			if (substitutions[i] is not NetworkText networkText)
-				networkText = FromLiteral(substitutions[i].ToString());
-			array[i] = networkText;
+            if (substitutions[i] is not NetworkText networkText)
+                networkText = FromLiteral(substitutions[i].ToString());
+            array[i] = networkText;
         }
         return array;
     }

@@ -1,5 +1,4 @@
-﻿using TrProtocol.Models;
-namespace TrProtocol.Packets;
+﻿namespace TrProtocol.Packets;
 
 public class TileSection : Packet
 {

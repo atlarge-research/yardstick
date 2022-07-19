@@ -1,6 +1,4 @@
-﻿using System.IO;
-
-namespace TrProtocol.Models;
+﻿namespace TrProtocol.Models;
 
 public partial class ItemData
 {

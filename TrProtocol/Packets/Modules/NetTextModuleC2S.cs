@@ -1,6 +1,4 @@
-﻿using TrProtocol.Models;
-
-namespace TrProtocol.Packets.Modules
+﻿namespace TrProtocol.Packets.Modules
 {
     [C2SOnly]
     public class NetTextModuleC2S : NetModulesPacket

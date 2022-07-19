@@ -3,7 +3,7 @@
 [Serializer(typeof(PrimitiveFieldSerializer<PylonPacketType>))]
 public enum PylonPacketType : byte
 {
-	PylonWasAdded,
-	PylonWasRemoved,
-	PlayerRequestsTeleport
+    PylonWasAdded,
+    PylonWasRemoved,
+    PlayerRequestsTeleport
 }

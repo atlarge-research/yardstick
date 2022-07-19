@@ -1,7 +1,4 @@
-﻿using System;
-using TrProtocol.Models;
-
-namespace TrProtocol.Packets;
+﻿namespace TrProtocol.Packets;
 
 public class WorldData : Packet
 {

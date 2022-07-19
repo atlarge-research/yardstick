@@ -74,7 +74,7 @@ public partial class PlayerDeathReason
     public static PlayerDeathReason ByProjectile(int playerIndex, int projectileIndex)
     {
         PlayerDeathReason playerDeathReason = new()
-		{
+        {
             _sourcePlayerIndex = playerIndex,
             _sourceProjectileIndex = projectileIndex
         };

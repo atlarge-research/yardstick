@@ -1,6 +1,4 @@
-﻿using TrProtocol.Models;
-
-namespace TrProtocol.Packets.Modules
+﻿namespace TrProtocol.Packets.Modules
 {
     [S2COnly]
     public class NetTextModuleS2C : NetModulesPacket, IPlayerSlot
