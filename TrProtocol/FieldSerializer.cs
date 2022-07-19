@@ -23,7 +23,7 @@ public abstract class NumericFieldSerializer<T> : FieldSerializer<T>, IConfigura
         WriteOverride(bw, (T)o);
     }
 
-    public void Configure(PropertyInfo prop, string version)
+    public IConfigurable Configure(PropertyInfo prop, string version)
     {
         foreach (var bounds in prop.GetCustomAttributes<BoundsAttribute>())
         {
@@ -35,6 +35,7 @@ public abstract class NumericFieldSerializer<T> : FieldSerializer<T>, IConfigura
             interrupt = bounds.Interrupt;
             enabled = true;
         }
+        return this;
     }
 }
 public abstract class FieldSerializer<T> : IFieldSerializer
