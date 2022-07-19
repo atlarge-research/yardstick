@@ -51,7 +51,7 @@ public partial class PacketSerializer
     private class ArraySerializer<T> : FieldSerializer<T[]>, IConfigurable
     {
         private int size;
-        private readonly IFieldSerializer elementSerializer;
+        private IFieldSerializer elementSerializer;
         public ArraySerializer() : this(0)
         {
 
@@ -77,11 +77,15 @@ public partial class PacketSerializer
                 elementSerializer.Write(bw, x);
         }
 
-        public void Configure(PropertyInfo prop, string version)
+        public IConfigurable Configure(PropertyInfo prop, string version)
         {
             if (elementSerializer is IConfigurable conf)
                 conf.Configure(prop, version);
-            size = prop.GetCustomAttribute<ArraySizeAttribute>().Size;
+            return new ArraySerializer<T>()
+            {
+                size = prop.GetCustomAttribute<ArraySizeAttribute>().Size,
+                elementSerializer = elementSerializer
+            };
         }
     }
 }

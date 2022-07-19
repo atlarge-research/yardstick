@@ -90,7 +90,8 @@ public partial class PacketSerializer
             ser = RequestFieldSerializer(t); // fallback
         serFound:
 
-            if (ser is IConfigurable conf) conf.Configure(prop, Version);
+            if (ser is IConfigurable conf) 
+                ser = (IFieldSerializer)conf.Configure(prop, Version);
 
             if (shouldSerialize)
                 serializer += (o, bw) => { if (condition(o)) ser.Write(bw, getter(o)); };

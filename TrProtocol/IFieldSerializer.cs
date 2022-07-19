@@ -10,5 +10,5 @@ public interface IFieldSerializer
 
 public interface IConfigurable
 {
-    void Configure(PropertyInfo prop, string version);
+    IConfigurable Configure(PropertyInfo prop, string version);
 }
