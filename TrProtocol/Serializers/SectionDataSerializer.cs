@@ -2,8 +2,7 @@
 
 namespace TrProtocol.Models;
 
-[Serializer(typeof(SectionDataSerializer), "Terraria238")]
-[Serializer(typeof(SectionDataSerializer), "Terraria248")]
+[Serializer(typeof(SectionDataSerializer))]
 public partial struct SectionData
 {
     private class SectionDataSerializer : FieldSerializer<SectionData>

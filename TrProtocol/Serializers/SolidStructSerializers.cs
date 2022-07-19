@@ -1,42 +1,27 @@
 ﻿namespace TrProtocol.Models;
 
-[Serializer(typeof(BitsByteSerializer))]
+
+[Serializer(typeof(PrimitiveFieldSerializer<BitsByte>))]
 public partial struct BitsByte
 {
-    private class BitsByteSerializer : PrimitiveFieldSerializer<BitsByte>
-    {
-    }
 }
 
-[Serializer(typeof(Vector2Serailizer))]
+[Serializer(typeof(PrimitiveFieldSerializer<Vector2>))]
 public partial struct Vector2
 {
-    public class Vector2Serailizer : PrimitiveFieldSerializer<Vector2>
-    {
-    }
 }
 
-[Serializer(typeof(PositionSerailizer))]
-public partial struct Position
-{
-    public class PositionSerailizer : PrimitiveFieldSerializer<Position>
-    {
-    }
-}
-
-[Serializer(typeof(ShortPositionSerializer))]
+[Serializer(typeof(PrimitiveFieldSerializer<ShortPosition>))]
 public partial struct ShortPosition
 {
-    private class ShortPositionSerializer : PrimitiveFieldSerializer<ShortPosition>
-    {
-    }
 }
 
-[Serializer(typeof(UShortPositionSerializer))]
+[Serializer(typeof(PrimitiveFieldSerializer<UShortPosition>))]
 public partial struct UShortPosition
 {
-    private class UShortPositionSerializer : PrimitiveFieldSerializer<UShortPosition>
-    {
-    }
 }
 
+[Serializer(typeof(PrimitiveFieldSerializer<Position>))]
+public partial struct Position
+{
+}

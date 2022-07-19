@@ -30,7 +30,7 @@ namespace AgentTest
             var server = new TcpListener(IPAddress.Any, 7777);
             server.Start();
             var client2 = server.AcceptTcpClient();
-            client.Connect("yfeil.top", 7777);
+            client.Connect("trcn.fun", 7777);
             Tunnel(client, client2, true);
             Tunnel(client2, client, false);
         }
