@@ -11,8 +11,11 @@ namespace TrClientTest
         static void Main(string[] args)
         {
             var client = new TClient();
-            var ip = "43.248.184.35";
-            ushort port = 7777;
+            var ip = "127.0.0.1";
+            ushort port = 7778;
+            /*
+            ip = "43.248.184.35";
+            port = 7777;*/
             var password = "aaaa";
             client.Username = "afftt";
             /*
@@ -27,12 +30,7 @@ namespace TrClientTest
 
             client.OnChat += (o, t, c) => Console.WriteLine(t);
             client.OnMessage += (o, t) => Console.WriteLine(t);
-
-            client.On<WorldData>(_ =>
-            {
-                client.Username = "rabbit";
-            });
-
+            
             new Thread(() =>
             {
                 while (true)

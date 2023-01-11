@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -17,7 +18,7 @@ namespace TrClient
         private TcpClient client;
 
         public byte PlayerSlot { get; private set; }
-        public string CurRelease = "Terraria249";
+        public string CurRelease = "Terraria279";
         public string Username = "";
         public bool IsPlaying { get; private set; }
 

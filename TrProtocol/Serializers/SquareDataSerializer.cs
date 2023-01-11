@@ -73,6 +73,7 @@ public partial class SquareData
                     var flags2 = tile.Flags2;
                     bw.Write(flags1);
                     bw.Write(flags2);
+                    bw.Write(tile.Flags3);
 
                     if (flags2[2])
                     {
