@@ -138,6 +138,8 @@ public partial class PacketSerializer
         LoadPackets();
     }
 
+    public TextWriter ErrorLogger { get; set; } = Console.Out;
+
     public Packet Deserialize(BinaryReader br0)
     {
         var l = br0.ReadInt16();
@@ -151,16 +153,16 @@ public partial class PacketSerializer
             if (moduledeserializers.TryGetValue(moduletype, out var f))
                 result = f(br);
             else
-                Console.WriteLine($"[Warning] net module type = {moduletype} not defined, ignoring");
+                ErrorLogger.WriteLine($"[Warning] net module type = {moduletype} not defined, ignoring");
         }
         else if (deserializers.TryGetValue(msgid, out var f2))
             result = f2(br);
         else
-            Console.WriteLine($"[Warning] message type = {msgid} not defined, ignoring");
+            ErrorLogger.WriteLine($"[Warning] message type = {msgid} not defined, ignoring");
 
         if (br.BaseStream.Position != br.BaseStream.Length)
         {
-            Console.WriteLine($"[Warning] {br.BaseStream.Length - br.BaseStream.Position} not used when deserializing {(Client ? "S2C::" : "C2S::")}{result}");
+            ErrorLogger.WriteLine($"[Warning] {br.BaseStream.Length - br.BaseStream.Position} not used when deserializing {(Client ? "S2C::" : "C2S::")}{result}");
         }
         return result;
     }
@@ -181,7 +183,7 @@ public partial class PacketSerializer
             return bs;
         }
 
-        Console.WriteLine($"[Warning] packet {p} not defined, ignoring");
+        ErrorLogger.WriteLine($"[Warning] packet {p} not defined, ignoring");
         return Array.Empty<byte>();
     }
 

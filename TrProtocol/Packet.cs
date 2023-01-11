@@ -1,9 +1,25 @@
-﻿namespace TrProtocol;
+﻿using System.Text;
+
+namespace TrProtocol;
 
 public abstract class Packet
 {
     public abstract MessageID Type { get; }
+
+    public override string ToString()
+    {
+        var sb = new StringBuilder();
+        sb.Append($"{Type}{{");
+
+        sb.AppendJoin(
+            ", ", GetType().GetProperties().Select(prop => $"{prop.Name}={prop.GetValue(this)}"));
+
+        sb.Append("}}");
+
+        return sb.ToString();
+    }
 }
+
 public interface IPlayerSlot
 {
     byte PlayerSlot { get; set; }
