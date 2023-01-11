@@ -4,7 +4,7 @@ public unsafe class PrimitiveFieldSerializer<TPrimitive> : FieldSerializer<TPrim
     where TPrimitive : unmanaged
 {
     private static readonly int SizeOfTPrimitive = sizeof(TPrimitive);
-    protected unsafe override TPrimitive ReadOverride(BinaryReader br)
+    protected override TPrimitive ReadOverride(BinaryReader br)
     {
         Span<byte> buffer = stackalloc byte[SizeOfTPrimitive];
         br.Read(buffer);
@@ -12,7 +12,7 @@ public unsafe class PrimitiveFieldSerializer<TPrimitive> : FieldSerializer<TPrim
             return *(TPrimitive*)ptr;
     }
 
-    protected unsafe override void WriteOverride(BinaryWriter bw, TPrimitive t)
+    protected override void WriteOverride(BinaryWriter bw, TPrimitive t)
     {
         Span<byte> buffer = stackalloc byte[SizeOfTPrimitive];
         fixed (byte* ptr = buffer)

@@ -8,6 +8,10 @@ public interface IPlayerSlot
 {
     byte PlayerSlot { get; set; }
 }
+public interface ILoadOutSlot
+{
+    byte LoadOutSlot { get; set; }
+}
 public interface IOtherPlayerSlot
 {
     byte OtherPlayerSlot { get; set; }
