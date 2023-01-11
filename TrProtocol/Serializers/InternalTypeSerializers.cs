@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using System.Runtime.ConstrainedExecution;
 
 namespace TrProtocol;
 
@@ -12,10 +13,18 @@ public partial class PacketSerializer
         RegisterSerializer(new ByteArraySerializer());
     }
 
-    private readonly static Dictionary<Type, IFieldSerializer> fieldSerializers = new();
+    private static readonly Dictionary<Type, IFieldSerializer> fieldSerializers = new();
 
-    private static IFieldSerializer RequestFieldSerializer(Type t)
+    private static IFieldSerializer RequestFieldSerializer(Type t, string version = null)
     {
+        foreach (var attr in t.GetCustomAttributes<SerializerAttribute>()) // try to resolve serializer according to attributes
+        {
+            if ((attr.Version ?? version) == version)
+            {
+                return attr.Serializer;
+            }
+        }
+
         if (fieldSerializers.TryGetValue(t, out IFieldSerializer value))
             return value;
         if (t.IsPrimitive || t.IsEnum)

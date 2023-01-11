@@ -79,15 +79,7 @@ public partial class PacketSerializer
 
             IFieldSerializer ser;
 
-            foreach (var attr in t.GetCustomAttributes<SerializerAttribute>()) // try to resolve serializer according to attributes
-            {
-                if ((attr.Version ?? Version) == Version)
-                {
-                    ser = attr.Serializer;
-                    goto serFound;
-                }
-            }
-            ser = RequestFieldSerializer(t); // fallback
+            ser = RequestFieldSerializer(t, Version);
         serFound:
 
             if (ser is IConfigurable conf) 

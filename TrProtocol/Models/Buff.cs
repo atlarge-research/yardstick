@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace TrProtocol.Models
 {
     [StructLayout(LayoutKind.Sequential)]
-    public struct Buff
+    public partial struct Buff
     {
         public ushort BuffType { get; set; }
         public short BuffTime { get; set; }

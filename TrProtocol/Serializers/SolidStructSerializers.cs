@@ -16,6 +16,11 @@ public partial struct ShortPosition
 {
 }
 
+[Serializer(typeof(PrimitiveFieldSerializer<Buff>))]
+public partial struct Buff
+{
+}
+
 [Serializer(typeof(PrimitiveFieldSerializer<UShortPosition>))]
 public partial struct UShortPosition
 {
