@@ -4,18 +4,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TrProtocol.Models
+namespace TrProtocol.Models;
+
+[Serializer(typeof(PrimitiveFieldSerializer<MessageSource>))]
+public enum MessageSource : byte
 {
-    [Serializer(typeof(PrimitiveFieldSerializer<MessageSource>))]
-    public enum MessageSource : byte
-    {
-        Idle,
-        Storage,
-        ThrownAway,
-        PickedUp,
-        ChoppedTree,
-        ChoppedGemTree,
-        ChoppedCactus,
-        Count
-    }
+    Idle,
+    Storage,
+    ThrownAway,
+    PickedUp,
+    ChoppedTree,
+    ChoppedGemTree,
+    ChoppedCactus,
+    Count
 }

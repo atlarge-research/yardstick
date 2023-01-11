@@ -5,12 +5,11 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TrProtocol.Models
+namespace TrProtocol.Models;
+
+[StructLayout(LayoutKind.Sequential)]
+public partial struct Buff
 {
-    [StructLayout(LayoutKind.Sequential)]
-    public partial struct Buff
-    {
-        public ushort BuffType { get; set; }
-        public short BuffTime { get; set; }
-    }
+    public ushort BuffType { get; set; }
+    public short BuffTime { get; set; }
 }

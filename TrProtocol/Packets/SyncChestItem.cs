@@ -1,6 +1,6 @@
 ﻿namespace TrProtocol.Packets;
 
-public class SyncChestItem : Packet
+public class SyncChestItem : Packet, IChestSlot
 {
     public override MessageID Type => MessageID.SyncChestItem;
     public short ChestSlot { get; set; }

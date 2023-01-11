@@ -40,6 +40,12 @@ public interface INPCSlot
 {
     short NPCSlot { get; set; }
 }
+
+public interface IChestSlot
+{
+    short ChestSlot { get; set; }
+}
+
 public interface IProjSlot
 {
     short ProjSlot { get; set; }

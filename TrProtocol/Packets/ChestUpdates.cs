@@ -1,6 +1,6 @@
 ﻿namespace TrProtocol.Packets;
 
-public class ChestUpdates : Packet
+public class ChestUpdates : Packet, IChestSlot
 {
     public override MessageID Type => MessageID.ChestUpdates;
     public byte Operation { get; set; }
