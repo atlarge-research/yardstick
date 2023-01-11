@@ -23,7 +23,8 @@ public partial class SquareData
                     var tile = new SimpleTileData
                     {
                         Flags1 = br.ReadByte(),
-                        Flags2 = br.ReadByte()
+                        Flags2 = br.ReadByte(),
+                        Flags3 = br.ReadByte()
                     };
                     if (tile.Flags2[2])
                     {

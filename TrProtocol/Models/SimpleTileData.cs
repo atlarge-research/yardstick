@@ -4,6 +4,7 @@ public struct SimpleTileData
 {
     public BitsByte Flags1;
     public BitsByte Flags2;
+    public BitsByte Flags3;
     public byte TileColor { get; set; }
     public byte WallColor { get; set; }
     public ushort TileType { get; set; }
