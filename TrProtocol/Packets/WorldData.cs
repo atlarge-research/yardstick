@@ -72,6 +72,10 @@ public class WorldData : Packet
     public BitsByte EventInfo6 { get; set; }
     public BitsByte EventInfo7 { get; set; }
     public BitsByte EventInfo8 { get; set; }
+    public BitsByte EventInfo9 { get; set; }
+    public BitsByte EventInfo10 { get; set; }
+    public byte SundialCooldown { get; set; }
+    public byte MoondialCooldown { get; set; }
     public short CopperOreTier { get; set; }
     public short IronOreTier { get; set; }
     public short SilverOreTier { get; set; }

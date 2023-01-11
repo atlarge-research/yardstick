@@ -2,7 +2,6 @@
 
 public partial struct SectionData
 {
-    [Ignore] public bool IsCompressed { get; set; }
     public int StartX { get; set; }
     public int StartY { get; set; }
     public short Width { get; set; }

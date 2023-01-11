@@ -17,7 +17,7 @@ namespace TrClient
         private TcpClient client;
 
         public byte PlayerSlot { get; private set; }
-        public string CurRelease = "Terraria248";
+        public string CurRelease = "Terraria249";
         public string Username = "";
         public bool IsPlaying { get; private set; }
 
@@ -131,7 +131,8 @@ namespace TrClient
         {
             void Handler(Packet p) => handler(p as T);
 
-            if (handlers.TryGetValue(typeof(T), out var val)) val += Handler;
+            if (handlers.TryGetValue(typeof(T), out var val))
+                handlers[typeof(T)] = val + Handler;
             else handlers.Add(typeof(T), Handler);
         }
 
@@ -207,7 +208,7 @@ namespace TrClient
                     if (handlers.TryGetValue(packet.GetType(), out var act))
                         act(packet);
                     else
-                        ;//Console.WriteLine($"[Warning] not processed packet type {packet}");
+                        Console.WriteLine($"[Warning] not processed packet type {packet}");
                 }
                 catch (Exception e)
                 {

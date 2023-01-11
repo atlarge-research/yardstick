@@ -5,6 +5,7 @@ public struct ComplexTileData
     public BitsByte Flags1;
     public BitsByte Flags2;
     public BitsByte Flags3;
+    public BitsByte Flags4;
 
     public ushort TileType { get; set; }
     public short FrameX { get; set; }

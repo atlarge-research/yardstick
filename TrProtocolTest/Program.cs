@@ -33,7 +33,6 @@ namespace TrProtocolTest
             {
                 Data = new()
                 {
-                    IsCompressed = true,
                     StartX = 0,
                     StartY = 0,
                     Width = 10,

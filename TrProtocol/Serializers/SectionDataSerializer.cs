@@ -10,24 +10,14 @@ public partial struct SectionData
         protected override SectionData ReadOverride(BinaryReader reader)
         {
             reader.BaseStream.Position = 1L;
-            var compressed = reader.ReadByte() != 0;
-            if (compressed)
-            {
-                using var ds = new DeflateStream(reader.BaseStream, CompressionMode.Decompress, true);
-                using var br = new BinaryReader(ds);
-                return deserialize(br);
-            }
-            else
-            {
-                reader.BaseStream.Position = 2L;
-                return deserialize(reader);
-            }
+            using var ds = new DeflateStream(reader.BaseStream, CompressionMode.Decompress, true);
+            using var br = new BinaryReader(ds);
+            return deserialize(br);
 
             SectionData deserialize(BinaryReader br)
             {
                 var data = new SectionData
                 {
-                    IsCompressed = compressed,
                     StartX = br.ReadInt32(),
                     StartY = br.ReadInt32(),
                     Width = br.ReadInt16(),
@@ -92,21 +82,21 @@ public partial struct SectionData
                 var flags1 = tile.Flags1;
                 // if HasFlag2 flag is true
                 if (flags1[0])
-                {
                     tile.Flags2 = br.ReadByte();
-                    var flags2 = tile.Flags2;
-                    // if HasFlag3 flag is true
-                    if (flags2[0])
-                        tile.Flags3 = br.ReadByte();
-                }
+
+                var flags2 = tile.Flags2;
+                if (flags2[0])
+                    tile.Flags3 = br.ReadByte();
+
                 var flags3 = tile.Flags3;
+                if (flags3[0])
+                    tile.Flags4 = br.ReadByte();
 
                 // if HasTile flag is true
                 if (flags1[1])
                 {
                     // read a byte when this flag is false
                     tile.TileType = flags1[5] ? br.ReadUInt16() : br.ReadByte();
-
                     if (Constants.tileFrameImportant[tile.TileType])
                     {
                         tile.FrameX = br.ReadInt16();
@@ -140,7 +130,7 @@ public partial struct SectionData
                 // if HasCountByte or HasCountInt16 flag is true
                 if (flags1[6] || flags1[7])
                 {
-                    tile.Count = flags1[7] ? br.ReadInt16() : br.ReadByte();
+                    tile.Count = flags1[6] ? br.ReadByte() : br.ReadInt16();
                 }
 
                 return tile;
@@ -148,21 +138,12 @@ public partial struct SectionData
         }
         protected override void WriteOverride(BinaryWriter writer, SectionData data)
         {
-            writer.Write(data.IsCompressed);
-
-            if (data.IsCompressed)
-            {
-                using var compressed = new MemoryStream();
-                // simplified using cannot be used here
-                using (var ds = new DeflateStream(compressed, CompressionMode.Compress, true))
-                using (var bw = new BinaryWriter(ds))
-                    serialize(bw);
-                writer.Write(compressed.ToArray());
-            }
-            else
-            {
-                serialize(writer);
-            }
+            using var compressed = new MemoryStream();
+            // simplified using cannot be used here
+            using (var ds = new DeflateStream(compressed, CompressionMode.Compress, true))
+            using (var bw = new BinaryWriter(ds))
+                serialize(bw);
+            writer.Write(compressed.ToArray());
 
             void serialize(BinaryWriter bw)
             {
@@ -208,18 +189,20 @@ public partial struct SectionData
                 var flags1 = tile.Flags1;
                 var flags2 = tile.Flags2;
                 var flags3 = tile.Flags3;
+                var flags4 = tile.Flags4;
 
                 //flags1[6] = tile.Count > 1;
                 //flags1[7] = tile.Count > byte.MaxValue;
 
                 bw.Write(flags1);
                 // if HasFlag2 flag is true
-                if (flags1[0])
-                {
-                    bw.Write(flags2);
-                    // if HasFlag3 flag is true
-                    if (flags2[0]) bw.Write(flags3);
-                }
+                if (flags1[0]) bw.Write(flags2);
+
+                // if HasFlag3 flag is true
+                if (flags2[0]) bw.Write(flags3);
+
+                // if HasFlag3 flag is true
+                if (flags3[0]) bw.Write(flags4);
 
                 // if HasTile flag is true
                 if (flags1[1])
