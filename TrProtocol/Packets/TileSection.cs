@@ -3,5 +3,6 @@
 public class TileSection : Packet
 {
     public override MessageID Type => MessageID.TileSection;
-    public SectionData Data { get; set; }
+    public byte[] data { get; set; }
+    //public SectionData Data { get; set; }
 }

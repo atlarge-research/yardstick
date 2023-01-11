@@ -69,7 +69,7 @@ public partial struct SectionData
                 {
                     data.TileEntities[i] = TileEntity.Read(br);
                 }
-
+                
                 return data;
             }
 
@@ -132,7 +132,7 @@ public partial struct SectionData
                 {
                     tile.Count = flags1[6] ? br.ReadByte() : br.ReadInt16();
                 }
-
+                
                 return tile;
             }
         }
@@ -140,7 +140,7 @@ public partial struct SectionData
         {
             using var compressed = new MemoryStream();
             // simplified using cannot be used here
-            using (var ds = new DeflateStream(compressed, CompressionMode.Compress, true))
+            using (var ds = new DeflateStream(compressed, CompressionLevel.SmallestSize, true))
             using (var bw = new BinaryWriter(ds))
                 serialize(bw);
             writer.Write(compressed.ToArray());

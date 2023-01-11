@@ -16,14 +16,16 @@ namespace Dimensions
         
         private event Func<Packet> GetData;
         private event Action<Packet> SendData;
-        
+        private event Func<bool> Connected;
+
         private bool shouldStop;
         private string Prefix;
         
-        private Tunnel(Func<Packet> getData, Action<Packet> sendData)
+        private Tunnel(Func<Packet> getData, Action<Packet> sendData, Func<bool> connected)
         {
             GetData = getData;
             SendData = sendData;
+            Connected = connected;
             Task.Run(RunTunnel);
         }
         
@@ -31,7 +33,7 @@ namespace Dimensions
         {
             try
             {
-                while (!shouldStop)
+                while (!shouldStop && Connected())
                 {
                     var packet = GetData();
                     if (packet == null) throw new Exception("packet is null");
@@ -61,7 +63,7 @@ namespace Dimensions
             }, p =>
             {
                 client.Send(Serializers.serverSerializer.Serialize(p));
-            })
+            }, () => server.client.Connected && client.client.Connected)
             {
                 Prefix = "[S2C] "
             };
@@ -75,7 +77,7 @@ namespace Dimensions
             }, p =>
             {
                  server.Send(Serializers.clientSerializer.Serialize(p));
-            })
+            }, () => server.client.Connected && client.client.Connected)
             {
                 Prefix = "[C2S] "
             };

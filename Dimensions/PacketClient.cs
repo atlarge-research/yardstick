@@ -16,6 +16,7 @@ namespace Dimensions
         public event Action<Exception> OnError = Console.WriteLine;
         private readonly BinaryReader br;
         private readonly BinaryWriter bw;
+        public bool useDebug = false;
 
         public readonly TcpClient client;
         
@@ -34,13 +35,21 @@ namespace Dimensions
             packets.Add(null);
         }
 
+        public void Clear()
+        {
+            while (packets.TryTake(out _)) ;
+        }
+        
         public byte[]? Receive()
         {
-            return packets.Take();
+            var b = packets.Take();
+            //if (!useDebug && b != null) File.AppendAllText("recv.log", string.Join(" ", b.Select(x => x.ToString("X2"))) + Environment.NewLine);
+            return b;
         }
 
         public void Send(byte[] data)
         {
+            //if (useDebug) File.AppendAllText("send.log", string.Join(" ", data.Select(x => x.ToString("X2"))) + Environment.NewLine);
             lock (bw) bw.Write(data);
         }
         

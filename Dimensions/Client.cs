@@ -15,7 +15,8 @@ namespace Dimensions;
 public enum ClientState
 {
     New,
-    Reused,
+    ReusedConnect1,
+    ReusedConnect2,
     Connected,
 }
 public class Client
@@ -29,6 +30,8 @@ public class Client
     private PacketClient? _serverConnection;
     private Server? currentServer;
 
+    private ShortPosition spawnPosition;
+    
     // once client received world data from server, set it to true and request tile data
     private ClientState state;
     
@@ -47,7 +50,7 @@ public class Client
     
     public Client(TcpClient client)
     {
-        _client = new PacketClient(client);
+        _client = new PacketClient(client){useDebug = true};
 
         using var br = new BinaryReader(new MemoryStream(_client.Receive()!));
         
@@ -62,6 +65,7 @@ public class Client
 
     public void TunnelTo(Server server)
     {
+        _client.Clear();
         currentServer = server;
         var serverConnection = new TcpClient();
         serverConnection.Connect(server.serverIP!, server.serverPort);
@@ -83,16 +87,35 @@ public class Client
         switch (packet)
         {
             case WorldData data:
-                if (state == ClientState.Reused)
+                if (state == ClientState.ReusedConnect1)
                 {
                     _serverConnection!.Send(
                         Serializers.clientSerializer.Serialize(new RequestTileData
                         {
                             Position = new Position(data.SpawnX, data.SpawnY)
                         }));
-                    state = ClientState.Connected;
+                    spawnPosition = new ShortPosition(data.SpawnX, data.SpawnY);
+                    state = ClientState.ReusedConnect2;
                 }
 
+                break;
+            case StartPlaying:
+                if (state == ClientState.ReusedConnect2)
+                {
+                    var spawn = new SpawnPlayer
+                    {
+                        PlayerSlot = syncPlayer.PlayerSlot,
+                        Context = PlayerSpawnContext.SpawningIntoWorld,
+                        DeathsPVE = 0,
+                        DeathsPVP = 0,
+                        Position = spawnPosition,
+                        Timer = 0
+                    };
+                    _client.Send(Serializers.serverSerializer.Serialize(spawn));
+                    _serverConnection!.Send(Serializers.clientSerializer.Serialize(spawn));
+
+                    state = ClientState.Connected;
+                }
                 break;
         }
         return true;
@@ -109,17 +132,12 @@ public class Client
         switch (packet)
         {
             case SyncPlayer sync:
-                if (syncPlayer == null)
-                {
-                    syncPlayer = sync;
-                    break;
-                }
-
-                if (syncPlayer.Name != sync.Name)
+                if (syncPlayer != null && syncPlayer.Name != sync.Name)
                 {
                     Disconnect("Name change is not allowed");
                     return false;
                 }
+                syncPlayer = sync;
                 break;
             case NetTextModuleC2S text:
                 if (text.Command == "Say" && text.Text.StartsWith("/server"))
@@ -146,18 +164,17 @@ public class Client
                     else
                     {
                         // we need to close s2c first to ensure the client doesn't receive a half packet
-                        s2c!.OnClose += () =>
+                        c2s!.OnClose += () =>
                         {
-                            c2s!.OnClose += () =>
-                            {
-                                Cleaning();
-                                state = ClientState.Reused;
-                                TunnelTo(target);
-                            };
-                            c2s.Close();
-                            _client.Cancel();
+                            Cleaning();
+                            state = ClientState.ReusedConnect1;
+                            TunnelTo(target);
                         };
-                        s2c.Close();
+                        
+                        s2c!.Close();
+                        c2s.Close();
+
+                        _client.Cancel();
                         _serverConnection!.Cancel();
 
                         _serverConnection.client.Close();

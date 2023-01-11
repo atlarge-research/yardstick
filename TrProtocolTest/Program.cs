@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using TrProtocol;
 using TrProtocol.Packets;
@@ -29,6 +30,26 @@ namespace TrProtocolTest
                 Version = "Terraria183"
             });
             Console.WriteLine(string.Join(" ", b.Select(b => $"{b:x2}")));
+            var tb = File.ReadAllText("tb.txt").Split(' ').Select(s => Convert.ToByte(s, 16)).ToArray();
+            var p = mgr.Deserialize(new BinaryReader(new MemoryStream(tb)));
+            var tb2 = mgr.Serialize(p);
+            var pp = mgr.Deserialize(new BinaryReader(new MemoryStream(tb2)));
+            var tb3 = mgr.Serialize(pp);
+            var b1 = tb[3..];
+            var b2 = tb2[3..];
+            var m1 = new MemoryStream(b1);
+            var m2 = new MemoryStream(b2);
+
+            var ds1 = new DeflateStream(m1, CompressionMode.Decompress);
+            var ds2 = new DeflateStream(m2, CompressionMode.Decompress);
+
+            for (;;)
+            {
+                var x = ds1.ReadByte();
+                var y = ds2.ReadByte();
+                if (x != y) Debugger.Break();
+            }
+
             var p2 = mgr.Deserialize(new BinaryReader(new MemoryStream(mgr.Serialize(new TileSection
             {
                 Data = new()
