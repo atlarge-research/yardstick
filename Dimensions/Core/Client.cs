@@ -7,15 +7,7 @@ using TrProtocol.Packets.Modules;
 
 namespace Dimensions.Core;
 
-public enum ClientState
-{
-    New,
-    ReusedConnect1,
-    ReusedConnect2,
-    Connected,
-}
-
-public partial class Client
+public class Client
 {
     private readonly PacketClient _client;
     
@@ -184,5 +176,6 @@ public partial class Client
         RegisterHandler<ItemHandler>();
         RegisterHandler<PylonHandler>();
         RegisterHandler<MobileDebugHandler>();
+        RegisterHandler<SSCHandler>();
     }
 }

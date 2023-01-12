@@ -7,6 +7,13 @@ namespace Dimensions.Core;
 
 public class ConnectionHandler : ClientHandler
 {
+    public enum ClientState
+    {
+        New,
+        ReusedConnect1,
+        ReusedConnect2,
+        Connected,
+    }
 
     private SyncPlayer syncPlayer;
     private ShortPosition spawnPosition;
