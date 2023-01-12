@@ -246,5 +246,5 @@ public enum MessageID : byte
     SyncItemCannotBeTakenByEnemies = 148,
 
     ServerInfo = 149,
-    PlayerPlatformInfo = 149
+    PlayerPlatformInfo = 150
 }

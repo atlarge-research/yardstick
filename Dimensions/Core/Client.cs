@@ -65,8 +65,8 @@ public partial class Client
         var packet = Serializers.serverSerializer.Deserialize(br);
 
         if (packet is not ClientHello hello)
-            throw Disconnect("Expected ClientHello");
-
+            throw new Exception("ClientHello expected!");
+        
         clientHello = hello;
 
         RegisterHandlers();
@@ -183,5 +183,6 @@ public partial class Client
         RegisterHandler<PlayerHandler>();
         RegisterHandler<ItemHandler>();
         RegisterHandler<PylonHandler>();
+        RegisterHandler<MobileDebugHandler>();
     }
 }

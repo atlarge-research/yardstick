@@ -12,7 +12,7 @@ namespace Dimensions
     public class Listener
     {
         private readonly TcpListener listener;
-        public event Action<Exception> OnError;
+        public event Action<Exception> OnError = Console.WriteLine;
         
         public Listener(IPEndPoint ep)
         {
