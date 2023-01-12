@@ -60,9 +60,12 @@ public class ConnectionHandler : ClientHandler
         {
             if (text.Text.StartsWith("/server"))
             {
-                var target = Program.config.GetServer(text.Text[7..].Trim());
+                //var target = Program.config.GetServer(text.Text[7..].Trim());
                 
-                Parent.ChangeServer(target);
+                //Parent.ChangeServer(target);
+
+                // handled raw player command
+                args.Handled = true;
             }
         }
     }

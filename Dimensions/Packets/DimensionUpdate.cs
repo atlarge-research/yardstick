@@ -9,10 +9,10 @@ using TrProtocol.Models;
 namespace Dimensions.Packets
 {
     [Serializer(typeof(PrimitiveFieldSerializer<SubMessageID>))]
-    public enum SubMessageID
+    public enum SubMessageID : short
     {
-        ChangeSever = 1,
-        ChangeCustomizedServer = 2,
+        ChangeSever = 2,
+        ChangeCustomizedServer = 3,
         GetOnlineInfo = 4
     }
 

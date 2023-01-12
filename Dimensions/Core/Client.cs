@@ -28,6 +28,7 @@ public partial class Client
 
     public void SendClient(Packet packet)
     {
+        Console.WriteLine($"Send To Client: {packet}");
         _client.Send(Serializers.serverSerializer.Serialize(packet));
     }
 
@@ -43,6 +44,7 @@ public partial class Client
     
     public void SendServer(Packet packet)
     {
+        Console.WriteLine($"Send To Server: {packet}");
         _serverConnection!.Send(Serializers.clientSerializer.Serialize(packet));
     }
 

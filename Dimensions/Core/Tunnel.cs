@@ -34,8 +34,8 @@ namespace Dimensions.Core
                     var args = new PacketReceiveArgs(packet);
                     OnReceive?.Invoke(args);
                     if (args.Handled) continue;
-                    Console.WriteLine($"{Prefix}Tunneling: {packet}");
-                    SendData(packet);
+                    //Console.WriteLine($"{Prefix}Tunneling: {packet}");
+                    SendData!(packet);
                 }
             }
             catch (Exception e)

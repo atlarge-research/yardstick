@@ -2,7 +2,9 @@
 using System.Net;
 using System.Threading;
 using TrClient;
+using TrProtocol.Models;
 using TrProtocol.Packets;
+using TrProtocol.Packets.Modules;
 
 namespace TrClientTest
 {
@@ -12,7 +14,7 @@ namespace TrClientTest
         {
             var client = new TClient();
             var ip = "127.0.0.1";
-            ushort port = 7778;
+            ushort port = 7777;
             /*
             ip = "43.248.184.35";
             port = 7777;*/
@@ -36,6 +38,12 @@ namespace TrClientTest
                 while (true)
                 {
                     client.ChatText(Console.ReadLine());
+                    client.Send(new NetTeleportPylonModule
+                    {
+                        Position = new ShortPosition(1000, 1000),
+                        PylonPacketType = PylonPacketType.PylonWasAdded,
+                        PylonType = TeleportPylonType.Victory
+                    });
                 }
             }).Start();
 

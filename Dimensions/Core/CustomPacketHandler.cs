@@ -16,6 +16,7 @@ namespace Dimensions.Core
         {
             if (args.Packet is DimensionUpdate update)
             {
+                Console.WriteLine($"dimension update received: {update}");
                 switch (update.SubType)
                 {
                     case SubMessageID.GetOnlineInfo:

@@ -25,6 +25,7 @@ namespace Dimensions.Core
 
         public void Cancel()
         {
+            OnError?.Invoke(new Exception($"PacketClient {client.Client.RemoteEndPoint} cancel called"));
             packets.Add(null);
         }
 
