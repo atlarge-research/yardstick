@@ -78,7 +78,7 @@ namespace Dimensions.Core
                 case WorldData data:
                     var isSSC = data.EventInfo1[6];
 
-                    if (current == State.NonSSC && isSSC)
+                    if (current == State.SSC && !isSSC)
                         RestoreCharacter();
 
                     current = isSSC ? State.SSC : State.NonSSC;

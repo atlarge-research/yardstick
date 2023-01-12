@@ -36,14 +36,14 @@ public class Client
     
     public void SendServer(Packet packet)
     {
-        Console.WriteLine($"Send To Server: {packet}");
+        //Console.WriteLine($"Send To Server: {packet}");
         _serverConnection!.Send(Serializers.clientSerializer.Serialize(packet));
     }
 
     public Exception Disconnect(string reason)
     {
         SendClient(new Kick { Reason = NetworkText.FromLiteral(reason)});
-        Console.WriteLine($"Disconnected from {_client.client.Client?.RemoteEndPoint}: {reason}");
+        //Console.WriteLine($"Disconnected from {_client.client.Client?.RemoteEndPoint}: {reason}");
         _client.client.Close();
         return new(reason);
     }
