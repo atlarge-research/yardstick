@@ -1,16 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
-using TrProtocol;
+﻿using TrProtocol;
 
-namespace Dimensions
+namespace Dimensions.Core
 {
     public class Tunnel
     {
-        public event Func<Packet, bool>? OnReceive;
+        public event Action<PacketReceiveArgs> OnReceive;
         public event Action<Exception>? OnError;
         public event Action? OnClose;
         
@@ -37,11 +31,11 @@ namespace Dimensions
                 {
                     var packet = GetData();
                     if (packet == null) throw new Exception("packet is null");
-                    if (OnReceive?.Invoke(packet) ?? true)
-                    {
-                        Console.WriteLine($"{Prefix}Tunneling: {packet}");
-                        SendData(packet);
-                    }
+                    var args = new PacketReceiveArgs(packet);
+                    OnReceive?.Invoke(args);
+                    if (args.Handled) continue;
+                    Console.WriteLine($"{Prefix}Tunneling: {packet}");
+                    SendData(packet);
                 }
             }
             catch (Exception e)

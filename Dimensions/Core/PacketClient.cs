@@ -1,22 +1,15 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Concurrent;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
-using TrProtocol;
 
-namespace Dimensions
+namespace Dimensions.Core
 {
     public class PacketClient
     {
         private readonly NetworkStream stream;
-        private readonly BlockingCollection<byte[]?> packets = new();
+        private readonly BlockingCollection<byte[]> packets = new();
         public event Action<Exception> OnError = Console.WriteLine;
         private readonly BinaryReader br;
         private readonly BinaryWriter bw;
-        public bool useDebug = false;
 
         public readonly TcpClient client;
         
@@ -40,16 +33,14 @@ namespace Dimensions
             while (packets.TryTake(out _)) ;
         }
         
-        public byte[]? Receive()
+        public byte[] Receive()
         {
             var b = packets.Take();
-            //if (!useDebug && b != null) File.AppendAllText("recv.log", string.Join(" ", b.Select(x => x.ToString("X2"))) + Environment.NewLine);
             return b;
         }
 
         public void Send(byte[] data)
         {
-            //if (useDebug) File.AppendAllText("send.log", string.Join(" ", data.Select(x => x.ToString("X2"))) + Environment.NewLine);
             lock (bw) bw.Write(data);
         }
         

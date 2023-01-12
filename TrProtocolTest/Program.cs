@@ -32,24 +32,23 @@ namespace TrProtocolTest
             Console.WriteLine(string.Join(" ", b.Select(b => $"{b:x2}")));
             var tb = File.ReadAllText("tb.txt").Split(' ').Select(s => Convert.ToByte(s, 16)).ToArray();
             var p = mgr.Deserialize(new BinaryReader(new MemoryStream(tb)));
-            var tb2 = mgr.Serialize(p);
-            var pp = mgr.Deserialize(new BinaryReader(new MemoryStream(tb2)));
-            var tb3 = mgr.Serialize(pp);
             var b1 = tb[3..];
-            var b2 = tb2[3..];
-            var m1 = new MemoryStream(b1);
-            var m2 = new MemoryStream(b2);
 
-            var ds1 = new DeflateStream(m1, CompressionMode.Decompress);
-            var ds2 = new DeflateStream(m2, CompressionMode.Decompress);
+            var ms1 = new MemoryStream();
+            var ds = new DeflateStream(ms1, CompressionLevel.SmallestSize);
+
+            var ms3 = new MemoryStream(b1);
+            var ds2 = new DeflateStream(ms3, CompressionMode.Decompress);
 
             for (;;)
             {
-                var x = ds1.ReadByte();
-                var y = ds2.ReadByte();
-                if (x != y) Debugger.Break();
+                int bb = ds2.ReadByte();
+                if (bb == -1) break;
+                ds.WriteByte((byte)bb);
             }
 
+            ds.Flush();
+            /*
             var p2 = mgr.Deserialize(new BinaryReader(new MemoryStream(mgr.Serialize(new TileSection
             {
                 Data = new()
@@ -152,7 +151,7 @@ namespace TrProtocolTest
                         }
                     }
                 }
-            }))));
+            }))));*/
             var p3 = mgr.Deserialize(new BinaryReader(new MemoryStream(mgr.Serialize(new TileChange
             {
                 Position = new TrProtocol.Models.ShortPosition { X = 2, Y = 4 }
