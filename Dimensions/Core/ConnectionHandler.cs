@@ -63,18 +63,6 @@ public class ConnectionHandler : ClientHandler
 
             syncPlayer = sync;
         }
-        else if (args.Packet is NetTextModuleC2S text)
-        {
-            if (text.Text.StartsWith("/server"))
-            {
-                //var target = Program.config.GetServer(text.Text[7..].Trim());
-                
-                //Parent.ChangeServer(target);
-
-                // handled raw player command
-                args.Handled = true;
-            }
-        }
     }
 
     public override void OnCleaning()

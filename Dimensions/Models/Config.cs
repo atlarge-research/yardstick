@@ -12,9 +12,9 @@ public class Config
     public string protocolVersion;
     public Server[] servers;
 
-    private Dictionary<string, Server>? _serverCache;
+    private Dictionary<string, Server> _serverCache;
 
-    public Server? GetServer(string name)
+    public Server GetServer(string name)
     {
         _serverCache ??= servers.ToDictionary(s => s.name!, s => s);
         return _serverCache.TryGetValue(name, out var val) ? val : null;

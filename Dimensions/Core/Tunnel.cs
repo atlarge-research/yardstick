@@ -6,13 +6,13 @@ namespace Dimensions.Core
     public class Tunnel
     {
         public event Action<PacketReceiveArgs> OnReceive;
-        public event Action<Exception>? OnError;
-        public event Action? OnClose;
+        public event Action<Exception> OnError;
+        public event Action OnClose;
 
         private readonly PacketClient source, target;
 
         private bool shouldStop;
-        private string prefix;
+        private readonly string prefix;
         
         public Tunnel(PacketClient source, PacketClient target, string prefix)
         {

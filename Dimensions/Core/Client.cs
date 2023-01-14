@@ -176,6 +176,7 @@ public class Client
     private void RegisterHandlers()
     {
         RegisterHandler<ConnectionHandler>();
+        RegisterHandler<CommandHandler>();
         RegisterHandler<CustomPacketHandler>();
         RegisterHandler<NpcHandler>();
         RegisterHandler<ProjectileHandler>();

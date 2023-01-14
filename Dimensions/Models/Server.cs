@@ -8,7 +8,7 @@ namespace Dimensions.Models;
 
 public class Server
 {
-    public string? name;
-    public string? serverIP;
+    public string name;
+    public string serverIP;
     public ushort serverPort;
 }
