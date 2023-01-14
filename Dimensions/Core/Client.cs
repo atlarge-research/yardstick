@@ -21,7 +21,7 @@ public class Client
     public void SendClient(Packet packet)
     {
         Console.WriteLine($"Send To Client: {packet}");
-        _client.Send(Serializers.serverSerializer.Serialize(packet));
+        _client.Send(packet);
     }
 
     public void SendChatMessage(string literal)
@@ -37,7 +37,7 @@ public class Client
     public void SendServer(Packet packet)
     {
         //Console.WriteLine($"Send To Server: {packet}");
-        _serverConnection!.Send(Serializers.clientSerializer.Serialize(packet));
+        _serverConnection!.Send(packet);
     }
 
     public Exception Disconnect(string reason)
@@ -50,11 +50,11 @@ public class Client
     
     public Client(TcpClient client)
     {
-        _client = new PacketClient(client);
+        _client = new PacketClient(client, true);
 
-        using var br = new BinaryReader(new MemoryStream(_client.Receive()!));
+        _client.OnError += OnClose;
         
-        var packet = Serializers.serverSerializer.Deserialize(br);
+        var packet = _client.Receive()!;
 
         if (packet is not ClientHello hello)
             throw new Exception("ClientHello expected!");
@@ -64,22 +64,29 @@ public class Client
         RegisterHandlers();
     }
 
+    private void OnClose(Exception obj)
+    {
+        s2c?.Close();
+        c2s?.Close();
+        _serverConnection?.client.Close();
+    }
+
     public void TunnelTo(Server server)
     {
         _client.Clear();
         currentServer = server;
         var serverConnection = new TcpClient();
         serverConnection.Connect(server.serverIP!, server.serverPort);
-        _serverConnection = new PacketClient(serverConnection);
+        _serverConnection = new PacketClient(serverConnection, false);
         
         // prepare the to-server channel to load player state
-        _serverConnection.Send(Serializers.clientSerializer.Serialize(clientHello));
+        _serverConnection.Send(clientHello);
         
-        s2c = Tunnel.CreateS2CTunnel(_serverConnection, _client);
+        s2c = new Tunnel(_serverConnection, _client, "[S2C]");
         s2c.OnReceive += OnS2CPacket;
         s2c.OnError += Console.WriteLine;
         
-        c2s = Tunnel.CreateC2STunnel(_serverConnection, _client);
+        c2s = new Tunnel(_serverConnection, _client, "[C2S]");
         c2s.OnReceive += OnC2SPacket;
         c2s.OnError += Console.WriteLine;
     }

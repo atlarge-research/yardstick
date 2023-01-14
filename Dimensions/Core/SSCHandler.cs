@@ -23,6 +23,7 @@ namespace Dimensions.Core
         private PlayerHealth playerHealth;
         private AnglerQuestCountSync anglerQuest;
         private byte currentSlot;
+        private bool newServer;
         private readonly SyncEquipment[] equipments = new SyncEquipment[maxInventory];
         public override void OnC2SPacket(PacketReceiveArgs args)
         {
@@ -74,6 +75,7 @@ namespace Dimensions.Core
             {
                 case LoadPlayer plr:
                     currentSlot = plr.PlayerSlot;
+                    newServer = true;
                     break;
                 case WorldData data:
                     var isSSC = data.EventInfo1[6];
@@ -81,7 +83,32 @@ namespace Dimensions.Core
                     if (current == State.SSC && !isSSC)
                         RestoreCharacter();
 
+                    if (isSSC && newServer)
+                    {
+                        Parent.SendClient(new AddPlayerBuff
+                        {
+                            OtherPlayerSlot = syncPlayer.PlayerSlot,
+                            BuffType = 156, // stoned
+                            BuffTime = 300
+                        });
+                        Parent.SendClient(new AddPlayerBuff
+                        {
+                            OtherPlayerSlot = syncPlayer.PlayerSlot,
+                            BuffType = 149, // webbed
+                            BuffTime = 300
+                        });
+                        newServer = false;
+                    }
+
                     current = isSSC ? State.SSC : State.NonSSC;
+                    break;
+                case StartPlaying:
+                    if (current == State.SSC)
+                        Parent.SendClient(new PlayerBuffs
+                        {
+                            PlayerSlot = syncPlayer.PlayerSlot,
+                            BuffTypes = new ushort[44]
+                        });
                     break;
             }
         }

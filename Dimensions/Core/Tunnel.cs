@@ -1,4 +1,5 @@
-﻿using TrProtocol;
+﻿using Dimensions.Models;
+using TrProtocol;
 
 namespace Dimensions.Core
 {
@@ -7,19 +8,17 @@ namespace Dimensions.Core
         public event Action<PacketReceiveArgs> OnReceive;
         public event Action<Exception>? OnError;
         public event Action? OnClose;
-        
-        private event Func<Packet> GetData;
-        private event Action<Packet> SendData;
-        private event Func<bool> Connected;
+
+        private readonly PacketClient source, target;
 
         private bool shouldStop;
-        private string Prefix;
+        private string prefix;
         
-        private Tunnel(Func<Packet> getData, Action<Packet> sendData, Func<bool> connected)
+        public Tunnel(PacketClient source, PacketClient target, string prefix)
         {
-            GetData = getData;
-            SendData = sendData;
-            Connected = connected;
+            this.source = source;
+            this.target = target;
+            this.prefix = prefix;
             Task.Run(RunTunnel);
         }
         
@@ -27,15 +26,15 @@ namespace Dimensions.Core
         {
             try
             {
-                while (!shouldStop && Connected())
+                while (!shouldStop && source.client.Connected && target.client.Connected)
                 {
-                    var packet = GetData();
+                    var packet = source.Receive();
                     if (packet == null) throw new Exception("packet is null");
                     var args = new PacketReceiveArgs(packet);
                     OnReceive?.Invoke(args);
                     if (args.Handled) continue;
                     //Console.WriteLine($"{Prefix}Tunneling: {packet}");
-                    SendData!(packet);
+                    target.Send(packet);
                 }
             }
             catch (Exception e)
@@ -48,35 +47,6 @@ namespace Dimensions.Core
             }
         }
         
-        public static Tunnel CreateS2CTunnel(PacketClient server, PacketClient client)
-        {
-            return new(() =>
-            {
-                using var br = new BinaryReader(new MemoryStream(server.Receive()!));
-                return Serializers.clientSerializer.Deserialize(br);
-            }, p =>
-            {
-                client.Send(Serializers.serverSerializer.Serialize(p));
-            }, () => server.client.Connected && client.client.Connected)
-            {
-                Prefix = "[S2C] "
-            };
-        }
-        public static Tunnel CreateC2STunnel(PacketClient server, PacketClient client)
-        {
-            return new(() =>
-            {
-                using var br = new BinaryReader(new MemoryStream(client.Receive()!));
-                return Serializers.serverSerializer.Deserialize(br);
-            }, p =>
-            {
-                 server.Send(Serializers.clientSerializer.Serialize(p));
-            }, () => server.client.Connected && client.client.Connected)
-            {
-                Prefix = "[C2S] "
-            };
-        }
-
         public void Close()
         {
             shouldStop = true;

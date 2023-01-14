@@ -1,25 +1,27 @@
 ﻿using System.Collections.Concurrent;
 using System.Net.Sockets;
+using TrProtocol;
 
 namespace Dimensions.Core
 {
     public class PacketClient
     {
-        private readonly NetworkStream stream;
-        private readonly BlockingCollection<byte[]> packets = new();
+        private readonly BlockingCollection<Packet> packets = new();
         public event Action<Exception> OnError = Console.WriteLine;
         private readonly BinaryReader br;
         private readonly BinaryWriter bw;
 
         public readonly TcpClient client;
-        
-        public PacketClient(TcpClient client)
+
+        private readonly PacketSerializer serializer;
+        public PacketClient(TcpClient client, bool isClient)
         {
             this.client = client;
-            stream = client.GetStream();
+            var stream = client.GetStream();
             br = new(stream);
             bw = new(stream);
 
+            serializer = isClient ? Serializers.serverSerializer : Serializers.clientSerializer;
             Task.Run(ListenThread);
         }
 
@@ -34,15 +36,15 @@ namespace Dimensions.Core
             while (packets.TryTake(out _)) ;
         }
         
-        public byte[] Receive()
+        public Packet Receive()
         {
             var b = packets.Take();
             return b;
         }
 
-        public void Send(byte[] data)
+        public void Send(Packet data)
         {
-            lock (bw) bw.Write(data);
+            lock (bw) bw.Write(serializer.Serialize(data));
         }
         
         private void ListenThread()
@@ -51,12 +53,8 @@ namespace Dimensions.Core
             {
                 for (;;)
                 {
-                    var size = br.ReadUInt16();
-                    var buf = new byte[size];
-                    Buffer.BlockCopy(br.ReadBytes(size - 2), 0, buf, 2, size - 2);
-                    buf[0] = (byte)(size & 0xFF);
-                    buf[1] = (byte)(size >> 8);
-                    packets.Add(buf);
+                    var packet = serializer.Deserialize(br);
+                    packets.Add(packet);
                 }
             }
             catch (Exception e)
