@@ -10,6 +10,8 @@ public class SyncProjectile : Packet, IProjSlot, IPlayerSlot
     [Bounds("Terraria238", 955)]
     public short ProjType { get; set; }
     public BitsByte Bit1 { get; set; }
+    [Condition(nameof(Bit1), 2)]
+    public BitsByte Bit2 { get; set; }
     [Condition(nameof(Bit1), 0)]
     public float AI1 { get; set; }
     [Condition(nameof(Bit1), 1)]
@@ -21,8 +23,10 @@ public class SyncProjectile : Packet, IProjSlot, IPlayerSlot
     [Condition(nameof(Bit1), 5)]
     public float Knockback { get; set; }
     [Condition(nameof(Bit1), 6)]
-    public ushort OriginalDamage { get; set; }
+    public short OriginalDamage { get; set; }
     [Condition(nameof(Bit1), 7)]
     public short UUID { get; set; }
+    [Condition(nameof(Bit2), 0)]
+    public float AI3 { get; set; }
 
 }
