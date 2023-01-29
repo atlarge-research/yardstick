@@ -44,6 +44,7 @@ namespace Dimensions.Core
 
         public void Send(Packet data)
         {
+            //Console.WriteLine($"Send=>{client.Client.RemoteEndPoint}: {data}");
             lock (bw) bw.Write(serializer.Serialize(data));
         }
         

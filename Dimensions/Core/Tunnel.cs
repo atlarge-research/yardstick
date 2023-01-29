@@ -19,6 +19,10 @@ namespace Dimensions.Core
             this.source = source;
             this.target = target;
             this.prefix = prefix;
+        }
+
+        public void Start()
+        {
             Task.Run(RunTunnel);
         }
         
@@ -33,7 +37,7 @@ namespace Dimensions.Core
                     var args = new PacketReceiveArgs(packet);
                     OnReceive?.Invoke(args);
                     if (args.Handled) continue;
-                    //Console.WriteLine($"{Prefix}Tunneling: {packet}");
+                    //Console.WriteLine($"{prefix} Tunneling: {packet}");
                     target.Send(packet);
                 }
             }

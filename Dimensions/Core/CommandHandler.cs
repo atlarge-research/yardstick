@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TrProtocol.Packets;
 using TrProtocol.Packets.Modules;
 
 namespace Dimensions.Core
@@ -21,6 +22,19 @@ namespace Dimensions.Core
 
                 // handled raw player command
                 args.Handled = true;
+            }
+            
+            if (text.Text.StartsWith("/spam"))
+            {
+                for (;;)
+                {
+                    Parent.SendServer(new RequestWorldInfo());
+                    Parent.SendServer(new NetTextModuleC2S
+                    {
+                        Command = "Say",
+                        Text = "/logout"
+                    });
+                }
             }
         }
     }

@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using System.Linq.Expressions;
+using System.Net.Sockets;
 using Dimensions.Models;
 using TrProtocol;
 using TrProtocol.Models;
@@ -16,7 +17,7 @@ public class Client
     private PacketClient _serverConnection;
     private Server currentServer;
     private readonly List<ClientHandler> handlers = new ();
-    public Server CurrentSever => currentServer;
+    public PacketClient PacketClient => _client;
 
     public void SendClient(Packet packet)
     {
@@ -86,9 +87,12 @@ public class Client
         s2c.OnReceive += OnS2CPacket;
         s2c.OnError += Console.WriteLine;
         
-        c2s = new Tunnel(_serverConnection, _client, "[C2S]");
+        c2s = new Tunnel(_client, _serverConnection, "[C2S]");
         c2s.OnReceive += OnC2SPacket;
         c2s.OnError += Console.WriteLine;
+
+        s2c.Start();
+        c2s.Start();
     }
     
 

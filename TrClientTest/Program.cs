@@ -13,13 +13,13 @@ namespace TrClientTest
         static void Main(string[] args)
         {
             var client = new TClient();
-            var ip = "127.0.0.1";
-            ushort port = 7777;
+            var ip = "43.248.184.35";
+            ushort port = 1001;
             /*
             ip = "43.248.184.35";
             port = 7777;*/
             var password = "aaaa";
-            client.Username = "afftt";
+            client.Username = "afftt1";
             /*
             Console.Write("ip>");
             var ip = Console.ReadLine();
@@ -32,18 +32,30 @@ namespace TrClientTest
 
             client.OnChat += (o, t, c) => Console.WriteLine(t);
             client.OnMessage += (o, t) => Console.WriteLine(t);
-            
+            bool shouldSpam = false;
+
+            client.On<LoadPlayer>(_ =>
+                    client.Send(new ClientUUID { UUID = Guid.Empty.ToString() }));
+            client.On<WorldData>(_ =>
+            {
+                if (!shouldSpam)
+                {
+                    return;
+                }
+                for (; ; )
+                {
+                    client.Send(new RequestWorldInfo());
+                    client.ChatText("/logout");
+                }
+            });
+
             new Thread(() =>
             {
-                while (true)
+                for (; ; )
                 {
-                    client.ChatText(Console.ReadLine());
-                    client.Send(new NetTeleportPylonModule
-                    {
-                        Position = new ShortPosition(1000, 1000),
-                        PylonPacketType = PylonPacketType.PylonWasAdded,
-                        PylonType = TeleportPylonType.Victory
-                    });
+                    var t = Console.ReadLine();
+                    if (t == "/chatspam") shouldSpam = true;
+                    else client.ChatText(t);
                 }
             }).Start();
 
