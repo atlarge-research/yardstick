@@ -12,6 +12,11 @@ namespace Dimensions.Core
 {
     public class CustomPacketHandler : ClientHandler
     {
+        public override void OnC2SPacket(PacketReceiveArgs args)
+        {
+            args.Handled = true;
+        }
+
         public override void OnS2CPacket(PacketReceiveArgs args)
         {
             if (args.Packet is not DimensionUpdate update) return;

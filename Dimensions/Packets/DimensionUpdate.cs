@@ -17,7 +17,6 @@ namespace Dimensions.Packets
         GetOnlineInfo = 4
     }
 
-    [S2COnly]
     public class DimensionUpdate : Packet
     {
         public override MessageID Type => MessageID.Unused67;
