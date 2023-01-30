@@ -11,6 +11,7 @@ namespace Dimensions.Packets
     [Serializer(typeof(PrimitiveFieldSerializer<SubMessageID>))]
     public enum SubMessageID : short
     {
+        ClientAddress = 1,
         ChangeSever = 2,
         ChangeCustomizedServer = 3,
         GetOnlineInfo = 4

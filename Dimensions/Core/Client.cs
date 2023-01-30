@@ -1,6 +1,8 @@
 ﻿using System.Linq.Expressions;
+using System.Net;
 using System.Net.Sockets;
 using Dimensions.Models;
+using Dimensions.Packets;
 using TrProtocol;
 using TrProtocol.Models;
 using TrProtocol.Packets;
@@ -13,6 +15,7 @@ public class Client
     private readonly PacketClient _client;
     
     private readonly ClientHello clientHello;
+    private readonly DimensionUpdate clientAddress;
     private Tunnel c2s, s2c;
     private PacketClient _serverConnection;
     private Server currentServer;
@@ -62,6 +65,15 @@ public class Client
         
         clientHello = hello;
 
+        var ip = client.Client.RemoteEndPoint as IPEndPoint;
+
+        clientAddress = new DimensionUpdate
+        {
+            SubType = SubMessageID.ClientAddress,
+            Content = ip.Address.ToString(),
+            Port = (ushort)ip.Port
+        };
+
         RegisterHandlers();
     }
 
@@ -82,6 +94,7 @@ public class Client
         
         // prepare the to-server channel to load player state
         _serverConnection.Send(clientHello);
+        _serverConnection.Send(clientAddress);
         
         s2c = new Tunnel(_serverConnection, _client, "[S2C]");
         s2c.OnReceive += OnS2CPacket;
