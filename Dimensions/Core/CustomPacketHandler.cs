@@ -14,7 +14,8 @@ namespace Dimensions.Core
     {
         public override void OnC2SPacket(PacketReceiveArgs args)
         {
-            args.Handled = true;
+            if (args.Packet is DimensionUpdate)
+                args.Handled = true;
         }
 
         public override void OnS2CPacket(PacketReceiveArgs args)
