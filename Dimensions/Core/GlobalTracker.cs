@@ -22,5 +22,11 @@ namespace Dimensions.Core
                 };
             }
         }
+
+        public static string[] GetClientNames()
+        {
+            lock (_clients)
+                return _clients.Select(c => c.Name).Where(n => n != null).Distinct().ToArray();
+        }
     }
 }

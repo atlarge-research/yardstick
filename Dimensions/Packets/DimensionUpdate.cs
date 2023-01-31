@@ -14,7 +14,8 @@ namespace Dimensions.Packets
         ClientAddress = 1,
         ChangeSever = 2,
         ChangeCustomizedServer = 3,
-        GetOnlineInfo = 4
+        OnlineInfoRequest = 4,
+        OnlineInfoResponse = 5
     }
 
     public class DimensionUpdate : Packet
@@ -22,7 +23,7 @@ namespace Dimensions.Packets
         public override MessageID Type => MessageID.Unused67;
         public SubMessageID SubType { get; set; }
         public string Content { get; set; }
-        private bool ShouldHasPort => SubType == SubMessageID.ChangeCustomizedServer;
+        private bool ShouldHasPort => SubType == SubMessageID.ChangeCustomizedServer || SubType == SubMessageID.ClientAddress;
         [Condition(nameof(ShouldHasPort))]
         public ushort Port { get; set; }
     }

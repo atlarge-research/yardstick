@@ -60,8 +60,11 @@ public class ConnectionHandler : ClientHandler
                 Parent.Disconnect("Name change is not allowed");
                 args.Handled = true;
             }
-
-            syncPlayer = sync;
+            else
+            {
+                syncPlayer = sync;
+                Parent.Name = sync.Name;
+            }
         }
     }
 

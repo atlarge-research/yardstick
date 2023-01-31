@@ -1,6 +1,7 @@
 ﻿using System.Linq.Expressions;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using Dimensions.Models;
 using Dimensions.Packets;
 using TrProtocol;
@@ -21,6 +22,8 @@ public class Client
     private Server currentServer;
     private readonly List<ClientHandler> handlers = new ();
     public PacketClient PacketClient => _client;
+
+    public string Name { get; set; }
 
     public void SendClient(Packet packet)
     {
@@ -56,8 +59,12 @@ public class Client
     {
         _client = new PacketClient(client, true);
 
-        _client.OnError += OnClose;
-        
+        _client.OnError += OnError;
+
+        GlobalTracker.OnClientConnection(this);
+
+        _client.Start();
+
         var packet = _client.Receive()!;
 
         if (packet is not ClientHello hello)
@@ -77,11 +84,13 @@ public class Client
         RegisterHandlers();
     }
 
-    private void OnClose(Exception obj)
+    private void OnError(Exception e)
     {
+        Console.WriteLine($"critical connection error occurred: {e}");
         s2c?.Close();
         c2s?.Close();
         _serverConnection?.client.Close();
+        _client?.client.Close();
     }
 
     public void TunnelTo(Server server)
@@ -91,23 +100,26 @@ public class Client
         var serverConnection = new TcpClient();
         serverConnection.Connect(server.serverIP!, server.serverPort);
         _serverConnection = new PacketClient(serverConnection, false);
-        
+
+        _serverConnection.OnError += OnError;
+
+        _serverConnection.Start();
+
         // prepare the to-server channel to load player state
         _serverConnection.Send(clientHello);
         _serverConnection.Send(clientAddress);
         
         s2c = new Tunnel(_serverConnection, _client, "[S2C]");
         s2c.OnReceive += OnS2CPacket;
-        s2c.OnError += Console.WriteLine;
+        s2c.OnError += OnError;
         
         c2s = new Tunnel(_client, _serverConnection, "[C2S]");
         c2s.OnReceive += OnC2SPacket;
-        c2s.OnError += Console.WriteLine;
+        c2s.OnError += OnError;
 
         s2c.Start();
         c2s.Start();
     }
-    
 
     private void OnCommonPacket(PacketReceiveArgs args)
     {

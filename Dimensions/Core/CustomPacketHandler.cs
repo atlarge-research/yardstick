@@ -25,8 +25,12 @@ namespace Dimensions.Core
 
             switch (update.SubType)
             {
-                case SubMessageID.GetOnlineInfo:
-                    Parent.SendChatMessage("Current Online: <not implemented>");
+                case SubMessageID.OnlineInfoRequest:
+                    Parent.SendServer(new DimensionUpdate
+                    {
+                        SubType = SubMessageID.OnlineInfoResponse,
+                        Content = string.Join("\n", GlobalTracker.GetClientNames())
+                    });
                     break;
                 case SubMessageID.ChangeSever:
                     var server = Program.config.GetServer(update.Content);

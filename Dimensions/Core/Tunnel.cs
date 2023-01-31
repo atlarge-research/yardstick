@@ -33,7 +33,7 @@ namespace Dimensions.Core
                 while (!shouldStop && source.client.Connected && target.client.Connected)
                 {
                     var packet = source.Receive();
-                    if (packet == null) throw new Exception("packet is null");
+                    if (packet == null) continue;
                     var args = new PacketReceiveArgs(packet);
                     OnReceive?.Invoke(args);
                     if (args.Handled) continue;

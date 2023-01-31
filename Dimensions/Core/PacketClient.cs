@@ -22,12 +22,16 @@ namespace Dimensions.Core
             bw = new(stream);
 
             serializer = isClient ? Serializers.serverSerializer : Serializers.clientSerializer;
+        }
+
+        public void Start()
+        {
             Task.Run(ListenThread);
         }
 
         public void Cancel()
         {
-            OnError?.Invoke(new Exception($"PacketClient {client.Client.RemoteEndPoint} cancel called"));
+            //OnError?.Invoke(new Exception($"PacketClient {client.Client.RemoteEndPoint} cancel called"));
             packets.Add(null);
         }
 
