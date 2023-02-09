@@ -3,7 +3,7 @@ module ys
 go 1.17
 
 require (
-	github.com/gin-gonic/gin v1.7.4
+	github.com/gin-gonic/gin v1.7.7
 	github.com/gurkankaymak/hocon v1.2.3
 	github.com/matoous/go-nanoid/v2 v2.0.0
 	github.com/schollz/progressbar/v3 v3.8.3
