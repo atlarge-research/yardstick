@@ -49,7 +49,6 @@ public enum MessageID : byte
 	KillPlayer = 44,
 	RequestReadSign = 46,
 	ReadSign = 47,
-	[Obsolete("Deprecated. Use NetLiquidModule instead.")]
 	LiquidUpdate = 48,
 	StartPlaying = 49,
 	PlayerBuffs = 50,

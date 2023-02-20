@@ -6,12 +6,12 @@ public abstract partial class TileEntity
     {
         protected override TileEntity ReadOverride(BinaryReader br)
         {
-            return TileEntity.Read(br);
+            return TileEntity.Read(br, true);
         }
 
         protected override void WriteOverride(BinaryWriter bw, TileEntity t)
         {
-            TileEntity.Write(bw, t);
+            TileEntity.Write(bw, t, true);
         }
     }
 }

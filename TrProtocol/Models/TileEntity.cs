@@ -16,13 +16,14 @@ public abstract partial class TileEntity
         { TileEntityType.TEFoodPlatter, typeof(TEFoodPlatter) },
         { TileEntityType.TETeleportationPylon, typeof(TETeleportationPylon) }
     };
-    public static TileEntity Read(BinaryReader br)
+    public static TileEntity Read(BinaryReader br, bool networkSend)
     {
         var type = (TileEntityType)br.ReadByte();
         if (tileEntityDict.TryGetValue(type, out var t))
         {
-            var entity = Activator.CreateInstance(t) as TileEntity;
-            entity.ID = br.ReadInt32();
+            var entity = (Activator.CreateInstance(t) as TileEntity)!;
+            if (!networkSend)
+                entity.ID = br.ReadInt32();
             entity.Position = new() { X = br.ReadInt16(), Y = br.ReadInt16() };
             entity.ReadExtraData(br);
             return entity;
@@ -30,10 +31,11 @@ public abstract partial class TileEntity
         else
             return null;
     }
-    public static void Write(BinaryWriter bw, TileEntity t)
+    public static void Write(BinaryWriter bw, TileEntity t, bool networkSend)
     {
         bw.Write((byte)t.EntityType);
-        bw.Write(t.ID);
+        if (!networkSend)
+            bw.Write(t.ID);
         bw.Write(t.Position.X);
         bw.Write(t.Position.Y);
         t.WriteExtraData(bw);
