@@ -214,5 +214,7 @@ public class Client
         RegisterHandler<PylonHandler>();
         RegisterHandler<MobileDebugHandler>();
         RegisterHandler<SSCHandler>();
+        //RegisterHandler < NpcHandler() >;
+
     }
 }

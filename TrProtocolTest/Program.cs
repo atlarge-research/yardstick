@@ -18,7 +18,7 @@ namespace TrProtocolTest
 
             try
             {
-                _ = new PacketSerializer(true, "Terraria248");
+                _ = new PacketSerializer(true, "Terraria278");
             }
             catch (Exception e)
             {

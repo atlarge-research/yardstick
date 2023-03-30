@@ -1,6 +1,6 @@
 ﻿namespace TrProtocol.Packets;
 
-public class SpawnPlayer : Packet, IPlayerSlot
+public class SpawnPlayerSpawnPlayer : Packet, IPlayerSlot
 {
     public override MessageID Type => MessageID.SpawnPlayer;
     public byte PlayerSlot { get; set; }

@@ -30,13 +30,15 @@ public class ConnectionHandler : ClientHandler
             {
                 Position = new Position(data.SpawnX, data.SpawnY)
             });
-            spawnPosition = new ShortPosition(data.SpawnX, data.SpawnY);
+            // add random offset to spawn position to prevent player from spawning on top of each other
+            spawnPosition= new ShortPosition((short) (data.SpawnX + ( new Random().Next(0, 5))), (short)(data.SpawnY +  new Random().Next(0, 15)));
+            // spawnPosition = new ShortPosition(data.SpawnX, data.SpawnY);
             state = ClientState.ReusedConnect2;
         }
         else if (args.Packet is StartPlaying)
         {
             if (state != ClientState.ReusedConnect2) return;
-            var spawn = new SpawnPlayer
+            var spawn = new SpawnPlayerSpawnPlayer
             {
                 PlayerSlot = syncPlayer.PlayerSlot,
                 Context = PlayerSpawnContext.SpawningIntoWorld,

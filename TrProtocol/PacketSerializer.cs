@@ -134,7 +134,7 @@ public partial class PacketSerializer
 
     public Packet Deserialize(BinaryReader br0)
     {
-        var l = br0.ReadInt16();
+;        var l = br0.ReadInt16();
         using var ms = new MemoryStream(br0.ReadBytes(l - 2));
         using var br = new BinaryReader(ms);
         Packet result = null;

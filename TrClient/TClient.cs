@@ -21,6 +21,8 @@ namespace TrClient
         public string CurRelease = "Terraria279";
         public string Username = "";
         public bool IsPlaying { get; private set; }
+        private short SpawnX;
+        private short SpawnY;
 
         private BinaryReader br;
         private BinaryWriter bw;
@@ -95,22 +97,32 @@ namespace TrClient
 
         public void Spawn(short x, short y)
         {
-            Send(new SpawnPlayer
+            Send(new SpawnPlayerSpawnPlayer
             {
+
+                Context = PlayerSpawnContext.SpawningIntoWorld,
                 Position = new ShortPosition { X = x, Y = y },
-                Context = PlayerSpawnContext.SpawningIntoWorld
-            });
+
+            }) ;
         }
 
         public void SendPlayer()
         {
             Send(new SyncPlayer
             {
-                Name = Username
+                Name = Username,
+                HairColor = RandomColor(),
+                
             });
             Send(new PlayerHealth { StatLifeMax = 100, StatLife = 100 });
             for (byte i = 0; i < 73; ++i)
                 Send(new SyncEquipment { ItemSlot = i });
+        }
+
+        private static Color RandomColor()
+        {
+            Random random = new Random();
+            return new Color((byte)random.Next(256), (byte)random.Next(256), (byte)random.Next(256));
         }
 
         public void ChatText(string message)
@@ -159,19 +171,30 @@ namespace TrClient
                 SendPlayer();
                 Send(new RequestWorldInfo());
             });
-            On<WorldData>(_ =>
+            On<WorldData>(data =>
             {
                 if (!IsPlaying)
                 {
-                    TileGetSection(100, 100);
+                    this.SpawnX = data.SpawnX;
+                    this.SpawnY = data.SpawnY;
+                    TileGetSection(data.SpawnX, data.SpawnY);
                     IsPlaying = true;
                 }
             });
             On<StartPlaying>(_ =>
             {
-                Spawn(100, 100);
+                Spawn(this.SpawnX, this.SpawnY);
 
             });
+            On<PlayerActive>(_ =>
+            {
+                Console.WriteLine("bruh");
+            });
+            On<PlaceObject>(pkt =>
+            {
+                this.ChatText("THERE WAS AN ITEM PLACED AT " + pkt.Position.ToString());
+            });
+            
         }
 
         public bool connected = false;
@@ -199,7 +222,7 @@ namespace TrClient
             verify.Close();*/
 
             On<RequestPassword>(_ => Send(new SendPassword { Password = password }));
-
+            //On<StatusText>(_=> )
             connected = true;
             while (connected && !shouldExit())
             {
@@ -209,7 +232,7 @@ namespace TrClient
                     if (handlers.TryGetValue(packet.GetType(), out var act))
                         act(packet);
                     else
-                        Console.WriteLine($"[Warning] not processed packet type {packet}");
+                        Console.WriteLine($"[Warning] not processed packet type {packet.Type}");
                 }
                 catch (Exception e)
                 {
