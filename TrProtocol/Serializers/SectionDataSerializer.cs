@@ -66,7 +66,7 @@ public partial struct SectionData
                 data.TileEntities = new TileEntity[data.TileEntityCount];
                 for (int i = 0; i < data.TileEntityCount; i++)
                 {
-                    data.TileEntities[i] = TileEntity.Read(br);
+                    data.TileEntities[i] = TileEntity.Read(br, false);
                 }
                 
                 return data;
@@ -179,7 +179,7 @@ public partial struct SectionData
                 bw.Write(data.TileEntityCount);
                 for (int i = 0; i < data.TileEntityCount; i++)
                 {
-                    TileEntity.Write(bw, data.TileEntities[i]);
+                    TileEntity.Write(bw, data.TileEntities[i], false);
                 }
             }
 

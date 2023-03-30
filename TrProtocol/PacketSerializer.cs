@@ -77,10 +77,7 @@ public partial class PacketSerializer
                     condition = o => ((BitsByte)get2(o))[cond.BitIndex] == cond.Prediction;
             }
 
-            IFieldSerializer ser;
-
-            ser = RequestFieldSerializer(t, Version);
-        serFound:
+            var ser = RequestFieldSerializer(t, Version);
 
             if (ser is IConfigurable conf) 
                 ser = (IFieldSerializer)conf.Configure(prop, Version);
