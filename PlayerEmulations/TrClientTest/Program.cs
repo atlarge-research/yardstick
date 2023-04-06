@@ -14,11 +14,6 @@ namespace TrClientTest
     {
         static void Main(string[] args)
         {
-            // createclient(string n);
-            // create 10 clients
-            // var ip = "127.0.0.1";
-            // ushort port = 7777;
-            // var password = "";
             // read ip port and password from a yaml file called config.json
             string v = Directory.GetCurrentDirectory();
             var builder = new ConfigurationBuilder()
@@ -28,27 +23,18 @@ namespace TrClientTest
             var ip = config["ip"];
             ushort port = ushort.Parse(config["port"]);
             var password = config["password"];
-            
+            // create a random name for each client
+            var client = createclient("BOT#" + Guid.NewGuid().ToString().Substring(0, 8));
 
-            for (int i = 0; i < 3; i++)
-            {
-                // createclient("client" + i);
-                // var client = new TClient();
-                var client = createclient("client" + i);
-                // create client game loop in sepereate thread
-                new Thread(() => client.GameLoop(new IPEndPoint(IPAddress.Parse(ip), port), password)).Start();
-                // kill thread after 10 seconds
-                // Thread.Sleep(10000);
-                // client.KillServer();
+            new Thread(() => client.GameLoop(new IPEndPoint(IPAddress.Parse(ip), port), password)).Start();
 
-            }
 
         }
 
         private static TClient createclient(string name)
         {
             var client = new TClient();
-  
+
             client.Username = name;
 
             client.OnChat += (o, t, c) => Console.WriteLine(t);
