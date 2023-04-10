@@ -24,6 +24,9 @@ namespace TrClient
         private short SpawnX;
         private short SpawnY;
 
+        public short currentX;
+        public short currentY;
+
         private BinaryReader br;
         private BinaryWriter bw;
         private readonly PacketSerializer mgr = new(true);
@@ -112,6 +115,9 @@ namespace TrClient
             {
                 Name = Username,
                 HairColor = RandomColor(),
+                SkinColor = RandomColor(),
+                EyeColor = RandomColor(),
+                ShirtColor = RandomColor()
                 
             });
             Send(new PlayerHealth { StatLifeMax = 100, StatLife = 100 });
@@ -177,23 +183,40 @@ namespace TrClient
                 {
                     this.SpawnX = data.SpawnX;
                     this.SpawnY = data.SpawnY;
+                    this.currentX = data.SpawnX;
+                    this.currentY = data.SpawnY;
                     TileGetSection(data.SpawnX, data.SpawnY);
                     IsPlaying = true;
+
+
                 }
             });
             On<StartPlaying>(_ =>
             {
                 Spawn(this.SpawnX, this.SpawnY);
 
+                
+
             });
             On<PlayerActive>(_ =>
             {
+
+                Thread.Sleep(1000);
                 Console.WriteLine("bruh");
+                this.ChatText("bruh");
+                
+                this.TeleportPlayer(this.currentX-10, 100);
+
             });
+            On<PlayerHealth>(pkt=>{
+                this.ChatText("HEALTH IS " + pkt.StatLife.ToString());
+            });
+            
             On<PlaceObject>(pkt =>
             {
                 this.ChatText("THERE WAS AN ITEM PLACED AT " + pkt.Position.ToString());
             });
+            
             
         }
 
@@ -208,6 +231,33 @@ namespace TrClient
         {
             Connect(endPoint, proxy);
             GameLoopInternal(password);
+        }
+
+        public void TeleportPlayer(int x, int y)
+        {
+            // /
+            
+
+            // this.SpawnY = ((short)y);
+            Send(new TogglePvp { PvpEnabled = true , PlayerSlot = this.PlayerSlot});
+            this.ChatText("Teleported to " + x + " " + y);
+            Send(new UpdatePlayer{ 
+                PlayerSlot = this.PlayerSlot,
+                Bit1 = 0,
+                Bit2 = 0,
+                Bit3 = 0,
+                Bit4 = 0,
+                SelectedItem =  0,              
+                Position =  new Vector2 { X = x, Y = y },
+                Velocity = new Vector2 { X = 0, Y = 0 }
+                // Not sent if UpdateVelocity is not set
+                // Velocity = new Vector2 { X = 0, Y = 0 },
+                //  Original Position X	Single	Original Position for Potion of Return, only sent if UsedPotionofReturn flag is true
+                // Original Position Y	Single	Original Position for Potion of Return, only sent if UsedPotionofReturn flag is true
+                // Home Position X	Single	Home Position for Potion of Return, only sent if UsedPotionofReturn flag is true
+                // Home Position Y	Single	Home Position for Potion of Return, only sent if UsedPotionofReturn flag is true
+
+                });
         }
         private void GameLoopInternal(string password)
         {

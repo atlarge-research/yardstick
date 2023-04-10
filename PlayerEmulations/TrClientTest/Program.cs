@@ -12,21 +12,39 @@ namespace TrClientTest
 {
     class Program
     {
+
+
+
+
         static void Main(string[] args)
         {
+            string ip = "127.0.0.1";
+            ushort port = 7777;
+            string password = "";
             // read ip port and password from a yaml file called config.json
+            // if it exists
+
             string v = Directory.GetCurrentDirectory();
             var builder = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("config.json", optional: true, reloadOnChange: true);
-            var config = builder.Build();
-            var ip = config["ip"];
-            ushort port = ushort.Parse(config["port"]);
-            var password = config["password"];
-            // create a random name for each client
-            var client = createclient("BOT#" + Guid.NewGuid().ToString().Substring(0, 8));
+            if(File.Exists("config.json"))
+            {
+                var config = builder.Build();
+                ip = config["ip"];
+                port = ushort.Parse(config["port"]);
+                password = config["password"];
+            }
+  
+            var client = createclient("BOT");
+
 
             new Thread(() => client.GameLoop(new IPEndPoint(IPAddress.Parse(ip), port), password)).Start();
+
+            // after 5 seconds teleport the client to 10 blocks to the right of spawn
+            // Thread.Sleep(5000);
+            // short delta  = 10;
+            // client.TeleportPlayer(client.currentX - delta, client.currentY);
 
 
         }

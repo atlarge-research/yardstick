@@ -15,7 +15,7 @@ public enum MessageID : byte
 	TileSection = 10,
 	FrameSection = 11,
 	SpawnPlayer = 12,
-	PlayerControls = 13,
+	UpdatePlayer = 13,
 	Unused15 = 15,
 	PlayerHealth = 16,
 	TileChange = 17,

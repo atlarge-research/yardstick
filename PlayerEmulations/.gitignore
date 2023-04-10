@@ -9,3 +9,4 @@ obj/
 /Delphinus.Generator/obj
 build/
 .DS_Store
+.vscode/
