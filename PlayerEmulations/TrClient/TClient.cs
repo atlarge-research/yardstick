@@ -205,7 +205,7 @@ namespace TrClient
                 Console.WriteLine("bruh");
                 this.ChatText("bruh");
                 
-                this.TeleportPlayer(this.currentX-10, 100);
+                this.TeleportPlayer(this.SpawnX, this.SpawnY);
 
             });
             On<PlayerHealth>(pkt=>{
@@ -240,6 +240,7 @@ namespace TrClient
 
             // this.SpawnY = ((short)y);
             Send(new TogglePvp { PvpEnabled = true , PlayerSlot = this.PlayerSlot});
+            // Send(new Reqes)
             this.ChatText("Teleported to " + x + " " + y);
             Send(new UpdatePlayer{ 
                 PlayerSlot = this.PlayerSlot,
