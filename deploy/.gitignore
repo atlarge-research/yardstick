@@ -1,4 +1,0 @@
-# terraform git ignore
-
-.terraform*
-terraform*
