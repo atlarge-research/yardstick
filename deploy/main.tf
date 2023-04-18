@@ -72,7 +72,7 @@ resource "docker_container" "botcontainer" {
 
     # add terraria container's ip to env
     env = [
-        "TERRARIA_IP=172.28.0."
+        "TERRARIA_IP=172.28.0.2"
     ]
     volumes {
         container_path = "/app"
