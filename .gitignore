@@ -115,3 +115,8 @@ fabric.properties
 
 application.conf
 ys/ys-linux-amd64
+
+# terraform related files
+.DS_Store*
+.terraform*
+terraform*
