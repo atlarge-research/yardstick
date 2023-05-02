@@ -1,0 +1,12 @@
+.vs/
+.idea/
+bin/
+obj/
+/OTAPIServer/obj
+/Protocal/TrProtocol/bin/Debug/net5.0
+/Delphinus.OTAPI.PC/obj/Debug/netstandard2.0
+/Delphinus/obj
+/Delphinus.Generator/obj
+build/
+.DS_Store
+.vscode/
