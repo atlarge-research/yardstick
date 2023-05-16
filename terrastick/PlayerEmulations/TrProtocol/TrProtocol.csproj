@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<TargetFramework>net6.0</TargetFramework>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
+
+	
+	<ItemGroup>
+		<Using Include="TrProtocol.Models" />
+		<Using Include="TrProtocol.Packets" />
+	</ItemGroup>
+
+</Project>
