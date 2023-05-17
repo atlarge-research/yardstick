@@ -1,10 +1,5 @@
 #!/bin/bash
 
-# to-dos here
-# 1) unified setup for aws, azure
-# 2) ask which env do you want to run the experiment in
-# 3) check if you have the required config file and if all the required variables are defined
-
 # Virtual environment setup
 python -m venv .env
 source .env/bin/activate
