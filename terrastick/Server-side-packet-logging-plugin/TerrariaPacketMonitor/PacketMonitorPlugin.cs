@@ -8,17 +8,20 @@ using Terraria;
 using Terraria.DataStructures;
 using Terraria.GameContent.Tile_Entities;
 using TerrariaApi.Server;
+using System.Diagnostics;
 
 namespace TerrariaPacketMonitor
 {
     [ApiVersion(2, 1)]
     public class PacketMonitorPlugin : TerrariaPlugin
     {
+        private static Stopwatch stopwatch;
+        private  int i = 0;
         public override string Author => "Abhilash Balaji";
         public override string Description => "Dumps packet data to stream";
         public override string Name => "Packet Monitor";
         public override Version Version => Assembly.GetExecutingAssembly().GetName().Version;
-
+       
         public TextWriter OutputStream { get; set; }
 
         public PacketMonitorPlugin(Main game) : base(game)
@@ -28,12 +31,37 @@ namespace TerrariaPacketMonitor
 
         public override void Initialize()
         {
+
+            Directory.CreateDirectory(Path.Combine(TShockAPI.TShock.SavePath, "PacketLogs"));
+
+            FileStream fileStream = new FileStream(Path.Combine(TShockAPI.TShock.SavePath, "PacketLogs", GetFileName()), FileMode.Create, FileAccess.Write, FileShare.Read);
+            OutputStream = new StreamWriter(fileStream);
+            //OutputStream = Console.Out;
+            stopwatch = new Stopwatch();
+
             ServerApi.Hooks.NetGetData.Register(this, OnGetData, -1);
             ServerApi.Hooks.NetSendData.Register(this, OnSendData, -1);
+            ServerApi.Hooks.GamePostUpdate.Register(this, (EventArgs args) =>
+            {
+                // end of game update
+                stopwatch.Stop();
 
-            Directory.CreateDirectory(Path.Combine(TShockAPI.TShock.SavePath, "debug logger"));
+                OutputStream.WriteLine($"GAME UPDATE TIME : {stopwatch.ElapsedMilliseconds}");
+                stopwatch.Reset();
+            }, -1);
+            ServerApi.Hooks.GameUpdate.Register(this, (args) =>
+            {
+                if (stopwatch != null && stopwatch.IsRunning)
+                {
+                    throw new InvalidOperationException("Stopwatch is already running.");
+                }
+                //
 
-            OutputStream = Console.Out; //new FileStream(Path.Combine(TShockAPI.TShock.SavePath, "debug logger", GetFileName()), FileMode.Create, FileAccess.Write, FileShare.Read);
+
+                stopwatch.Start();
+                //SendOutput("start GAMEUPDATE");
+            }, -1);
+          
         }
 
         protected override void Dispose(bool disposing)
@@ -55,6 +83,7 @@ namespace TerrariaPacketMonitor
             OutputStream.WriteLine($"{DateTime.Now}: {output}");
         }
 
+        
         void OnGetData(GetDataEventArgs args)
         {
             PacketTypes type = args.MsgID;
