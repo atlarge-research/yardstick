@@ -124,3 +124,6 @@ terraform*
 # deployment temp files and virtual env
 .env/
 temp/
+
+# terrastick analysis files
+*.log
