@@ -29,6 +29,7 @@ namespace TrClient
 
         private BinaryReader br;
         private BinaryWriter bw;
+        private string workload;
         private readonly PacketSerializer mgr = new(true);
 
         public void Connect(string hostname, int port)
@@ -155,8 +156,9 @@ namespace TrClient
             else handlers.Add(typeof(T), Handler);
         }
 
-        public TClient()
+        public TClient(string workload)
         {
+            this.workload = workload;
             InternalOn();
         }
 
@@ -230,12 +232,11 @@ namespace TrClient
             
             On<NetTextModuleS2C>(pkt =>
             {
-                if (pkt.Text._text.Contains( "start tel"))
+                if (pkt.Text._text.Contains( "start") && this.workload == "TEL")
                 {
                     this.ChatText("Starting teleport work load");
-                    // run teleport workload in a seperate thread for 10 seconds
                     this.RunTeleportWorkLoad(10);
-
+                    this.ChatText("WORKLOAD COMPLETE");
 
                 }
             });
