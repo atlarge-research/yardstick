@@ -46,7 +46,7 @@ namespace TerrariaPacketMonitor
                 // end of game update
                 stopwatch.Stop();
 
-                OutputStream.WriteLine($"GAME UPDATE TIME : {stopwatch.ElapsedMilliseconds}");
+                SendOutput($"GAME UPDATE TIME : {stopwatch.ElapsedMilliseconds}");
                 stopwatch.Reset();
             }, -1);
             ServerApi.Hooks.GameUpdate.Register(this, (args) =>
