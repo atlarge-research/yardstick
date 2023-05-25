@@ -3,6 +3,8 @@
 # This script is used to reserve nodes on das5/das6, deploy terraria server and bot(s) and run some experiments on das5/6 nodes.
 
 # Define the required variables
+EXP_TIME=$(date +%Y-%m-%d-%H-%M-%S)
+DIR_NAME="terraria-experiment-$EXP_TIME"
 VU_SSH_HOSTNAME="ssh.data.vu.nl"
 DAS5_HOSTNAME="fs0.das5.cs.vu.nl"
 DAS6_HOSTNAME="fs0.das6.cs.vu.nl"
@@ -12,10 +14,6 @@ DAS6_HOSTNAME="fs0.das6.cs.vu.nl"
 
 # validate the config file by checking if all the required variables are defined, NUM_NODES is a number and greater than 1 and RESERVE_DURATION is in the format HH:MM:SS
 function validate_config {
-    if [ -z "$VUNET_USERNAME" ] || [ -z "$IN_VU_NETWORK" ] || [ -z "$NUM_NODES" ] || [ -z "$RESERVE_DURATION" ]; then
-        echo "ERROR: One or more variables from the above are not defined in das-config.txt"
-        exit 1
-    fi
     if [ "$DAS_VERSION_TO_USE" -eq 5 ]; then
         if [ -z "$DAS5_USERNAME" ]; then
             echo "ERROR: DAS5_USERNAME is not defined in das-config.txt"
@@ -40,7 +38,7 @@ function validate_config {
     fi
 }
 
-# ssh to das5/6 with or without proxyjump depending on whether IN_VU_NETWORK=true or not
+# ssh to das5/6 and execute the commands
 function ssh_das {
     if [ "$DAS_VERSION_TO_USE" -eq 5 ]; then
         USERNAME=$DAS5_USERNAME
@@ -49,14 +47,47 @@ function ssh_das {
         USERNAME=$DAS6_USERNAME
         HOSTNAME=$DAS6_HOSTNAME
     fi
-    if [ "$IN_VU_NETWORK" = true ] ; then
-        ssh "$USERNAME@$HOSTNAME" -t "$@"
+    ssh -J "$VUNET_USERNAME@$VU_SSH_HOSTNAME" "$USERNAME@$HOSTNAME" -t "$@" 
+}
+
+# scp files/directory to das5/6
+function scp_das {
+    if [ "$DAS_VERSION_TO_USE" -eq 5 ]; then
+        USERNAME=$DAS5_USERNAME
+        HOSTNAME=$DAS5_HOSTNAME
+    elif [ "$DAS_VERSION_TO_USE" -eq 6 ]; then
+        USERNAME=$DAS6_USERNAME
+        HOSTNAME=$DAS6_HOSTNAME
+    fi
+    scp -r -J "$VUNET_USERNAME@$VU_SSH_HOSTNAME" "$@" "$USERNAME@$HOSTNAME:~"
+}
+
+function scp_das {
+    # Arguments
+    local TRANSFER_MODE=$1
+    local FROM_PATH=$2
+    local TO_PATH=$3
+
+    # Destination server details
+    if [ "$DAS_VERSION_TO_USE" -eq 5 ]; then
+        USERNAME=$DAS5_USERNAME
+        HOSTNAME=$DAS5_HOSTNAME
+    elif [ "$DAS_VERSION_TO_USE" -eq 6 ]; then
+        USERNAME=$DAS6_USERNAME
+        HOSTNAME=$DAS6_HOSTNAME
+    fi
+
+    # Check transfer mode and perform the respective scp command
+    if [ "$TRANSFER_MODE" = "file" ]; then
+        scp -o ProxyJump=${VUNET_USERNAME}@${VU_SSH_HOSTNAME} ${FROM_PATH} ${USERNAME}@${HOSTNAME}:${TO_PATH}
+    elif [ "$TRANSFER_MODE" = "folder" ]; then
+        scp -r -o ProxyJump=${VUNET_USERNAME}@${VU_SSH_HOSTNAME} ${FROM_PATH} ${USERNAME}@${HOSTNAME}:${TO_PATH}
     else
-        ssh -J "$VUNET_USERNAME@$VU_SSH_HOSTNAME" "$USERNAME@$HOSTNAME" -t "$@" 
+        echo "Invalid transfer mode. Please use 'file' or 'folder'."
     fi
 }
 
-remote_commands=$(cat <<CMD
+setup_commands=$(cat <<CMD
     cd ~
     wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
     chmod +x dotnet-install.sh
@@ -64,7 +95,7 @@ remote_commands=$(cat <<CMD
     echo "export DOTNET_ROOT=\$HOME/.dotnet" >> ~/.bashrc
     echo "export PATH=\$PATH:\$HOME/.dotnet:\$HOME/.dotnet/tools" >> ~/.bashrc
     source ~/.bashrc
-    dir_name="terraria-experiment-$(date +%Y-%m-%d-%H-%M-%S)"
+    dir_name="$DIR_NAME"
     mkdir -p "\$dir_name"
     cd "\$dir_name"
     mkdir -p server bot
@@ -77,6 +108,10 @@ remote_commands=$(cat <<CMD
     curl -sL https://github.com/AbhilashBalaji/Benchmarking-Terraria/releases/download/testv1/linux-x64.zip -o linux-x64.zip
     unzip linux-x64.zip
     rm linux-x64.zip
+CMD
+)
+
+reserve_commands=$(cat <<CMD
     module load prun
     preserve -llist
     echo "Reserving $NUM_NODES nodes for $RESERVE_DURATION"
@@ -96,8 +131,11 @@ remote_commands=$(cat <<CMD
     bot_nodes=\${my_array[@]:1}
     echo "Bot nodes: \$bot_nodes"
     ssh \$server_node 'dotnet --version'
+    ssh \$server_node 'cd ~/$DIR_NAME/server && ./TShock.Server -world ~/$DIR_NAME/server/worlds/$WORLD_NAME.wld'
 CMD
 )
 
 validate_config
-ssh_das "$remote_commands"
+ssh_das "$setup_commands"
+scp_das "folder" "../worlds" "~/$DIR_NAME/server/worlds"
+ssh_das "$reserve_commands"
