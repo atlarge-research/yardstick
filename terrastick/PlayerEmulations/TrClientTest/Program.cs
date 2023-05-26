@@ -25,7 +25,7 @@ namespace TrClientTest
 
             if (Environment.GetEnvironmentVariable("TERRASTICK_IP") != null)
             {
-                ip = Environment.GetEnvironmentVariable("TERRARIA_IP");
+                ip = Environment.GetEnvironmentVariable("TERRASTICK_IP");
             }
             if(Environment.GetEnvironmentVariable("TERRASTICK_WORKLOAD") != null)
             {

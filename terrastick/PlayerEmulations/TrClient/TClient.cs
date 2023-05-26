@@ -228,15 +228,17 @@ namespace TrClient
                     this.SpawnSet = true;
                 }
             }
-            // event handler for when a chat message is received saying start work load when "start tel" is recived.
             
+            // event handler for when a chat message is received saying start work load when "start <time>" is recived.
+
             On<NetTextModuleS2C>(pkt =>
             {
                 if (pkt.Text._text.Contains( "start") && this.workload == "TEL")
                 {
                     this.ChatText("Starting teleport work load");
-                    this.RunTeleportWorkLoad(10);
-                    this.ChatText("WORKLOAD COMPLETE");
+                    string time = pkt.Text._text.Split(' ')[2];
+
+                    this.RunTeleportWorkLoad(int.Parse(time));
 
                 }
             });
@@ -277,7 +279,7 @@ namespace TrClient
                 this.ChatText("Teleported to " + newXPos + " " + yPos);
                 if (secs-- == 0)
                 {
-                    this.ChatText("Teleport workload finished");
+                    this.ChatText("WORKLOAD COMPLETE");
                     break;
                 }
             }
