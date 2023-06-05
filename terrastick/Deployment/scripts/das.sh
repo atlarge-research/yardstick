@@ -123,9 +123,10 @@ remote_commands=$(cat <<CMD
     sed -i 's/export TERRASTICK_WORKLOAD=.*/export TERRASTICK_WORKLOAD=TEL/' ~/.bashrc
     source ~/.bashrc
     ssh \$server_node 'cd ~/$DIR_NAME/server && screen -S server -d -m bash -c "./TShock.Server -world ~/$DIR_NAME/server/worlds/$WORLD_NAME.wld"' && echo "Server started on \$server_node"
+    echo "waiting for server to start" && sleep 10
     for node in \$bot_nodes; do
         echo "Bot node: \$node"
-        ssh \$node 'cd ~/$DIR_NAME/bot/yardstick-$TERRASTICK_VERSION/terrastick/PlayerEmulations/TrClientTest/bin/Release/net6.0/linux-x64/ && screen -S bot -d -m bash -c "./TrClientTest"'
+        ssh \$node 'cd ~/$DIR_NAME/bot/yardstick-$TERRASTICK_VERSION/terrastick/PlayerEmulations/TrClientTest/bin/Release/net6.0/linux-x64/ && screen -L -S bot-\$node -d -m bash -c "./TrClientTest"'
         echo "Bot started on \$node"
     done
     echo "Server and bots started"
