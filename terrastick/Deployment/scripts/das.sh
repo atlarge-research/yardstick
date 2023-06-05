@@ -52,17 +52,6 @@ function ssh_das {
 
 # scp files/directory to das5/6
 function scp_das {
-    if [ "$DAS_VERSION_TO_USE" -eq 5 ]; then
-        USERNAME=$DAS5_USERNAME
-        HOSTNAME=$DAS5_HOSTNAME
-    elif [ "$DAS_VERSION_TO_USE" -eq 6 ]; then
-        USERNAME=$DAS6_USERNAME
-        HOSTNAME=$DAS6_HOSTNAME
-    fi
-    scp -r -J "$VUNET_USERNAME@$VU_SSH_HOSTNAME" "$@" "$USERNAME@$HOSTNAME:~"
-}
-
-function scp_das {
     # Arguments
     local TRANSFER_MODE=$1
     local FROM_PATH=$2
@@ -87,7 +76,7 @@ function scp_das {
     fi
 }
 
-setup_commands=$(cat <<CMD
+remote_commands=$(cat <<CMD
     cd ~
     wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
     chmod +x dotnet-install.sh
@@ -104,16 +93,14 @@ setup_commands=$(cat <<CMD
     unzip TShock-5.1.3-for-Terraria-1.4.4.9-linux-x64-Release.zip
     tar -xvf TShock-Beta-linux-x64-Release.tar
     rm TShock-Beta-linux-x64-Release.tar TShock-5.1.3-for-Terraria-1.4.4.9-linux-x64-Release.zip
-    cd ../bot
+    cd ServerPlugins
+    curl -sL https://github.com/atlarge-research/yardstick/releases/download/$TERRASTICK_VERSION/server-side-packet-monitor.zip -o server-side-packet-monitor.zip
+    unzip -n server-side-packet-monitor.zip && rm server-side-packet-monitor.zip
+    cd ../../bot
     curl -sL https://github.com/atlarge-research/yardstick/archive/refs/tags/$TERRASTICK_VERSION.zip -o terrastick.zip
     unzip terrastick.zip && rm terrastick.zip
-    cd yardstick-$TERRASTICK_VERSION/terrastick && cp -r Server-side-packet-logging-plugin/ ../../../server/ServerPlugins/
-CMD
-)
-
-
-
-reserve_commands=$(cat <<CMD
+    mv yardstick-$TERRASTICK_VERSION/terrastick/Deployment/worlds ../server/
+    cd yardstick-$TERRASTICK_VERSION/terrastick/PlayerEmulations/TrClientTest && dotnet build -r linux-x64 -c Release --no-self-contained || echo "Build failed"
     module load prun
     preserve -llist
     echo "Reserving $NUM_NODES nodes for $RESERVE_DURATION"
@@ -135,17 +122,17 @@ reserve_commands=$(cat <<CMD
     sed -i "s/export TERRASTICK_IP=.*/export TERRASTICK_IP=10.141.0.\$(echo \$server_node | sed 's/node0*\([1-9][0-9]*\)/\1/' | grep -oE '[0-9]+')/" ~/.bashrc
     sed -i 's/export TERRASTICK_WORKLOAD=.*/export TERRASTICK_WORKLOAD=TEL/' ~/.bashrc
     source ~/.bashrc
-    ssh \$server_node 'cd ~/$DIR_NAME/server && screen -S server -d -m bash -c "./TShock.Server -world ~/$DIR_NAME/server/worlds/$WORLD_NAME.wld"'
+    ssh \$server_node 'cd ~/$DIR_NAME/server && screen -S server -d -m bash -c "./TShock.Server -world ~/$DIR_NAME/server/worlds/$WORLD_NAME.wld"' && echo "Server started on \$server_node"
     for node in \$bot_nodes; do
         echo "Bot node: \$node"
-        ssh \$node 'cd ~/$DIR_NAME/bot/publish/ && screen -S bot -d -m bash -c "./TrClientTest"'
+        ssh \$node 'cd ~/$DIR_NAME/bot/yardstick-$TERRASTICK_VERSION/terrastick/PlayerEmulations/TrClientTest/bin/Release/net6.0/linux-x64/ && screen -S bot -d -m bash -c "./TrClientTest"'
+        echo "Bot started on \$node"
     done
+    echo "Server and bots started"
     ssh \$server_node 'screen -r server'
 CMD
 )
 
 
 validate_config
-ssh_das "$setup_commands"
-scp_das "folder" "../worlds" "~/$DIR_NAME/server/worlds"
-ssh_das "$reserve_commands"
+ssh_das "$remote_commands"
