@@ -105,11 +105,13 @@ setup_commands=$(cat <<CMD
     tar -xvf TShock-Beta-linux-x64-Release.tar
     rm TShock-Beta-linux-x64-Release.tar TShock-5.1.3-for-Terraria-1.4.4.9-linux-x64-Release.zip
     cd ../bot
-    curl -sL https://github.com/AbhilashBalaji/Benchmarking-Terraria/releases/download/testv1/linux-x64.zip -o linux-x64.zip
-    unzip linux-x64.zip
-    rm linux-x64.zip
+    curl -sL https://github.com/atlarge-research/yardstick/archive/refs/tags/$TERRASTICK_VERSION.zip -o terrastick.zip
+    unzip terrastick.zip && rm terrastick.zip
+    cd yardstick-$TERRASTICK_VERSION/terrastick && cp -r Server-side-packet-logging-plugin/ ../../../server/ServerPlugins/
 CMD
 )
+
+
 
 reserve_commands=$(cat <<CMD
     module load prun
@@ -130,10 +132,18 @@ reserve_commands=$(cat <<CMD
     echo "Server node: \$server_node"
     bot_nodes=\${my_array[@]:1}
     echo "Bot nodes: \$bot_nodes"
-    ssh \$server_node 'dotnet --version'
-    ssh \$server_node 'cd ~/$DIR_NAME/server && ./TShock.Server -world ~/$DIR_NAME/server/worlds/$WORLD_NAME.wld'
+    sed -i "s/export TERRASTICK_IP=.*/export TERRASTICK_IP=10.141.0.\$(echo \$server_node | sed 's/node0*\([1-9][0-9]*\)/\1/' | grep -oE '[0-9]+')/" ~/.bashrc
+    sed -i 's/export TERRASTICK_WORKLOAD=.*/export TERRASTICK_WORKLOAD=TEL/' ~/.bashrc
+    source ~/.bashrc
+    ssh \$server_node 'cd ~/$DIR_NAME/server && screen -S server -d -m bash -c "./TShock.Server -world ~/$DIR_NAME/server/worlds/$WORLD_NAME.wld"'
+    for node in \$bot_nodes; do
+        echo "Bot node: \$node"
+        ssh \$node 'cd ~/$DIR_NAME/bot/publish/ && screen -S bot -d -m bash -c "./TrClientTest"'
+    done
+    ssh \$server_node 'screen -r server'
 CMD
 )
+
 
 validate_config
 ssh_das "$setup_commands"
