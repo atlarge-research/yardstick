@@ -77,13 +77,27 @@ function scp_das {
 }
 
 remote_commands=$(cat <<CMD
+    TERRASTICK_WORKLOAD=$TERRASTICK_WORKLOAD
+    TERRASTICK_IP=$TERRASTICK_IP
+    DOTNET_ROOT=\$HOME/.dotnet
+    PATH=\$PATH:\$HOME/.dotnet:\$HOME/.dotnet/tools
+    variable_list=("TERRASTICK_WORKLOAD" "TERRASTICK_IP" "DOTNET_ROOT" "PATH")
+    for variable_name in "\${variable_list[@]}"; do
+        variable_value="\${!variable_name}"
+        if ! grep -q "^export \$variable_name=" ~/.bashrc; then
+            echo "export \$variable_name=\"\$variable_value\"" >> ~/.bashrc
+            echo "Added the variable \$variable_name to the bash RC file."
+        else
+            # Variable is already set
+            echo "The variable \$variable_name is already set in the bash RC file."
+        fi
+    done
     cd ~
     wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
     chmod +x dotnet-install.sh
     ./dotnet-install.sh --version latest
-    echo "export DOTNET_ROOT=\$HOME/.dotnet" >> ~/.bashrc
-    echo "export PATH=\$PATH:\$HOME/.dotnet:\$HOME/.dotnet/tools" >> ~/.bashrc
     source ~/.bashrc
+    exit
     dir_name="$DIR_NAME"
     mkdir -p "\$dir_name"
     cd "\$dir_name"
