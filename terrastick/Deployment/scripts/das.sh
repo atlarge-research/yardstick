@@ -52,17 +52,6 @@ function ssh_das {
 
 # scp files/directory to das5/6
 function scp_das {
-    if [ "$DAS_VERSION_TO_USE" -eq 5 ]; then
-        USERNAME=$DAS5_USERNAME
-        HOSTNAME=$DAS5_HOSTNAME
-    elif [ "$DAS_VERSION_TO_USE" -eq 6 ]; then
-        USERNAME=$DAS6_USERNAME
-        HOSTNAME=$DAS6_HOSTNAME
-    fi
-    scp -r -J "$VUNET_USERNAME@$VU_SSH_HOSTNAME" "$@" "$USERNAME@$HOSTNAME:~"
-}
-
-function scp_das {
     # Arguments
     local TRANSFER_MODE=$1
     local FROM_PATH=$2
@@ -87,13 +76,28 @@ function scp_das {
     fi
 }
 
-setup_commands=$(cat <<CMD
+remote_commands=$(cat <<CMD
+    TERRASTICK_WORKLOAD=$TERRASTICK_WORKLOAD
+    TERRASTICK_IP=$TERRASTICK_IP
+    DOTNET_ROOT=\$HOME/.dotnet
+    PATH=\$PATH:\$HOME/.dotnet:\$HOME/.dotnet/tools
+    variable_list=("TERRASTICK_WORKLOAD" "TERRASTICK_IP" "DOTNET_ROOT" "PATH")
+    for variable_name in "\${variable_list[@]}"; do
+        variable_value="\${!variable_name}"
+        if ! grep -q "^export \$variable_name=" ~/.bashrc; then
+            echo "export \$variable_name=\"\$variable_value\"" >> ~/.bashrc
+            echo "Added the variable \$variable_name to the bash RC file."
+        else
+            # Variable is already set
+            echo "The variable \$variable_name is already set in the bash RC file."
+        fi
+    done
     cd ~
-    wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
-    chmod +x dotnet-install.sh
+    if ! [ -f dotnet-install.sh ]; then
+        wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
+        chmod +x dotnet-install.sh
+    fi
     ./dotnet-install.sh --version latest
-    echo "export DOTNET_ROOT=\$HOME/.dotnet" >> ~/.bashrc
-    echo "export PATH=\$PATH:\$HOME/.dotnet:\$HOME/.dotnet/tools" >> ~/.bashrc
     source ~/.bashrc
     dir_name="$DIR_NAME"
     mkdir -p "\$dir_name"
@@ -104,14 +108,14 @@ setup_commands=$(cat <<CMD
     unzip TShock-5.1.3-for-Terraria-1.4.4.9-linux-x64-Release.zip
     tar -xvf TShock-Beta-linux-x64-Release.tar
     rm TShock-Beta-linux-x64-Release.tar TShock-5.1.3-for-Terraria-1.4.4.9-linux-x64-Release.zip
-    cd ../bot
-    curl -sL https://github.com/AbhilashBalaji/Benchmarking-Terraria/releases/download/testv1/linux-x64.zip -o linux-x64.zip
-    unzip linux-x64.zip
-    rm linux-x64.zip
-CMD
-)
-
-reserve_commands=$(cat <<CMD
+    cd ServerPlugins
+    curl -sL https://github.com/atlarge-research/yardstick/releases/download/$TERRASTICK_VERSION/server-side-packet-monitor.zip -o server-side-packet-monitor.zip
+    unzip -n server-side-packet-monitor.zip && rm server-side-packet-monitor.zip
+    cd ../../bot
+    curl -sL https://github.com/atlarge-research/yardstick/archive/refs/tags/$TERRASTICK_VERSION.zip -o terrastick.zip
+    unzip terrastick.zip && rm terrastick.zip
+    mv yardstick-$TERRASTICK_VERSION/terrastick/Deployment/worlds ../server/
+    cd yardstick-$TERRASTICK_VERSION/terrastick/PlayerEmulations/TrClientTest && dotnet build -r linux-x64 -c Release --no-self-contained || echo "Build failed"
     module load prun
     preserve -llist
     echo "Reserving $NUM_NODES nodes for $RESERVE_DURATION"
@@ -130,12 +134,21 @@ reserve_commands=$(cat <<CMD
     echo "Server node: \$server_node"
     bot_nodes=\${my_array[@]:1}
     echo "Bot nodes: \$bot_nodes"
-    ssh \$server_node 'dotnet --version'
-    ssh \$server_node 'cd ~/$DIR_NAME/server && ./TShock.Server -world ~/$DIR_NAME/server/worlds/$WORLD_NAME.wld'
+    sed -i "s/export TERRASTICK_IP=.*/export TERRASTICK_IP=10.141.0.\$(echo \$server_node | sed 's/node0*\([1-9][0-9]*\)/\1/' | grep -oE '[0-9]+')/" ~/.bashrc
+    sed -i 's/export TERRASTICK_WORKLOAD=.*/export TERRASTICK_WORKLOAD=TEL/' ~/.bashrc
+    source ~/.bashrc
+    ssh \$server_node 'cd ~/$DIR_NAME/server && screen -S server -d -m bash -c "./TShock.Server -world ~/$DIR_NAME/server/worlds/$WORLD_NAME.wld"' && echo "Server started on \$server_node"
+    echo "waiting for server to start" && sleep 10
+    for node in \$bot_nodes; do
+        echo "Bot node: \$node"
+        ssh \$node 'cd ~/$DIR_NAME/bot/yardstick-$TERRASTICK_VERSION/terrastick/PlayerEmulations/TrClientTest/bin/Release/net6.0/linux-x64/ && screen -L -S bot-\$node -d -m bash -c "./TrClientTest"'
+        echo "Bot started on \$node"
+    done
+    echo "Server and bots started"
+    ssh \$server_node 'screen -r server'
 CMD
 )
 
+
 validate_config
-ssh_das "$setup_commands"
-scp_das "folder" "../worlds" "~/$DIR_NAME/server/worlds"
-ssh_das "$reserve_commands"
+ssh_das "$remote_commands"
