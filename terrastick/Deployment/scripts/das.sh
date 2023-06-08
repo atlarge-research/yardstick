@@ -93,11 +93,12 @@ remote_commands=$(cat <<CMD
         fi
     done
     cd ~
-    wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
-    chmod +x dotnet-install.sh
+    if ! [ -f dotnet-install.sh ]; then
+        wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
+        chmod +x dotnet-install.sh
+    fi
     ./dotnet-install.sh --version latest
     source ~/.bashrc
-    exit
     dir_name="$DIR_NAME"
     mkdir -p "\$dir_name"
     cd "\$dir_name"
