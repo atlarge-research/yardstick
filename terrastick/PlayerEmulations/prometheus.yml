@@ -1,0 +1,10 @@
+# premetheus config file for scraping metrics from the terrastick app linked to a process exporter
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'terrastick'
+    static_configs:
+      - targets: ['localhost:8080']

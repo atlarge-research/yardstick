@@ -1,0 +1,5 @@
+# process exporter config linked to Tshock process
+  - job_name: 'tshock'
+    static_configs:
+      - targets: ['localhost:9256']
+```

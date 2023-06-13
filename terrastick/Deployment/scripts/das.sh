@@ -114,12 +114,16 @@ remote_commands=$(cat <<CMD
     cd ../../bot
     curl -sL https://github.com/atlarge-research/yardstick/archive/refs/tags/$TERRASTICK_VERSION.zip -o terrastick.zip
     unzip terrastick.zip && rm terrastick.zip
+    curl -sL  https://github.com/prometheus/prometheus/releases/download/v2.37.8/prometheus-2.37.8.linux-amd64.tar.gz -o prometheus.gz
+    tar -xvf prometheus.gz
+    curl -sL https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter-0.7.10.linux-amd64.tar.gz -o process-exporter.gz
+    tar -xvf process-exporter.gz
     mv yardstick-$TERRASTICK_VERSION/terrastick/Deployment/worlds ../server/
     cd yardstick-$TERRASTICK_VERSION/terrastick/PlayerEmulations/TrClientTest && dotnet build -r linux-x64 -c Release --no-self-contained || echo "Build failed"
     module load prun
     preserve -llist
     echo "Reserving $NUM_NODES nodes for $RESERVE_DURATION"
-    preserve -np $NUM_NODES -t $RESERVE_DURATION > reservation.txt
+    preserve -np $((NUM_NODES+1)) -t $RESERVE_DURATION > reservation.txt
     cat reservation.txt | grep -o -E '[0-9]+' | head -n 1 > reservation_id.txt
     reservation_id=\$(cat reservation_id.txt) && rm reservation*.txt
     while ! preserve -llist | grep \$reservation_id | awk '{print \$7}' | grep -q "R" ;
@@ -132,13 +136,23 @@ remote_commands=$(cat <<CMD
     mapfile -t my_array < nodes.txt && rm nodes.txt
     server_node=\${my_array[0]}
     echo "Server node: \$server_node"
-    bot_nodes=\${my_array[@]:1}
+    # bot nodes are all nodes except the first one and last one
+    bot_nodes=\${my_array[@]:1:\${#my_array[@]}-2}
     echo "Bot nodes: \$bot_nodes"
+    prometheus_node=\${my_array[-1]}
+
     sed -i "s/export TERRASTICK_IP=.*/export TERRASTICK_IP=10.141.0.\$(echo \$server_node | sed 's/node0*\([1-9][0-9]*\)/\1/' | grep -oE '[0-9]+')/" ~/.bashrc
     sed -i 's/export TERRASTICK_WORKLOAD=.*/export TERRASTICK_WORKLOAD=TEL/' ~/.bashrc
     source ~/.bashrc
     ssh \$server_node 'cd ~/$DIR_NAME/server && screen -S server -d -m bash -c "./TShock.Server -world ~/$DIR_NAME/server/worlds/$WORLD_NAME.wld"' && echo "Server started on \$server_node"
     echo "waiting for server to start" && sleep 10
+
+    # start process exporter on server node
+    ssh \$server_node 'cd ~/$DIR_NAME/server && screen -S process-exporter -d -m bash -c "./process-exporter -config.path server-process-exporter.yaml"' && echo "Process exporter started on \$server_node"
+    # start prometheus on prometheus node
+    ssh \$prometheus_node 'cd ~/$DIR_NAME/server && screen -S prometheus -d -m bash -c "prometheus --config.file=prometheus.yml"' && echo "Prometheus started on \$prometheus_node"
+    echo "waiting for prometheus to start" && sleep 10
+    
     for node in \$bot_nodes; do
         echo "Bot node: \$node"
         ssh \$node 'cd ~/$DIR_NAME/bot/yardstick-$TERRASTICK_VERSION/terrastick/PlayerEmulations/TrClientTest/bin/Release/net6.0/linux-x64/ && screen -L -S bot-\$node -d -m bash -c "./TrClientTest"'
