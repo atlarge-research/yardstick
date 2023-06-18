@@ -153,10 +153,10 @@ remote_commands=$(cat <<CMD
     echo "waiting for server to start" && sleep 10
 
     # start process exporter on server node
-    ssh \$server_node 'cd ~/$DIR_NAME/server/process-exporter-0.7.10.linux-amd64 && screen -L -S process-exporter -d -m bash -c "./process-exporter -config.path server-process-exporter.yaml -web.listen-address 0.0.0.0:9256"' && echo "Process exporter started on \$server_node"
+    ssh \$server_node 'cd ~/$DIR_NAME/server/process-exporter-0.7.10.linux-amd64 && screen -L -S process-exporter -d -m bash -c "./process-exporter -config.path server-process-exporter.yaml -web.listen-address \$TERRASTICK_IP:9256"' && echo "Process exporter started on \$server_node"
     
     # start prometheus on prometheus node
-    sed -i "s/TERRASTICK_IP/$TERRASTICK_IP/g" ~/$DIR_NAME/prometheus/prometheus-2.37.8.linux-amd64/prometheus-terrastick.yml
+    sed -i "s/TERRASTICK_IP/\$TERRASTICK_IP/g" ~/$DIR_NAME/prometheus/prometheus-2.37.8.linux-amd64/prometheus-terrastick.yml
     ssh \$prometheus_node 'cd ~/$DIR_NAME/prometheus/prometheus-2.37.8.linux-amd64 && screen -L -S prometheus -d -m bash -c "./prometheus --config.file=prometheus-terrastick.yml"' && echo "Prometheus started on \$prometheus_node"
     # echo "waiting for prometheus to start" && sleep 10
     
