@@ -311,17 +311,33 @@ namespace TrClient
 
                 });
         }
+
+        public void WalkPlayer(int x1,int y1,int x2,int y2)
+        {
+            var lerp = new Vector2 { X = x1, Y = y1 };
+            var lerp2 = new Vector2 { X = x2, Y = y2 };
+            var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(10));
+            while (timer.WaitForNextTickAsync().Result)
+            {
+                lerp = Vector2.Lerp(lerp, lerp2, 0.5f);
+                Send(new UpdatePlayer
+                {
+                    PlayerSlot = this.PlayerSlot,
+                    Bit1 = 0,
+                    Bit2 = 0,
+                    Bit3 = 0,
+                    Bit4 = 0,
+                    SelectedItem = 0,
+                    Position = lerp,
+                    Velocity = new Vector2 { X = 0, Y = 0 }
+                });
+            }
+        }
         private void GameLoopInternal(string password)
         {
 
             Console.WriteLine("Sending Client Hello...");
             Hello(CurRelease);
-
-            /*TcpClient verify = new TcpClient();
-            byte[] raw = Encoding.ASCII.GetBytes("-1551487326");
-            verify.Connect(new IPEndPoint(endPoint.Address, 7980));
-            verify.GetStream().Write(raw, 0, raw.Length);
-            verify.Close();*/
 
             On<RequestPassword>(_ => Send(new SendPassword { Password = password }));
             //On<StatusText>(_=> )

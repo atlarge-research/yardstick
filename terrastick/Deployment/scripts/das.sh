@@ -149,7 +149,7 @@ remote_commands=$(cat <<CMD
     sed -i "s/export TERRASTICK_IP=.*/export TERRASTICK_IP=10.141.0.\$(echo \$server_node | sed 's/node0*\([1-9][0-9]*\)/\1/' | grep -oE '[0-9]+')/" ~/.bashrc
     sed -i 's/export TERRASTICK_WORKLOAD=.*/export TERRASTICK_WORKLOAD=TEL/' ~/.bashrc
     source ~/.bashrc
-    ssh \$server_node 'cd ~/$DIR_NAME/server && screen -L -S server -d -m bash -c "./TShock.Server -world ~/$DIR_NAME/server/worlds/$WORLD_NAME.wld"' && echo "Server started on \$server_node"
+    ssh \$server_node 'cd ~/$DIR_NAME/server && screen -L -S server -d -m bash -c "./TShock.Server -autocreate 1   -maxplayers $MAX_PLAYERS"' && echo "Server started on \$server_node"
     echo "waiting for server to start" && sleep 10
 
     # start process exporter on server node
