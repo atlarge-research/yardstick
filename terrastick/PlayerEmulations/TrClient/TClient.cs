@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using TrProtocol;
 using TrProtocol.Models;
 using TrProtocol.Packets;
@@ -241,12 +242,48 @@ namespace TrClient
                     this.RunTeleportWorkLoad(int.Parse(time));
 
                 }
+                if (pkt.Text._text.Contains("start") && this.workload == "WLK")
+                {
+                    this.ChatText("Starting walk work load");
+                    string time = pkt.Text._text.Split(' ')[2];
+
+                     this.RunWalkWorkLoadAsync(int.Parse(time));
+
+                }
             });
             
 
 
 
         }
+
+        private async Task RunWalkWorkLoadAsync(int v)
+        {
+            int secs = v;
+            Random rand = new Random();
+            int spawnTime = rand.Next(500, 1000);
+            var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(spawnTime));
+
+            while (await timer.WaitForNextTickAsync())
+            {
+                var xPos = this.SpawnX;
+                var yPos = this.SpawnY;
+                var rand1 = new Random();
+                // random delta between -10 and 10
+                var deltaX = rand1.Next(-10, 10);
+
+                var newXPos = (rand.Next() >= 0.5) ? xPos + deltaX : xPos - deltaX;
+                await this.WalkPlayer(xPos, yPos, newXPos, yPos);
+                this.ChatText("Teleported to " + newXPos + " " + yPos);
+                if (secs-- == 0)
+                {
+                    this.ChatText("WORKLOAD COMPLETE");
+                    break;
+                }
+            }
+            timer.Dispose();
+        }
+
 
         public bool connected = false;
 
@@ -310,14 +347,16 @@ namespace TrClient
                 // Home Position Y	Single	Home Position for Potion of Return, only sent if UsedPotionofReturn flag is true
 
                 });
+            this.SpawnX = x;
+            this.SpawnY = y;
         }
 
-        public void WalkPlayer(int x1,int y1,int x2,int y2)
+        public async Task WalkPlayer(int x1,int y1,int x2,int y2)
         {
             var lerp = new Vector2 { X = x1, Y = y1 };
             var lerp2 = new Vector2 { X = x2, Y = y2 };
-            var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(10));
-            while (timer.WaitForNextTickAsync().Result)
+            var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(1000));
+            while (await timer.WaitForNextTickAsync())
             {
                 lerp = Vector2.Lerp(lerp, lerp2, 0.5f);
                 Send(new UpdatePlayer
@@ -328,9 +367,11 @@ namespace TrClient
                     Bit3 = 0,
                     Bit4 = 0,
                     SelectedItem = 0,
-                    Position = lerp,
-                    Velocity = new Vector2 { X = 0, Y = 0 }
+                    Position = new Vector2 { X = lerp.X, Y = lerp.Y },
+                    Velocity = new Vector2 { X = lerp2.X - lerp.X, Y = lerp2.Y - lerp.Y }
                 });
+                this.SpawnX = (int)lerp.X;
+                this.SpawnY = (int)lerp.Y;
             }
         }
         private void GameLoopInternal(string password)

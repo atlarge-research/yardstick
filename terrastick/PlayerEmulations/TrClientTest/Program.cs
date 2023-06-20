@@ -19,7 +19,7 @@ namespace TrClientTest
         static void Main(string[] args)
         {
             string ip = "127.0.0.1";
-            string workload = "TEL";
+            string workload = "WLK";
             string name = "BOT";
             string logpath = "terrastick_bot_logs";
 
