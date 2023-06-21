@@ -28,6 +28,7 @@ import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.ItemSta
 import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.Position;
 import science.atlarge.opencraft.mcprotocollib.data.game.entity.player.Hand;
 import science.atlarge.opencraft.mcprotocollib.data.game.entity.player.PlayerAction;
+import science.atlarge.opencraft.mcprotocollib.packet.ingame.client.ClientChatPacket;
 import science.atlarge.opencraft.mcprotocollib.packet.ingame.client.player.ClientPlayerActionPacket;
 import science.atlarge.opencraft.mcprotocollib.packet.ingame.client.player.ClientPlayerPlaceBlockPacket;
 import science.atlarge.opencraft.mcprotocollib.packet.ingame.client.player.ClientPlayerPositionPacket;
@@ -149,6 +150,10 @@ public class BotController {
      */
     public void creativeInventoryAction(Material mat, int amt) {
         getSession().send(new ClientCreativeInventoryActionPacket(PLAYER_INVENTORY_HOTBAR_0, new ItemStack(mat.getId(), amt)));
+    }
+
+    public void sendChatMsg(String msg) {
+        getSession().send(new ClientChatPacket(msg));
     }
 
     /**

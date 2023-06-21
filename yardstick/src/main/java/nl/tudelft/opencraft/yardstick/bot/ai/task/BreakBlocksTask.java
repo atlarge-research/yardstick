@@ -18,13 +18,12 @@
 
 package nl.tudelft.opencraft.yardstick.bot.ai.task;
 
+import java.util.ArrayList;
+import java.util.List;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.world.Block;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class BreakBlocksTask implements Task {
 

@@ -129,6 +129,8 @@ import science.atlarge.opencraft.packetlib.event.session.PacketSentEvent;
 import science.atlarge.opencraft.packetlib.event.session.SessionListener;
 import science.atlarge.opencraft.packetlib.packet.Packet;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -142,6 +144,9 @@ public class BotListener implements SessionListener {
     private BotPlayer player;
     private Server server;
     private World world;
+
+    private final List<PacketReceivedEvent> unhandledRecvPkt = new ArrayList<>();
+    private boolean serverJoinGame;
 
     /**
      * Creates a new listener.
@@ -464,6 +469,13 @@ public class BotListener implements SessionListener {
             this.player = new BotPlayer(bot, p.getEntityId());
             player.setGamemode(p.getGameMode());
             bot.setPlayer(player);
+
+            // Replay the unhandled packet events before receiving server join game
+            serverJoinGame = true;
+            for (PacketReceivedEvent packetReceivedEvent : unhandledRecvPkt) {
+                packetReceived(packetReceivedEvent);
+            }
+            unhandledRecvPkt.clear();
         } else if (packet instanceof ServerMapDataPacket) {
             // 0x24 Map
             ServerMapDataPacket p = (ServerMapDataPacket) packet;
@@ -512,6 +524,11 @@ public class BotListener implements SessionListener {
             ServerOpenTileEntityEditorPacket p = (ServerOpenTileEntityEditorPacket) packet;
             // TODO
 
+        }
+        // ServerJoinGame packet is received after a few Player packets.
+        // Save them to handle later
+        else if (!serverJoinGame) {
+            unhandledRecvPkt.add(pre);
         } else if (packet instanceof ServerPlayerAbilitiesPacket) {
 
             // 0x2B Player Abilities
@@ -540,8 +557,8 @@ public class BotListener implements SessionListener {
         } else if (packet instanceof ServerPlayerPositionRotationPacket) {
             // 0x2E Player Position And Look
             ServerPlayerPositionRotationPacket p = (ServerPlayerPositionRotationPacket) packet;
-
             BotPlayer player = bot.getPlayer();
+
             player.setLocation(new Vector3d(p.getX(), p.getY(), p.getZ()));
             player.setPitch(p.getPitch());
             player.setYaw(p.getYaw());
@@ -549,7 +566,6 @@ public class BotListener implements SessionListener {
 
             Session session = bot.getClient().getSession();
             session.send(new ClientTeleportConfirmPacket(p.getTeleportId()));
-
             logger.info("Received new Player position: " + player.getLocation());
 
         } else if (packet instanceof ServerPlayerUseBedPacket) {
@@ -723,7 +739,7 @@ public class BotListener implements SessionListener {
             // TODO
 
         } else {
-            logger.warn("Received unhandled packet: {}", packet.getClass().getName());
+            logger.debug("Received unhandled packet: {}", packet.getClass().getName());
         }
     }
 
