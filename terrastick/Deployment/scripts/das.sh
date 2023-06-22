@@ -113,6 +113,8 @@ remote_commands=$(cat <<CMD
     rm TShock-Beta-linux-x64-Release.tar TShock-5.1.3-for-Terraria-1.4.4.9-linux-x64-Release.zip
     curl -sL https://github.com/ncabatoff/process-exporter/releases/download/v0.7.10/process-exporter-0.7.10.linux-amd64.tar.gz -o process-exporter.gz
     tar -xvf process-exporter.gz && rm process-exporter.gz
+    wget https://github.com/prometheus/node_exporter/releases/download/v1.6.0/node_exporter-1.6.0.linux-amd64.tar.gz
+    tar -xvf node_exporter-1.6.0.linux-amd64.tar.gz && rm node_exporter-1.6.0.linux-amd64.tar.gz
     cd ServerPlugins
     curl -sL https://github.com/atlarge-research/yardstick/releases/download/$TERRASTICK_VERSION/server-side-packet-monitor.zip -o server-side-packet-monitor.zip
     unzip -n server-side-packet-monitor.zip && rm server-side-packet-monitor.zip
@@ -122,6 +124,7 @@ remote_commands=$(cat <<CMD
     mv yardstick-$TERRASTICK_VERSION/terrastick/Deployment/worlds ../server/
     mv yardstick-$TERRASTICK_VERSION/terrastick/Deployment/metrics-configs/prometheus-terrastick.yml ../prometheus/prometheus-2.37.8.linux-amd64/
     mv yardstick-$TERRASTICK_VERSION/terrastick/Deployment/metrics-configs/server-process-exporter.yaml ../server/process-exporter-0.7.10.linux-amd64/
+
     cd yardstick-$TERRASTICK_VERSION/terrastick/PlayerEmulations/TrClientTest && dotnet build -r linux-x64 -c Release --no-self-contained || echo "Build failed"
     module load prun
     preserve -llist
@@ -152,10 +155,12 @@ remote_commands=$(cat <<CMD
     ssh \$server_node 'cd ~/$DIR_NAME/server && screen -L -S server -d -m bash -c "./TShock.Server -port 7777 -maxplayers 20 -world ~/$DIR_NAME/server/worlds/$WORLD_NAME.wld "' && echo "Server started on \$server_node"
     echo "waiting for server to start" && sleep 10
 
-    # start process exporter on server node
+    # start node and process exporter on server node
     ssh \$server_node 'cd ~/$DIR_NAME/server/process-exporter-0.7.10.linux-amd64 && screen -L -S process-exporter -d -m bash -c "./process-exporter -config.path server-process-exporter.yaml -web.listen-address \$TERRASTICK_IP:9256"' && echo "Process exporter started on \$server_node"
+    ssh \$server_node 'cd ~/$DIR_NAME/server/node_exporter-1.6.0.linux-amd64 && screen -L -S node-exporter -d -m bash -c "./node_exporter"' && echo "Node exporter started on \$server_node"
     
-    # start prometheus on prometheus node
+
+
     sed -i "s/TERRASTICK_IP/\$TERRASTICK_IP/g" ~/$DIR_NAME/prometheus/prometheus-2.37.8.linux-amd64/prometheus-terrastick.yml
     ssh \$prometheus_node 'cd ~/$DIR_NAME/prometheus/prometheus-2.37.8.linux-amd64 && screen -L -S prometheus -d -m bash -c "./prometheus --config.file=prometheus-terrastick.yml"' && echo "Prometheus started on \$prometheus_node"
     # echo "waiting for prometheus to start and waiting for server to load up" && sleep 30
