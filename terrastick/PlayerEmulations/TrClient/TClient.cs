@@ -261,8 +261,7 @@ namespace TrClient
         {
             int secs = v;
             Random rand = new Random();
-            int spawnTime = rand.Next(500, 1000);
-            var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(spawnTime));
+            var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(v * 1000));
 
             while (await timer.WaitForNextTickAsync())
             {
@@ -270,7 +269,7 @@ namespace TrClient
                 var yPos = this.SpawnY;
                 var rand1 = new Random();
                 // random delta between -10 and 10
-                var deltaX = rand1.Next(-10, 10);
+                var deltaX = rand1.Next(-100, 100);
 
                 var newXPos = (rand.Next() >= 0.5) ? xPos + deltaX : xPos - deltaX;
                 await this.WalkPlayer(xPos, yPos, newXPos, yPos);
