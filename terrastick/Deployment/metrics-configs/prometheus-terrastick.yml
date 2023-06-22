@@ -10,5 +10,5 @@ scrape_configs:
       - targets: ['TERRASTICK_IP:9256']
   - job_name: 'node-exporter'
     static_configs:
-      - targets: ['TERRASTICK_IP:9100']=
+      - targets: ['TERRASTICK_IP:9100']
 
