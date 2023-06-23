@@ -20,7 +20,8 @@ namespace TrClientTest
         {
             string ip = "127.0.0.1";
             string workload = "TEL";
-            string name = "BOT";
+            // name is botname and last 5 characters of hostname
+            string name = "BOT_" + Environment.MachineName.Substring(Environment.MachineName.Length - 5);
             string logpath = "terrastick_bot_logs";
 
             if (Environment.GetEnvironmentVariable("TERRASTICK_IP") != null)
