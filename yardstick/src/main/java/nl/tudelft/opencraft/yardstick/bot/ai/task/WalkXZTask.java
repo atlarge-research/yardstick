@@ -21,9 +21,12 @@ package nl.tudelft.opencraft.yardstick.bot.ai.task;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.util.Vector2i;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class WalkXZTask implements Task {
 
+    private final Logger logger = LoggerFactory.getLogger(WalkXZTask.class);
     private Vector2i target;
 
     public Vector2i getTarget() {
@@ -39,7 +42,7 @@ public class WalkXZTask implements Task {
         try {
             return new WalkTaskExecutor(bot, target.getHighestWalkTarget(bot.getWorld()));
         } catch (ChunkNotLoadedException e) {
-            bot.getLogger().warning(e.getMessage());
+            logger.warn(e.getMessage());
             return new WalkTaskExecutor(bot, bot.getPlayer().getLocation().intVector());
         }
     }

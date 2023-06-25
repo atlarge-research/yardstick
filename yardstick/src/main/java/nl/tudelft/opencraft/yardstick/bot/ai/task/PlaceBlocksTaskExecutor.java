@@ -18,9 +18,6 @@
 
 package nl.tudelft.opencraft.yardstick.bot.ai.task;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
 import com.beust.jcommander.internal.Lists;
 import com.beust.jcommander.internal.Sets;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
@@ -31,6 +28,10 @@ import nl.tudelft.opencraft.yardstick.bot.world.Material;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import nl.tudelft.opencraft.yardstick.util.WorldUtil;
+
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Represents a task to place blocks.
@@ -45,9 +46,9 @@ public class PlaceBlocksTaskExecutor extends AbstractTaskExecutor {
      * Creates a new PlaceBlocksTask. The locations must be visible and
      * reachable to the bot.
      *
-     * @param bot the bot for the task.
+     * @param bot       the bot for the task.
      * @param locations the locations at which to place blocks.
-     * @param material the material type of the blocks.
+     * @param material  the material type of the blocks.
      */
     public PlaceBlocksTaskExecutor(Bot bot, List<Vector3i> locations, Material material) {
         super(bot);
@@ -75,18 +76,18 @@ public class PlaceBlocksTaskExecutor extends AbstractTaskExecutor {
         try {
             toPlace = bot.getWorld().getBlockAt(placeAt);
         } catch (ChunkNotLoadedException ex) {
-            logger.warning("Could not get block: " + placeAt);
+            logger.warn("Could not get block: {}", placeAt);
             return onTick();
         }
 
         if (toPlace.getMaterial() != Material.AIR) {
-            logger.warning("Block not air: " + placeAt);
+            logger.warn("Block not air: {}", placeAt);
             return onTick();
         }
 
         Hitpoint hit = tryGetHitpoint(bot.getPlayer().getEyeLocation(), toPlace);
         if (hit == null) {
-            logger.warning("Could not place block -- player: " + bot.getPlayer().getLocation() + ", block: " + placeAt);
+            logger.warn("Could not place block -- player: {}, block: {}", bot.getPlayer().getLocation(), placeAt);
             return onTick();
         }
 
@@ -115,7 +116,7 @@ public class PlaceBlocksTaskExecutor extends AbstractTaskExecutor {
             try {
                 support = placeAt.getRelative(placeFace);
             } catch (ChunkNotLoadedException ex) {
-                logger.warning("Could not get block: " + placeAt.getLocation().add(placeFace.getOffset()));
+                logger.warn("Could not get block: " + placeAt.getLocation().add(placeFace.getOffset()));
                 continue;
             }
 
@@ -156,9 +157,9 @@ public class PlaceBlocksTaskExecutor extends AbstractTaskExecutor {
      * Returns the hit point from a point to the center of a block face of a
      * block.
      *
-     * @param from The viewpoint or origin of the ray trace.
+     * @param from    The viewpoint or origin of the ray trace.
      * @param support The block to ray trace to.
-     * @param face The face of the block.
+     * @param face    The face of the block.
      * @return The hit point if the ray trace was successful, null if a
      * occluding block was found.
      */

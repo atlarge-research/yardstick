@@ -18,8 +18,6 @@
 
 package nl.tudelft.opencraft.yardstick.model;
 
-import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.Position;
-import java.util.Random;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
@@ -29,6 +27,11 @@ import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import nl.tudelft.opencraft.yardstick.util.ZigZagRange;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.Position;
+
+import java.util.Random;
 
 /**
  * Represents a model which moves the bot randomly to short and long distance
@@ -37,6 +40,8 @@ import nl.tudelft.opencraft.yardstick.util.ZigZagRange;
 public class SimpleMovementModel implements BotModel {
 
     private static final Random RANDOM = new Random(System.nanoTime());
+
+    private final Logger logger = LoggerFactory.getLogger(SimpleMovementModel.class);
 
     private final boolean anchored;
     private Vector3d anchor;
@@ -136,7 +141,7 @@ public class SimpleMovementModel implements BotModel {
 
             return new Vector3i(x, y, z);
         } catch (ChunkNotLoadedException ex) {
-            bot.getLogger().warning("Bot target not loaded: (" + x + "," + y + "," + z + ")");
+            logger.warn("Bot target not loaded: ({},{},{})", x, y, z);
             return botLoc.intVector();
         }
     }

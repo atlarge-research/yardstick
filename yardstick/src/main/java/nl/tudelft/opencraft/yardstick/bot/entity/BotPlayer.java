@@ -18,13 +18,13 @@
 
 package nl.tudelft.opencraft.yardstick.bot.entity;
 
-import java.nio.charset.Charset;
-import java.util.UUID;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import nl.tudelft.opencraft.yardstick.bot.Bot;
 import science.atlarge.opencraft.mcprotocollib.data.game.entity.player.GameMode;
 import science.atlarge.opencraft.packetlib.Session;
-import nl.tudelft.opencraft.yardstick.bot.Bot;
+
+import java.nio.charset.Charset;
+import java.util.UUID;
 
 /**
  * Represents the bot as a player in the world.

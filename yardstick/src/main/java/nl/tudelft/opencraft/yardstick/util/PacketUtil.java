@@ -18,14 +18,15 @@
 
 package nl.tudelft.opencraft.yardstick.util;
 
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.util.Map;
-import java.util.Map.Entry;
 import science.atlarge.opencraft.packetlib.io.NetOutput;
 import science.atlarge.opencraft.packetlib.io.stream.StreamNetOutput;
 import science.atlarge.opencraft.packetlib.packet.Packet;
 import science.atlarge.opencraft.packetlib.packet.PacketProtocol;
+
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  * Represents packet-related utilities.
@@ -58,8 +59,8 @@ public class PacketUtil {
      * Returns the packet class corresponding to a packet integer identifier in
      * a {@link PacketProtocol}.
      *
-     * @param prot the packet protocol.
-     * @param id the ID of the packet.
+     * @param prot     the packet protocol.
+     * @param id       the ID of the packet.
      * @param outgoing whether the packet is client->server.
      * @return The packet class.
      * @throws Exception upon failure of any sort.

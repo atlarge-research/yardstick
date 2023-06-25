@@ -38,42 +38,43 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 package nl.tudelft.opencraft.yardstick.bot.world;
 
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public class SimpleWorldPhysics implements WorldPhysics {
 
-    private static final Vector3i[] SURROUNDING = new Vector3i[]{
-        // middle --- y + 0
-        new Vector3i(-1, 0, 1),
-        new Vector3i(0, 0, 1),
-        new Vector3i(1, 0, 1),
-        new Vector3i(-1, 0, 0),
-        new Vector3i(1, 0, 0),
-        new Vector3i(-1, 0, -1),
-        new Vector3i(0, 0, -1),
-        new Vector3i(1, 0, -1),
-        // bottom --- y - 1
-        new Vector3i(-1, -1, 1),
-        new Vector3i(0, -1, 1),
-        new Vector3i(1, -1, 1),
-        new Vector3i(-1, -1, 0),
-        new Vector3i(0, -1, 0),
-        new Vector3i(1, -1, 0),
-        new Vector3i(-1, -1, -1),
-        new Vector3i(0, -1, -1),
-        new Vector3i(1, -1, -1),
-        // top  --- y + 1
-        new Vector3i(-1, 1, 1),
-        new Vector3i(0, 1, 1),
-        new Vector3i(1, 1, 1),
-        new Vector3i(-1, 1, 0),
-        new Vector3i(0, 1, 0),
-        new Vector3i(1, 1, 0),
-        new Vector3i(-1, 1, -1),
-        new Vector3i(0, 1, -1),
-        new Vector3i(1, 1, -1),};
+    private static final Vector3i[] SURROUNDING = new Vector3i[] {
+            // middle --- y + 0
+            new Vector3i(-1, 0, 1),
+            new Vector3i(0, 0, 1),
+            new Vector3i(1, 0, 1),
+            new Vector3i(-1, 0, 0),
+            new Vector3i(1, 0, 0),
+            new Vector3i(-1, 0, -1),
+            new Vector3i(0, 0, -1),
+            new Vector3i(1, 0, -1),
+            // bottom --- y - 1
+            new Vector3i(-1, -1, 1),
+            new Vector3i(0, -1, 1),
+            new Vector3i(1, -1, 1),
+            new Vector3i(-1, -1, 0),
+            new Vector3i(0, -1, 0),
+            new Vector3i(1, -1, 0),
+            new Vector3i(-1, -1, -1),
+            new Vector3i(0, -1, -1),
+            new Vector3i(1, -1, -1),
+            // top  --- y + 1
+            new Vector3i(-1, 1, 1),
+            new Vector3i(0, 1, 1),
+            new Vector3i(1, 1, 1),
+            new Vector3i(-1, 1, 0),
+            new Vector3i(0, 1, 0),
+            new Vector3i(1, 1, 0),
+            new Vector3i(-1, 1, -1),
+            new Vector3i(0, 1, -1),
+            new Vector3i(1, 1, -1),};
 
     private final World world;
 
@@ -113,7 +114,7 @@ public class SimpleWorldPhysics implements WorldPhysics {
      * @param locB The destination location.
      * @return True if the player can traverse.
      * @throws ChunkNotLoadedException If there is not enough information in the
-     * system to determine traversal.
+     *                                 system to determine traversal.
      */
     @Override
     public boolean canWalk(Vector3i locA, Vector3i locB) throws ChunkNotLoadedException {
