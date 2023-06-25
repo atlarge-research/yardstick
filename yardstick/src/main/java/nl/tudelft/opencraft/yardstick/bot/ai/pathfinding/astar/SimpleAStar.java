@@ -18,19 +18,18 @@
 
 package nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar;
 
-import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.BlockPathNode;
-import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.PathNode;
-import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.heuristic.Heuristic;
-import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
-import nl.tudelft.opencraft.yardstick.bot.world.WorldPhysics;
-import nl.tudelft.opencraft.yardstick.util.Vector3i;
-
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
+import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.BlockPathNode;
+import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.PathNode;
+import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.astar.heuristic.Heuristic;
+import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
+import nl.tudelft.opencraft.yardstick.bot.world.WorldPhysics;
+import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public class SimpleAStar {
 

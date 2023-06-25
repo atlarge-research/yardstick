@@ -18,9 +18,6 @@
 
 package nl.tudelft.opencraft.yardstick.workload;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -28,7 +25,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.logging.Level;
 import java.util.zip.GZIPOutputStream;
+import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
+import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 
 /**
  * Represents a concurrent buffer for writing {@link PacketEntry} objects to a
@@ -36,7 +36,7 @@ import java.util.zip.GZIPOutputStream;
  */
 public class PacketEntryWriter implements AutoCloseable {
 
-    private final Logger logger = LoggerFactory.getLogger(PacketEntryWriter.class);
+    private static final SubLogger LOGGER = GlobalLogger.getLogger().newSubLogger("WorkLoadFileDumper");
     //
     private final DataOutputStream dos;
     private final Queue<PacketEntry> entries = new ConcurrentLinkedQueue<>();
@@ -72,7 +72,7 @@ public class PacketEntryWriter implements AutoCloseable {
             try {
                 entry.writeTo(dos);
             } catch (IOException ex) {
-                logger.error("Could not write packet: " + entry.toCsv(), ex);
+                LOGGER.log(Level.SEVERE, "Could not write packet: " + entry.toCsv(), ex);
             }
         }
     }

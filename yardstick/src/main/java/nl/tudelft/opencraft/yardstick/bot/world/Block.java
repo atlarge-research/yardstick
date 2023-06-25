@@ -18,19 +18,16 @@
 
 package nl.tudelft.opencraft.yardstick.bot.world;
 
-import com.google.common.base.Preconditions;
-import nl.tudelft.opencraft.yardstick.util.Vector3i;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import science.atlarge.opencraft.mcprotocollib.data.game.chunk.BlockStorage;
 import science.atlarge.opencraft.mcprotocollib.data.game.chunk.Column;
 import science.atlarge.opencraft.mcprotocollib.data.game.world.block.BlockState;
-
+import com.google.common.base.Preconditions;
 import java.util.Objects;
+import nl.tudelft.opencraft.yardstick.logging.GlobalLogger;
+import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public class Block {
 
-    private final Logger logger = LoggerFactory.getLogger(Block.class);
     private final int x, y, z;
     private final Chunk chunk;
 
@@ -124,7 +121,7 @@ public class Block {
         int index = Math.floorDiv(y, 16);
         //GlobalLogger.getLogger().info("Get Internal Storage - y: " + y + ", index: " + index);
         if (index > 15) {
-            logger.warn("How did this happen: ({},{},{})", x, y, z);
+            GlobalLogger.getLogger().warning("How did this happen: (" + x + "," + y + "," + z + ")");
         }
 
         science.atlarge.opencraft.mcprotocollib.data.game.chunk.Chunk[] sections = handle.getChunks();

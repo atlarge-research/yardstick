@@ -33,7 +33,7 @@ public class WorkloadSessionListener extends SessionAdapter {
     /**
      * Creates a new WorkloadSessionListener.
      *
-     * @param dumper  the dumper to use.
+     * @param dumper the dumper to use.
      * @param botName The name of the bot this listener is attached to.
      */
     public WorkloadSessionListener(WorkloadDumper dumper, String botName) {

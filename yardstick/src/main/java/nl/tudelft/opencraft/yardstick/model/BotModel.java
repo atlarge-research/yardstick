@@ -20,7 +20,6 @@ package nl.tudelft.opencraft.yardstick.model;
 
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
-import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 
 /**
  * Represents an interaction model of a {@link Bot}.
@@ -33,6 +32,6 @@ public interface BotModel {
      * @param bot the bot.
      * @return the task.
      */
-    TaskExecutor newTask(Bot bot) throws ChunkNotLoadedException;
+    TaskExecutor newTask(Bot bot);
 
 }

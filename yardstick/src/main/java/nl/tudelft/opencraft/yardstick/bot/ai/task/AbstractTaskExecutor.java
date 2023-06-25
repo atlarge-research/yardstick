@@ -20,8 +20,7 @@ package nl.tudelft.opencraft.yardstick.bot.ai.task;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import nl.tudelft.opencraft.yardstick.logging.SubLogger;
 
 public abstract class AbstractTaskExecutor implements TaskExecutor {
 
@@ -29,12 +28,13 @@ public abstract class AbstractTaskExecutor implements TaskExecutor {
     protected final Bot bot;
     protected final String shortName;
     @JsonIgnore
-    protected final Logger logger = LoggerFactory.getLogger(AbstractTaskExecutor.class);
+    protected final SubLogger logger;
     protected TaskStatus lastStatus;
 
     public AbstractTaskExecutor(Bot bot) {
         this.bot = bot;
         this.shortName = getClass().getSimpleName();
+        this.logger = bot.getLogger().newSubLogger(shortName);
     }
 
     @Override

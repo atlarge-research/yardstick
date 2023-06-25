@@ -18,6 +18,10 @@
 
 package nl.tudelft.opencraft.yardstick.model;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import com.google.common.collect.Lists;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.BreakBlocksTaskExecutor;
@@ -30,20 +34,11 @@ import nl.tudelft.opencraft.yardstick.bot.world.Material;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import nl.tudelft.opencraft.yardstick.util.WorldUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Represents a model which places and breaks blocks randomly.
  */
 public class SimpleInteractionModel implements BotModel {
-
-    private final Logger logger = LoggerFactory.getLogger(SimpleInteractionModel.class);
 
     private static final int INTERACT_BLOCK_AMOUNT = 3;
     private static final int BREAK_BLOCK_RADIUS = 1;
@@ -56,7 +51,7 @@ public class SimpleInteractionModel implements BotModel {
             // Break blocks
             List<Block> selection = selectBreakBlocks(bot);
             if (selection.isEmpty()) {
-                logger.warn("Could not find breakable blocks!");
+                bot.getLogger().warning("Could not find breakable blocks!");
                 return null;
             }
 
@@ -66,7 +61,7 @@ public class SimpleInteractionModel implements BotModel {
         // Place blocks
         List<Vector3i> selection = selectPlaceBlocks(bot);
         if (selection.isEmpty()) {
-            logger.warn("Could not find placable blocks!");
+            bot.getLogger().warning("Could not find placable blocks!");
             return null;
         }
         return new PlaceBlocksTaskExecutor(bot, selection, PLACE_BLOCK_MATERIAL);

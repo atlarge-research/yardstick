@@ -18,12 +18,6 @@
 
 package nl.tudelft.opencraft.yardstick.bot;
 
-import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
-import nl.tudelft.opencraft.yardstick.bot.world.Block;
-import nl.tudelft.opencraft.yardstick.bot.world.BlockFace;
-import nl.tudelft.opencraft.yardstick.bot.world.Material;
-import nl.tudelft.opencraft.yardstick.util.Vector3d;
-import nl.tudelft.opencraft.yardstick.util.Vector3i;
 import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.ItemStack;
 import science.atlarge.opencraft.mcprotocollib.data.game.entity.metadata.Position;
 import science.atlarge.opencraft.mcprotocollib.data.game.entity.player.Hand;
@@ -36,6 +30,12 @@ import science.atlarge.opencraft.mcprotocollib.packet.ingame.client.player.Clien
 import science.atlarge.opencraft.mcprotocollib.packet.ingame.client.window.ClientCreativeInventoryActionPacket;
 import science.atlarge.opencraft.packetlib.Session;
 import science.atlarge.opencraft.packetlib.packet.Packet;
+import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
+import nl.tudelft.opencraft.yardstick.bot.world.Block;
+import nl.tudelft.opencraft.yardstick.bot.world.BlockFace;
+import nl.tudelft.opencraft.yardstick.bot.world.Material;
+import nl.tudelft.opencraft.yardstick.util.Vector3d;
+import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 /**
  * Represents actions for controlling a {@link Bot}.
@@ -90,7 +90,7 @@ public class BotController {
      * Updates the Minecraft server of the Bot's digging status.
      *
      * @param block the block the bot is digging.
-     * @param face  the face the bot is digging.
+     * @param face the face the bot is digging.
      * @param state the digging state.
      */
     public void updateDigging(Block block, BlockFace face, DiggingState state) {
@@ -115,8 +115,8 @@ public class BotController {
     /**
      * Updates the Minecraft server of block placement.
      *
-     * @param block    The block the bot is placing.
-     * @param face     The face the bot is placing at.
+     * @param block The block the bot is placing.
+     * @param face The face the bot is placing at.
      * @param hitpoint The hitpoint of the cursor.
      */
     public void placeBlock(Vector3i block, BlockFace face, Vector3d hitpoint) {
@@ -171,7 +171,7 @@ public class BotController {
             yaw += 360;
         }
         double pitch = -Math.asin(dv.getY() / r) / Math.PI * 180;
-        return new double[] {yaw, pitch};
+        return new double[]{yaw, pitch};
     }
 
 }

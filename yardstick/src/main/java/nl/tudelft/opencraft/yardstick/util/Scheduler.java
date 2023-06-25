@@ -36,7 +36,7 @@ public class Scheduler {
      * Creates a new Scheduler for executing tasks.
      *
      * @param tickMs the desired fixed delay between task executions, in
-     *               milliseconds.
+     * milliseconds.
      */
     public Scheduler(long tickMs) {
         this.tickNanos = TimeUnit.MILLISECONDS.toNanos(tickMs);

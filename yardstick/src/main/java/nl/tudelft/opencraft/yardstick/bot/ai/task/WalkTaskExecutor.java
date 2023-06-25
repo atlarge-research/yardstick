@@ -41,7 +41,11 @@
 
 package nl.tudelft.opencraft.yardstick.bot.ai.task;
 
-import nl.tudelft.opencraft.yardstick.Yardstick;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.pathfinding.PathNode;
 import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
@@ -51,15 +55,11 @@ import nl.tudelft.opencraft.yardstick.bot.world.Material;
 import nl.tudelft.opencraft.yardstick.util.Vector3d;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
-import java.text.MessageFormat;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-
 public class WalkTaskExecutor extends AbstractTaskExecutor {
 
     private static double speed = 0.15, jumpFactor = 3, fallFactor = 4, liquidFactor = 0.5;
     private static int defaultTimeout = 6000;
+    private static final ExecutorService service = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
     private final Vector3i target;
 
@@ -70,7 +70,7 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
     private int ticksSinceStepChange = 0;
     private int timeout = defaultTimeout;
 
-    private Callable<PathNode> task = new Callable<>() {
+    private Callable<PathNode> task = new Callable<PathNode>() {
         @Override
         public PathNode call() throws Exception {
             BotPlayer player = bot.getPlayer();
@@ -84,9 +84,9 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
         this.target = target;
 
         if (bot.getPlayer().getLocation().intVector().equals(target)) {
-            logger.warn("Useless walk task. Bot and given target location equal.");
+            logger.warning("Useless walk task. Bot and given target location equal.");
         }
-        pathFuture = Yardstick.THREAD_POOL.submit(task);
+        pathFuture = service.submit(task);
         startTime = System.currentTimeMillis();
     }
 
@@ -109,7 +109,6 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
             try {
                 nextStep = pathFuture.get();
                 ticksSinceStepChange = 0;
-                logger.info(MessageFormat.format("bot {0} walking towards {1}", bot.getName(), target));
             } catch (InterruptedException e) {
                 return TaskStatus.forFailure(e.getMessage(), e);
             } catch (ExecutionException e) {
@@ -163,8 +162,8 @@ public class WalkTaskExecutor extends AbstractTaskExecutor {
             thisBlock = bot.getWorld().getBlockAt(blockLoc);
         } catch (ChunkNotLoadedException e) {
             // TODO: Fix: Wait until chunk is loaded.
-            logger.warn("Block under player: {}", blockLoc);
-            logger.warn("Player at {}", moveLoc);
+            logger.warning(String.format("Block under player: %s", blockLoc));
+            logger.warning(String.format("Player at %s", moveLoc));
             return TaskStatus.forFailure(e.getMessage());
         }
 

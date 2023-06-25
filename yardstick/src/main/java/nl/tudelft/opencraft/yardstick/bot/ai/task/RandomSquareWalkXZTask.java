@@ -22,14 +22,10 @@ import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
 import nl.tudelft.opencraft.yardstick.util.Vector2i;
 import nl.tudelft.opencraft.yardstick.util.Vector3i;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Random;
 
 public class RandomSquareWalkXZTask implements Task {
-
-    private final Logger logger = LoggerFactory.getLogger(RandomSquareWalkXZTask.class);
 
     private Vector2i center;
     private int radius;
@@ -60,7 +56,7 @@ public class RandomSquareWalkXZTask implements Task {
         try {
             target = v.getHighestWalkTarget(bot.getWorld());
         } catch (ChunkNotLoadedException e) {
-            logger.warn(e.getMessage());
+            bot.getLogger().warning(e.getMessage());
             target = bot.getPlayer().getLocation().intVector();
         }
         return new WalkTaskExecutor(bot, target);
