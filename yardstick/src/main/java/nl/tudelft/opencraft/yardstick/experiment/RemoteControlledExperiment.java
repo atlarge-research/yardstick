@@ -26,14 +26,13 @@ import io.javalin.http.Context;
 import io.javalin.plugin.json.JavalinJson;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.ai.task.Task;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkXZTask;
 import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
-import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
+import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 import java.util.HashMap;
 
-import static io.javalin.apibuilder.ApiBuilder.get;
-import static io.javalin.apibuilder.ApiBuilder.path;
-import static io.javalin.apibuilder.ApiBuilder.post;
+import static io.javalin.apibuilder.ApiBuilder.*;
 
 public class RemoteControlledExperiment extends Experiment {
 
@@ -44,8 +43,8 @@ public class RemoteControlledExperiment extends Experiment {
     /**
      * Creates a new experiment.
      */
-    public RemoteControlledExperiment(int nodeID, GameArchitecture game) {
-        super(7, nodeID, game, "Experiment Controlled Through REST API.");
+    public RemoteControlledExperiment() {
+        super(7, "Experiment Controlled Through REST API.");
     }
 
     @Override
@@ -79,7 +78,7 @@ public class RemoteControlledExperiment extends Experiment {
         PlayerStatusRequest rq = validator.getOrNull();
         synchronized (bots) {
             if (rq == null) {
-                logger.warn("Received invalid PlayerStatusRequest: {}", context.body());
+                logger.warning(String.format("Received invalid PlayerStatusRequest: %s", context.body()));
                 context.status(400);
             } else if (bots.containsKey(rq.getPlayerName())) {
                 context.result(JavalinJson.toJson(bots.get(rq.getPlayerName())));
@@ -114,7 +113,7 @@ public class RemoteControlledExperiment extends Experiment {
                 bots.put(bot.getName(), bot);
             }
             context.result(bot.getName());
-        } catch (ConnectException | InterruptedException e) {
+        } catch (ConnectException e) {
             e.printStackTrace();
         }
     }

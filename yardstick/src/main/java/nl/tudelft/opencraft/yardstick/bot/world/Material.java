@@ -38,20 +38,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 package nl.tudelft.opencraft.yardstick.bot.world;
 
 import nl.tudelft.opencraft.yardstick.bot.inventory.ToolType;
-
-import static nl.tudelft.opencraft.yardstick.bot.inventory.ToolType.AXE;
-import static nl.tudelft.opencraft.yardstick.bot.inventory.ToolType.PICKAXE;
-import static nl.tudelft.opencraft.yardstick.bot.inventory.ToolType.SHEARS;
-import static nl.tudelft.opencraft.yardstick.bot.inventory.ToolType.SHOVEL;
-import static nl.tudelft.opencraft.yardstick.bot.inventory.ToolType.SWORD;
-import static nl.tudelft.opencraft.yardstick.bot.world.Material.Flag.FLUID;
-import static nl.tudelft.opencraft.yardstick.bot.world.Material.Flag.INDESTRUCTABLE;
-import static nl.tudelft.opencraft.yardstick.bot.world.Material.Flag.INTERACTABLE;
-import static nl.tudelft.opencraft.yardstick.bot.world.Material.Flag.TRAVERSABLE;
+import static nl.tudelft.opencraft.yardstick.bot.inventory.ToolType.*;
+import static nl.tudelft.opencraft.yardstick.bot.world.Material.Flag.*;
 
 public enum Material {
 

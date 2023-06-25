@@ -18,9 +18,8 @@
 
 package nl.tudelft.opencraft.yardstick.bot.entity;
 
-import science.atlarge.opencraft.mcprotocollib.data.game.entity.type.object.ObjectType;
-
 import java.util.UUID;
+import science.atlarge.opencraft.mcprotocollib.data.game.entity.type.object.ObjectType;
 
 /**
  * Represents an Object.

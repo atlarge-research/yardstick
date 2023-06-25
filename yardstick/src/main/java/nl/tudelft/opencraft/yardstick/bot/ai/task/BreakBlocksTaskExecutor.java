@@ -18,15 +18,14 @@
 
 package nl.tudelft.opencraft.yardstick.bot.ai.task;
 
+import java.util.Iterator;
+import java.util.List;
 import com.beust.jcommander.internal.Lists;
 import nl.tudelft.opencraft.yardstick.bot.Bot;
 import nl.tudelft.opencraft.yardstick.bot.BotController;
 import nl.tudelft.opencraft.yardstick.bot.world.Block;
 import nl.tudelft.opencraft.yardstick.bot.world.BlockFace;
 import nl.tudelft.opencraft.yardstick.util.WorldUtil;
-
-import java.util.Iterator;
-import java.util.List;
 
 /**
  * Represents a task for breaking blocks.
@@ -43,7 +42,7 @@ public class BreakBlocksTaskExecutor extends AbstractTaskExecutor {
      * Creates a new BreakBlocksTask. The blocks must be in reach and visible to
      * the bot.
      *
-     * @param bot    the bot of the task.
+     * @param bot the bot of the task.
      * @param blocks the blocks that must be broken.
      */
     public BreakBlocksTaskExecutor(Bot bot, List<Block> blocks) {
@@ -78,7 +77,7 @@ public class BreakBlocksTaskExecutor extends AbstractTaskExecutor {
             // Find a block face
             face = WorldUtil.getVisibleBlockFace(bot.getPlayer(), current);
             if (face == null) {
-                logger.error("Could not find block face for block: {}", current.getLocation().toString());
+                logger.severe("Could not find block face for block: " + current.getLocation().toString());
 
                 // Couldn't find one, next block
                 current = null;

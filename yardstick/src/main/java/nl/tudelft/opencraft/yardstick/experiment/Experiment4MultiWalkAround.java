@@ -18,66 +18,48 @@
 
 package nl.tudelft.opencraft.yardstick.experiment;
 
-import com.typesafe.config.Config;
-import nl.tudelft.opencraft.yardstick.bot.Bot;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
-import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
-import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
-import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
-import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
-import nl.tudelft.opencraft.yardstick.util.Vector3d;
-import nl.tudelft.opencraft.yardstick.util.Vector3i;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.stream.Collectors;
+import nl.tudelft.opencraft.yardstick.bot.Bot;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskExecutor;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.TaskStatus;
+import nl.tudelft.opencraft.yardstick.bot.ai.task.WalkTaskExecutor;
+import nl.tudelft.opencraft.yardstick.bot.world.ConnectException;
+import nl.tudelft.opencraft.yardstick.model.SimpleMovementModel;
+import nl.tudelft.opencraft.yardstick.util.Vector3d;
+import nl.tudelft.opencraft.yardstick.util.Vector3i;
 
 public class Experiment4MultiWalkAround extends Experiment {
 
-    private final Logger logger = LoggerFactory.getLogger(Experiment4MultiWalkAround.class);
-    private final Config behaviorConfig;
     private final List<Bot> botList = Collections.synchronizedList(new ArrayList<>());
-    private final List<Future<Bot>> connectingBots = new ArrayList<>();
     private SimpleMovementModel movement;
 
     private int botsTotal = 0;
     private long startMillis;
-    private Duration experimentDuration;
-    private Duration timeBetweenJoins;
+    private int durationInSeconds;
+    private int secondsBetweenJoin;
     private int numberOfBotsPerJoin;
     private final Map<Bot, Vector3d> botSpawnLocations = new HashMap<>();
     private long lastJoin = System.currentTimeMillis();
 
-    public Experiment4MultiWalkAround(int nodeID, GameArchitecture game, Config behaviorConfig) {
-        super(4, nodeID, game, "Bots walking around based on a movement model for Second Life.");
-        this.behaviorConfig = behaviorConfig;
-    }
-
-    public Experiment4MultiWalkAround(int experimentID, int nodeID, GameArchitecture game,
-            Config behaviorConfig, String desc) {
-        super(experimentID, nodeID, game, desc);
-        this.behaviorConfig = behaviorConfig;
+    public Experiment4MultiWalkAround() {
+        super(4, "Bots walking around based on a movement model for Second Life.");
     }
 
     @Override
     protected void before() {
-        this.botsTotal = behaviorConfig.getInt("bots");
-        this.experimentDuration = behaviorConfig.getDuration("duration");
-        this.timeBetweenJoins = behaviorConfig.getDuration("joininterval");
-        this.numberOfBotsPerJoin = behaviorConfig.getInt("numbotsperjoin");
+        this.botsTotal = Integer.parseInt(options.experimentParams.get("bots"));
+        this.durationInSeconds = Integer.parseInt(options.experimentParams.getOrDefault("duration", "600"));
+        this.secondsBetweenJoin = Integer.parseInt(options.experimentParams.getOrDefault("joininterval", "1"));
+        this.numberOfBotsPerJoin = Integer.parseInt(options.experimentParams.getOrDefault("numbotsperjoin", "1"));
         this.movement = new SimpleMovementModel(
-                behaviorConfig.getInt("boxDiameter"),
-                behaviorConfig.getBoolean("spawnAnchor")
+                Integer.parseInt(options.experimentParams.getOrDefault("boxDiameter", "32")),
+                Boolean.parseBoolean(options.experimentParams.getOrDefault("spawnAnchor", "false"))
         );
         this.startMillis = System.currentTimeMillis();
     }
@@ -85,31 +67,27 @@ public class Experiment4MultiWalkAround extends Experiment {
     @Override
     protected void tick() {
         synchronized (botList) {
-            // Remove all bots that are not connected.
             List<Bot> disconnectedBots = botList.stream()
                     .filter(bot -> !bot.isJoined())
                     .collect(Collectors.toList());
             disconnectedBots.forEach(bot -> bot.disconnect("Bot is not connected"));
             botList.removeAll(disconnectedBots);
-
-            // Add all new bots that are connected.
-            List<Future<Bot>> newlyConnectedBots = connectingBots.stream()
-                    .filter(Future::isDone)
-                    .collect(Collectors.toList());
-            newlyConnectedBots.forEach(fb -> {
-                connectingBots.remove(fb);
-                try {
-                    botList.add(fb.get());
-                } catch (InterruptedException | ExecutionException e) {
-                    // ignore
-                }
-            });
         }
-        if (System.currentTimeMillis() - this.lastJoin > timeBetweenJoins.toMillis() * 1000
+        if (System.currentTimeMillis() - this.lastJoin > secondsBetweenJoin * 1000
                 && botList.size() <= this.botsTotal) {
-            int botsToConnect = Math.min(this.numberOfBotsPerJoin, this.botsTotal - currentNumberOfBots());
+            lastJoin = System.currentTimeMillis();
+            int botsToConnect = Math.min(this.numberOfBotsPerJoin, this.botsTotal - botList.size());
             for (int i = 0; i < botsToConnect; i++) {
-                connectNewBot();
+                CompletableFuture.runAsync(() -> {
+                    long startTime = System.currentTimeMillis();
+                    try {
+                        Bot bot = createBot();
+                        botSpawnLocations.put(bot, bot.getPlayer().getLocation());
+                        botList.add(bot);
+                    } catch (ConnectException e) {
+                        logger.warning(String.format("Could not connect bot on %s:%d after %d ms.", options.host, options.port, System.currentTimeMillis() - startTime));
+                    }
+                });
             }
         }
         synchronized (botList) {
@@ -119,27 +97,11 @@ public class Experiment4MultiWalkAround extends Experiment {
         }
     }
 
-    void connectNewBot() {
-        connectingBots.add(CompletableFuture.supplyAsync(() -> {
-            long startTime = System.currentTimeMillis();
-            try {
-                Bot bot = createBot();
-                botSpawnLocations.put(bot, bot.getPlayer().getLocation());
-                return bot;
-            } catch (ConnectException | InterruptedException e) {
-                logger.warn("Could not connect bot after {} ms.",
-                        System.currentTimeMillis() - startTime);
-            }
-            return null;
-        }));
-        lastJoin = System.currentTimeMillis();
-    }
-
     private void botTick(Bot bot) {
         TaskExecutor t = bot.getTaskExecutor();
         if (t == null || t.getStatus().getType() != TaskStatus.StatusType.IN_PROGRESS) {
             Vector3i newLocation = movement.newTargetLocation(bot);
-            logger.info("Setting task for bot to walk to {}", newLocation);
+            bot.getLogger().info(String.format("Setting task for bot to walk to %s", newLocation));
             bot.setTaskExecutor(new WalkTaskExecutor(bot, newLocation));
         }
     }
@@ -147,7 +109,7 @@ public class Experiment4MultiWalkAround extends Experiment {
     @Override
     protected boolean isDone() {
 
-        boolean timeUp = System.currentTimeMillis() - this.startMillis > this.experimentDuration.toMillis();
+        boolean timeUp = System.currentTimeMillis() - this.startMillis > this.durationInSeconds * 1_000;
         if (timeUp) {
             return true;
         } else if (botList.size() > 0) {
@@ -166,36 +128,6 @@ public class Experiment4MultiWalkAround extends Experiment {
     protected void after() {
         for (Bot bot : botList) {
             bot.disconnect("disconnect");
-        }
-    }
-
-    public long getStartMillis() {
-        return startMillis;
-    }
-
-    public int getBotsTotal() {
-        return botsTotal;
-    }
-
-    public int currentNumberOfBots() {
-        return botList.size() + connectingBots.size();
-    }
-
-    public long getLastJoined() {
-        return lastJoin;
-    }
-
-    public int joinIntervalInSeconds() {
-        return (int) timeBetweenJoins.getSeconds();
-    }
-
-    public int getBotsPerJoin() {
-        return numberOfBotsPerJoin;
-    }
-
-    public void disconnectBots(int num, String reason) {
-        for (int i = 0; i < Math.min(num, botList.size()); i++) {
-            botList.get(i).disconnect(reason);
         }
     }
 }

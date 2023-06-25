@@ -18,24 +18,6 @@
 
 package nl.tudelft.opencraft.yardstick.bot;
 
-import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
-import nl.tudelft.opencraft.yardstick.bot.entity.Entity;
-import nl.tudelft.opencraft.yardstick.bot.entity.ExperienceOrb;
-import nl.tudelft.opencraft.yardstick.bot.entity.LightningStrike;
-import nl.tudelft.opencraft.yardstick.bot.entity.Mob;
-import nl.tudelft.opencraft.yardstick.bot.entity.ObjectEntity;
-import nl.tudelft.opencraft.yardstick.bot.entity.Painting;
-import nl.tudelft.opencraft.yardstick.bot.entity.Player;
-import nl.tudelft.opencraft.yardstick.bot.world.Block;
-import nl.tudelft.opencraft.yardstick.bot.world.Chunk;
-import nl.tudelft.opencraft.yardstick.bot.world.ChunkLocation;
-import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
-import nl.tudelft.opencraft.yardstick.bot.world.Dimension;
-import nl.tudelft.opencraft.yardstick.bot.world.World;
-import nl.tudelft.opencraft.yardstick.telemetry.GlobalMetrics;
-import nl.tudelft.opencraft.yardstick.util.Vector3d;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import science.atlarge.opencraft.mcprotocollib.MinecraftProtocol;
 import science.atlarge.opencraft.mcprotocollib.data.SubProtocol;
 import science.atlarge.opencraft.mcprotocollib.data.game.chunk.Column;
@@ -128,8 +110,24 @@ import science.atlarge.opencraft.packetlib.event.session.PacketSendingEvent;
 import science.atlarge.opencraft.packetlib.event.session.PacketSentEvent;
 import science.atlarge.opencraft.packetlib.event.session.SessionListener;
 import science.atlarge.opencraft.packetlib.packet.Packet;
-
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
+import nl.tudelft.opencraft.yardstick.bot.entity.Entity;
+import nl.tudelft.opencraft.yardstick.bot.entity.ExperienceOrb;
+import nl.tudelft.opencraft.yardstick.bot.entity.LightningStrike;
+import nl.tudelft.opencraft.yardstick.bot.entity.Mob;
+import nl.tudelft.opencraft.yardstick.bot.entity.ObjectEntity;
+import nl.tudelft.opencraft.yardstick.bot.entity.Painting;
+import nl.tudelft.opencraft.yardstick.bot.entity.Player;
+import nl.tudelft.opencraft.yardstick.bot.world.Block;
+import nl.tudelft.opencraft.yardstick.bot.world.Chunk;
+import nl.tudelft.opencraft.yardstick.bot.world.ChunkLocation;
+import nl.tudelft.opencraft.yardstick.bot.world.ChunkNotLoadedException;
+import nl.tudelft.opencraft.yardstick.bot.world.Dimension;
+import nl.tudelft.opencraft.yardstick.bot.world.World;
+import nl.tudelft.opencraft.yardstick.util.Vector3d;
 
 /**
  * Handles basic bot network traffic.
@@ -137,7 +135,7 @@ import java.util.UUID;
 public class BotListener implements SessionListener {
 
     private final Bot bot;
-    private final Logger logger = LoggerFactory.getLogger(BotListener.class);
+    private final Logger logger;
     //
     private BotPlayer player;
     private Server server;
@@ -150,6 +148,7 @@ public class BotListener implements SessionListener {
      */
     public BotListener(Bot bot) {
         this.bot = bot;
+        this.logger = bot.getLogger();
     }
 
     @Override
@@ -168,7 +167,7 @@ public class BotListener implements SessionListener {
             // TODO
 
             if (p.getEntityId() == 0) {
-                logger.warn("Received spawn object with EID == 0: {}", p.getType());
+                logger.warning("Received spawn object with EID == 0: " + p.getType());
                 return;
             }
 
@@ -197,7 +196,7 @@ public class BotListener implements SessionListener {
             ServerSpawnGlobalEntityPacket p = (ServerSpawnGlobalEntityPacket) packet;
 
             if (p.getType() != GlobalEntityType.LIGHTNING_BOLT) {
-                logger.warn("Received spawn global entity for non-lightning strike");
+                logger.warning("Received spawn global entity for non-lightning strike");
                 return;
             }
 
@@ -275,7 +274,7 @@ public class BotListener implements SessionListener {
 
             if (pos.getY() > 255) {
                 // https://github.com/Steveice10/MCProtocolLib/issues/347
-                logger.warn("Ignoring BlockChange: ({},{},{})", pos.getX(), pos.getY(), pos.getZ());
+                logger.warning("Ignoring BlockChange: (" + pos.getX() + "," + pos.getY() + "," + pos.getZ() + ")");
                 return;
             }
 
@@ -283,7 +282,7 @@ public class BotListener implements SessionListener {
             try {
                 b = bot.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
             } catch (ChunkNotLoadedException e) {
-                logger.trace("Received BlockChange for block in unloaded chunk: {}", pos);
+                logger.fine("Received BlockChange for block in unloaded chunk: " + pos);
                 return;
             }
 
@@ -322,7 +321,7 @@ public class BotListener implements SessionListener {
                 try {
                     b = bot.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
                 } catch (ChunkNotLoadedException e) {
-                    logger.trace("Received MultiBlockChange for block in unloaded chunk: {}", pos);
+                    logger.fine("Received MultiBlockChange for block in unloaded chunk: " + pos);
                     return;
                 }
 
@@ -723,7 +722,7 @@ public class BotListener implements SessionListener {
             // TODO
 
         } else {
-            logger.warn("Received unhandled packet: {}", packet.getClass().getName());
+            logger.warning("Received unhandled packet: " + packet.getClass().getName());
         }
     }
 
@@ -738,7 +737,6 @@ public class BotListener implements SessionListener {
 
     @Override
     public void connected(ConnectedEvent ce) {
-        GlobalMetrics.CONNECTED_PLAYERS.inc();
     }
 
     @Override
@@ -747,8 +745,10 @@ public class BotListener implements SessionListener {
 
     @Override
     public void disconnected(DisconnectedEvent de) {
-        GlobalMetrics.CONNECTED_PLAYERS.dec();
-        logger.info("Disconnected: {}", de.getReason());
+        logger.info("Disconnected: " + de.getReason());
+        if (de.getCause() != null) {
+            logger.log(Level.WARNING, "Connection closed unexpectedly!", de.getCause());
+        }
     }
 
 }

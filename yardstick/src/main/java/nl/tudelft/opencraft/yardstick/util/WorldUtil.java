@@ -38,7 +38,7 @@ public class WorldUtil {
      * environment (block occlusion).
      *
      * @param player the player.
-     * @param block  the block the player is observing.
+     * @param block the block the player is observing.
      * @return an arbitrary block face that is visible, or null, if none exists.
      */
     public static BlockFace getVisibleBlockFace(Player player, Block block) {
@@ -70,7 +70,7 @@ public class WorldUtil {
      * surroundings (is there a block or entity occluding the face?).
      *
      * @param player the player.
-     * @param block  the block the player is observing.
+     * @param block the block the player is observing.
      * @return an array of three block faces.
      */
     public static BlockFace[] getDirectedBlockFaces(Player player, Block block) {

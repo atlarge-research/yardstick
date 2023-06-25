@@ -18,13 +18,12 @@
 
 package nl.tudelft.opencraft.yardstick.statistic;
 
-import io.prometheus.client.CollectorRegistry;
-import io.prometheus.client.exporter.PushGateway;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Level;
+import io.prometheus.client.CollectorRegistry;
+import io.prometheus.client.exporter.PushGateway;
+import nl.tudelft.opencraft.yardstick.Yardstick;
 
 /**
  * Represents a runnable pusher which pushes a {@link CollectorRegistry} to a
@@ -32,7 +31,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class StatisticsPusher implements Runnable {
 
-    private final Logger logger = LoggerFactory.getLogger(StatisticsPusher.class);
     private CollectorRegistry registry;
     private PushGateway gateway;
     private final AtomicBoolean run = new AtomicBoolean(true);
@@ -72,13 +70,13 @@ public class StatisticsPusher implements Runnable {
             try {
                 gateway.pushAdd(registry, "yardstick", PushGateway.instanceIPGroupingKey());
             } catch (IOException ex) {
-                logger.error("Could not push statistics", ex);
+                Yardstick.LOGGER.log(Level.SEVERE, "Could not push statistics", ex);
             }
 
             try {
                 Thread.sleep(10_000);
             } catch (InterruptedException ex) {
-                logger.error("Statistics thread interrupted!", ex);
+                Yardstick.LOGGER.log(Level.SEVERE, "Statistics thread interrupted!", ex);
                 return;
             }
         }

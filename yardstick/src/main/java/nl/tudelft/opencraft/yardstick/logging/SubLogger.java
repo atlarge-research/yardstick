@@ -16,14 +16,34 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package nl.tudelft.opencraft.yardstick.experiment;
+package nl.tudelft.opencraft.yardstick.logging;
 
-import nl.tudelft.opencraft.yardstick.model.MoveInteractModel;
+import java.util.logging.Logger;
 
-public class Experiment6InteractWalk extends AbstractModelExperiment {
+/**
+ * A logger which composes a parent logger.
+ */
+public class SubLogger extends Logger {
 
-    public Experiment6InteractWalk() {
-        super(6, "Bots move around randomly and have a chance to break or place blocks", new MoveInteractModel());
+    public SubLogger(String name) {
+        super(name, null);
+    }
+
+    /**
+     * Creates a new child logger for this logger.
+     *
+     * @param name the name of the child logger.
+     * @return The child logger.
+     */
+    public SubLogger newSubLogger(String name) {
+        SubLogger logger;
+        if (getName() == null) {
+            logger = new SubLogger(name);
+        } else {
+            logger = new SubLogger(getName() + '.' + name);
+        }
+        logger.setParent(this);
+        return logger;
     }
 
 }
