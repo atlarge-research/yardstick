@@ -110,18 +110,7 @@ public class Experiment4MultiWalkAround extends Experiment {
     protected boolean isDone() {
 
         boolean timeUp = System.currentTimeMillis() - this.startMillis > this.durationInSeconds * 1_000;
-        if (timeUp) {
-            return true;
-        } else if (botList.size() > 0) {
-            boolean allBotsDisconnected;
-            synchronized (botList) {
-                allBotsDisconnected = botList.stream().noneMatch(Bot::isJoined);
-            }
-            if (allBotsDisconnected) {
-                return true;
-            }
-        }
-        return false;
+        return timeUp;
     }
 
     @Override
