@@ -152,7 +152,7 @@ remote_commands=$(cat <<CMD
     sed -i "s/export TERRASTICK_IP=.*/export TERRASTICK_IP=10.141.0.\$(echo \$server_node | sed 's/node0*\([1-9][0-9]*\)/\1/' | grep -oE '[0-9]+')/" ~/.bashrc
     sed -i 's/export TERRASTICK_WORKLOAD=.*/export TERRASTICK_WORKLOAD=TEL/' ~/.bashrc
     source ~/.bashrc
-    ssh \$server_node 'cd $DIR_NAME/server && screen -L -S server -d -m bash -c "./TShock.Server -port 7777 -c -maxplayers 20 -world $DIR_NAME/server/worlds/$WORLD_NAME.wld "' && echo "Server started on \$server_node"
+    ssh \$server_node 'cd $DIR_NAME/server && screen -L -S server -d -m bash -c "./TShock.Server -port 7777 -heaptile  -maxplayers 100 -world $DIR_NAME/server/worlds/$WORLD_NAME.wld "' && echo "Server started on \$server_node"
     echo "waiting for server to start" && sleep 10
 
     # start node and process exporter on server node
@@ -169,7 +169,8 @@ remote_commands=$(cat <<CMD
         echo "Bot node: \$node"
         for i in {1..$NUM_BOTS_PER_NODE}; do
             ssh \$node 'cd $DIR_NAME/bot/yardstick-$TERRASTICK_VERSION/terrastick/PlayerEmulations/TrClientTest/bin/Release/net6.0/linux-x64/ && screen -L -S bot-\$node -d -m bash -c "./TrClientTest"' & 
-            wait $WAIT_TIME_BETWEEN_BOTS
+            # wait for WAIT_TIME_BETWEEN_BOTS 
+            sleep $WAIT_TIME_BETWEEN_BOTS
         done
 
 
