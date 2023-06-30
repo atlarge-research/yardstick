@@ -152,6 +152,14 @@ remote_commands=$(cat <<CMD
     sed -i "s/export TERRASTICK_IP=.*/export TERRASTICK_IP=10.141.0.\$(echo \$server_node | sed 's/node0*\([1-9][0-9]*\)/\1/' | grep -oE '[0-9]+')/" ~/.bashrc
     sed -i 's/export TERRASTICK_WORKLOAD=.*/export TERRASTICK_WORKLOAD=TEL/' ~/.bashrc
     source ~/.bashrc
+     # set CURRENT_DIR env variable in the server
+    ssh \$server_node "echo 'export CURRENT_DIR=$DIR_NAME' >> ~/.bashrc && source ~/.bashrc"
+    # create a new file in the server node called config.txt in dirname/server  and store  with DIR_NAME,TERRASTICK_VERSION,NUM_NODES,bot_nodes,TERASTICK_TILING
+    ssh \$server_node "echo 'DIR_NAME=$DIR_NAME' >> $DIR_NAME/server/config.txt"
+    ssh \$server_node "echo 'TERRASTICK_VERSION=$TERRASTICK_VERSION' >> $DIR_NAME/server/config.txt"
+    ssh \$server_node "echo 'NUM_NODES=$NUM_NODES' >> $DIR_NAME/server/config.txt"
+    ssh \$server_node "echo 'NUM_BOTS_PER_NODE=$NUM_BOTS_PER_NODE' >> $DIR_NAME/server/config.txt"
+    ssh \$server_node "echo 'TERRASTICK_TILING=$TERRASTICK_TILING' >> $DIR_NAME/server/config.txt"
     ssh \$server_node 'cd $DIR_NAME/server && screen -L -S server -d -m bash -c "./TShock.Server -port 7777 -heaptile  -maxplayers 100 -world $DIR_NAME/server/worlds/$WORLD_NAME.wld "' && echo "Server started on \$server_node"
     echo "waiting for server to start" && sleep 10
 
