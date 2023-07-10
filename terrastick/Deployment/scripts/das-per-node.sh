@@ -78,6 +78,7 @@ DIR_NAME="/var/scratch/$VUNET_USERNAME/terraria-experiment-$EXP_TIME"
 remote_commands=$(cat <<CMD
     TERRASTICK_WORKLOAD=$TERRASTICK_WORKLOAD
     TERRASTICK_IP=$TERRASTICK_IP
+    TERRASTICK_WORKLOAD_DURATION=$TERRASTICK_WORKLOAD_DURATION
     DOTNET_ROOT=\$HOME/.dotnet
     PATH=\$PATH:\$HOME/.dotnet:\$HOME/.dotnet/tools
     variable_list=("TERRASTICK_WORKLOAD" "TERRASTICK_IP" "DOTNET_ROOT" "PATH")
@@ -160,7 +161,7 @@ remote_commands=$(cat <<CMD
     ssh \$server_node "echo 'NUM_NODES=$NUM_NODES' >> $DIR_NAME/server/config.txt"
     ssh \$server_node "echo 'NUM_BOTS_PER_NODE=$NUM_BOTS_PER_NODE' >> $DIR_NAME/server/config.txt"
     ssh \$server_node "echo 'TERRASTICK_TILING=$TERRASTICK_TILING' >> $DIR_NAME/server/config.txt"
-    ssh \$server_node 'cd $DIR_NAME/server && screen -L -S server -d -m bash -c "./TShock.Server -port 7777 -heaptile  -maxplayers 100 -world $DIR_NAME/server/worlds/$WORLD_NAME.wld "' && echo "Server started on \$server_node"
+    ssh \$server_node 'cd $DIR_NAME/server && screen -L -S server -d -m bash -c "./TShock.Server -port 7777 -heaptile  -maxplayers 200 -world $DIR_NAME/server/worlds/$WORLD_NAME.wld "' && echo "Server started on \$server_node"
     echo "waiting for server to start" && sleep 10
 
     # start node and process exporter on server node
