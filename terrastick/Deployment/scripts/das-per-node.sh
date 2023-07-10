@@ -186,6 +186,16 @@ remote_commands=$(cat <<CMD
         echo "Bot started on \$node"
     done
     echo "Server and bots started"
+
+    # wait for the workload to finish
+    sleep $TERRASTICK_WORKLOAD_DURATION
+    echo "Workload finished"
+    # kill the server and bots
+    for node in \$bot_nodes; do
+        ssh \$node 'screen -S bot-\$node -X quit' && echo "Bot stopped on \$node"
+    done
+    ssh \$server_node 'screen -S server -X quit' && echo "Server stopped"
+    ssh \$server_node 'cd $DIR_NAME/bot/yardstick-$TERRASTICK_VERSION/terrastick/analysisScripts/ && python3 analysis.py' && echo "Analysis done"
 CMD
 )
 

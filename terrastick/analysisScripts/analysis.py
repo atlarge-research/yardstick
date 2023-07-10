@@ -12,8 +12,6 @@ ServerLogs = os.listdir(CURRENT_DIR + '/server/tshock/logs')[0]
 # read the only file in CURRENT_DIR/server/tshock/PacketLogs
 PacketLogs = os.listdir(CURRENT_DIR + '/server/tshock/PacketLogs')[0]
 
-# get the time stamp from ServerLogs for the line that looks like 2023-06-28 02:41:26 - HandlerCollection`1: INFO: Broadcast: Q: start 300
-
 with open(ServerLogs, 'r') as f:
     lines = f.readlines()
 
