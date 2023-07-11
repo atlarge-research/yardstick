@@ -11,6 +11,9 @@ ServerLogs = CURRENT_DIR+"/server/tshock/logs/"+os.listdir(CURRENT_DIR + '/serve
 
 # read the only file in CURRENT_DIR/server/tshock/PacketLogs
 PacketLogs = CURRENT_DIR+"/server/tshock/PacketLogs/"+os.listdir(CURRENT_DIR + '/server/tshock/PacketLogs')[0]
+
+# get output file as the argument
+output_file = sys.argv[1]
 with open(ServerLogs, 'r') as f:
     lines = f.readlines()
 
@@ -77,5 +80,5 @@ for line in lines:
 
 plt.title(str(num_nodes) + ' * ' + str(num_bots_node) + ' Bots ' + tiling + ' DAS5 Response Times')
 plt.savefig(CURRENT_DIR + '/bot/yardstick-terrastick-test-v0.15/terrastick/analysisScripts/'+num_nodes+'_'+num_bots_node+'_'+tiling+'_Response_Times.pdf')
-
+plt.savefig(output_file)
 
