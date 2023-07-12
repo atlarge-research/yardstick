@@ -79,6 +79,6 @@ for line in lines:
 
 
 plt.title(str(num_nodes) + ' * ' + str(num_bots_node) + ' Bots ' + tiling + ' DAS5 Response Times')
-plt.savefig(CURRENT_DIR + '/bot/yardstick-terrastick-test-v0.15/terrastick/analysisScripts/'+num_nodes+'_'+num_bots_node+'_'+tiling+'_Response_Times.pdf')
+plt.savefig(CURRENT_DIR + '/bot/yardstick-terrastick-test-v0.17/terrastick/analysisScripts/'+num_nodes+'_'+num_bots_node+'_'+tiling+'_Response_Times.pdf')
 plt.savefig(output_file)
 

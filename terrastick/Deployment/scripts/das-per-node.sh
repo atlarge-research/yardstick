@@ -185,7 +185,9 @@ remote_commands=$(cat <<CMD
 
         echo "Bot started on \$node"
     done
-    echo "Server and bots started"
+
+    echo "Running workload with $TERRASTICK_WORKLOAD ...."
+
 
     # wait for the workload to finish
     sleep $TERRASTICK_WORKLOAD_DURATION
@@ -195,7 +197,11 @@ remote_commands=$(cat <<CMD
         ssh \$node 'screen -S bot-\$node -X quit' && echo "Bot stopped on \$node"
     done
     ssh \$server_node 'screen -S server -X quit' && echo "Server stopped"
-    ssh \$server_node 'cd $DIR_NAME/bot/yardstick-$TERRASTICK_VERSION/terrastick/analysisScripts/ && python3 analysis.py' && echo "Analysis done"
+    ssh \$server_node 'screen -S process-exporter -X quit' && echo "Process exporter stopped"
+
+    ssh \$server_node 'module load python/3.5.2'
+    ssh \$server_node 'source ~/venv/bin/activate && cd $DIR_NAME/bot/yardstick-$TERRASTICK_VERSION/terrastick/analysisScripts/ && python3 analysis.py' && echo "Analysis done"
+
 CMD
 )
 
