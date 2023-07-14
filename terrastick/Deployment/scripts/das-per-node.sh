@@ -126,6 +126,7 @@ remote_commands=$(cat <<CMD
     mv yardstick-$TERRASTICK_VERSION/terrastick/Deployment/worlds ../server/
     mv yardstick-$TERRASTICK_VERSION/terrastick/Deployment/metrics-configs/prometheus-terrastick.yml ../prometheus/prometheus-2.37.8.linux-amd64/
     mv yardstick-$TERRASTICK_VERSION/terrastick/Deployment/metrics-configs/server-process-exporter.yaml ../server/process-exporter-0.7.10.linux-amd64/
+    mkdir -p ~/temp && cp -r yardstick-$TERRASTICK_VERSION/terrastick/analysisScripts/ ~/temp/
 
     cd yardstick-$TERRASTICK_VERSION/terrastick/PlayerEmulations/TrClientTest && dotnet build -r linux-x64 -c Release --no-self-contained || echo "Build failed"
     module load prun
@@ -201,9 +202,7 @@ remote_commands=$(cat <<CMD
     ssh \$server_node 'screen -S process-exporter -X quit' && echo "Process exporter stopped"
 
     ssh \$server_node 'module load python/3.5.2'
-    ssh \$server_node 'cd $DIR_NAME/bot/yardstick-$TERRASTICK_VERSION/terrastick/analysisScripts/ && ./analysis_setup.sh' && echo "Analysis setup done
-    ssh \$server_node 'cd $DIR_NAME/bot/yardstick-$TERRASTICK_VERSION/terrastick/analysisScripts/ && python3 analysis.py' && echo "Analysis done"
-
+    ssh \$server_node 'cd ~/temp/ && ./run_analysis.sh' && echo "Analysis done"
 CMD
 )
 

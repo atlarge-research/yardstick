@@ -1,6 +1,7 @@
 import seaborn as sns
 import matplotlib.pyplot as plt
 from datetime import datetime
+import os
 
 # read CURRENT_DIR environment variable
 CURRENT_DIR = os.environ['CURRENT_DIR']
