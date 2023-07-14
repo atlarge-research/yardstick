@@ -76,12 +76,13 @@ function scp_das {
 DIR_NAME="/var/scratch/$VUNET_USERNAME/terraria-experiment-$EXP_TIME"
 
 remote_commands=$(cat <<CMD
+    TERRASTICK_VERSION=$TERRASTICK_VERSION
     TERRASTICK_WORKLOAD=$TERRASTICK_WORKLOAD
     TERRASTICK_IP=$TERRASTICK_IP
     TERRASTICK_WORKLOAD_DURATION=$TERRASTICK_WORKLOAD_DURATION
     DOTNET_ROOT=\$HOME/.dotnet
     PATH=\$PATH:\$HOME/.dotnet:\$HOME/.dotnet/tools
-    variable_list=("TERRASTICK_WORKLOAD" "TERRASTICK_IP" "DOTNET_ROOT" "PATH")
+    variable_list=("TERRASTICK_WORKLOAD" "TERRASTICK_IP" "DOTNET_ROOT" "PATH" "TERRASTICK_VERSION")
     for variable_name in "\${variable_list[@]}"; do
         variable_value="\${!variable_name}"
         if ! grep -q "^export \$variable_name=" ~/.bashrc; then
@@ -200,7 +201,8 @@ remote_commands=$(cat <<CMD
     ssh \$server_node 'screen -S process-exporter -X quit' && echo "Process exporter stopped"
 
     ssh \$server_node 'module load python/3.5.2'
-    ssh \$server_node 'source ~/venv/bin/activate && cd $DIR_NAME/bot/yardstick-$TERRASTICK_VERSION/terrastick/analysisScripts/ && python3 analysis.py' && echo "Analysis done"
+    ssh \$server_node 'cd $DIR_NAME/bot/yardstick-$TERRASTICK_VERSION/terrastick/analysisScripts/ && ./analysis_setup.sh' && echo "Analysis setup done
+    ssh \$server_node 'cd $DIR_NAME/bot/yardstick-$TERRASTICK_VERSION/terrastick/analysisScripts/ && python3 analysis.py' && echo "Analysis done"
 
 CMD
 )

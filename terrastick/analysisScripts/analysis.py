@@ -5,6 +5,12 @@ from datetime import datetime
 # read CURRENT_DIR environment variable
 CURRENT_DIR = os.environ['CURRENT_DIR']
 
+# get the user name 
+USER_NAME = os.environ['USER']
+
+# get the terrastick_version
+TERRASTICK_VERSION = os.environ['TERRASTICK_VERSION']
+
 # read the onle file in CURRENT_DIR/server/tshock/logs
 ServerLogs = CURRENT_DIR+"/server/tshock/logs/"+os.listdir(CURRENT_DIR + '/server/tshock/logs')[0]
 
@@ -76,6 +82,6 @@ for line in lines:
             tiling = "TEST"
 
 plt.title(str(num_nodes) + ' * ' + str(num_bots_node) + ' Bots ' + tiling + ' DAS5 Response Times')
-plt.savefig('/var/scratch/abi354/'+num_nodes+'_'+num_bots_node+'_'+tiling+'_Response_Times.pdf')
-plt.savefig(CURRENT_DIR + '/bot/yardstick-terrastick-test-v0.18/terrastick/analysisScripts/'+num_nodes+'_'+num_bots_node+'_'+tiling+'_Response_Times.pdf')
+plt.savefig('/var/scratch/'+ USER_NAME +'/'+num_nodes+'_'+num_bots_node+'_'+tiling+'_Response_Times.pdf')
+plt.savefig(CURRENT_DIR + '/bot/yardstick-' + TERRASTICK_VERSION+ '/terrastick/analysisScripts/'+num_nodes+'_'+num_bots_node+'_'+tiling+'_Response_Times.pdf')
 
