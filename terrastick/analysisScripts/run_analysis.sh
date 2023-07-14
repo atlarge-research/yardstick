@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Create a virtual environment and install the required packages
-python -m venv .env
+module load python/3.6.0
+python3.6 -m venv .env
 source .env/bin/activate
 pip install -r requirements.txt
-python analysis.py
+python3.6 analysis.py
