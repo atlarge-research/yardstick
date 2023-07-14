@@ -1,6 +1,5 @@
 import seaborn as sns
 import matplotlib.pyplot as plt
-import os
 from datetime import datetime
 
 # read CURRENT_DIR environment variable
@@ -12,8 +11,6 @@ ServerLogs = CURRENT_DIR+"/server/tshock/logs/"+os.listdir(CURRENT_DIR + '/serve
 # read the only file in CURRENT_DIR/server/tshock/PacketLogs
 PacketLogs = CURRENT_DIR+"/server/tshock/PacketLogs/"+os.listdir(CURRENT_DIR + '/server/tshock/PacketLogs')[0]
 
-# get output file as the argument
-output_file = sys.argv[1]
 with open(ServerLogs, 'r') as f:
     lines = f.readlines()
 
@@ -55,6 +52,7 @@ update_time_timestamps = [datetime.strptime(line.split(':')[0].strip() + ':' + l
 
 # plot the response times of the workload through time
 print(len(update_time_timestamps),len(game_update_times))
+plt.figure(figsize=(20,20))
 plt.plot(update_time_timestamps, game_update_times)
 # plt.title('2 * 3 Bots Heap Tiling '+'DAS5 Response Times')
 
@@ -77,8 +75,7 @@ for line in lines:
         if tiling =='':
             tiling = "TEST"
 
-
 plt.title(str(num_nodes) + ' * ' + str(num_bots_node) + ' Bots ' + tiling + ' DAS5 Response Times')
-plt.savefig(CURRENT_DIR + '/bot/yardstick-terrastick-test-v0.17/terrastick/analysisScripts/'+num_nodes+'_'+num_bots_node+'_'+tiling+'_Response_Times.pdf')
-plt.savefig(output_file)
+plt.savefig('/var/scratch/abi354/'+num_nodes+'_'+num_bots_node+'_'+tiling+'_Response_Times.pdf')
+plt.savefig(CURRENT_DIR + '/bot/yardstick-terrastick-test-v0.18/terrastick/analysisScripts/'+num_nodes+'_'+num_bots_node+'_'+tiling+'_Response_Times.pdf')
 
