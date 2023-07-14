@@ -126,7 +126,7 @@ remote_commands=$(cat <<CMD
     mv yardstick-$TERRASTICK_VERSION/terrastick/Deployment/worlds ../server/
     mv yardstick-$TERRASTICK_VERSION/terrastick/Deployment/metrics-configs/prometheus-terrastick.yml ../prometheus/prometheus-2.37.8.linux-amd64/
     mv yardstick-$TERRASTICK_VERSION/terrastick/Deployment/metrics-configs/server-process-exporter.yaml ../server/process-exporter-0.7.10.linux-amd64/
-    mkdir -p ~/temp && mv yardstick-$TERRASTICK_VERSION/terrastick/analysisScripts/* ~/temp/
+    mkdir -p ~/temp && cp yardstick-$TERRASTICK_VERSION/terrastick/analysisScripts/* ~/temp/
 
     cd yardstick-$TERRASTICK_VERSION/terrastick/PlayerEmulations/TrClientTest && dotnet build -r linux-x64 -c Release --no-self-contained || echo "Build failed"
     module load prun
@@ -191,8 +191,7 @@ remote_commands=$(cat <<CMD
     echo "Running workload with $TERRASTICK_WORKLOAD ...."
 
 
-    # wait for the workload to finish
-    sleep $TERRASTICK_WORKLOAD_DURATION
+    sleep $TERRASTICK_WORKLOAD_DURATION 
     echo "Workload finished"
     # kill the server and bots
     for node in \$bot_nodes; do
