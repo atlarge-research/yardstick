@@ -56,15 +56,15 @@ game_update_times = [line.split(' ')[-1] for line in game_update_lines]
 # get the time stamp of of the current game_update_lines
 update_time_timestamps = [datetime.strptime(line.split(':')[0].strip() + ':' + line.split(':')[1].strip() +":"+ line.split(':')[2].strip(), '%m/%d/%Y %I:%M:%S %p') for line in game_update_lines]
 
-# plot the response times of the workload through time
+
 print(len(update_time_timestamps),len(game_update_times))
 plt.figure(figsize=(20,10))
+game_update_times = [float(time) for time in game_update_times]
 plt.plot(update_time_timestamps, game_update_times,xdate=True)
 plt.xlabel('Time')
 plt.ylabel('Response Time (ms)')
-# plt.title('2 * 3 Bots Heap Tiling '+'DAS5 Response Times')
 
-# read the experiment config from CURRENT_DIR/server/config,txt
+
 with open(CURRENT_DIR + '/server/config.txt', 'r') as f:
     lines = f.readlines()
 for line in lines:
@@ -85,5 +85,4 @@ for line in lines:
 
 plt.title(str(num_nodes) + ' * ' + str(num_bots_node) + ' Bots ' + tiling + ' DAS5 Response Times')
 plt.savefig('/var/scratch/'+ USER_NAME +'/'+num_nodes+'_'+num_bots_node+'_'+tiling+'_Response_Times.pdf')
-plt.savefig(CURRENT_DIR + '/bot/yardstick-' + TERRASTICK_VERSION+ '/terrastick/analysisScripts/'+num_nodes+'_'+num_bots_node+'_'+tiling+'_Response_Times.pdf')
 
