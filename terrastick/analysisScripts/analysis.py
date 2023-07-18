@@ -20,10 +20,11 @@ PacketLogs = CURRENT_DIR+"/server/tshock/PacketLogs/"+os.listdir(CURRENT_DIR + '
 
 with open(ServerLogs, 'r') as f:
     lines = f.readlines()
-
+set_start=False
 for i, line in enumerate(lines):
-    if "start" in line:
+    if "start" in line and not set_start:
         start_line = line
+        set_start = True
     if "WORKLOAD COMPLETE" in line:
         end_line = line
 
@@ -59,7 +60,7 @@ update_time_timestamps = [datetime.strptime(line.split(':')[0].strip() + ':' + l
 
 print(len(update_time_timestamps),len(game_update_times))
 plt.figure(figsize=(20,10))
-game_update_times = [float(time) for time in game_update_times]
+game_update_times = [float(time) - float(game_update_times[0]) for time in game_update_times]
 plt.plot(update_time_timestamps, game_update_times)
 plt.xlabel('Time')
 plt.ylabel('Response Time (ms)')
