@@ -60,7 +60,7 @@ update_time_timestamps = [datetime.strptime(line.split(':')[0].strip() + ':' + l
 
 print(len(update_time_timestamps),len(game_update_times))
 plt.figure(figsize=(20,10))
-game_update_times = [float(time - game_update_times[0]) for time in game_update_times]
+update_time_timestamps = [t - update_time_timestamps[0] for t in update_time_timestamps]
 plt.plot(update_time_timestamps, game_update_times)
 plt.xlabel('Time')
 plt.ylabel('Response Time (ms)')
