@@ -41,7 +41,7 @@ public class Experiment9PlayerScalability extends Experiment {
 
     private int botsTotal = 0;
     private long startMillis;
-    private long latestTick;
+    private long latestTick = 0;
     private int durationInSeconds;
     private int secondsBetweenJoin;
     private int numberOfBotsPerJoin;
