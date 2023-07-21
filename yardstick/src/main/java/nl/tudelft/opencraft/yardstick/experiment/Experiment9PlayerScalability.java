@@ -107,7 +107,7 @@ public class Experiment9PlayerScalability extends Experiment {
 
     @Override
     protected boolean isDone() {
-        if (System.currentTimeMillis() - this.latestTick > 55) {
+        if (System.currentTimeMillis() - this.latestTick < 50) {
             return true;
         }
 
