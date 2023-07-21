@@ -41,6 +41,7 @@ public class Experiment9PlayerScalability extends Experiment {
 
     private int botsTotal = 0;
     private long startMillis;
+    private long latestTick;
     private int durationInSeconds;
     private int secondsBetweenJoin;
     private int numberOfBotsPerJoin;
@@ -66,6 +67,7 @@ public class Experiment9PlayerScalability extends Experiment {
 
     @Override
     protected void tick() {
+        this.latestTick = System.currentTimeMillis();
         synchronized (botList) {
             List<Bot> disconnectedBots = botList.stream()
                 .filter(bot -> !bot.isJoined())
@@ -108,7 +110,7 @@ public class Experiment9PlayerScalability extends Experiment {
 
     @Override
     protected boolean isDone() {
-        return false;
+        return (this.latestTick - System.currentTimeMillis()) > 51;
     }
 
     @Override
