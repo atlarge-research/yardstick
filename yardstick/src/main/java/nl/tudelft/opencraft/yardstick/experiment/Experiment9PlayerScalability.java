@@ -40,7 +40,7 @@ public class Experiment9PlayerScalability extends Experiment {
     private BoundingBoxMovementModel movement;
 
     private int botsTotal = 0;
-    private long latestTick = System.currentTimeMillis();
+    private long latestTick;
     private int secondsBetweenJoin;
     private int numberOfBotsPerJoin;
     private final Map<Bot, Vector3d> botSpawnLocations = new HashMap<>();
@@ -59,6 +59,7 @@ public class Experiment9PlayerScalability extends Experiment {
             Integer.parseInt(options.experimentParams.getOrDefault("boxDiameter", "32")),
             Boolean.parseBoolean(options.experimentParams.getOrDefault("spawnAnchor", "false"))
         );
+        this.latestTick = System.currentTimeMillis();
     }
 
     @Override
@@ -106,7 +107,11 @@ public class Experiment9PlayerScalability extends Experiment {
 
     @Override
     protected boolean isDone() {
-        return System.currentTimeMillis() - this.latestTick > 51;
+        if (System.currentTimeMillis() - this.latestTick > 55) {
+            return true;
+        }
+
+        return false;
     }
 
     @Override
