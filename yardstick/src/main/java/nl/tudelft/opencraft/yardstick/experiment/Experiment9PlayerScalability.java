@@ -40,16 +40,14 @@ public class Experiment9PlayerScalability extends Experiment {
     private BoundingBoxMovementModel movement;
 
     private int botsTotal = 0;
-    private long startMillis;
     private long latestTick = System.currentTimeMillis();
-    private int durationInSeconds;
     private int secondsBetweenJoin;
     private int numberOfBotsPerJoin;
     private final Map<Bot, Vector3d> botSpawnLocations = new HashMap<>();
     private long lastJoin = System.currentTimeMillis();
 
     public Experiment9PlayerScalability() {
-        super(4, "Gradually increase the number of players up to the point where a latency of 50ms cannot be achieved.");
+        super(9, "Gradually increase the number of players up to the point where a latency of 50ms cannot be achieved.");
     }
 
     @Override
@@ -62,7 +60,6 @@ public class Experiment9PlayerScalability extends Experiment {
             Integer.parseInt(options.experimentParams.getOrDefault("boxDiameter", "32")),
             Boolean.parseBoolean(options.experimentParams.getOrDefault("spawnAnchor", "false"))
         );
-        this.startMillis = System.currentTimeMillis();
     }
 
     @Override
