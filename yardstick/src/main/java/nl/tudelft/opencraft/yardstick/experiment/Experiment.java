@@ -91,12 +91,13 @@ public abstract class Experiment implements Runnable {
             do {
                 long beforeTick = System.nanoTime();
                 tick();
+                sched.sleepTick();
                 long afterTick = System.nanoTime();
 
                 if (afterTick - beforeTick > 51_000_000) { // 51 ms response time
                     break;
                 }
-                sched.sleepTick();
+                
             } while (!isDone());
             after();
             logger.info("Experiment complete, exiting");
