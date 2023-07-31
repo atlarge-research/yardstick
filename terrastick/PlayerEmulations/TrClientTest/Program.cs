@@ -21,8 +21,10 @@ namespace TrClientTest
             string ip = "127.0.0.1";
             string workload = "TEL";
             // name is botname and last 5 characters of hostname
-            string name = "BOT_" + Environment.MachineName.Substring(Environment.MachineName.Length - 5);
+            // randomize name
+            string name = "BOT_" + Environment.MachineName.Substring(Environment.MachineName.Length - 5)+ "_" + new Random().Next(0,100);
             string logpath = "terrastick_bot_logs";
+            int workload_duration = 300;
 
             if (Environment.GetEnvironmentVariable("TERRASTICK_IP") != null)
             {
@@ -43,21 +45,25 @@ namespace TrClientTest
                 logpath = Environment.GetEnvironmentVariable("TERRASTICK_LOGPATH");
 
             }
+            if(Environment.GetEnvironmentVariable("TERRASTICK_WORKLOAD_DURATION") !=null)
+            {
+                workload_duration = int.Parse(Environment.GetEnvironmentVariable("TERRASTICK_WORKLOAD_DURATION"));
+            }
             Console.WriteLine("IP: " + ip);
             ushort port = 7777;
             string password = "";
 
 
-            var client = createclient(name, workload);
+            var client = createclient(name, workload,workload_duration);
 
 
             new Thread(() => client.GameLoop(new IPEndPoint(IPAddress.Parse(ip), port), password)).Start();
 
         }
 
-        private static TClient createclient(string name,string workload)
+        private static TClient createclient(string name,string workload,int workload_duration)
         {
-            var client = new TClient(workload);
+            var client = new TClient(workload,workload_duration);
 
             client.Username = name;
 

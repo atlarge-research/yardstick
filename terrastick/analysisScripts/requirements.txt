@@ -1,0 +1,4 @@
+pyparsing==2.4.7
+seaborn==0.11.1
+matplotlib==3.3.4
+

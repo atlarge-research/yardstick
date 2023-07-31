@@ -76,11 +76,13 @@ function scp_das {
 DIR_NAME="/var/scratch/$VUNET_USERNAME/terraria-experiment-$EXP_TIME"
 
 remote_commands=$(cat <<CMD
+    TERRASTICK_VERSION=$TERRASTICK_VERSION
     TERRASTICK_WORKLOAD=$TERRASTICK_WORKLOAD
     TERRASTICK_IP=$TERRASTICK_IP
+    TERRASTICK_WORKLOAD_DURATION=$TERRASTICK_WORKLOAD_DURATION
     DOTNET_ROOT=\$HOME/.dotnet
     PATH=\$PATH:\$HOME/.dotnet:\$HOME/.dotnet/tools
-    variable_list=("TERRASTICK_WORKLOAD" "TERRASTICK_IP" "DOTNET_ROOT" "PATH")
+    variable_list=("TERRASTICK_WORKLOAD" "TERRASTICK_IP" "DOTNET_ROOT" "PATH" "TERRASTICK_VERSION")
     for variable_name in "\${variable_list[@]}"; do
         variable_value="\${!variable_name}"
         if ! grep -q "^export \$variable_name=" ~/.bashrc; then
@@ -124,6 +126,7 @@ remote_commands=$(cat <<CMD
     mv yardstick-$TERRASTICK_VERSION/terrastick/Deployment/worlds ../server/
     mv yardstick-$TERRASTICK_VERSION/terrastick/Deployment/metrics-configs/prometheus-terrastick.yml ../prometheus/prometheus-2.37.8.linux-amd64/
     mv yardstick-$TERRASTICK_VERSION/terrastick/Deployment/metrics-configs/server-process-exporter.yaml ../server/process-exporter-0.7.10.linux-amd64/
+    mkdir -p ~/temp && cp yardstick-$TERRASTICK_VERSION/terrastick/analysisScripts/* ~/temp/
 
     cd yardstick-$TERRASTICK_VERSION/terrastick/PlayerEmulations/TrClientTest && dotnet build -r linux-x64 -c Release --no-self-contained || echo "Build failed"
     module load prun
@@ -152,7 +155,15 @@ remote_commands=$(cat <<CMD
     sed -i "s/export TERRASTICK_IP=.*/export TERRASTICK_IP=10.141.0.\$(echo \$server_node | sed 's/node0*\([1-9][0-9]*\)/\1/' | grep -oE '[0-9]+')/" ~/.bashrc
     sed -i 's/export TERRASTICK_WORKLOAD=.*/export TERRASTICK_WORKLOAD=TEL/' ~/.bashrc
     source ~/.bashrc
-    ssh \$server_node 'cd $DIR_NAME/server && screen -L -S server -d -m bash -c "./TShock.Server -port 7777  -maxplayers 20 -world $DIR_NAME/server/worlds/$WORLD_NAME.wld "' && echo "Server started on \$server_node"
+     # set CURRENT_DIR env variable in the server
+    ssh \$server_node "echo 'export CURRENT_DIR=$DIR_NAME' >> ~/.bashrc && source ~/.bashrc"
+    # create a new file in the server node called config.txt in dirname/server  and store  with DIR_NAME,TERRASTICK_VERSION,NUM_NODES,bot_nodes,TERASTICK_TILING
+    ssh \$server_node "echo 'DIR_NAME=$DIR_NAME' >> $DIR_NAME/server/config.txt"
+    ssh \$server_node "echo 'TERRASTICK_VERSION=$TERRASTICK_VERSION' >> $DIR_NAME/server/config.txt"
+    ssh \$server_node "echo 'NUM_NODES=$NUM_NODES' >> $DIR_NAME/server/config.txt"
+    ssh \$server_node "echo 'NUM_BOTS_PER_NODE=$NUM_BOTS_PER_NODE' >> $DIR_NAME/server/config.txt"
+    ssh \$server_node "echo 'TERRASTICK_TILING=$TERRASTICK_TILING' >> $DIR_NAME/server/config.txt"
+    ssh \$server_node 'cd $DIR_NAME/server && screen -L -S server -d -m bash -c "./TShock.Server -port 7777 -heaptile  -maxplayers 200 -world $DIR_NAME/server/worlds/$WORLD_NAME.wld "' && echo "Server started on \$server_node"
     echo "waiting for server to start" && sleep 10
 
     # start node and process exporter on server node
@@ -167,10 +178,30 @@ remote_commands=$(cat <<CMD
     
     for node in \$bot_nodes; do
         echo "Bot node: \$node"
-        ssh \$node 'cd $DIR_NAME/bot/yardstick-$TERRASTICK_VERSION/terrastick/PlayerEmulations/TrClientTest/bin/Release/net6.0/linux-x64/ && screen -L -S bot-\$node -d -m bash -c "./TrClientTest"'
+        for i in {1..$NUM_BOTS_PER_NODE}; do
+            ssh \$node 'cd $DIR_NAME/bot/yardstick-$TERRASTICK_VERSION/terrastick/PlayerEmulations/TrClientTest/bin/Release/net6.0/linux-x64/ && screen -L -S bot-\$node -d -m bash -c "./TrClientTest"' & 
+            # wait for WAIT_TIME_BETWEEN_BOTS 
+            sleep $WAIT_TIME_BETWEEN_BOTS
+        done
+
+
         echo "Bot started on \$node"
     done
-    echo "Server and bots started"
+
+    echo "Running workload with $TERRASTICK_WORKLOAD ...."
+
+
+    sleep $TERRASTICK_WORKLOAD_DURATION 
+    echo "Workload finished"
+    # kill the server and bots
+    for node in \$bot_nodes; do
+        ssh \$node 'screen -S bot-\$node -X quit' && echo "Bot stopped on \$node"
+    done
+    ssh \$server_node 'screen -S server -X quit' && echo "Server stopped"
+    ssh \$server_node 'screen -S process-exporter -X quit' && echo "Process exporter stopped"
+
+    ssh \$server_node 'module load python/3.6.0'
+    ssh \$server_node 'cd ~/temp/ && ./run_analysis.sh' && echo "Analysis done"
 CMD
 )
 

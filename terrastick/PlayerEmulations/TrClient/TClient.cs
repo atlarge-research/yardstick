@@ -32,7 +32,7 @@ namespace TrClient
         private BinaryWriter bw;
         private string workload;
         private readonly PacketSerializer mgr = new(true);
-
+        private bool firstNPCSync = false;
         public void Connect(string hostname, int port)
         {
             client = new TcpClient();
@@ -147,7 +147,7 @@ namespace TrClient
         public Func<bool> shouldExit = () => false;
 
         private readonly Dictionary<Type, Action<Packet>> handlers = new();
-
+        private int workload_duration = 300;
         public void On<T>(Action<T> handler) where T : Packet
         {
             void Handler(Packet p) => handler(p as T);
@@ -157,9 +157,11 @@ namespace TrClient
             else handlers.Add(typeof(T), Handler);
         }
 
-        public TClient(string workload)
+        public TClient(string workload,int workload_durration)
         {
             this.workload = workload;
+            this.workload_duration = workload_durration;
+
             InternalOn();
         }
 
@@ -251,6 +253,25 @@ namespace TrClient
 
                 }
             });
+
+            On<PlayerHealth>(pkt =>
+            {
+                // run player workload on first packet
+
+                if (this.workload == "TEL" && !this.firstNPCSync)
+                {
+                    this.ChatText("Starting player work load");
+                    this.firstNPCSync = true;
+                    this.RunTeleportWorkLoad(this.workload_duration);
+                }
+                else if (this.workload == "WLK" && !this.firstNPCSync)
+                {
+                    this.ChatText("Starting player work load");
+                    this.firstNPCSync = true;
+                    this.RunWalkWorkLoadAsync(this.workload_duration);
+                }
+            });
+        
             
 
 
@@ -390,7 +411,7 @@ namespace TrClient
                     if (handlers.TryGetValue(packet.GetType(), out var act))
                         act(packet);
                     else
-                        Console.WriteLine($"[Warning] not processed packet type {packet.Type}");
+                        Console.WriteLine($"[Warning] not processed packet type {packet}");
                 }
                 catch (Exception e)
                 {
