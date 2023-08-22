@@ -183,8 +183,8 @@ remote_commands=$(cat <<CMD
     ssh \$server_node 'screen -S process-exporter -X quit' && echo "Process exporter stopped"
 
     # get prometheus logs by running the get_prometheus_logs.sh script
-    cd ~/temp/ && ./get_prometheus_logs.sh
-    
+    ssh \$prometheus_node 'cd ~/temp/ && ./get_prometheus_logs.sh || echo "failed to get prometheus logs"'
+
     # run analysis scipts
     ssh \$server_node 'module load python/3.6.0'
     ssh \$server_node 'cd ~/temp/ && ./run_analysis.sh' && echo "Analysis done"
