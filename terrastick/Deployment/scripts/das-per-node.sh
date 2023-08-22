@@ -66,7 +66,7 @@ remote_commands=$(cat <<CMD
             echo "Added the variable \$variable_name to the bash RC file."
         else
             # Variable is already set, update it to its latest value using sed
-            sed -i "s/^export \$variable_name=.*/export \$variable_name=\"\$variable_value\"/" ~/.bashrc
+            sed -i "s|^export \$variable_name=.*|export \$variable_name=\"\$variable_value\"|" ~/.bashrc
             echo "Updated the variable \$variable_name in the bash RC file."
         fi
     done
