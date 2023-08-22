@@ -54,18 +54,20 @@ remote_commands=$(cat <<CMD
     TERRASTICK_WORKLOAD=$TERRASTICK_WORKLOAD
     TERRASTICK_IP=$TERRASTICK_IP
     TERRASTICK_WORKLOAD_DURATION=$TERRASTICK_WORKLOAD_DURATION
+    TERRASTICK_TILING=$TERRASTICK_TILING
     DIR_NAME=$DIR_NAME
     DOTNET_ROOT=\$HOME/.dotnet
     PATH=\$PATH:\$HOME/.dotnet:\$HOME/.dotnet/tools
-    variable_list=("TERRASTICK_WORKLOAD" "TERRASTICK_IP" "DOTNET_ROOT" "PATH" "TERRASTICK_VERSION" "TERRASTICK_WORKLOAD_DURATION" "DIR_NAME")
+    variable_list=("TERRASTICK_WORKLOAD" "TERRASTICK_IP" "DOTNET_ROOT" "PATH" "TERRASTICK_VERSION" "TERRASTICK_WORKLOAD_DURATION" "DIR_NAME" "TERRASTICK_TILING")
     for variable_name in "\${variable_list[@]}"; do
         variable_value="\${!variable_name}"
         if ! grep -q "^export \$variable_name=" ~/.bashrc; then
             echo "export \$variable_name=\"\$variable_value\"" >> ~/.bashrc
             echo "Added the variable \$variable_name to the bash RC file."
         else
-            # Variable is already set
-            echo "The variable \$variable_name is already set in the bash RC file."
+            # Variable is already set, update it to its latest value using sed
+            sed -i "s/^export \$variable_name=.*/export \$variable_name=\"\$variable_value\"/" ~/.bashrc
+            echo "Updated the variable \$variable_name in the bash RC file."
         fi
     done
     cd ~
@@ -128,7 +130,6 @@ remote_commands=$(cat <<CMD
 
     
     sed -i "s/export TERRASTICK_IP=.*/export TERRASTICK_IP=10.141.0.\$(echo \$server_node | sed 's/node0*\([1-9][0-9]*\)/\1/' | grep -oE '[0-9]+')/" ~/.bashrc
-    sed -i 's/export TERRASTICK_WORKLOAD=.*/export TERRASTICK_WORKLOAD=TEL/' ~/.bashrc
     source ~/.bashrc
 
     if [ "$TERRASTICK_TILING" == "VANILLA" ]; then

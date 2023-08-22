@@ -3,16 +3,16 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import os
 
-CURRENT_DIR = os.environ['CURRENT_DIR']
+EXP_DIR = os.environ['DIR_NAME']
 
-plots_dir = CURRENT_DIR + '/plots'
+plots_dir = EXP_DIR + '/plots'
 
 # Ensure the plots directory exists
 if not os.path.exists(plots_dir):
     os.makedirs(plots_dir)
 
-ServerLogs = CURRENT_DIR+"/server/tshock/logs/"+os.listdir(CURRENT_DIR + '/server/tshock/logs')[0]
-PacketLogs = CURRENT_DIR+"/server/tshock/PacketLogs/"+os.listdir(CURRENT_DIR + '/server/tshock/PacketLogs')[0]
+ServerLogs = EXP_DIR+"/server/tshock/logs/"+os.listdir(EXP_DIR + '/server/tshock/logs')[0]
+PacketLogs = EXP_DIR+"/server/tshock/PacketLogs/"+os.listdir(EXP_DIR + '/server/tshock/PacketLogs')[0]
 
 # Extract start and end times from server logs
 with open(ServerLogs, 'r') as f:
