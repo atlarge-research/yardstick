@@ -46,9 +46,6 @@ function ssh_das {
     ssh -J "$VUNET_USERNAME@$VU_SSH_HOSTNAME" "$USERNAME@$HOSTNAME" -t "$@" 
 }
 
-
-
-
 remote_commands=$(cat <<CMD
     TERRASTICK_VERSION=$TERRASTICK_VERSION
     TERRASTICK_WORKLOAD=$TERRASTICK_WORKLOAD
@@ -104,7 +101,7 @@ remote_commands=$(cat <<CMD
     mv yardstick-$TERRASTICK_VERSION/terrastick/Deployment/worlds ../server/
     mv yardstick-$TERRASTICK_VERSION/terrastick/Deployment/metrics-configs/prometheus-terrastick.yml ../prometheus/prometheus-2.37.8.linux-amd64/
     mv yardstick-$TERRASTICK_VERSION/terrastick/Deployment/metrics-configs/server-process-exporter.yaml ../server/process-exporter-0.7.10.linux-amd64/
-    mkdir -p ~/temp && cp yardstick-$TERRASTICK_VERSION/terrastick/analysisScripts/* ~/temp/ # hacky workaround to run analysis on the server node, otherwise the long path creates problems
+    mkdir -p ~/temp && cp yardstick-$TERRASTICK_VERSION/terrastick/analysis-scripts/* ~/temp/ # hacky workaround to run analysis on the server node, otherwise the long path creates problems
 
     cd yardstick-$TERRASTICK_VERSION/terrastick/PlayerEmulations/TrClientTest && dotnet build -r linux-x64 -c Release --no-self-contained || echo "Build failed"
     module load prun
@@ -154,8 +151,6 @@ remote_commands=$(cat <<CMD
     echo "Running workload with $TERRASTICK_WORKLOAD ...."
 
     total_wait_time=0
-    start_timestamp=\$(date -u "+%Y-%m-%dT%H:%M:%SZ")
-    echo "START=\${start_timestamp}" > $DIR_NAME/exp_times.txt
     for node in \$bot_nodes; do
         echo "Bot node: \$node"
         for i in {1..$NUM_BOTS_PER_NODE}; do
@@ -164,26 +159,20 @@ remote_commands=$(cat <<CMD
             sleep $WAIT_TIME_BETWEEN_BOTS
             total_wait_time=$((total_wait_time + WAIT_TIME_BETWEEN_BOTS))
         done
-
-
         echo "Bot started on \$node"
     done
 
     sleep $((TERRASTICK_WORKLOAD_DURATION - total_wait_time))
-
-    end_timestamp=\$(date -u "+%Y-%m-%dT%H:%M:%SZ")
-    echo "END=\${end_timestamp}" >> $DIR_NAME/exp_times.txt
     echo "Workload finished"
 
     # kill all the processes
     for node in \$bot_nodes; do
-        ssh \$node 'screen -S bot-\$node -X quit' && echo "Bot stopped on \$node"
+        ssh \$node 'screen -ls | grep bot-\$node | cut -d. -f1 | awk '{print $1}' | xargs kill' && echo "Bot processes stopped on \$node"
     done
-    ssh \$server_node 'screen -S server -X quit' && echo "Server stopped"
-    ssh \$server_node 'screen -S process-exporter -X quit' && echo "Process exporter stopped"
-
-    # get prometheus logs by running the get_prometheus_logs.sh script
-    ssh \$prometheus_node 'cd ~/temp/ && ./get_prometheus_logs.sh || echo "failed to get prometheus logs"'
+    ssh \$server_node 'screen -ls | grep server | cut -d. -f1 | awk '{print $1}' | xargs kill' && echo "Terraria server process stopped"
+    ssh \$server_node 'screen -ls | grep process-exporter | cut -d. -f1 | awk '{print $1}' | xargs kill' && echo "Process exporter stopped"
+    ssh \$server_node 'screen -ls | grep node-exporter | cut -d. -f1 | awk '{print $1}' | xargs kill' && echo "Node exporter stopped"
+    ssh \$prometheus_node 'screen -ls | grep prometheus | cut -d. -f1 | awk '{print $1}' | xargs kill' && echo "Prometheus stopped"
 
     # run analysis scipts
     ssh \$server_node 'module load python/3.6.0'
