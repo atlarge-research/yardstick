@@ -1,6 +1,7 @@
 import seaborn as sns
 import matplotlib.pyplot as plt
 from datetime import datetime
+import json
 import os
 
 EXP_DIR = os.environ['DIR_NAME']
@@ -11,21 +12,28 @@ plots_dir = EXP_DIR + '/plots'
 if not os.path.exists(plots_dir):
     os.makedirs(plots_dir)
 
-ServerLogs = EXP_DIR+"/server/tshock/logs/"+os.listdir(EXP_DIR + '/server/tshock/logs')[0]
-PacketLogs = EXP_DIR+"/server/tshock/PacketLogs/"+os.listdir(EXP_DIR + '/server/tshock/PacketLogs')[0]
+server_logs = EXP_DIR+"/server/tshock/logs/"+os.listdir(EXP_DIR + '/server/tshock/logs')[0]
+packet_logs = EXP_DIR+"/server/tshock/PacketLogs/"+os.listdir(EXP_DIR + '/server/tshock/PacketLogs')[0]
+cpu_utilization_json = EXP_DIR+"/prometheus/cpu_utilization.json"
+
 
 # Extract start and end times from server logs
-with open(ServerLogs, 'r') as f:
+with open(server_logs, 'r') as f:
     lines = f.readlines()
     
 for line in lines:
-    if "start" in line:
+    if "Starting player work load" in line:
         start_time = datetime.strptime(' '.join(line.split(' ')[:2]), '%Y-%m-%d %H:%M:%S')
+        break
+
+for line in lines:
     if "WORKLOAD COMPLETE" in line:
         end_time = datetime.strptime(' '.join(line.split(' ')[:2]), '%Y-%m-%d %H:%M:%S')
+        break
 
 # Extract game update times from packet logs within the start and end times
-with open(PacketLogs, 'r') as f:
+with open(packet_logs, 'r') as f:
+    
     lines = f.readlines()
 
 game_update_lines = [line for line in lines if "GAME UPDATE TIME" in line and start_time <= datetime.strptime(':'.join(line.split(':')[0:3]).strip(), '%m/%d/%Y %I:%M:%S %p') <= end_time]
@@ -76,3 +84,33 @@ plt.ylabel('Count')
 plt.title('Corrected Distribution of Top 20 Packet Types Sent to the Server')
 plt.tight_layout()
 plt.savefig(os.path.join(plots_dir, 'packet_distribution.pdf'))
+
+# Load the data from the cpu_utilization.json file
+with open(cpu_utilization_json, "r") as file:
+    cpu_utilization_data = json.load(file)
+
+# Extracting and aggregating CPU utilization data across all cores and modes (excluding idle)
+cpu_timeseries = cpu_utilization_data["data"]["result"]
+aggregated_cpu_utilization = {}
+
+for series in cpu_timeseries:
+    mode = series["metric"]["mode"]
+    if mode != "idle":  # Exclude the idle mode
+        timestamps, values = zip(*series["values"])
+        for i, timestamp in enumerate(timestamps):
+            if timestamp not in aggregated_cpu_utilization:
+                aggregated_cpu_utilization[timestamp] = 0
+            aggregated_cpu_utilization[timestamp] += float(values[i])
+
+# Sorting the data by timestamp for plotting
+sorted_timestamps, sorted_values = zip(*sorted(aggregated_cpu_utilization.items()))
+
+# Plotting the aggregated CPU utilization
+plt.figure(figsize=(15, 8))
+plt.plot(sorted_timestamps, sorted_values, label="Overall CPU Utilization", color='red')
+plt.title("Aggregated CPU Utilization Over Time")
+plt.xlabel("Timestamp")
+plt.ylabel("Aggregated CPU Seconds")
+plt.legend()
+plt.grid(True)
+plt.show()

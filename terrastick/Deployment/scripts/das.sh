@@ -154,8 +154,8 @@ remote_commands=$(cat <<CMD
     echo "Running workload with $TERRASTICK_WORKLOAD ...."
 
     total_wait_time=0
-    start_timestamp=$(date +%s)
-    echo "START=\$start_timestamp" > $DIR_NAME/exp_times.txt
+    start_timestamp=\$(date -u "+%Y-%m-%dT%H:%M:%SZ")
+    echo "START=\${start_timestamp}" > $DIR_NAME/exp_times.txt
     for node in \$bot_nodes; do
         echo "Bot node: \$node"
         for i in {1..$NUM_BOTS_PER_NODE}; do
@@ -171,8 +171,8 @@ remote_commands=$(cat <<CMD
 
     sleep $((TERRASTICK_WORKLOAD_DURATION - total_wait_time))
 
-    end_timestamp=$(date +%s)
-    echo "END=\$end_timestamp" >> $DIR_NAME/exp_times.txt
+    end_timestamp=\$(date -u "+%Y-%m-%dT%H:%M:%SZ")
+    echo "END=\${end_timestamp}" >> $DIR_NAME/exp_times.txt
     echo "Workload finished"
 
     # kill all the processes
