@@ -167,12 +167,10 @@ remote_commands=$(cat <<CMD
 
     # kill all the processes
     for node in \$bot_nodes; do
-        ssh \$node 'screen -ls | grep bot-\$node | cut -d. -f1 | awk '{print $1}' | xargs kill' && echo "Bot processes stopped on \$node"
+        ssh \$node 'killall screen' && echo "All screen sessions stopped on \$node"
     done
-    ssh \$server_node 'screen -ls | grep server | cut -d. -f1 | awk '{print $1}' | xargs kill' && echo "Terraria server process stopped"
-    ssh \$server_node 'screen -ls | grep process-exporter | cut -d. -f1 | awk '{print $1}' | xargs kill' && echo "Process exporter stopped"
-    ssh \$server_node 'screen -ls | grep node-exporter | cut -d. -f1 | awk '{print $1}' | xargs kill' && echo "Node exporter stopped"
-    ssh \$prometheus_node 'screen -ls | grep prometheus | cut -d. -f1 | awk '{print $1}' | xargs kill' && echo "Prometheus stopped"
+    ssh \$server_node 'killall screen' && echo "All screen sessions stopped on server node"
+    ssh \$prometheus_node 'killall screen' && echo "All screen sessions stopped on prometheus node"
 
     # run analysis scipts
     ssh \$server_node 'module load python/3.6.0'
