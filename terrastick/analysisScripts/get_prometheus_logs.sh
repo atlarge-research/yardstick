@@ -6,9 +6,9 @@ PROMETHEUS_PORT="9090"
 
 # Define the metrics of interest
 declare -A metrics
-metrics["cpu_utilization"]="node_cpu_seconds_total"
-metrics["memory_usage"]="node_memory_usage_bytes"
-metrics["threads_total"]="node_threads"
+metrics["cpu_utilization_raw"]="node_cpu_seconds_total" # this is raw data, calculations done in analysis.py
+metrics["average_cpu_utilization"]="100 * avg without (cpu, mode) (1 - rate(node_cpu_seconds_total{mode="idle"}[1m]))" # this calculates the average CPU utilization across all cores and modes barring idle
+metrics["average_memory_utilization"]="100 * (1 - ((avg_over_time(node_memory_MemFree_bytes[10m]) + avg_over_time(node_memory_Cached_bytes[10m]) + avg_over_time(node_memory_Buffers_bytes[10m])) / avg_over_time(node_memory_MemTotal_bytes[10m])))"
 metrics["network_io_bytes_sent"]="node_network_transmit_bytes_total"
 metrics["network_io_bytes_received"]="node_network_receive_bytes_total"
 

@@ -43,7 +43,8 @@ update_time_timestamps = [datetime.strptime(':'.join(line.split(':')[0:3]).strip
 game_update_times = [float(line.split(' ')[-1]) for line in game_update_lines]
 
 # Highlight when bots join
-bot_join_times = [datetime.strptime(' '.join(line.split(' ')[:2]), '%Y-%m-%d %H:%M:%S') for line in lines if "Player has joined" in line and start_time <= datetime.strptime(' '.join(line.split(' ')[:2]), '%Y-%m-%d %H:%M:%S') <= end_time]
+bot_join_lines = [line for line in lines if "Player has joined" in line and start_time <= datetime.strptime(' '.join(line.split(' ')[:2]), '%Y-%m-%d %H:%M:%S') <= end_time]
+bot_join_times = [datetime.strptime(' '.join(line.split(' ')[:2]), '%Y-%m-%d %H:%M:%S') for line in bot_join_lines]
 
 # Plot the response times
 plt.figure(figsize=(20, 10))
@@ -51,17 +52,13 @@ plt.plot(update_time_timestamps, game_update_times, label='Response Time')
 
 # Add red lines for bot join times
 for bot_join_time in bot_join_times:
-    plt.axvline(x=bot_join_time, color='r', linestyle='--', alpha=0.5, label='Bot Joined')
+    plt.axvline(x=bot_join_time, color='r', linestyle='--', alpha=0.5, label='Bot Joined at {}'.format(bot_join_time))
 
 # To prevent duplicate labels in the legend, we'll handle them here:
 handles, labels = plt.gca().get_legend_handles_labels()
-new_labels, new_handles = [], []
-for handle, label in zip(handles, labels):
-    if label not in new_labels:
-        new_labels.append(label)
-        new_handles.append(handle)
+by_label = dict(zip(labels, handles))
 
-plt.legend(new_handles, new_labels)
+plt.legend(by_label.values(), by_label.keys())
 plt.xlabel('Time')
 plt.ylabel('Response Time (ms)')
 plt.title('Response Times with Bot Join Times Highlighted')
@@ -113,4 +110,4 @@ plt.xlabel("Timestamp")
 plt.ylabel("Aggregated CPU Seconds")
 plt.legend()
 plt.grid(True)
-plt.show()
+plt.savefig(os.path.join(plots_dir, 'cpu_utilization.pdf'))
