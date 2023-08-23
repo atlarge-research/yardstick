@@ -1,8 +1,6 @@
-# premetheus config file for scraping metrics from the terrastick app linked to a process exporter
-
 global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
+  scrape_interval: 10s
+  evaluation_interval: 10s
 
 scrape_configs:
   - job_name: 'process-exporter'

@@ -14,7 +14,7 @@ if not os.path.exists(plots_dir):
 
 server_logs = EXP_DIR+"/server/tshock/logs/"+os.listdir(EXP_DIR + '/server/tshock/logs')[0]
 packet_logs = EXP_DIR+"/server/tshock/PacketLogs/"+os.listdir(EXP_DIR + '/server/tshock/PacketLogs')[0]
-cpu_utilization_json = EXP_DIR+"/prometheus/cpu_utilization.json"
+cpu_utilization_json = EXP_DIR+"/prometheus/node_cpu_utilization_raw.json"
 
 
 # Extract start and end times from server logs
