@@ -16,10 +16,10 @@ SAVE_DIR = os.path.join(os.getenv("DIR_NAME"), "prometheus/json_data")
 
 os.makedirs(SAVE_DIR, exist_ok=True)
 
-with open(os.path.join(os.getenv("DIR_NAME"), "exp_times.txt"), 'r') as f:
-    lines = f.readlines()
-    START = lines[0].split('=')[1].strip()
-    END = lines[1].split('=')[1].strip()
+with open(os.path.join(os.getenv("DIR_NAME"), "exp_times.json"), 'r') as f:
+    data = json.load(f)
+    START = data["START"]
+    END = data["END"]
 
 for metric_name, metric in metrics.items():
     response = requests.get(f"http://{PROMETHEUS_SERVER}:{PROMETHEUS_PORT}/api/v1/query_range", params={"query": metric, "start": START, "end": END, "step": PROMETHEUS_SCRAPE_INTERVAL})

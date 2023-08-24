@@ -16,35 +16,24 @@ server_logs = EXP_DIR+"/server/tshock/logs/"+os.listdir(EXP_DIR + '/server/tshoc
 packet_logs = EXP_DIR+"/server/tshock/PacketLogs/"+os.listdir(EXP_DIR + '/server/tshock/PacketLogs')[0]
 cpu_utilization_json = EXP_DIR+"/prometheus/json_data/node_cpu_utilization_raw.json"
 
+start_time=None
+end_time=None
+bot_join_times=[]
 
-# Extract start and end times from server logs
-with open(server_logs, 'r') as f:
-    lines = f.readlines()
-    
-for line in lines:
-    if "Starting player work load" in line:
-        start_time = datetime.strptime(' '.join(line.split(' ')[:2]), '%Y-%m-%d %H:%M:%S')
-        break
-
-for line in lines:
-    if "WORKLOAD COMPLETE" in line:
-        end_time = datetime.strptime(' '.join(line.split(' ')[:2]), '%Y-%m-%d %H:%M:%S')
-        break
+with open(EXP_DIR + '/exp_times.json', 'r') as f:
+    data = json.load(f)
+    start_time = datetime.fromisoformat(data["START"].replace("Z", ""))
+    end_time = datetime.fromisoformat(data["END"].replace("Z", ""))
+    bot_join_times = [datetime.fromisoformat(time.replace("Z", "")) for time in data["BOTS"].values()]
 
 # Extract game update times from packet logs within the start and end times
-with open(packet_logs, 'r') as f:
-    
+with open(packet_logs, 'r') as f: 
     lines = f.readlines()
-
 game_update_lines = [line for line in lines if "GAME UPDATE TIME" in line and start_time <= datetime.strptime(':'.join(line.split(':')[0:3]).strip(), '%m/%d/%Y %I:%M:%S %p') <= end_time]
 
 # Extract timestamps and response times
 update_time_timestamps = [datetime.strptime(':'.join(line.split(':')[0:3]).strip(), '%m/%d/%Y %I:%M:%S %p') for line in game_update_lines]
 game_update_times = [float(line.split(' ')[-1]) for line in game_update_lines]
-
-# Highlight when bots join
-bot_join_lines = [line for line in lines if "Player has joined" in line and start_time <= datetime.strptime(' '.join(line.split(' ')[:2]), '%Y-%m-%d %H:%M:%S') <= end_time]
-bot_join_times = [datetime.strptime(' '.join(line.split(' ')[:2]), '%Y-%m-%d %H:%M:%S') for line in bot_join_lines]
 
 # Plot the response times
 plt.figure(figsize=(20, 10))
@@ -52,7 +41,7 @@ plt.plot(update_time_timestamps, game_update_times, label='Response Time')
 
 # Add red lines for bot join times
 for bot_join_time in bot_join_times:
-    plt.axvline(x=bot_join_time, color='r', linestyle='--', alpha=0.5, label='Bot Joined at {}'.format(bot_join_time))
+    plt.axvline(x=bot_join_time, color='r', linestyle='--', alpha=0.5, label='Bot Joined')
 
 # To prevent duplicate labels in the legend, we'll handle them here:
 handles, labels = plt.gca().get_legend_handles_labels()
