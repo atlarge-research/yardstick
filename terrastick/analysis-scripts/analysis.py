@@ -24,9 +24,9 @@ bot_join_times=[]
 # all of these times are in CET
 with open(EXP_DIR + '/exp_times.json', 'r') as f:
     data = json.load(f)
-    start_time = start_time = datetime.strptime(data["START"], "%Y-%m-%dT%H:%M:%SZ")
-    end_time = end_time = datetime.strptime(data["END"], "%Y-%m-%dT%H:%M:%SZ")
-    bot_join_times = [datetime.strptime(time, "%Y-%m-%dT%H:%M:%SZ") for time in data["BOTS"].values()]
+    start_time = start_time = datetime.strptime(data["START_ANALYSIS"], "%Y-%m-%dT%H:%M:%SZ")
+    end_time = end_time = datetime.strptime(data["END_ANALYSIS"], "%Y-%m-%dT%H:%M:%SZ")
+    bot_join_times = [datetime.strptime(time, "%Y-%m-%dT%H:%M:%SZ") for time in data["BOTS_JOINED"].values()]
 
 # Extract game update times from packet logs within the start and end times
 with open(packet_logs, 'r') as f: 

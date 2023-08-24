@@ -9,5 +9,5 @@ echo "getting exp times"
 python3.6 get_exp_times.py
 echo "getting prometheus logs"
 python3.6 get_prometheus_logs.py
-echo "getting node logs"
+echo "performing analysis"
 python3.6 analysis.py
