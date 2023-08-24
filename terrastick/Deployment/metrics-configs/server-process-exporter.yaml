@@ -1,4 +1,5 @@
 process_names:
-  - name: "TShock.Server"
+  - name: "tshock-server"
     cmdline:
-    - '.*'
+    - "TShock.Server.*"
+

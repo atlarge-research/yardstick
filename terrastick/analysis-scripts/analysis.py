@@ -51,9 +51,9 @@ by_label = dict(zip(labels, handles))
 
 plt.legend(by_label.values(), by_label.keys())
 plt.xlabel('Time')
-plt.ylabel('Response Time (ms)')
-plt.title('Response Times with Bot Join Times Highlighted')
-plt.savefig(os.path.join(plots_dir, 'response_times_with_bot_joins.pdf'))
+plt.ylabel('Game Update Time (ms)')
+plt.title('Game Update Times with Bot Join Times Highlighted')
+plt.savefig(os.path.join(plots_dir, 'game_times_with_bot_joins.pdf'))
 
 # Extract and plot packet distribution
 corrected_packet_types = [line.split("[Recv]")[1].split('(')[1].split(')')[0] for line in lines if "[Recv]" in line]
