@@ -12,6 +12,7 @@ plots_dir = EXP_DIR + '/plots'
 if not os.path.exists(plots_dir):
     os.makedirs(plots_dir)
 
+# times are in CET
 server_logs = EXP_DIR+"/server/tshock/logs/"+os.listdir(EXP_DIR + '/server/tshock/logs')[0]
 packet_logs = EXP_DIR+"/server/tshock/PacketLogs/"+os.listdir(EXP_DIR + '/server/tshock/PacketLogs')[0]
 cpu_utilization_json = EXP_DIR+"/prometheus/json_data/node_cpu_utilization_raw.json"
@@ -20,11 +21,12 @@ start_time=None
 end_time=None
 bot_join_times=[]
 
+# all of these times are in CET
 with open(EXP_DIR + '/exp_times.json', 'r') as f:
     data = json.load(f)
-    start_time = datetime.fromisoformat(data["START"].replace("Z", ""))
-    end_time = datetime.fromisoformat(data["END"].replace("Z", ""))
-    bot_join_times = [datetime.fromisoformat(time.replace("Z", "")) for time in data["BOTS"].values()]
+    start_time = start_time = datetime.strptime(data["START"], "%Y-%m-%dT%H:%M:%SZ")
+    end_time = end_time = datetime.strptime(data["END"], "%Y-%m-%dT%H:%M:%SZ")
+    bot_join_times = [datetime.strptime(time, "%Y-%m-%dT%H:%M:%SZ") for time in data["BOTS"].values()]
 
 # Extract game update times from packet logs within the start and end times
 with open(packet_logs, 'r') as f: 

@@ -1,6 +1,7 @@
 import os
 import requests
 import json
+from datetime import datetime, timedelta
 
 PROMETHEUS_SERVER = os.getenv("PROMETHEUS_IP")
 PROMETHEUS_PORT = "9090"
@@ -18,13 +19,22 @@ os.makedirs(SAVE_DIR, exist_ok=True)
 
 with open(os.path.join(os.getenv("DIR_NAME"), "exp_times.json"), 'r') as f:
     data = json.load(f)
-    START = data["START"]
-    END = data["END"]
+    START_UTC = (datetime.strptime(data["START"], "%Y-%m-%dT%H:%M:%SZ") - timedelta(hours=2)).isoformat() + "Z"
+    END_UTC = (datetime.strptime(data["END"], "%Y-%m-%dT%H:%M:%SZ") - timedelta(hours=2)).isoformat() + "Z"
 
 for metric_name, metric in metrics.items():
-    response = requests.get(f"http://{PROMETHEUS_SERVER}:{PROMETHEUS_PORT}/api/v1/query_range", params={"query": metric, "start": START, "end": END, "step": PROMETHEUS_SCRAPE_INTERVAL})
+    response = requests.get(f"http://{PROMETHEUS_SERVER}:{PROMETHEUS_PORT}/api/v1/query_range", params={"query": metric, "start": START_UTC, "end": END_UTC, "step": PROMETHEUS_SCRAPE_INTERVAL})
     if response.status_code == 200:
+        response_data = response.json()
+        # need to convert from UTC to CET
+        for result in response_data['data']['result']:
+            for value in result['values']:
+                timestamp_utc = datetime.utcfromtimestamp(value[0])
+                timestamp_cet = timestamp_utc + timedelta(hours=2)
+                value[0] = timestamp_cet.timestamp()
         with open(os.path.join(SAVE_DIR, f"{metric_name}.json"), 'w') as f:
-            json.dump(response.json(), f)
+            json.dump(response_data, f)
     else:
         print(f"Failed to retrieve {metric_name}")
+        print("due to this reason-",response)
+
