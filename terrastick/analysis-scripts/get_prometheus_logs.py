@@ -9,19 +9,19 @@ PROMETHEUS_SCRAPE_INTERVAL = "5s"
 
 series_metrics = {
     # process-exporter metrics
-    "cpu_utilization": "sum(rate(namedprocess_namegroup_cpu_seconds_total%7Bmode%3D~%22user%7Csystem%22%2Cgroupname%3D%22tshock-server%22%7D%5B1m%5D))*100",
-    "memory_utilization": "sum(namedprocess_namegroup_memory_bytes%7Bgroupname%3D%22tshock-server%22%2Cjob%3D%22process-exporter%22%2Cmemtype%3D~%22resident%7Cswapped%22%7D)",
+    "cpu_utilization_percent": "sum(rate(namedprocess_namegroup_cpu_seconds_total%7Bmode%3D~%22user%7Csystem%22%2Cgroupname%3D%22tshock-server%22%7D%5B1m%5D))*100",
+    "memory_utilization_bytes": "sum(namedprocess_namegroup_memory_bytes%7Bgroupname%3D%22tshock-server%22%2Cjob%3D%22process-exporter%22%2Cmemtype%3D~%22resident%7Cswapped%22%7D)",
     "total_number_of_threads": "namedprocess_namegroup_num_threads",
     "number_of_threads_by_thread_group_name": "namedprocess_namegroup_thread_count",
-    "disk_writes": "namedprocess_namegroup_write_bytes_total",
-    "disk_reads": "namedprocess_namegroup_read_bytes_total",
+    "disk_writes_bytes": "namedprocess_namegroup_write_bytes_total",
+    "disk_reads_bytes": "namedprocess_namegroup_read_bytes_total",
     "thread_states": "namedprocess_namegroup_states",
 }
 
 instant_metrics = {
     # node-exporter metrics
     "number_of_cores": "count%20without(cpu%2C%20mode)%20(node_cpu_seconds_total%7Bmode%3D%22idle%22%7D)", # we can use any mode here, I have used idle
-    "total_memory": 'node_memory_MemTotal_bytes',
+    "total_memory_bytes": 'node_memory_MemTotal_bytes',
     # process-exporter metrics
     "number_of_processes_in_group": "namedprocess_namegroup_num_procs",
 }
