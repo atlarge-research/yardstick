@@ -15,7 +15,6 @@ if not os.path.exists(plots_dir):
 # times are in CET
 server_logs = EXP_DIR+"/server/tshock/logs/"+os.listdir(EXP_DIR + '/server/tshock/logs')[0]
 packet_logs = EXP_DIR+"/server/tshock/PacketLogs/"+os.listdir(EXP_DIR + '/server/tshock/PacketLogs')[0]
-cpu_utilization_json = EXP_DIR+"/prometheus/json_data/node_cpu_utilization_raw.json"
 
 start_time=None
 end_time=None
@@ -73,32 +72,3 @@ plt.title('Corrected Distribution of Top 20 Packet Types Sent to the Server')
 plt.tight_layout()
 plt.savefig(os.path.join(plots_dir, 'packet_distribution.pdf'))
 
-# Load the data from the cpu_utilization.json file
-with open(cpu_utilization_json, "r") as file:
-    cpu_utilization_data = json.load(file)
-
-# Extracting and aggregating CPU utilization data across all cores and modes (excluding idle)
-cpu_timeseries = cpu_utilization_data["data"]["result"]
-aggregated_cpu_utilization = {}
-
-for series in cpu_timeseries:
-    mode = series["metric"]["mode"]
-    if mode != "idle":  # Exclude the idle mode
-        timestamps, values = zip(*series["values"])
-        for i, timestamp in enumerate(timestamps):
-            if timestamp not in aggregated_cpu_utilization:
-                aggregated_cpu_utilization[timestamp] = 0
-            aggregated_cpu_utilization[timestamp] += float(values[i])
-
-# Sorting the data by timestamp for plotting
-sorted_timestamps, sorted_values = zip(*sorted(aggregated_cpu_utilization.items()))
-
-# Plotting the aggregated CPU utilization
-plt.figure(figsize=(15, 8))
-plt.plot(sorted_timestamps, sorted_values, label="Overall CPU Utilization", color='red')
-plt.title("Aggregated CPU Utilization Over Time")
-plt.xlabel("Timestamp")
-plt.ylabel("Aggregated CPU Seconds")
-plt.legend()
-plt.grid(True)
-plt.savefig(os.path.join(plots_dir, 'cpu_utilization.pdf'))
