@@ -44,12 +44,6 @@ for metric_name, metric in series_metrics.items():
     response = requests.request("POST", url, headers=headers, data=payload)
     if response.status_code == 200:
         response_data = response.json()
-        # need to convert from UTC to CET
-        for result in response_data['data']['result']:
-            for value in result['values']:
-                timestamp_utc = datetime.utcfromtimestamp(value[0])
-                timestamp_cet = timestamp_utc + timedelta(hours=2)
-                value[0] = timestamp_cet.timestamp()
         with open(os.path.join(SAVE_DIR, f"{metric_name}.json"), 'w') as f:
             json.dump(response_data, f)
     else:

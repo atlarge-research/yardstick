@@ -6,15 +6,30 @@ import os
 
 EXP_DIR = os.environ['DIR_NAME']
 
+prometheus_json_dir = EXP_DIR + '/prometheus/json_data'
 plots_dir = EXP_DIR + '/plots'
 
 # Ensure the plots directory exists
 if not os.path.exists(plots_dir):
     os.makedirs(plots_dir)
 
-# times are in CET
 server_logs = EXP_DIR+"/server/tshock/logs/"+os.listdir(EXP_DIR + '/server/tshock/logs')[0]
 packet_logs = EXP_DIR+"/server/tshock/PacketLogs/"+os.listdir(EXP_DIR + '/server/tshock/PacketLogs')[0]
+
+# from prometheus data, extract instant values of the following metrics:
+# total_memory_bytes in total_memory_bytes.json file
+# number_of_cores in number_of_cores.json file
+# number_of_processes_in_group in number_of_processes_in_group.json file
+total_memory_bytes = None
+number_of_cores = None
+number_of_processes_in_group = None
+# Load the json files and extract the values
+with open(prometheus_json_dir + '/total_memory.json', 'r') as f:
+    total_memory = json.load(f)['quantity']
+with open(prometheus_json_dir + '/number_of_cores.json', 'r') as f:
+    number_of_cores = json.load(f)['quantity']
+with open(prometheus_json_dir + '/number_of_processes_in_group.json', 'r') as f:
+    number_of_processes_in_group = json.load(f)['quantity']
 
 start_time=None
 end_time=None
