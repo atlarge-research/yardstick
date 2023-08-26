@@ -7,10 +7,20 @@ PROMETHEUS_SERVER = os.getenv("PROMETHEUS_IP")
 PROMETHEUS_PORT = "9090"
 PROMETHEUS_SCRAPE_INTERVAL = "5s"
 
-metrics = {
-    "node_cpu_utilization_raw": "node_cpu_seconds_total", # this is raw data, calculations done in analysis.py
-    "node_cpu_utilization_custom": "100%20*%20avg%20without%20(cpu%2C%20mode)%20(%0A%20%201%20-%20rate(node_cpu_seconds_total%7Bmode%3D%22idle%22%7D%5B1m%5D)%0A)",
-    "node_memory_utilization_custom": "100%20*%20(1%20-%20((avg_over_time(node_memory_MemFree_bytes%5B10m%5D)%20%2B%20avg_over_time(node_memory_Cached_bytes%5B10m%5D)%20%2B%20avg_over_time(node_memory_Buffers_bytes%5B10m%5D))%20%2F%20avg_over_time(node_memory_MemTotal_bytes%5B10m%5D)))"
+process_metrics = {
+    "cpu_utilization": "sum(rate(namedprocess_namegroup_cpu_seconds_total%7Bmode%3D~%22user%7Csystem%22%2Cgroupname%3D%22tshock-server%22%7D%5B1m%5D))*100",
+    "memory_utilization": "sum(namedprocess_namegroup_memory_bytes%7Bgroupname%3D%22tshock-server%22%2Cjob%3D%22process-exporter%22%2Cmemtype%3D~%22resident%7Cswapped%22%7D)",
+    "total_number_of_threads": "namedprocess_namegroup_num_threads",
+    "number_of_threads_by_thread_group_name": "namedprocess_namegroup_thread_count",
+    "disk_writes": "namedprocess_namegroup_write_bytes_total",
+    "disk_reads": "namedprocess_namegroup_read_bytes_total",
+    "thread_states": "namedprocess_namegroup_states",
+}
+
+node_metrics = {
+    "number_of_cores": "count%20without(cpu%2C%20mode)%20(node_cpu_seconds_total%7Bmode%3D%22idle%22%7D)", # we can use any mode here, I have used idle
+    "total_memory": 'node_memory_MemTotal_bytes',
+    "number_of_processes_in_group": "namedprocess_namegroup_num_procs",
 }
 
 SAVE_DIR = os.path.join(os.getenv("DIR_NAME"), "prometheus/json_data")
@@ -22,7 +32,7 @@ with open(os.path.join(os.getenv("DIR_NAME"), "exp_times.json"), 'r') as f:
     START_UTC = (datetime.strptime(data["START_ANALYSIS"], "%Y-%m-%dT%H:%M:%SZ") - timedelta(hours=2)).isoformat() + "Z"
     END_UTC = (datetime.strptime(data["END_ANALYSIS"], "%Y-%m-%dT%H:%M:%SZ") - timedelta(hours=2)).isoformat() + "Z"
 
-for metric_name, metric in metrics.items():
+for metric_name, metric in process_metrics.items():
     url = f"http://{PROMETHEUS_SERVER}:{PROMETHEUS_PORT}/api/v1/query_range"
     headers = {
         'Content-Type': 'application/x-www-form-urlencoded'
@@ -39,6 +49,21 @@ for metric_name, metric in metrics.items():
                 value[0] = timestamp_cet.timestamp()
         with open(os.path.join(SAVE_DIR, f"{metric_name}.json"), 'w') as f:
             json.dump(response_data, f)
+    else:
+        print(f"Failed to retrieve {metric_name}")
+        print("due to this reason-", response.reason)
+
+for metric_name, metric in node_metrics.items():
+    url = f"http://{PROMETHEUS_SERVER}:{PROMETHEUS_PORT}/api/v1/query"
+    headers = {
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+    payload = f"query={metric}&time={START_UTC+(END_UTC-START_UTC)/2}"
+    response = requests.request("POST", url, headers=headers, data=payload)
+    if response.status_code == 200:
+        response_data = response.json()
+        with open(os.path.join(SAVE_DIR, f"{metric_name}.json"), 'w') as f:
+            json.dump({"quantity": response_data['data']['result'][0]['value'][1]}, f)
     else:
         print(f"Failed to retrieve {metric_name}")
         print("due to this reason-", response.reason)
