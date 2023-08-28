@@ -238,7 +238,7 @@ plt.savefig(os.path.join(plots_dir, 'total_number_of_threads.pdf'))
 
 # Extract the thread names data
 thread_names_data = {}
-for result in number_of_threads_by_thread_group_name_json['result']:
+for result in number_of_threads_by_thread_group_name_json['data']['result']:
     thread_name = result['metric']['threadname']
     if thread_name not in thread_names_data:
         thread_names_data[thread_name] = {
