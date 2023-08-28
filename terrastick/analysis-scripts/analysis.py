@@ -264,7 +264,7 @@ for name in thread_group_names:
 
 # 2. Pie Chart
 # Define a vibrant color palette
-vibrant_colors = ['#E63946', '#F1FAEE', '#A8DADC', '#457B9D', '#1D3557', '#F4A261', '#2A9D8F', '#E9C46A']
+pleasing_colors = ['#FFADAD', '#FFD6A5', '#FDFFB6', '#CAFFBF', '#9BF6FF', '#A0C4FF', '#BDB2FF', '#FFC6FF']
 
 # Define explode values to slightly separate each segment
 explode = [0.05] * len(constant_thread_counts)
@@ -273,7 +273,7 @@ explode = [0.05] * len(constant_thread_counts)
 plt.figure(figsize=(12, 8))
 plt.pie(constant_thread_counts.values(), 
         labels=constant_thread_counts.keys(), 
-        colors=vibrant_colors, 
+        colors=pleasing_colors,
         autopct=lambda p: '{:.0f}'.format(p * sum(constant_thread_counts.values()) / 100), 
         startangle=140,
         explode=explode,
@@ -283,6 +283,7 @@ plt.pie(constant_thread_counts.values(),
 plt.title("Thread Counts for Constant Thread Groups", fontsize=16)
 plt.tight_layout()
 plt.show()
+plt.savefig(os.path.join(plots_dir, 'constant_thread_counts.pdf'))
 
 # 3. Graph for ".NET ThreadPool"
 # Extract data for ".NET ThreadPool"
@@ -361,4 +362,4 @@ plt.legend()
 plt.grid(True)
 plt.tight_layout()
 plt.show()
-plt.savefig(os.path.join(plots_dir, 'disk_reads_writes.pdf'))
+plt.savefig(os.path.join(plots_dir, 'disk_writes.pdf'))
