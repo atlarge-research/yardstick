@@ -245,8 +245,9 @@ for result in number_of_threads_by_thread_group_name_json['data']['result']:
             "timestamps": [],
             "threads": []
         }
-    thread_names_data[thread_name]["timestamps"].append(result['value'][0])
-    thread_names_data[thread_name]["threads"].append(float(result['value'][1]))
+    for value in result['values']:
+        thread_names_data[thread_name]["timestamps"].append(value[0])
+        thread_names_data[thread_name]["threads"].append(float(value[1]))
 
 # Convert timestamps to elapsed time
 for thread_name, thread_data in thread_names_data.items():
