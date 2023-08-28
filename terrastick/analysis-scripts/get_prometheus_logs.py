@@ -2,6 +2,7 @@ import os
 import requests
 import json
 from datetime import datetime, timedelta
+import time
 
 PROMETHEUS_SERVER = os.getenv("PROMETHEUS_IP")
 PROMETHEUS_PORT = "9090"
@@ -32,8 +33,16 @@ os.makedirs(SAVE_DIR, exist_ok=True)
 
 with open(os.path.join(os.getenv("DIR_NAME"), "exp_times.json"), 'r') as f:
     data = json.load(f)
-    START_UTC = (datetime.strptime(data["START_ANALYSIS"], "%Y-%m-%dT%H:%M:%SZ") - timedelta(hours=2)).isoformat() + "Z"
-    END_UTC = (datetime.strptime(data["END_ANALYSIS"], "%Y-%m-%dT%H:%M:%SZ") - timedelta(hours=2)).isoformat() + "Z"
+    START_UTC = datetime.strptime(data["START_ANALYSIS"], "%Y-%m-%dT%H:%M:%SZ")
+    END_UTC = datetime.strptime(data["END_ANALYSIS"], "%Y-%m-%dT%H:%M:%SZ")
+    # Check if daylight saving is on or off
+    if time.localtime().tm_isdst:
+        START_UTC = (START_UTC - timedelta(hours=2)).isoformat() + "Z"
+        END_UTC = (END_UTC - timedelta(hours=2)).isoformat() + "Z"
+    else:
+        START_UTC = (START_UTC - timedelta(hours=1)).isoformat() + "Z"
+        END_UTC = (END_UTC - timedelta(hours=1)).isoformat() + "Z"
+
 
 for metric_name, metric in series_metrics.items():
     url = f"http://{PROMETHEUS_SERVER}:{PROMETHEUS_PORT}/api/v1/query_range"
@@ -44,6 +53,16 @@ for metric_name, metric in series_metrics.items():
     response = requests.request("POST", url, headers=headers, data=payload)
     if response.status_code == 200:
         response_data = response.json()
+        for result in response_data['data']['result']:
+            for value in result['values']:
+                # value[0] is the timestamp
+                # Check if daylight saving is on or off
+                if time.localtime().tm_isdst:
+                    # If daylight saving is on, add 7200 seconds (2 hours) to the timestamp
+                    value[0] += 7200
+                else:
+                    # If daylight saving is off, add 3600 seconds (1 hour) to the timestamp
+                    value[0] += 3600
         with open(os.path.join(SAVE_DIR, f"{metric_name}.json"), 'w') as f:
             json.dump(response_data, f)
     else:

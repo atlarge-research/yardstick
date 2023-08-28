@@ -24,8 +24,8 @@ total_memory_bytes = None
 number_of_cores = None
 number_of_processes_in_group = None
 # Load the json files and extract the values
-with open(prometheus_json_dir + '/total_memory.json', 'r') as f:
-    total_memory = json.load(f)['quantity']
+with open(prometheus_json_dir + '/total_memory_bytes.json', 'r') as f:
+    total_memory_bytes = json.load(f)['quantity']
 with open(prometheus_json_dir + '/number_of_cores.json', 'r') as f:
     number_of_cores = json.load(f)['quantity']
 with open(prometheus_json_dir + '/number_of_processes_in_group.json', 'r') as f:
