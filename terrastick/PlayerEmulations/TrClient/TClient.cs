@@ -238,7 +238,7 @@ namespace TrClient
             {
                 if (pkt.Text._text.Contains( "start") && this.workload == "TEL")
                 {
-                    this.ChatText("Starting teleport work load");
+                    this.ChatText("Starting player work load");
                     string time = pkt.Text._text.Split(' ')[2];
 
                     this.RunTeleportWorkLoad(int.Parse(time));
@@ -246,7 +246,7 @@ namespace TrClient
                 }
                 if (pkt.Text._text.Contains("start") && this.workload == "WLK")
                 {
-                    this.ChatText("Starting walk work load");
+                    this.ChatText("Starting player work load");
                     string time = pkt.Text._text.Split(' ')[2];
 
                      this.RunWalkWorkLoadAsync(int.Parse(time));

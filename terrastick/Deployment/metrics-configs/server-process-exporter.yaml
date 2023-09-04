@@ -1,3 +1,5 @@
-# process exporter config linked to Tshock process
-process_name :
-  - TShock.Server
+process_names:
+  - name: "tshock-server"
+    cmdline:
+    - "TShock.Server.*"
+
