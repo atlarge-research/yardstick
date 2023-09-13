@@ -11,7 +11,7 @@ with open(server_logs, 'r') as f:
     lines = f.readlines()
 
 def convert_to_datetime(time_str):
-    return datetime.strptime(time_str, '%Y-%m-%dT%H:%M:%SZ')
+    return datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
 
 def time_to_duration(start, end):
     delta = end - start
