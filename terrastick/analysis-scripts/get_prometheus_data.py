@@ -35,13 +35,6 @@ with open(os.path.join(os.getenv("DIR_NAME"), "exp_times_durations.json"), 'r') 
     data = json.load(f)
     START_UTC = datetime.strptime(data["START_ANALYSIS"], "%Y-%m-%dT%H:%M:%SZ")
     END_UTC = datetime.strptime(data["END_ANALYSIS"], "%Y-%m-%dT%H:%M:%SZ")
-    # Check if daylight saving is on or off
-    if time.localtime().tm_isdst:
-        START_UTC = (START_UTC - timedelta(hours=2)).isoformat() + "Z"
-        END_UTC = (END_UTC - timedelta(hours=2)).isoformat() + "Z"
-    else:
-        START_UTC = (START_UTC - timedelta(hours=1)).isoformat() + "Z"
-        END_UTC = (END_UTC - timedelta(hours=1)).isoformat() + "Z"
 
 
 for metric_name, metric in series_metrics.items():
