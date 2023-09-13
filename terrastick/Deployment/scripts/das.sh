@@ -175,6 +175,23 @@ remote_commands=$(cat <<CMD
     # run analysis scipts
     ssh \$server_node 'module load python/3.6.0'
     ssh \$server_node 'cd ~/temp/ && ./run_analysis.sh' && echo "Analysis done"
+
+    # pruning the binaries like prometheus, node exporter, process exporter, server code, bot code, etc. to save space
+    ssh \$server_node 'cd $DIR_NAME/prometheus && rm -rf prometheus-*'
+    ssh \$server_node 'cd $DIR_NAME/server && rm -rf TShock.* bin i18n process-exporter-* node_exporter-* ServerPlugins screenlog.* GeoIP.dat *.txt'
+    ssh \$server_node 'cd $DIR_NAME && rm -rf bot'
+
+    # putting the configs in a exp_configs.txt file for later reference
+    ssh \$server_node 'echo "TERRASTICK_VERSION=\$TERRASTICK_VERSION" > $DIR_NAME/exp_configs.txt'
+    ssh \$server_node 'echo "TERRASTICK_WORKLOAD=\$TERRASTICK_WORKLOAD" >> $DIR_NAME/exp_configs.txt'
+    ssh \$server_node 'echo "TERRASTICK_WORKLOAD_DURATION=\$TERRASTICK_WORKLOAD_DURATION" >> $DIR_NAME/exp_configs.txt' 
+    ssh \$server_node 'echo "TERRASTICK_TILING=\$TERRASTICK_TILING" >> $DIR_NAME/exp_configs.txt'
+    ssh \$server_node 'echo "DIR_NAME=\$DIR_NAME" >> $DIR_NAME/exp_configs.txt'
+    ssh \$server_node 'echo "NUM_NODES=$NUM_NODES" >> $DIR_NAME/exp_configs.txt'
+    ssh \$server_node 'echo "NUM_BOTS_PER_NODE=$NUM_BOTS_PER_NODE" >> $DIR_NAME/exp_configs.txt'
+    ssh \$server_node 'echo "WAIT_TIME_BETWEEN_BOTS=$WAIT_TIME_BETWEEN_BOTS" >> $DIR_NAME/exp_configs.txt'
+    ssh \$server_node 'echo "WORLD_NAME=$WORLD_NAME" >> $DIR_NAME/exp_configs.txt'
+    ssh \$server_node 'echo "RESERVE_DURATION=$RESERVE_DURATION" >> $DIR_NAME/exp_configs.txt'
 CMD
 )
 
