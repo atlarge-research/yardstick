@@ -198,3 +198,4 @@ CMD
 
 validate_config
 ssh_das "$remote_commands"
+echo "Experiment finished. The results are in $DIR_NAME"
