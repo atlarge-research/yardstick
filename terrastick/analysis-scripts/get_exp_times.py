@@ -10,8 +10,6 @@ server_logs = EXP_DIR+"/server/tshock/logs/"+os.listdir(EXP_DIR + '/server/tshoc
 with open(server_logs, 'r') as f:
     lines = f.readlines()
 
-start_time = None
-end_time = None
 bot_times = {}
 for line in lines:
     if "Starting player work load" in line:
