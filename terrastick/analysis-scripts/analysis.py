@@ -1,100 +1,78 @@
 import seaborn as sns
 import matplotlib.pyplot as plt
-from datetime import datetime
 import pandas as pd
 import json
 import os
+from datetime import datetime
 
+# Define paths
 exp_dir = os.environ['DIR_NAME']
-prometheus_json_dir = exp_dir + '/prometheus/json_data'
-plots_dir = exp_dir + '/plots'
-
-# Ensure the plots directory exists
-if not os.path.exists(plots_dir):
-    os.makedirs(plots_dir)
-
+prometheus_json_dir = f'{exp_dir}/prometheus/json_data'
+plots_dir = f'{exp_dir}/plots'
 server_logs = exp_dir+"/server/tshock/logs/"+os.listdir(exp_dir + '/server/tshock/logs')[0]
 packet_logs = exp_dir+"/server/tshock/PacketLogs/"+os.listdir(exp_dir + '/server/tshock/PacketLogs')[0]
 
-total_memory_bytes_quantity = None
-number_of_cores_quantity = None
-number_of_processes_in_group_quantity = None
-cpu_utilization_percent_json = None
-disk_reads_bytes_json = None
-disk_writes_bytes_json = None
-memory_utilization_bytes_json = None
-number_of_threads_by_thread_group_name_json = None
-thread_states_json = None
-total_number_of_threads_json = None
+# Ensure plots directory exists
+if not os.path.exists(plots_dir):
+    os.makedirs(plots_dir)
 
-# Load the json files and extract the quantities/json data
-with open(prometheus_json_dir + '/total_memory_bytes.json', 'r') as f:
-    total_memory_bytes_quantity = json.load(f)['quantity']
-with open(prometheus_json_dir + '/number_of_cores.json', 'r') as f:
-    number_of_cores_quantity = json.load(f)['quantity']
-with open(prometheus_json_dir + '/number_of_processes_in_group.json', 'r') as f:
-    number_of_processes_in_group_quantity = json.load(f)['quantity']
-with open(prometheus_json_dir + '/cpu_utilization_percent.json', 'r') as f:
-    cpu_utilization_percent_json = json.load(f)
-with open(prometheus_json_dir + '/disk_reads_bytes.json', 'r') as f:
-    disk_reads_bytes_json = json.load(f)
-with open(prometheus_json_dir + '/disk_writes_bytes.json', 'r') as f:
-    disk_writes_bytes_json = json.load(f)
-with open(prometheus_json_dir + '/memory_utilization_bytes.json', 'r') as f:
-    memory_utilization_bytes_json = json.load(f)
-with open(prometheus_json_dir + '/number_of_threads_by_thread_group_name.json', 'r') as f:
-    number_of_threads_by_thread_group_name_json = json.load(f)
-with open(prometheus_json_dir + '/thread_states.json', 'r') as f:
-    thread_states_json = json.load(f)
-with open(prometheus_json_dir + '/total_number_of_threads.json', 'r') as f:
-    total_number_of_threads_json = json.load(f)
+# Load quantities and JSON data
+def load_json(file_path):
+    with open(file_path, 'r') as f:
+        return json.load(f)
+    
+# get quantity data from json files
+def get_quantity(file_path):
+    with open(file_path, 'r') as f:
+        return json.load(f)['quantity']
 
-start_time=None
-end_time=None
-bot_join_times=[]
-# all of these times are in CET
-with open(exp_dir + '/exp_times.json', 'r') as f:
-    data = json.load(f)
-    start_time = start_time = datetime.strptime(data["START_ANALYSIS"], "%Y-%m-%dT%H:%M:%SZ")
-    end_time = end_time = datetime.strptime(data["END_ANALYSIS"], "%Y-%m-%dT%H:%M:%SZ")
-    bot_join_times = [datetime.strptime(time, "%Y-%m-%dT%H:%M:%SZ") for time in data["BOTS_JOINED"].values()]
+# Convert timestamps to durations
+def time_to_duration(start, end):
+    delta = end - start
+    return delta.total_seconds()
 
+prometheus_series_files = [
+    'number_of_processes_in_group',
+    'cpu_utilization_percent', 'disk_reads_bytes', 'disk_writes_bytes',
+    'memory_utilization_bytes', 'number_of_threads_by_thread_group_name',
+    'thread_states', 'total_number_of_threads'
+]
 
-# this is required for prometheus graphs whose timings are in unix format
-# Convert the provided timestamps to UNIX format
-def convert_to_unix(timestamp):
-    return int(datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%SZ").timestamp())
-experiment_timings = None
-with open(exp_dir + '/exp_times.json', 'r') as f:
-    experiment_timings = json.load(f)
-# Convert all timestamps
-experiment_unix_times = {key: convert_to_unix(val) for key, val in experiment_timings.items() if key != "BOTS_JOINED"}
-bots_unix_times = {key: convert_to_unix(val) for key, val in experiment_timings["BOTS_JOINED"].items()}
-# Calculate time elapsed from the "START_ANALYSIS" event
-start_analysis_time = experiment_unix_times["START_ANALYSIS"]
-start_workload_elapsed = experiment_unix_times["START_WORKLOAD"] - start_analysis_time
-bots_elapsed_times = {key: val - start_analysis_time for key, val in bots_unix_times.items()}
+prometheus_instant_files = [
+    'total_memory_bytes', 'number_of_cores'
+]
 
+series_data_dict = {key: load_json(f'{prometheus_json_dir}/{key}.json') for key in prometheus_series_files}
 
+instant_data_dict = {key: get_quantity(f'{prometheus_json_dir}/{key}.json') for key in prometheus_instant_files}
+
+# Load experiment timings with durations
+with open(f'{exp_dir}/exp_times_durations.json', 'r') as f:
+    exp_timings = json.load(f)
+    start_time = datetime.strptime(exp_timings["START_ANALYSIS"], "%Y-%m-%dT%H:%M:%SZ")
+    end_time = datetime.strptime(exp_timings["END_ANALYSIS"], "%Y-%m-%dT%H:%M:%SZ")
+    start_analysis_duration = exp_timings["TIME_TO_START_ANALYSIS"]
+    start_workload_elapsed = exp_timings["TIME_TO_START_WORKLOAD"]
+    end_analysis_elapsed = exp_timings["TIME_TO_END_ANALYSIS"]
+    bots_elapsed_times = exp_timings["TIME_TO_BOTS_JOINED"]
 
 # Extract game update times from packet logs within the start and end times
-with open(packet_logs, 'r') as f: 
+with open(packet_logs, 'r') as f:
     lines = f.readlines()
-game_update_lines = [line for line in lines if "GAME UPDATE TIME" in line and start_time <= datetime.strptime(':'.join(line.split(':')[0:3]).strip(), '%m/%d/%Y %I:%M:%S %p') <= end_time]
 
-# Extract timestamps and response times
-update_time_timestamps = [datetime.strptime(':'.join(line.split(':')[0:3]).strip(), '%m/%d/%Y %I:%M:%S %p') for line in game_update_lines]
+game_update_lines = [line for line in lines if "GAME UPDATE TIME" in line and start_time <= datetime.strptime(':'.join(line.split(':')[0:3]).strip(), '%m/%d/%Y %I:%M:%S %p') <= end_time]
+update_time_time_elapsed = [time_to_duration(start_time, datetime.strptime(':'.join(line.split(':')[0:3]).strip(), '%m/%d/%Y %I:%M:%S %p')) for line in game_update_lines]
 game_update_times = [float(line.split(' ')[-1]) for line in game_update_lines]
 
 # Plot the response times
 plt.figure(figsize=(20, 10))
-plt.plot(update_time_timestamps, game_update_times, label='Response Time')
+plt.plot(update_time_time_elapsed, game_update_times, label='Response Time')
 
-# Add red lines for bot join times
-for bot_join_time in bot_join_times:
-    plt.axvline(x=bot_join_time, color='r', linestyle='--', alpha=0.5, label='Bot Joined')
+# Add lines for bot join times
+for _, elapsed_time in bots_elapsed_times.items():
+    plt.axvline(x=elapsed_time, color='r', linestyle='--', alpha=0.5, label='Bot Joined')
 
-# To prevent duplicate labels in the legend, we'll handle them here:
+# To prevent duplicate labels in the legend, handle them here:
 handles, labels = plt.gca().get_legend_handles_labels()
 by_label = dict(zip(labels, handles))
 
@@ -102,7 +80,7 @@ plt.legend(by_label.values(), by_label.keys())
 plt.xlabel('Time')
 plt.ylabel('Game Update Time (ms)')
 plt.title('Game Update Times with Bot Join Times Highlighted')
-plt.savefig(os.path.join(plots_dir, 'game_times_with_bot_joins.pdf'))
+plt.savefig(f'{plots_dir}/game_times_with_bot_joins.pdf')
 
 # Extract and plot packet distribution
 corrected_packet_types = [line.split("[Recv]")[1].split('(')[1].split(')')[0] for line in lines if "[Recv]" in line]
@@ -120,29 +98,25 @@ plt.xlabel('Packet Type')
 plt.ylabel('Count')
 plt.title('Corrected Distribution of Top 20 Packet Types Sent to the Server')
 plt.tight_layout()
-plt.savefig(os.path.join(plots_dir, 'packet_distribution.pdf'))
+plt.savefig(f'{plots_dir}/packet_distribution.pdf')
 
-# Extract the time series data from provided data
-timestamps, utilization_percent = zip(*cpu_utilization_percent_json['data']['result'][0]['values'])
-timestamps = [int(ts) for ts in timestamps]
+# Update CPU Utilization Plot
+time_elapsed, utilization_percent = zip(*series_data_dict['cpu_utilization_percent']['data']['result'][0]['values'])
 utilization_percent = [float(value) for value in utilization_percent]
 
-timestamps_elapsed = [ts - start_analysis_time for ts in timestamps]
-bots_elapsed_times = {key: val - start_analysis_time for key, val in bots_unix_times.items()}
-
-# Plotting the graph with the adjustments
+# Plotting CPU Utilization, now using durations
 plt.figure(figsize=(15, 7))
-plt.plot(timestamps_elapsed, utilization_percent, '-o', label='CPU Utilization (%)')
+plt.plot(time_elapsed, utilization_percent, '-o', label='CPU Utilization (%)')
 
-# Annotating "START_WORKLOAD"
+# Annotate "START_WORKLOAD"
 plt.axvline(x=start_workload_elapsed, linestyle="--", color="blue", label="Start Workload")
 plt.text(start_workload_elapsed, min(utilization_percent), "Start Workload", rotation=90, verticalalignment="bottom", color="blue")
 
-# Annotating "BOTS_JOINED"
+# Annotate "BOTS_JOINED"
 for _, elapsed_time in bots_elapsed_times.items():
     plt.axvline(x=elapsed_time, linestyle="--", color="green")
 
-# Label for "Bots Joined" in the legend
+# Legend for "Bots Joined"
 plt.plot([], [], linestyle="--", color="green", label="Bot Joined")
 plt.title("CPU Utilization Over Time")
 plt.xlabel("Time Elapsed (seconds)")
@@ -151,26 +125,25 @@ plt.legend()
 plt.grid(True)
 plt.tight_layout()
 plt.show()
-plt.savefig(os.path.join(plots_dir, 'cpu_utilization.pdf'))
+plt.savefig(f'{plots_dir}/cpu_utilization.pdf')
 
 # Extract the time series data for memory utilization
-memory_timestamps, memory_utilization_bytes = zip(*memory_utilization_bytes_json['data']['result'][0]['values'])
-memory_timestamps = [int(ts) for ts in memory_timestamps]
+memory_time_elapsed, memory_utilization_bytes = zip(*series_data_dict['memory_utilization_bytes']['data']['result'][0]['values'])
+memory_time_elapsed = [int(ts) for ts in memory_time_elapsed]
 memory_utilization_bytes = [float(value) for value in memory_utilization_bytes]
 # Define the conversion factor from bytes to megabytes and convert memory utilization bytes to megabytes
 bytes_to_megabytes = 1 / (2**20)
 memory_utilization_megabytes = [value * bytes_to_megabytes for value in memory_utilization_bytes]
 
-total_memory_bytes = float(total_memory_bytes_quantity)
+total_memory_bytes = float(instant_data_dict['total_memory_bytes'])
 total_memory_megabytes = total_memory_bytes * bytes_to_megabytes
 # Calculate memory utilization as a percentage of total memory
 memory_utilization_percentage = [(value / total_memory_bytes) * 100 for value in memory_utilization_bytes]
-memory_timestamps_elapsed = [ts - start_analysis_time for ts in memory_timestamps]
 
 
 # Plotting the graph with adaptive y-axis scaling
 plt.figure(figsize=(15, 7))
-plt.plot(memory_timestamps_elapsed, memory_utilization_percentage, '-o', label='Memory Utilization (%)', color="purple")
+plt.plot(memory_time_elapsed, memory_utilization_percentage, '-o', label='Memory Utilization (%)', color="purple")
 
 # Setting y-axis limits to be adaptive to the data
 upper_limit = max(memory_utilization_percentage) + 5  # Buffer of 5% above max value
@@ -198,7 +171,7 @@ plt.savefig(os.path.join(plots_dir, 'memory_utilization_percent.pdf'))
 
 # Plotting the graph for total memory used
 plt.figure(figsize=(15, 7))
-plt.plot(memory_timestamps_elapsed, memory_utilization_megabytes, '-o', label=f'Total Memory Used (MB)', color="purple")
+plt.plot(memory_time_elapsed, memory_utilization_megabytes, '-o', label=f'Total Memory Used (MB)', color="purple")
 plt.axvline(x=start_workload_elapsed, linestyle="--", color="blue", label="Start Workload")
 plt.text(start_workload_elapsed, 0, "Start Workload", rotation=90, verticalalignment="bottom", color="blue")
 for _, elapsed_time in bots_elapsed_times.items():
@@ -214,14 +187,13 @@ plt.show()
 plt.savefig(os.path.join(plots_dir, 'memory_utilization_megabytes.pdf'))
 
 # Extract the time series data for total number of threads
-threads_timestamps, total_threads = zip(*total_number_of_threads_json['data']['result'][0]['values'])
-threads_timestamps = [int(ts) for ts in threads_timestamps]
+threads_time_elapsed, total_threads = zip(*series_data_dict['total_number_of_threads']['data']['result'][0]['values'])
+threads_time_elapsed = [int(ts) for ts in threads_time_elapsed]
 total_threads = [float(value) for value in total_threads]
-threads_timestamps_elapsed = [ts - start_analysis_time for ts in threads_timestamps]
 
 # Plotting the graph for total number of threads over time
 plt.figure(figsize=(15, 7))
-plt.plot(threads_timestamps_elapsed, total_threads, '-o', label=f'Total Number of Threads', color="purple")
+plt.plot(threads_time_elapsed, total_threads, '-o', label=f'Total Number of Threads', color="purple")
 plt.axvline(x=start_workload_elapsed, linestyle="--", color="blue", label="Start Workload")
 plt.text(start_workload_elapsed, min(total_threads), "Start Workload", rotation=90, verticalalignment="bottom", color="blue")
 for _, elapsed_time in bots_elapsed_times.items():
@@ -238,20 +210,16 @@ plt.savefig(os.path.join(plots_dir, 'total_number_of_threads.pdf'))
 
 # Extract the thread names data
 thread_names_data = {}
-for result in number_of_threads_by_thread_group_name_json['data']['result']:
+for result in series_data_dict['number_of_threads_by_thread_group_name']['data']['result']:
     thread_name = result['metric']['threadname']
     if thread_name not in thread_names_data:
         thread_names_data[thread_name] = {
-            "timestamps": [],
+            "time_elapsed": [],
             "threads": []
         }
     for value in result['values']:
-        thread_names_data[thread_name]["timestamps"].append(value[0])
+        thread_names_data[thread_name]["time_elapsed"].append(value[0])
         thread_names_data[thread_name]["threads"].append(float(value[1]))
-
-# Convert timestamps to elapsed time
-for thread_name, thread_data in thread_names_data.items():
-    thread_data["timestamps_elapsed"] = [float(t) - start_analysis_time for t in thread_data["timestamps"]]
 
 # Extract constant thread counts (assuming values are constant if the first and last values are the same)
 constant_thread_counts = {name: data["threads"][0] for name, data in thread_names_data.items() if data["threads"][0] == data["threads"][-1]}
@@ -291,7 +259,7 @@ net_threadpool_data = thread_names_data[".NET ThreadPool"]
 
 # Plotting the graph for ".NET ThreadPool" over time
 plt.figure(figsize=(15, 7))
-plt.plot(net_threadpool_data["timestamps_elapsed"], net_threadpool_data["threads"], '-o', color="blue", label=".NET ThreadPool")
+plt.plot(net_threadpool_data["time_elapsed"], net_threadpool_data["threads"], '-o', color="blue", label=".NET ThreadPool")
 plt.axvline(x=start_workload_elapsed, linestyle="--", color="red", label="Start Workload")
 plt.text(start_workload_elapsed, min(net_threadpool_data["threads"]), "Start Workload", rotation=90, verticalalignment="bottom", color="red")
 for _, elapsed_time in bots_elapsed_times.items():
@@ -306,25 +274,22 @@ plt.tight_layout()
 plt.show()
 plt.savefig(os.path.join(plots_dir, 'net_threadpool.pdf'))
 
+# 'disk_reads_bytes', 'disk_writes_bytes'
 # Extract time series data for disk reads
-disk_reads_timestamps_all = []
+disk_reads_time_elapsed_all = []
 disk_reads_values_all = []
-for entry in disk_reads_bytes_json['data']['result']:
+for entry in series_data_dict['disk_reads_bytes']['data']['result']:
     for value in entry['values']:
-        disk_reads_timestamps_all.append(value[0])
+        disk_reads_time_elapsed_all.append(value[0])
         disk_reads_values_all.append(float(value[1]))
 
 # Extract time series data for disk writes
-disk_writes_timestamps_all = []
+disk_writes_time_elapsed_all = []
 disk_writes_values_all = []
-for entry in disk_writes_bytes_json['data']['result']:
+for entry in series_data_dict['disk_writes_bytes']['data']['result']:
     for value in entry['values']:
-        disk_writes_timestamps_all.append(value[0])
+        disk_writes_time_elapsed_all.append(value[0])
         disk_writes_values_all.append(float(value[1]))
-
-# Convert timestamps to elapsed time
-disk_reads_elapsed_times_all = [float(t) - start_analysis_time for t in disk_reads_timestamps_all]
-disk_writes_elapsed_times_all = [float(t) - start_analysis_time for t in disk_writes_timestamps_all]
 
 # Convert bytes to megabytes (MBs)
 disk_reads_values_MB = [value / 2**20 for value in disk_reads_values_all]
@@ -332,7 +297,7 @@ disk_writes_values_MB = [value / 2**20 for value in disk_writes_values_all]
 
 # Plotting Disk Reads over Time in MBs
 plt.figure(figsize=(15, 7))
-plt.plot(disk_reads_elapsed_times_all, disk_reads_values_MB, '-o', color="blue", label="Disk Reads")
+plt.plot(disk_reads_time_elapsed_all, disk_reads_values_MB, '-o', color="blue", label="Disk Reads")
 plt.axvline(x=start_workload_elapsed, linestyle="--", color="red", label="Start Workload")
 plt.text(start_workload_elapsed, min(disk_reads_values_MB), "Start Workload", rotation=90, verticalalignment="bottom", color="red")
 for _, elapsed_time in bots_elapsed_times.items():
@@ -349,7 +314,7 @@ plt.savefig(os.path.join(plots_dir, 'disk_reads.pdf'))
 
 # Plotting Disk Writes over Time in MBs
 plt.figure(figsize=(15, 7))
-plt.plot(disk_writes_elapsed_times_all, disk_writes_values_MB, '-o', color="orange", label="Disk Writes")
+plt.plot(disk_writes_time_elapsed_all, disk_writes_values_MB, '-o', color="orange", label="Disk Writes")
 plt.axvline(x=start_workload_elapsed, linestyle="--", color="red", label="Start Workload")
 plt.text(start_workload_elapsed, min(disk_writes_values_MB), "Start Workload", rotation=90, verticalalignment="bottom", color="red")
 for _, elapsed_time in bots_elapsed_times.items():
