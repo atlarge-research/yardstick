@@ -31,7 +31,7 @@ SAVE_DIR = os.path.join(os.getenv("DIR_NAME"), "prometheus/json_data")
 
 os.makedirs(SAVE_DIR, exist_ok=True)
 
-with open(os.path.join(os.getenv("DIR_NAME"), "exp_times.json"), 'r') as f:
+with open(os.path.join(os.getenv("DIR_NAME"), "exp_times_durations.json"), 'r') as f:
     data = json.load(f)
     START_UTC = datetime.strptime(data["START_ANALYSIS"], "%Y-%m-%dT%H:%M:%SZ")
     END_UTC = datetime.strptime(data["END_ANALYSIS"], "%Y-%m-%dT%H:%M:%SZ")
@@ -43,7 +43,6 @@ with open(os.path.join(os.getenv("DIR_NAME"), "exp_times.json"), 'r') as f:
         START_UTC = (START_UTC - timedelta(hours=1)).isoformat() + "Z"
         END_UTC = (END_UTC - timedelta(hours=1)).isoformat() + "Z"
 
-
 for metric_name, metric in series_metrics.items():
     url = f"http://{PROMETHEUS_SERVER}:{PROMETHEUS_PORT}/api/v1/query_range"
     headers = {
@@ -53,11 +52,22 @@ for metric_name, metric in series_metrics.items():
     response = requests.request("POST", url, headers=headers, data=payload)
     if response.status_code == 200:
         response_data = response.json()
+        
+        # Convert timestamps to durations
+        for datapoint in response_data['data']['result']:
+            for idx, ts_value_pair in enumerate(datapoint['values']):
+                timestamp = float(ts_value_pair[0])
+                # add 3600 or 7200 to the start_timestamp if daylight saving is on or off respectively
+                start_timestamp = datetime.strptime(START_UTC, "%Y-%m-%dT%H:%M:%SZ").timestamp() + (7200 if time.localtime().tm_isdst else 3600)
+                duration_from_start = timestamp - start_timestamp
+                datapoint['values'][idx][0] = duration_from_start
+                
         with open(os.path.join(SAVE_DIR, f"{metric_name}.json"), 'w') as f:
             json.dump(response_data, f)
     else:
         print(f"Failed to retrieve {metric_name}")
         print("due to this reason-", response.reason)
+
 
 for metric_name, metric in instant_metrics.items():
     url = f"http://{PROMETHEUS_SERVER}:{PROMETHEUS_PORT}/api/v1/query"
