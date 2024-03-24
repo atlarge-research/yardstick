@@ -65,8 +65,8 @@ update_time_time_elapsed = [time_to_duration(start_time, datetime.strptime(':'.j
 game_update_times = [float(line.split(' ')[-1]) for line in game_update_lines]
 
 # Plot the response times
-plt.figure(figsize=(20, 10))
-plt.plot(update_time_time_elapsed, game_update_times, label='Response Time')
+plt.figure(figsize=(8, 6))
+plt.plot(update_time_time_elapsed, game_update_times, label='Game Update Time')
 
 # Add lines for bot join times
 for _, elapsed_time in bots_elapsed_times.items():
@@ -77,9 +77,8 @@ handles, labels = plt.gca().get_legend_handles_labels()
 by_label = dict(zip(labels, handles))
 
 plt.legend(by_label.values(), by_label.keys())
-plt.xlabel('Time')
+plt.xlabel('Time Elapsed (seconds)')
 plt.ylabel('Game Update Time (ms)')
-plt.title('Game Update Times with Bot Join Times Highlighted')
 plt.savefig(f'{plots_dir}/game_times_with_bot_joins.pdf')
 
 # Extract and plot packet distribution
@@ -91,7 +90,7 @@ top_filtered_packet_counts = list(sorted_filtered_packet_counts.items())[:20]
 packet_names_filtered = [item[0] for item in top_filtered_packet_counts]
 packet_counts_filtered = [item[1] for item in top_filtered_packet_counts]
 
-plt.figure(figsize=(15, 10))
+plt.figure(figsize=(8, 6))
 plt.bar(packet_names_filtered, packet_counts_filtered)
 plt.xticks(rotation=90)
 plt.xlabel('Packet Type')
@@ -105,7 +104,7 @@ time_elapsed, utilization_percent = zip(*series_data_dict['cpu_utilization_perce
 utilization_percent = [float(value) for value in utilization_percent]
 
 # Plotting CPU Utilization, now using durations
-plt.figure(figsize=(15, 7))
+plt.figure(figsize=(8, 6))
 plt.plot(time_elapsed, utilization_percent, '-o', label='CPU Utilization (%)')
 
 # Annotate "START_WORKLOAD"
@@ -142,7 +141,7 @@ memory_utilization_percentage = [(value / total_memory_bytes) * 100 for value in
 
 
 # Plotting the graph with adaptive y-axis scaling
-plt.figure(figsize=(15, 7))
+plt.figure(figsize=(8, 6))
 plt.plot(memory_time_elapsed, memory_utilization_percentage, '-o', label='Memory Utilization (%)', color="purple")
 
 # Setting y-axis limits to be adaptive to the data
@@ -170,7 +169,7 @@ plt.show()
 plt.savefig(os.path.join(plots_dir, 'memory_utilization_percent.pdf'))
 
 # Plotting the graph for total memory used
-plt.figure(figsize=(15, 7))
+plt.figure(figsize=(8, 6))
 plt.plot(memory_time_elapsed, memory_utilization_megabytes, '-o', label=f'Total Memory Used (MB)', color="purple")
 plt.axvline(x=start_workload_elapsed, linestyle="--", color="blue", label="Start Workload")
 plt.text(start_workload_elapsed, 0, "Start Workload", rotation=90, verticalalignment="bottom", color="blue")
@@ -192,7 +191,7 @@ threads_time_elapsed = [int(ts) for ts in threads_time_elapsed]
 total_threads = [float(value) for value in total_threads]
 
 # Plotting the graph for total number of threads over time
-plt.figure(figsize=(15, 7))
+plt.figure(figsize=(8, 6))
 plt.plot(threads_time_elapsed, total_threads, '-o', label=f'Total Number of Threads', color="purple")
 plt.axvline(x=start_workload_elapsed, linestyle="--", color="blue", label="Start Workload")
 plt.text(start_workload_elapsed, min(total_threads), "Start Workload", rotation=90, verticalalignment="bottom", color="blue")
@@ -238,7 +237,7 @@ pleasing_colors = ['#FFADAD', '#FFD6A5', '#FDFFB6', '#CAFFBF', '#9BF6FF', '#A0C4
 explode = [0.05] * len(constant_thread_counts)
 
 # Plotting the enhanced pie chart
-plt.figure(figsize=(12, 8))
+plt.figure(figsize=(8, 6))
 plt.pie(constant_thread_counts.values(), 
         labels=constant_thread_counts.keys(), 
         colors=pleasing_colors,
@@ -258,7 +257,7 @@ plt.savefig(os.path.join(plots_dir, 'constant_thread_counts.pdf'))
 net_threadpool_data = thread_names_data[".NET ThreadPool"]
 
 # Plotting the graph for ".NET ThreadPool" over time
-plt.figure(figsize=(15, 7))
+plt.figure(figsize=(8, 6))
 plt.plot(net_threadpool_data["time_elapsed"], net_threadpool_data["threads"], '-o', color="blue", label=".NET ThreadPool")
 plt.axvline(x=start_workload_elapsed, linestyle="--", color="red", label="Start Workload")
 plt.text(start_workload_elapsed, min(net_threadpool_data["threads"]), "Start Workload", rotation=90, verticalalignment="bottom", color="red")
@@ -296,7 +295,7 @@ disk_reads_values_MB = [value / 2**20 for value in disk_reads_values_all]
 disk_writes_values_MB = [value / 2**20 for value in disk_writes_values_all]
 
 # Plotting Disk Reads over Time in MBs
-plt.figure(figsize=(15, 7))
+plt.figure(figsize=(8, 6))
 plt.plot(disk_reads_time_elapsed_all, disk_reads_values_MB, '-o', color="blue", label="Disk Reads")
 plt.axvline(x=start_workload_elapsed, linestyle="--", color="red", label="Start Workload")
 plt.text(start_workload_elapsed, min(disk_reads_values_MB), "Start Workload", rotation=90, verticalalignment="bottom", color="red")
@@ -313,7 +312,7 @@ plt.show()
 plt.savefig(os.path.join(plots_dir, 'disk_reads.pdf'))
 
 # Plotting Disk Writes over Time in MBs
-plt.figure(figsize=(15, 7))
+plt.figure(figsize=(8, 6))
 plt.plot(disk_writes_time_elapsed_all, disk_writes_values_MB, '-o', color="orange", label="Disk Writes")
 plt.axvline(x=start_workload_elapsed, linestyle="--", color="red", label="Start Workload")
 plt.text(start_workload_elapsed, min(disk_writes_values_MB), "Start Workload", rotation=90, verticalalignment="bottom", color="red")
