@@ -1,3 +1,6 @@
+## This script has been tested only a few times and may not work as expected.
+## Please use it as a reference and modify it as needed.
+
 #!/bin/bash
 
 # load the config file 

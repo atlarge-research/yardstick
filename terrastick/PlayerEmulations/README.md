@@ -1,3 +1,10 @@
+This readme helps to test the bot code on local.
+
+Steps to test the bot code on local:
+1. run the terraria server on local. download it from https://github.com/Pryaxis/TShock/releases
+2. run the bot code on local. go to /terrastick/PlayerEmulations/TrClientTest/bin/Release/net6.0/linux-x64/ and run ./TrClientTest
+3. The configurations are controlled using env vars in terrastick/PlayerEmulations/TrClientTest/Program.cs.
+
 ### Building the bot code for an OS+Platform
 * cd to `TrClientTest` and run `dotnet build -r <RID>` where RIDs for the OS+Platform are listed below in the table.
 * The build is placed in `TrClientTest/bin/Debug/net6.0/<RID>/`

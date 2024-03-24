@@ -69,11 +69,12 @@ remote_commands=$(cat <<CMD
         fi
     done
     cd ~
-    if ! [ -f dotnet-install.sh ]; then
-        wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
-        chmod +x dotnet-install.sh
+    mkdir -p .dotnet
+    cd .dotnet
+    if [ ! -f dotnet-sdk-6.0.420-linux-x64.tar.gz ]; then
+        wget https://download.visualstudio.microsoft.com/download/pr/b521d7d2-108b-43d9-861a-58b2505a125a/0023553690a68328b33bc30a38f151db/dotnet-sdk-6.0.420-linux-x64.tar.gz
     fi
-    ./dotnet-install.sh --version latest
+    tar zxf dotnet-sdk-6.0.420-linux-x64.tar.gz
     source ~/.bashrc
     dir_name="$DIR_NAME"
     mkdir -p "\$dir_name"
@@ -192,6 +193,8 @@ remote_commands=$(cat <<CMD
     ssh \$server_node 'echo "WAIT_TIME_BETWEEN_BOTS=$WAIT_TIME_BETWEEN_BOTS" >> $DIR_NAME/exp_configs.txt'
     ssh \$server_node 'echo "WORLD_NAME=$WORLD_NAME" >> $DIR_NAME/exp_configs.txt'
     ssh \$server_node 'echo "RESERVE_DURATION=$RESERVE_DURATION" >> $DIR_NAME/exp_configs.txt'
+
+    ssh \$server_node 'mv $DIR_NAME/exp_configs.txt $DIR_NAME/plots/'
 CMD
 )
 

@@ -25,6 +25,9 @@ for line in lines:
     if "WORKLOAD COMPLETE" in line:
         first_bot_end_time = datetime.strptime(' '.join(line.split(' ')[:2]), '%Y-%m-%d %H:%M:%S')
         break
+    if "has left." in line:
+        first_bot_end_time = datetime.strptime(' '.join(line.split(' ')[:2]), '%Y-%m-%d %H:%M:%S')
+        break
 
 first_bot_join_time = None
 for line in lines:
