@@ -7,7 +7,7 @@ pip install -r requirements.txt
 
 # Prompt the user to choose an environment
 echo "Which environment should the experiment run in?"
-echo "1) AWS"
+echo "1) AWS (supported but not reliable)"
 echo "2) Azure (not supported yet)"
 echo "3) DAS5"
 echo "4) DAS6"
