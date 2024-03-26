@@ -20,3 +20,13 @@ Steps to test the bot code on local:
 | Linux | x64 | linux-x64 |
 | OSX | x64 | osx-x64 |
 | OSX | ARM64 | osx-arm64 |
+
+
+### Project Structure
+```
+PlayerEmulations
+├── TrClientTest
+│   ├── Program.cs        - The main entry point for the bot code.
+│   └── TrClient.cs       - The Client emulation Library.
+└── TrProtocol            - Terraria Protocol Serialization and Deserialization Library.
+```
