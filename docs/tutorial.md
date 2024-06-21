@@ -37,7 +37,7 @@ Next, use its "Connect to Host..." feature to connect VSCode to DAS6.
 
 ### Python Environment
 
-Now that your VSCode is connected to DAS6, open a terminal (shortcut: `ctrl ~`).
+Now that your VSCode is connected to DAS6, open a terminal (shortcut: `ctrl+~`).
 We will proceed by installing Miniconda, which we use to manage Python and native dependencies required for Yardstick to run.
 
 You can follow the steps outlined on their [Web page](https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh), or follow the commands listed below:
@@ -54,20 +54,41 @@ mkdir -p $target_dir
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $target_dir/miniconda.sh
 bash $target_dir/miniconda.sh -b -u -p $target_dir
 rm -rf $target_dir/miniconda.sh
+$target_dir/bin/conda init bash
 ```
 
-Follow the instructions to create and activate a new conda environment called `yardstick`.
+You will need to close (`ctrl+D`) and reopen (`ctrl+~`) your shell before changes take effect.
+
+Create a new conda environment named yardstick by running:
+
+```
+conda create -n yardstick python=3.9
+conda activate yardstick
+```
+
 Once activated, run the following commands to obtain Yardstick and its dependencies:
 
 ```bash
 conda install jupyter pandas seaborn
-pip install yardstick
+pip install yardstick-benchmark
 ```
 
 ## Running Experiments
 
-You are now ready to visit the [example experiment]() and start running experiments with Yardstick.
-In the remainder of this section, we will ask to to perform increasingly difficult experiments,
+You are now ready to visit the [example experiment](../example.ipynb) and start running experiments with Yardstick.
+
+Create a new directory on DAS-6 for this tutorial, download the example notebook into the newly created directory, and open the directory in VSCode:
+
+```
+mkdir yardstick-tutorial
+cd yardstick-tutorial
+wget https://raw.githubusercontent.com/atlarge-research/yardstick/master/example.ipynb
+```
+
+After opening the Jupyter Notebook, click the button in the top right of the VSCode window to select a Kernel.
+Install the necessary plugins and select `Python Environments... > yardstick`. This is the yardstick environment we just created and prepared with Miniconda which contains all the necessary dependencies.
+
+In the remainder of this section, we will ask you to perform increasingly difficult experiments,
 which will make you increasingly adept at using Yardstick specifically, and performing experiments on a distributed system generally.
 
 > PRO TIP: Here starts the challenging part of the tutorial. Each subsection can easily take 30 minutes to complete.
