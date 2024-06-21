@@ -6,8 +6,16 @@ It has sold more than 200 million copies,<sup id="a1">[1](#fn1)</sup> and has mo
 In contrast to traditional games, Minecraft gives players fine-grained control over the environment.
 Players can be creative and alter the environment to their liking.
 Players can decide to create buildings, mines, farms, logical circuits, and other constructions.
-Minecraft's success has led to the creation of hundreds of similar games, which we collectively refer to as _Minecraft-like games_.
+Minecraft's success has led to the creation of hundreds of similar games, which we collectively refer to as _Minecraft-like games_ (MLGs).
 
+Unfortunately, it is difficult for MLG players to play together due to severe performance limitations.
+The modifiable and complex virtual environment is difficult to scale to a large number of players,
+resulting in virtual worlds whose scalability reaches only around 200 concurrent players under favorable conditions.
+This is orders of magnitudes lower than today's most scalable worlds, such as EVE Online, which can scale to thousands of concurrent players in a single environment.
+The only way MLG operators can support their high player numbers and sustain their high popularity is by
+splitting players across a large number of small instances, preventing players from playing together in large groups.
+
+In this tutorial, you make your first steps into exploring the performance of MLGs by running performance evaluation experiments with Yardstick,<sup id="a3">[3](#fn3)</sup><sup>,</sup><sup id="a4">[4](#fn4)</sup> our MLG benchmark.
 
 ## Setting Up
 
@@ -180,6 +188,6 @@ Finally, start your Minecraft 1.12.2 client on your local machine and connect to
 
 <a name="fn2">2.</a> Ibid. [↩](#a2)
 
-<a name="fn3">3.</a> van der Sar, et al. Yardstick: A Benchmark for Minecraft-like Services. ICPE 2019 [↩](#a3)
+<a name="fn3">3.</a> van der Sar, et al. [Yardstick: A Benchmark for Minecraft-like Services](https://atlarge-research.com/pdfs/jvdsar-yardstick-benchmark-icpe-2019.pdf). ICPE 2019 [↩](#a3)
 
-<a name="fn4">4.</a> When you run an experiment, the hostname of the node running the server will become visible in the output from Ansible. [↩](#a4)
+<a name="fn4">4.</a> Eickhoff, et al. [Meterstick: Benchmarking Performance Variability in Cloud and Self-hosted Minecraft-like Games](https://atlarge-research.com/pdfs/2023-jeickhoff-Meterstick-ICPE2023.pdf). ICPE 2023 [↩](#a4)
