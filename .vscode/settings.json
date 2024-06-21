@@ -1,0 +1,4 @@
+{
+    "python.formatting.provider": "black",
+    "ansible.python.interpreterPath": "/home/jdonkerv/.pyenv/versions/3.9.17/bin/python"
+}

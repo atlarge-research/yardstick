@@ -1,0 +1,12 @@
+pamuk:
+  version: 1
+  provider:
+    name: das
+  game:
+    name: minecraft
+    server:
+      name: papermc
+      vanilla:
+        version: 1.18
+    workload:
+      name: tgtp
