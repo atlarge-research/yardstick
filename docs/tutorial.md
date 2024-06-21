@@ -101,8 +101,19 @@ We recommend reading the file line by line to develop a sufficiently good unders
 Afterwards, run your first experiment by running all cells in the notebook.
 The cell that runs the experiment can take a long time (~10 minutes) to complete.
 This is expected.
+While the experiment is running, you can run type `preserve -llist` in the terminal to get an overview of node reservations on the DAS6. You'll likely see a line similar to the one below, with your username:
 
-Review the resulting plots.
+```
+id      user            start           stop            state   nhosts  hosts
+351651  core2435        06/21   07:02   06/21   07:18   R       2       node001 node015
+```
+
+This shows that user `core2435` has reserved 2 nodes: `node001` and `node015` from 7:02am until 7:18am.
+
+Which nodes did you reserve? How many nodes are in use by others? How many nodes do they use?
+
+When the experiment has completed, it is time to review the resulting plots.
+
 Are the numbers surprising? Why (not)?
 
 ### Visualizing Results
