@@ -28,6 +28,7 @@ import nl.tudelft.opencraft.yardstick.bot.entity.BotPlayer;
 import nl.tudelft.opencraft.yardstick.bot.world.SimpleWorldPhysics;
 import nl.tudelft.opencraft.yardstick.bot.world.World;
 import nl.tudelft.opencraft.yardstick.experiment.LoggerSessionListener;
+import nl.tudelft.opencraft.yardstick.telemetry.Timer;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadDumper;
 import nl.tudelft.opencraft.yardstick.workload.WorkloadSessionListener;
 import org.slf4j.Logger;
@@ -121,14 +122,20 @@ public class Bot {
      * @throws IllegalStateException if the bot is already connected.
      */
     public void connect() {
-        Session session = client.getSession();
-        if (session.isConnected()) {
-            throw new IllegalStateException("Can not start connection. Bot already isConnected!");
-        }
-        session.addListener(new LoggerSessionListener(logger));
-        session.connect();
+        Timer timer = new Timer("connect_latency");
+        timer.start();
+        try {
+            Session session = client.getSession();
+            if (session.isConnected()) {
+                throw new IllegalStateException("Can not start connection. Bot already isConnected!");
+            }
+            session.addListener(new LoggerSessionListener(logger));
+            session.connect();
 
-        initializeTaskTicker();
+            initializeTaskTicker();
+        } finally {
+            timer.stop();
+        }
     }
 
     private void initializeTaskTicker() {

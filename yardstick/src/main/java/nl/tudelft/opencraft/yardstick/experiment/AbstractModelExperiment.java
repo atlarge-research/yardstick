@@ -90,8 +90,10 @@ public abstract class AbstractModelExperiment extends Experiment {
 
     private Runnable newBotConnector(Bot bot) {
         return () -> {
+            long start = System.currentTimeMillis();
             bot.connect();
-            int sleep = 1000;
+
+            int sleep = 2000;
             int tries = 3;
             while (tries-- > 0 && (bot.getPlayer() == null || !bot.isJoined())) {
                 try {
@@ -101,11 +103,15 @@ public abstract class AbstractModelExperiment extends Experiment {
                     break;
                 }
             }
+
             if (!bot.isJoined()) {
                 String host = bot.getClient().getHost();
                 int port = bot.getClient().getPort();
                 logger.warn("Could not connect bot {}:{}.", host, port);
                 bot.disconnect("Make sure to close all connections.");
+                if (number == 10) {
+                    Experiment10WalkStraight.currBotId -= Experiment10WalkStraight.clientCount;
+                }
             }
         };
     }
@@ -137,5 +143,9 @@ public abstract class AbstractModelExperiment extends Experiment {
         for (Bot bot : botList) {
             bot.disconnect("disconnect");
         }
+    }
+
+    public BotModel getModel() {
+        return model;
     }
 }

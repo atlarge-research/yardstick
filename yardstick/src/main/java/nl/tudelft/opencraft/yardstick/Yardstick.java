@@ -25,13 +25,17 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment10GenerationStressTest;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment10WalkStraight;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment11Latency;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment11Random;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment12LatencyAndWalkAround;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment12RandomE2E;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment3WalkAround;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment4MultiWalkAround;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment5SimpleWalk;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment6InteractWalk;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment8BoxWalkAround;
+import nl.tudelft.opencraft.yardstick.experiment.Experiment9GenerationStressTest;
 import nl.tudelft.opencraft.yardstick.experiment.Experiment9Spike;
 import nl.tudelft.opencraft.yardstick.experiment.RemoteControlledExperiment;
 import nl.tudelft.opencraft.yardstick.game.GameArchitecture;
@@ -120,6 +124,18 @@ public class Yardstick {
                 break;
             case "12":
                 ex = new Experiment12LatencyAndWalkAround(id, game, behaviorConfig);
+                break;
+            case "13":
+                ex = new Experiment9GenerationStressTest();
+                break;
+            case "14":
+                ex = new Experiment10WalkStraight();
+                break;
+            case "15":
+                ex = new Experiment11Random();
+                break;
+            case "16":
+                ex = new Experiment12RandomE2E();
                 break;
             default:
                 System.out.println("Invalid experiment: " + behaviorName);
