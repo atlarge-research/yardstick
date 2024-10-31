@@ -2,6 +2,7 @@ from time import sleep
 from datetime import datetime
 from pathlib import Path
 import os
+import shutil
 
 import provisioning
 import monitoring
@@ -24,6 +25,7 @@ class Yardstick():
         self.server = server
         self.workload = workload
         self.metrics = metrics
+        self.dest = None
 
     def fetch(self, dest: Path, nodes: list[Node]):
         dest.mkdir(parents=True, exist_ok=True)
@@ -64,6 +66,15 @@ class Yardstick():
                 telegraf.deploy()
                 telegraf.start()
 
+    def set_data_output_directory(self, dir="yardstick/output"):
+        if self.environment == "DAS":
+            self.dest = Path(f"/var/scratch/{os.getlogin()}/{dir}")
+            if self.dest.exists():
+                shutil.rmtree(self.dest)
+
+    def get_metrics():
+        pass
+
     
     def deploy_and_start(self, nodes):
         if self.server == "PaperMC":
@@ -84,6 +95,8 @@ class Yardstick():
         self.clean(nodes)
 
         self.set_up_monitoring(nodes[:1])
+        self.set_data_output_directory()
+
         server = self.deploy_and_start(nodes[:1])
 
         if self.workload == "WalkAround":
@@ -101,10 +114,9 @@ class Yardstick():
             .replace("-", "")
             .replace(":", "")
         )
-        dest = Path(f"/var/scratch/{os.getlogin()}/yardstick/{timestamp}")
-        self.fetch(dest, nodes)
+        self.fetch(self.dest, nodes)
 
-        self.clean(nodes)
+        self.clean(nodes)3
         self.free_provisioned_nodes(provison, nodes)
 
 
