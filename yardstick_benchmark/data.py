@@ -22,10 +22,10 @@ def print_metrics(metrics, location):
     ''' Metrics available:
         CPU
      '''
-    supported metrics = ["CPU"]
+    supported_metrics = ["CPU"]
 
     for metric in metrics:
-        if metric not in supported metrics:
+        if metric not in supported_metrics:
             # some kind of soft error
             return
 
@@ -34,4 +34,3 @@ def print_metrics(metrics, location):
                                             "time_idle", "time_iowait", "time_irq", "time_nice", "time_softirq", "time_steal", "time_system", "time_user"])
 
             print(data)
-                
