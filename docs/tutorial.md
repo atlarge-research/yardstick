@@ -102,7 +102,7 @@ Install the necessary plugins and select `Python Environments... > yardstick`. T
 In the remainder of this section, we will ask you to perform increasingly difficult experiments,
 which will make you increasingly adept at using Yardstick specifically, and performing experiments on a distributed system generally.
 
-> [!TIP]
+> [!NOTE]
 > Here starts the challenging part of the tutorial. Each subsection can easily take 30 minutes to complete.
 > If you are doing this tutorial as part of a lecture or workshop, there may not be sufficient time remaining to complete all exercises.
 > This is by design. If you are out of time but remain curious about this work, feel free to explore the remaining sections from home. Your account is likely valid for several weeks.
