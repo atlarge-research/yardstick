@@ -33,9 +33,11 @@ Host das6
 You should now be able to connect to the DAS-6 using the command `ssh das6`.
 SSH will first request your VUnet password, and then your DAS-6 password.
 
-> PRO TIP: If you connect to the DAS-6 regularly, it is worth switching to public-key authentication using `ssh-keygen` and `ssh-copy-id`. This is left as an exercise for the reader.
+> [!TIP]
+> If you connect to the DAS-6 regularly, it is worth switching to public-key authentication using `ssh-keygen` and `ssh-copy-id`. This is left as an exercise for the reader.
 
-> PRO TIP: Use [eduVPN](https://www.eduvpn.org/client-apps/) to connet to the DAS-6 when you're not directly connected to the VU campus network.
+> [!TIP]
+> Use [eduVPN](https://www.eduvpn.org/client-apps/) to connet to the DAS-6 when you're not directly connected to the VU campus network.
 
 ### VSCode
 
@@ -50,7 +52,8 @@ We will proceed by installing Miniconda, which we use to manage Python and nativ
 
 You can follow the steps outlined on their [Web page](https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh), or follow the commands listed below:
 
-> IMPORTANT: When asked for an installation location, make sure to use the `target_dir` location shown below, where `whoami`, including back ticks, is replaced by your DAS6 username.
+> [!IMPORTANT]
+> When asked for an installation location, make sure to use the `target_dir` location shown below, where `whoami`, including back ticks, is replaced by your DAS6 username.
 >
 > The installation location is important because, by default, users on DAS6 have limited storage space available in their home directory, the default installation location, which can lead to errors during or after the installation process.
 
@@ -99,7 +102,8 @@ Install the necessary plugins and select `Python Environments... > yardstick`. T
 In the remainder of this section, we will ask you to perform increasingly difficult experiments,
 which will make you increasingly adept at using Yardstick specifically, and performing experiments on a distributed system generally.
 
-> PRO TIP: Here starts the challenging part of the tutorial. Each subsection can easily take 30 minutes to complete.
+> [!TIP]
+> Here starts the challenging part of the tutorial. Each subsection can easily take 30 minutes to complete.
 > If you are doing this tutorial as part of a lecture or workshop, there may not be sufficient time remaining to complete all exercises.
 > This is by design. If you are out of time but remain curious about this work, feel free to explore the remaining sections from home. Your account is likely valid for several weeks.
 
