@@ -46,11 +46,11 @@ class Yardstick():
             Path(__file__).parent / "clean.yml",
         ).run()
     
-    def provision(self, num_nodes=2):
+    def provision(self, num_nodes=2, time_s=900):
         #Figure out how to do this nicely
         if self.environment == "DAS":
             das = provisioning.Das()
-            nodes = das.provision(num=num_nodes)
+            nodes = das.provision(num=num_nodes, time_s=time_s)
             return das, nodes
 
         return None
@@ -93,7 +93,7 @@ class Yardstick():
 
 
     def run(self, bots=10, duration=60, bots_join_delay=5):
-        provison, nodes = self.provision()
+        provison, nodes = self.provision(time_s=duration+900)
         self.clean(nodes)
 
         self.set_up_monitoring(nodes[:1])
