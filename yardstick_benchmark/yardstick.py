@@ -1,5 +1,5 @@
 from time import sleep
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 import os
 import shutil
@@ -8,6 +8,8 @@ import provisioning
 import monitoring
 import games.minecraft.server
 import games.minecraft.workload
+
+import data
 
 from model import Node, RemoteAction
 
@@ -90,7 +92,7 @@ class Yardstick():
             server_handle.cleanup()
 
 
-    def run(self, bots=10):
+    def run(self, bots=10, duration=60, bots_join_delay=5):
         provison, nodes = self.provision()
         self.clean(nodes)
 
@@ -100,7 +102,7 @@ class Yardstick():
         server = self.deploy_and_start(nodes[:1])
 
         if self.workload == "WalkAround":
-            workload = games.minecraft.workload.WalkAround(nodes[1:], nodes[0].host, bots_per_node=bots)
+            workload = games.minecraft.workload.WalkAround(nodes[1:], nodes[0].host, bots_per_node=bots, duration=timedelta(seconds=duration), bots_join_delay=timedelta(seconds=bots_join_delay))
             workload.deploy()
             workload.start()
 
@@ -116,12 +118,15 @@ class Yardstick():
         )
         self.fetch(self.dest, nodes)
 
-        self.clean(nodes)3
+        self.clean(nodes)
         self.free_provisioned_nodes(provison, nodes)
+
+    def run_multiple():
+        pass
 
 
 if __name__ == "__main__":
     ys = Yardstick()
     ys.run()
-
+    data.preprocess_data(ys.dest)
 
