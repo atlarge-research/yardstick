@@ -1,4 +1,4 @@
-from yardstick_benchmark.model import RemoteApplication, Node
+from yardstick_benchmark_2.model import RemoteApplication, Node
 import os
 from enum import Enum
 import sys

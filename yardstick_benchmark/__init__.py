@@ -1,4 +1,4 @@
-from yardstick_benchmark.model import Node, RemoteAction
+from yardstick_benchmark_2.model import Node, RemoteAction
 from pathlib import Path
 
 
