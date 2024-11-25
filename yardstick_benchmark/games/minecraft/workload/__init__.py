@@ -57,8 +57,8 @@ class TraceBased(RemoteApplication):
             nodes,
             Path(__file__).parent / "trace_deploy.yml",
             Path(__file__).parent / "trace_start.yml",
-            Path(__file__).parent / "walkaround_stop.yml",
-            Path(__file__).parent / "walkaround_cleanup.yml",
+            Path(__file__).parent / "trace_stop.yml",
+            Path(__file__).parent / "trace_cleanup.yml",
             extravars={
                 "hostnames": [n.host for n in nodes],
                 "mc_host": server_host,

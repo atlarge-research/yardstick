@@ -222,11 +222,14 @@ async function player_worker(queue){
             if(!handler){
                 continue;
             }
-            
-            await handler(bot, arguments);
+            try{
+                await handler(bot, arguments);
+            } catch (error){
+                parentPort.postMessage(`Error processing action ${action}: ${error.message}`);
+            }
+        } else{
+            await sleep(200);
         }
-
-        await sleep(200);
     }
 }
 
