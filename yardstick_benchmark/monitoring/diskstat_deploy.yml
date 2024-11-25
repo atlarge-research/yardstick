@@ -1,0 +1,13 @@
+---
+- name: Deploy drive stat collection
+  gather_facts: true
+  hosts: all
+  tasks:
+    - name: Create Diskstat directory
+      file:
+        path: "{{wd}}"
+        state: directory
+    - name: Copy disk stat collection script
+      copy:
+        src: "{{diskstat_script}}"
+        dest: "{{wd}}"

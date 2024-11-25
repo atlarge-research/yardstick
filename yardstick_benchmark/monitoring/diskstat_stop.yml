@@ -1,0 +1,27 @@
+---
+- name: Stop DiskStat collection
+  gather_facts: true
+  hosts: all
+  tasks:
+    - name: Lookup diskstat pid
+      shell: |
+        cat {{wd}}/diskstat.pid
+      register: shell_diskstat_pid
+    - set_fact:
+        diskstat_pid: "{{ shell_diskstat_pid.stdout }}"
+    - name: Stop Diskstat
+      shell:
+        cmd: |
+          kill {{ diskstat_pid }}
+    - name: Wait for diskstat to stop
+      block:
+        - wait_for:
+            # Using https://stackoverflow.com/questions/46515704/how-to-kill-a-running-process-using-ansible/46541018#46541018
+            path: "/proc/{{ diskstat_pid }}/status"
+            state: absent
+            timeout: 15
+          register: wait_for_stop
+      rescue:
+        - name: Force kill stuck processes
+          shell: |
+            kill -9 {{ diskstat_pid }}
