@@ -22,6 +22,36 @@ const workers = new Set();
 
 let bot;
 
+async function attach_event_listeners(bot){
+    bot.on('entityHurt', (entity) => {
+        if (entity === bot.entity) {
+            const timestamp = Math.round(+new Date()/1000);
+            parentPort.postMessage(`[detected] ${timestamp} ${bot.username} attackedPlayer`);
+        }
+    });
+
+    bot.world.on('blockUpdate', (_, newBlock) => {
+        const timestamp = Math.round(+new Date() / 1000);
+        parentPort.postMessage(`[detected] ${timestamp} blockPlaced ${bot.username} ${newBlock.x} ${newBlock.y} ${newBlock.z} ${newBlock.type}`);
+    });
+
+    bot.on('entityHurt', (entity) => {
+        if (entity.type !== 'player') {
+            const timestamp = Math.round(+new Date()/1000);
+            parentPort.postMessage(`[detected] ${timestamp} attackedEntity ${bot.username}`);
+        }
+    });
+
+    bot.on('blockBreakProgressEnd', (block, entity) => {
+        if (entity != bot.entity){
+            const timestamp = Math.round(+new Date()/1000);
+            parentPort.postMessage(`[detected] ${timestamp} blockBroken ${bot.username}`);
+        }
+    });
+
+    return
+}
+
 async function join(bot, args){
     parentPort.postMessage(`joining the bot in the game`);
     return new Promise((resolve, reject) => {
@@ -101,6 +131,8 @@ async function place_block(bot, args){
                 bot.equip(inventoryItem, 'hand').then(() => {
                     var targetBlock = bot.blockAt(Vec3(x, y, z));
                     bot.placeBlock(targetBlock, new Vec3(xFaceAgainst, yFaceAgainst, zFaceAgainst)).then(() => {
+                        const timestamp = Math.round(+new Date() / 1000);
+                        parentPort.postMessage(`[done] ${timestamp} ${bot.username} placedBlock`);
                         resolve('Success');
                     });
                 });
@@ -126,6 +158,9 @@ async function attack_entity(bot, args){
                 }
 
                 bot.attack(entity);
+
+                const timestamp = Math.round(+new Date() / 1000);
+                parentPort.postMessage(`[done] ${timestamp} ${bot.username} attackedEntity ${entityType}`);
                 resolve();
             } catch (error) {
                 reject(error);
@@ -153,6 +188,9 @@ async function attack_player(player_name, args){
                 }
 
                 bot.attack(entity);
+
+                const timestamp = Math.round(+new Date() / 1000);
+                parentPort.postMessage(`[done] ${timestamp} ${bot.username} attackedPlayer ${attackedPlayerName}`);
                 resolve();
             } catch (error) {
                 reject(error);
@@ -175,6 +213,9 @@ async function move(bot, args){
         bot.pathfinder.setGoal(new GoalXZ(x, z));
 
         bot.once('goal_reached', () => {
+            const timestamp = Math.round(+new Date() / 1000);
+            parentPort.postMessage(`[done] ${timestamp} ${bot.username} moved ${x} ${y}`);
+
             resolve();
         });
 
@@ -214,7 +255,8 @@ async function player_worker(queue){
                     username: player_name,
                     port: 25565,                // only set if you need a port that isn't 25565
                 });
-                bot.loadPlugin(pathfinder);            
+                bot.loadPlugin(pathfinder);    
+                attach_event_listeners(bot);        
             }
 
             const handler = ACTION_HANDLERS[action];
