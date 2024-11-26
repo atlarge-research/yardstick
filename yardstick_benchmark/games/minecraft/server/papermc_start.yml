@@ -2,7 +2,13 @@
 - name: Deploy PaperMC
   gather_facts: true
   hosts: all
+  become: "{{ lookup('env', 'ANSIBLE_USE_SUDO') | default('false') }}"
+  become_method: sudo
+  become_user: root
   tasks:
+    - name: Set fact for ANSIBLE_USE_SUDO
+      set_fact:
+        ansible_use_sudo: "{{ lookup('env', 'ANSIBLE_USE_SUDO') | default('false') == 'true' }}"
     - name: Run PaperMC
       shell:
         cmd: |
@@ -13,7 +19,25 @@
           CHILD_PID=$(ps --ppid $PARENT_PID -o pid= | head -n 1)
           echo $! > papermc.pid
         chdir: "{{ wd }}"
+    - name: Wait for the latest.log file to appear
+      wait_for:
+        path: "{{ wd }}/logs/latest.log"
+        state: present
+        timeout: 60
+    - name: Ensure logs directory exists
+      file:
+        path: "{{ wd }}/logs"
+        state: directory
     - name: Waiting for server to become ready
       wait_for:
+        timeout: 60
         path: "{{wd}}/logs/latest.log"
         search_regex: 'For help, type "help"'
+      when: ansible_use_sudo != true
+    - name: Waiting for server to become ready using cat (used due to compatibility issue with nullblk)
+      shell: |
+        while ! cat "{{ wd }}/logs/latest.log" | grep -q 'For help, type "help"'; do
+          sleep 0.05
+        done
+      timeout: 60
+      when: ansible_use_sudo == true

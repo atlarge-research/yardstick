@@ -29,9 +29,9 @@ class VirtualStorage(RemoteApplication):
         )
 
 class SSH:    
-    def provision(self, hosts: list[str], path="~"):
+    def provision(self, hosts: list[str], path):
         return [
-            Node(host=host, wd=Path(path))
+            Node(host=host, wd=path)
             for host in hosts
         ]
 

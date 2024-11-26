@@ -50,7 +50,9 @@ class RemoteAction(object):
         self.extravars = extravars
         self.extravars.update({
             "ansible_ssh_pass": os.getenv("ANSIBLE_SSH_PASS", ""),
-            "ansible_port": os.getenv("ANSIBLE_PORT", "22"),  # Default to port 22
+            "ansible_port": os.getenv("ANSIBLE_PORT", "22"),
+            "ansible_user": os.getenv("ANSIBLE_USER", "default_user"),
+            "ansible_become_password": os.getenv("ANSIBLE_BECOME_PASS", "")
         })
 
     def run(self):
