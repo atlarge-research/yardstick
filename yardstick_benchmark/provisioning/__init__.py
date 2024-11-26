@@ -1,6 +1,6 @@
 import time
 from plumbum import local
-from yardstick_benchmark_2.model import Node, RemoteApplication
+from yardstick_benchmark.model import Node, RemoteApplication
 from pathlib import Path
 import os
 
@@ -29,9 +29,9 @@ class VirtualStorage(RemoteApplication):
         )
 
 class SSH:    
-    def provision(self, hosts: list[str]):
+    def provision(self, hosts: list[str], path="~"):
         return [
-            Node(host=host, wd=Path(f"~"))
+            Node(host=host, wd=Path(path))
             for host in hosts
         ]
 

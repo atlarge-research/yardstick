@@ -1,4 +1,4 @@
-from yardstick_benchmark_2.model import RemoteApplication, Node
+from yardstick_benchmark.model import RemoteApplication, Node
 from pathlib import Path
 import os
 from datetime import timedelta
