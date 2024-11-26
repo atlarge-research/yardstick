@@ -1,9 +1,32 @@
 import time
 from plumbum import local
-from yardstick_benchmark_2.model import Node
+from yardstick_benchmark_2.model import Node, RemoteApplication
 from pathlib import Path
 import os
 
+class VirtualStorage(RemoteApplication):
+    """ Runs createnullblk script and creates virtualized storage on the node 
+    """
+
+    def __init__(self, nodes: list[Node], storage_latency):
+        """ 
+        Args:
+            nodes (list[Node]): The nodes on which to run diskstat collection
+        """
+        super().__init__(
+            "virtual_storage",
+            nodes,
+            Path(__file__).parent / "virtstorage_deploy.yml",
+            Path(__file__).parent / "virtstorage_start.yml",
+            Path(__file__).parent / "virtstorage_stop.yml",
+            Path(__file__).parent / "virtstorage_cleanup.yml",
+            extravars={
+                "nullblk_script": os.path.join(
+                    os.path.dirname(__file__), "createnullblk.sh"
+                ),
+                "storage_latency": storage_latency
+            }
+        )
 
 class Das(object):
     def __init__(self):

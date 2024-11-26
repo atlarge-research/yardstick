@@ -1,0 +1,19 @@
+---
+- name: Virtualize Storage
+  gather_facts: true
+  hosts: all
+  tasks:
+    - name: Make createnullblk executable
+      shell:
+        cmd: chmod +x {{wd}}/createnullblk.sh
+        chdir: "{{wd}}"
+    - name: Run create nullblk, set up file system, and mount on the root folder
+      shell:
+        cmd: sudo ./createnullblk.sh 512 8192 {{storage_latency}} >> result.txt 2>&1
+        chdir: "{{wd}}"
+    - name: Make fs on the drive
+      shell:
+        cmd: sudo mkfs.ext4 /dev/nullb0
+    - name:
+      shell:
+        cmd: sudo mount /dev/nullb0 ~
