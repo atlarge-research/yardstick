@@ -28,6 +28,13 @@ class VirtualStorage(RemoteApplication):
             }
         )
 
+class SSH:    
+    def provision(self, hosts: list[str]):
+        return [
+            Node(host=host, wd=Path(f"~"))
+            for host in hosts
+        ]
+
 class Das(object):
     def __init__(self):
         self._reservation_map = dict()
