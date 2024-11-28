@@ -1,3 +1,12 @@
+// const mineflayer = require('mineflayer');
+// const { parentPort } = require("worker_threads");
+// const Item = require('prismarine-item')('1.20.1')
+// const pathfinder = require('mineflayer-pathfinder').pathfinder
+// const Movements = require('mineflayer-pathfinder').Movements
+// const { GoalXZ } = require('mineflayer-pathfinder').goals
+// const Vec3 = require('vec3');
+
+
 const fs = require('node:fs');
 const readline = require('readline');
 const { Worker, isMainThread } = require("worker_threads");
@@ -35,7 +44,7 @@ async function run(){
                 break;
             }
 
-            await sleep(100);
+            await sleep(1000);
         }
 
         if(!players[player]){

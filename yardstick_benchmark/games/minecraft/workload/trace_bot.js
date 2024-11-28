@@ -63,11 +63,6 @@ async function join(bot, args){
                 resolve(endTime);
             });
         });
-
-        bot.on('death', () => {
-            console.log('Bot died, respawning...');
-            bot.respawn();
-        });
     });
 }
 
@@ -182,16 +177,16 @@ async function attack_player(player_name, args){
 
         const moveAndAttack = async () => {
             try {
+                console.log('before moving');
                 while (calc_distance(entity.position, bot.entity.position) > 2) {
+                    console.log(calc_distance(entity.position, bot.entity.position));
                     const { x, z } = entity.position;
                     await move(player_name, [x, z]);
                 }
-
+                
+                console.log('here and about to attack');
                 bot.attack(entity);
-
-                const timestamp = Math.round(+new Date() / 1000);
-                parentPort.postMessage(`[done] ${timestamp} ${bot.username} attackedPlayer ${attackedPlayerName}`);
-                resolve();
+                resolve('');
             } catch (error) {
                 reject(error);
             }
@@ -214,7 +209,7 @@ async function move(bot, args){
 
         bot.once('goal_reached', () => {
             const timestamp = Math.round(+new Date() / 1000);
-            parentPort.postMessage(`[done] ${timestamp} ${bot.username} moved ${x} ${y}`);
+            parentPort.postMessage(`[done] ${timestamp} ${bot.username} moved ${x} ${z}`);
 
             resolve();
         });
@@ -256,7 +251,7 @@ async function player_worker(queue){
                     port: 25565,                // only set if you need a port that isn't 25565
                 });
                 bot.loadPlugin(pathfinder);    
-                attach_event_listeners(bot);        
+                //attach_event_listeners(bot);        
             }
 
             const handler = ACTION_HANDLERS[action];
@@ -270,7 +265,7 @@ async function player_worker(queue){
                 parentPort.postMessage(`Error processing action ${action}: ${error.message}`);
             }
         } else{
-            await sleep(200);
+            await sleep(1000);
         }
     }
 }
