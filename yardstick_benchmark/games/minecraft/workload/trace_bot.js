@@ -5,6 +5,7 @@ const pathfinder = require('mineflayer-pathfinder').pathfinder
 const Movements = require('mineflayer-pathfinder').Movements
 const { GoalXZ } = require('mineflayer-pathfinder').goals
 const Vec3 = require('vec3');
+const { appendFile } = require('node:fs');
 
 const ACTION_HANDLERS = {
     'join': join,
@@ -21,46 +22,43 @@ const trace_start_timestamp = process.env.START_TIMESTAMP;
 const workers = new Set();
 
 let bot;
+let lastHealth;
+let lastFood;
 
-async function attach_event_listeners(bot){
-    bot.on('entityHurt', (entity) => {
-        if (entity === bot.entity) {
-            const timestamp = Math.round(+new Date()/1000);
-            parentPort.postMessage(`[detected] ${timestamp} ${bot.username} attackedPlayer`);
+function appendLog(fname, issuer, receiver, action){
+    const time = Date.now();
+    appendFile(fname, `${time}, ${issuer}, ${receiver}, ${action} \n`, (error) => {
+        if(error){
+            parentPort.postMessage(`Error appending an update to a file ${error.message}`); 
         }
     });
-
-    bot.world.on('blockUpdate', (_, newBlock) => {
-        const timestamp = Math.round(+new Date() / 1000);
-        parentPort.postMessage(`[detected] ${timestamp} blockPlaced ${bot.username} ${newBlock.x} ${newBlock.y} ${newBlock.z} ${newBlock.type}`);
-    });
-
-    bot.on('entityHurt', (entity) => {
-        if (entity.type !== 'player') {
-            const timestamp = Math.round(+new Date()/1000);
-            parentPort.postMessage(`[detected] ${timestamp} attackedEntity ${bot.username}`);
-        }
-    });
-
-    bot.on('blockBreakProgressEnd', (block, entity) => {
-        if (entity != bot.entity){
-            const timestamp = Math.round(+new Date()/1000);
-            parentPort.postMessage(`[detected] ${timestamp} blockBroken ${bot.username}`);
-        }
-    });
-
-    return
 }
 
 async function join(bot, args){
     parentPort.postMessage(`joining the bot in the game`);
     return new Promise((resolve, reject) => {
-        console.log('waiting');
         bot.once("spawn", () => {
             bot.waitForChunksToLoad().then(() => {
-                console.log('spawned');
-                const endTime = Date.now();
-                resolve(endTime);
+                appendLog('received.csv', bot._client.username, bot._client.username, 'join');
+
+                bot.loadPlugin(pathfinder);
+                const defaultMove = new Movements(bot);
+                bot.pathfinder.setMovements(defaultMove);
+
+                bot.on('health', () => {
+                    if (bot.health !== lastHealth || bot.food !== lastFood) {
+                        lastHealth = bot.health;
+                        lastFood = bot.food;
+
+                        appendLog('received.csv', bot._client.username, bot._client.username, 'health_change');
+                    }
+                });
+                
+                bot.on('death', () => {
+                    bot.respawn()
+                })
+
+                resolve();
             });
         });
     });
@@ -126,9 +124,8 @@ async function place_block(bot, args){
                 bot.equip(inventoryItem, 'hand').then(() => {
                     var targetBlock = bot.blockAt(Vec3(x, y, z));
                     bot.placeBlock(targetBlock, new Vec3(xFaceAgainst, yFaceAgainst, zFaceAgainst)).then(() => {
-                        const timestamp = Math.round(+new Date() / 1000);
-                        parentPort.postMessage(`[done] ${timestamp} ${bot.username} placedBlock`);
-                        resolve('Success');
+                        appendLog('issued.csv', bot._client.username, bot._client.username, 'placedBlock');
+                        resolve();
                     });
                 });
             });
@@ -149,13 +146,11 @@ async function attack_entity(bot, args){
             try {
                 while (calc_distance(entity.position, bot.entity.position) > 2) {
                     const { x, z } = entity.position;
+                    appendLog('issued.csv', bot._client.username, bot._client.username, 'move');
                     await move(player_name, [x, z]);
                 }
 
                 bot.attack(entity);
-
-                const timestamp = Math.round(+new Date() / 1000);
-                parentPort.postMessage(`[done] ${timestamp} ${bot.username} attackedEntity ${entityType}`);
                 resolve();
             } catch (error) {
                 reject(error);
@@ -200,27 +195,36 @@ async function move(bot, args){
             resolve('Coordinates are not specified');
         }
 
-        const defaultMove = new Movements(bot);
-        bot.pathfinder.setMovements(defaultMove);
         bot.pathfinder.setGoal(new GoalXZ(x, z));
 
-        bot.once('goal_reached', () => {
-            const timestamp = Math.round(+new Date() / 1000);
-            parentPort.postMessage(`[done] ${timestamp} ${bot.username} moved ${x} ${z}`);
+        const cleanup = () => {
+            bot.removeListener('goal_reached', onGoalReached);
+            bot.removeListener('path_update', onPathUpdate);
+            bot.removeListener('pathfinder_error', onPathfinderError);
+        };
 
+        const onGoalReached = () => {
+            cleanup();
+            appendLog('received.csv', bot._client.username, bot._client.username, 'goal_reached');
             resolve();
-        });
-
-        bot.once('path_update', (r) => {
+        };
+    
+        const onPathUpdate = (r) => {
             if (r.status === 'noPath') {
+                cleanup();
                 console.log('No path to goal');
                 reject('No path to goal');
             }
-        });
-
-        bot.once('pathfinder_error', (error) => {
+        };
+    
+        const onPathfinderError = (error) => {
+            cleanup();
             reject(error);
-        });
+        };
+    
+        bot.once('goal_reached', onGoalReached);
+        bot.once('path_update', onPathUpdate);
+        bot.once('pathfinder_error', onPathfinderError);
     });
 }
 
@@ -246,10 +250,9 @@ async function player_worker(queue){
                     host: host,
                     username: player_name,
                     port: 25565,                // only set if you need a port that isn't 25565
-                });
-                bot.loadPlugin(pathfinder);    
-                //attach_event_listeners(bot);        
+                });        
             }
+            appendLog('issued.csv', bot._client.username, bot._client.username, action);
 
             const handler = ACTION_HANDLERS[action];
 
