@@ -2,9 +2,7 @@
 - name: Deploy Telegraf
   gather_facts: true
   hosts: all
-  become: "{{ lookup('env', 'ANSIBLE_USE_SUDO') | default('false') == 'true' }}"
-  become_method: sudo
-  become_user: root
+  become: "{{ use_sudo }}"
   tasks:
     - name: Create Telegraf directory
       file:
@@ -23,9 +21,7 @@
 - name: Deploy Minecraft tick collection execd input script
   gather_facts: true
   hosts: minecraft_servers
-  become: "{{ lookup('env', 'ANSIBLE_USE_SUDO') | default('false') == 'true' }}"
-  become_method: sudo
-  become_user: root
+  become: "{{ use_sudo }}"
   tasks:
     - name: Copy Minecraft tick collection input script
       copy:

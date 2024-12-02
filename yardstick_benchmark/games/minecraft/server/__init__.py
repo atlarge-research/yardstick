@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 class PaperMC(RemoteApplication):
-    def __init__(self, nodes: list[Node]):
+    def __init__(self, nodes: list[Node], use_strace=False):
         super().__init__(
             "papermc",
             nodes,
@@ -15,5 +15,6 @@ class PaperMC(RemoteApplication):
             extravars={
                 "hostnames": [n.host for n in nodes],
                 "papermc_template": str(Path(__file__).parent / "server.properties.j2"),
+                "use_strace": use_strace
             },
         )

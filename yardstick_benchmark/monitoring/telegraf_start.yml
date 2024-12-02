@@ -2,13 +2,8 @@
 - name: Start Telegraf
   gather_facts: true
   hosts: all
-  become: "{{ lookup('env', 'ANSIBLE_USE_SUDO') | default('false') == 'true' }}"
-  become_method: sudo
-  become_user: root
+  become: "{{ use_sudo }}"
   tasks:
-    - name: Set fact for ANSIBLE_USE_SUDO
-      set_fact:
-        ansible_use_sudo: "{{ lookup('env', 'ANSIBLE_USE_SUDO') | default('false') == 'true' }}"
     - name: Find executable
       shell: |
         find {{wd}} -type f -executable -name telegraf
@@ -18,15 +13,10 @@
         cmd: |
           nohup sh -c "sudo {{ find_telegraf.stdout }} --config telegraf-{{ inventory_hostname }}.conf --pidfile {{ wd }}/telegraf-{{ inventory_hostname }}.pid 2>&1 | sudo tee -a telegraf.log" > /dev/null &
         chdir: "{{wd}}"
-      when: ansible_use_sudo == true
+      when: use_sudo == true
     - name: Run Telegraf under non-privelledged access
       shell:
         cmd: |
           nohup sh -c "{{ find_telegraf.stdout }} --config telegraf-{{ inventory_hostname }}.conf --pidfile {{ wd }}/telegraf-{{ inventory_hostname }}.pid 2>&1 | tee -a telegraf.log" > /dev/null &
         chdir: "{{wd}}"
-      when: ansible_use_sudo != true
- 
-# - name: Record command used
-#   shell:
-#     cmd: echo "nohup sh -c {'sudo' if ansible_use_sudo == true else ''} {{ find_telegraf.stdout }} --config telegraf-{{ inventory_hostname }}.conf --pidfile {{ wd }}/telegraf-{{ inventory_hostname }}.pid 2>&1 | {'sudo' if ansible_use_sudo else ''} tee -a telegraf.log" > /dev/null &" >> command.txt
-#     chdir: "{{wd}}"
+      when: use_sudo != true

@@ -2,14 +2,8 @@
 - name: Deploy PaperMC
   gather_facts: true
   hosts: all
-  become: "{{ lookup('env', 'ANSIBLE_USE_SUDO') | default('false') }}"
+  become: "{{ use_sudo }}"
   tasks:
-    - name: Set fact for ANSIBLE_USE_SUDO
-      set_fact:
-        ansible_use_sudo: "{{ lookup('env', 'ANSIBLE_USE_SUDO') | default('false') == 'true' }}"
-    - name: Set fact for using strace
-      set_fact:
-        use_strace: false
     - name: Run PaperMC
       shell:
         cmd: |
@@ -37,11 +31,11 @@
         timeout: 60
         path: "{{wd}}/logs/latest.log"
         search_regex: 'For help, type "help"'
-      when: ansible_use_sudo != true
+      when: use_sudo != true
     - name: Waiting for server to become ready using cat (used due to compatibility issue with nullblk)
       shell: |
         while ! cat "{{ wd }}/logs/latest.log" | grep -q 'For help, type "help"'; do
           sleep 0.05
         done
       timeout: 60
-      when: ansible_use_sudo == true
+      when: use_sudo == true

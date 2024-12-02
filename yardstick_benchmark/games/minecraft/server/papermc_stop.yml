@@ -2,7 +2,7 @@
 - name: Stop PaperMC
   gather_facts: true
   hosts: all
-  become: "{{ lookup('env', 'ANSIBLE_USE_SUDO') | default('false') == 'true' }}"
+  become: "{{ use_sudo }}"
   tasks:
     - name: Find PaperMC PID
       shell: 

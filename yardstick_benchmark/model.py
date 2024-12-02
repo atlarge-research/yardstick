@@ -13,6 +13,7 @@ from typing import Optional
 class Node(object):
     host: str
     wd: Path
+    use_sudo: bool
 
 
 def _gen_wd_name(name, node_wd) -> str:
@@ -23,7 +24,7 @@ def _gen_wd_name(name, node_wd) -> str:
 
 def _gen_inv(name: str, nodes: list[Node]) -> dict:
     hosts = {
-        node.host: {"node_wd": str(node.wd), "wd": _gen_wd_name(name, node.wd)}
+        node.host: {"node_wd": str(node.wd), "wd": _gen_wd_name(name, node.wd), "use_sudo": node.use_sudo}
         for node in nodes
     }
     return {"all": {"hosts": hosts}}
@@ -41,7 +42,7 @@ class RemoteAction(object):
     ):
         self.name = name
         self.hosts = {
-            node.host: {"node_wd": node.wd, "wd": _gen_wd_name(name, node.wd)}
+            node.host: {"node_wd": node.wd, "wd": _gen_wd_name(name, node.wd), "use_sudo": node.use_sudo}
             for node in nodes
         }
         self.inv = inv if inv is not None else _gen_inv(name, nodes)
@@ -52,7 +53,7 @@ class RemoteAction(object):
             "ansible_ssh_pass": os.getenv("ANSIBLE_SSH_PASS", ""),
             "ansible_port": os.getenv("ANSIBLE_PORT", "22"),
             "ansible_user": os.getenv("ANSIBLE_USER", "default_user"),
-            "ansible_become_password": os.getenv("ANSIBLE_BECOME_PASS", "")
+            "ansible_become_password": os.getenv("ANSIBLE_BECOME_PASS", ""),
         })
 
     def run(self):

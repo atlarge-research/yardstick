@@ -29,9 +29,9 @@ class VirtualStorage(RemoteApplication):
         )
 
 class SSH:    
-    def provision(self, hosts: list[str], path):
+    def provision(self, hosts: list[str], path, use_sudo=False):
         return [
-            Node(host=host, wd=path)
+            Node(host=host, wd=path, use_sudo=use_sudo)
             for host in hosts
         ]
 
