@@ -3,12 +3,11 @@
   gather_facts: true
   hosts: all
   become: "{{ lookup('env', 'ANSIBLE_USE_SUDO') | default('false') == 'true' }}"
-  become_method: sudo
-  become_user: root
   tasks:
     - name: Find PaperMC PID
-      shell: |
-        cat {{wd}}/papermc.pid
+      shell: 
+        cmd: cat papermc.pid
+        chdir: "{{ wd }}"
       register: shell_papermc_pid
     - name: Obtain PaperMC pid
       set_fact:

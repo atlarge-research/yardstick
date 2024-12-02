@@ -177,14 +177,11 @@ async function attack_player(player_name, args){
 
         const moveAndAttack = async () => {
             try {
-                console.log('before moving');
                 while (calc_distance(entity.position, bot.entity.position) > 2) {
-                    console.log(calc_distance(entity.position, bot.entity.position));
                     const { x, z } = entity.position;
                     await move(player_name, [x, z]);
                 }
                 
-                console.log('here and about to attack');
                 bot.attack(entity);
                 resolve('');
             } catch (error) {
