@@ -173,8 +173,20 @@ async function attack_player(player_name, args){
         const moveAndAttack = async () => {
             try {
                 while (calc_distance(entity.position, bot.entity.position) > 2) {
-                    const { x, z } = entity.position;
-                    await move(player_name, [x, z]);
+                    const { x: targetX, z: targetZ } = entity.position;
+                    const { x: botX, z: botZ } = bot.entity.position;
+
+                    const dx = targetX - botX;
+                    const dz = targetZ - botZ;
+
+                    const length = Math.sqrt(dx * dx + dz * dz);
+                    const stepX = dx / length;
+                    const stepZ = dz / length;
+
+                    const nextX = botX + stepX;
+                    const nextZ = botZ + stepZ;
+
+                    await move(player_name, [nextX, nextZ]);
                 }
                 
                 bot.attack(entity);
@@ -250,6 +262,7 @@ async function player_worker(queue){
                     host: host,
                     username: player_name,
                     port: 25565,                // only set if you need a port that isn't 25565
+                    version: '1.20.1'
                 });        
             }
             appendLog('issued.csv', bot._client.username, bot._client.username, action);
