@@ -8,7 +8,7 @@
       shell:
         cmd: |
           module load java/jdk-17 || true # just in case we are on DAS
-          nohup sh -c "{{ 'strace -f -ttt -T -e trace=pread64,pwrite64,read,write,file -o fsysstrace.log' if use_strace else '' }} java -javaagent:jolokia-agent-jvm-2.0.3-javaagent.jar -jar paper-1.20.1-58.jar" {{ '' if use_strace else '> /dev/null' }} & 
+          nohup sh -c "{{ 'strace -f -ttt -T -e trace=pread64,pwrite64,read,write,openat,close -o fsysstrace.log' if use_strace else '' }} java -javaagent:jolokia-agent-jvm-2.0.3-javaagent.jar -jar paper-1.20.1-58.jar" {{ '' if use_strace else '> /dev/null' }} & 
           NOHUP_PID=$!
           echo $NOHUP_PID > nohup.pid 
           sleep 2
