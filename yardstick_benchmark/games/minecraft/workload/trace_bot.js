@@ -188,7 +188,8 @@ async function attack_player(player_name, args){
 
                     await move(player_name, [nextX, nextZ]);
                 }
-                
+
+                bot.stopDigging();
                 bot.attack(entity);
                 resolve('');
             } catch (error) {
@@ -208,6 +209,8 @@ async function move(bot, args){
         }
 
         bot.pathfinder.setGoal(new GoalXZ(x, z));
+        bot.pathfinder.movements.canDig = false;
+        bot.pathfinder.movements.canPlace = false;
 
         const cleanup = () => {
             bot.removeListener('goal_reached', onGoalReached);
@@ -262,7 +265,8 @@ async function player_worker(queue){
                     host: host,
                     username: player_name,
                     port: 25565,                // only set if you need a port that isn't 25565
-                    version: '1.20.1'
+                    version: '1.20.1',
+                    checkTimeoutInterval: 1000 * 1000
                 });        
             }
             appendLog('issued.csv', bot._client.username, bot._client.username, action);

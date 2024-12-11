@@ -10,7 +10,7 @@
         chdir: "{{wd}}"
     - name: Run create nullblk, set up file system, and mount on the root folder
       shell:
-        cmd: ./createnullblk.sh 512 8192 {{storage_latency}} >> drive.dev
+        cmd: ./createnullblk.sh 512 8192 {{storage_latency}} {{throughput}} >> drive.dev
         chdir: "{{wd}}"
     - name: Read the device name from drive.dev file
       shell: cat {{ wd }}/drive.dev

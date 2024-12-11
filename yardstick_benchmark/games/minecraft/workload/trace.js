@@ -1,15 +1,7 @@
-// const mineflayer = require('mineflayer');
-// const { parentPort } = require("worker_threads");
-// const Item = require('prismarine-item')('1.20.1')
-// const pathfinder = require('mineflayer-pathfinder').pathfinder
-// const Movements = require('mineflayer-pathfinder').Movements
-// const { GoalXZ } = require('mineflayer-pathfinder').goals
-// const Vec3 = require('vec3');
-
-
 const fs = require('node:fs');
 const readline = require('readline');
 const { Worker, isMainThread } = require("worker_threads");
+const { writeFile } = require('node:fs/promises');
 
 const trace = process.env.TRACE;
 const trace_start_timestamp = parseInt(process.env.START_TIMESTAMP);
@@ -22,6 +14,9 @@ function sleep(ms) {
 }
 
 async function run(){
+    await writeFile('issued.csv', 'timestamp, player_name, action \n');
+    await writeFile('received.csv', 'timestamp, player_name, issuer_name, action \n');
+
     const fileStream = fs.createReadStream(trace);
     const rl = readline.createInterface({
         input: fileStream,

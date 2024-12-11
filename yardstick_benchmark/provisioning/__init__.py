@@ -8,7 +8,7 @@ class VirtualStorage(RemoteApplication):
     """ Runs createnullblk script and creates virtualized storage on the node 
     """
 
-    def __init__(self, nodes: list[Node], storage_latency):
+    def __init__(self, nodes: list[Node], storage_latency, throughput):
         """ 
         Args:
             nodes (list[Node]): The nodes on which to run diskstat collection
@@ -24,7 +24,8 @@ class VirtualStorage(RemoteApplication):
                 "nullblk_script": os.path.join(
                     os.path.dirname(__file__), "createnullblk.sh"
                 ),
-                "storage_latency": storage_latency
+                "storage_latency": storage_latency,
+                "throughput": throughput
             }
         )
 
