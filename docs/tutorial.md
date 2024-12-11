@@ -96,7 +96,7 @@ cd yardstick-tutorial
 wget https://raw.githubusercontent.com/atlarge-research/yardstick/master/example.ipynb
 ```
 
-After opening the Jupyter Notebook, click the button in the top right of the VSCode window to select a Kernel.
+Open the `yardstick-tutorial` folder in VSCode, open the IPython Notebook, and click the button in the top right of the VSCode window to select a Kernel.
 Install the necessary plugins and select `Python Environments... > yardstick`. This is the yardstick environment we just created and prepared with Miniconda which contains all the necessary dependencies.
 
 In the remainder of this section, we will ask you to perform increasingly difficult experiments,
