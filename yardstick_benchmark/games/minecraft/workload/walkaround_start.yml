@@ -11,6 +11,9 @@
     BOX_Z: "{{box_z}}"
     BOTS_JOIN_DELAY: "{{bots_join_delay}}"
     BOTS_PER_NODE: "{{bots_per_node}}"
+  become: "{{ lookup('env', 'ANSIBLE_USE_SUDO') | default('false') == 'true' }}"
+  become_method: sudo
+  become_user: root
   tasks:
     - name: Set game spawn location
       shell:

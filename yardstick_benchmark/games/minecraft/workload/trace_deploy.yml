@@ -1,5 +1,5 @@
 ---
-- name: Deploy Minecraft WalkAround workload
+- name: Deploy Minecraft Trace Based workload
   gather_facts: true
   hosts: all
   become: "{{ lookup('env', 'ANSIBLE_USE_SUDO') | default('false') == 'true' }}"
@@ -38,3 +38,9 @@
         src: "{{item}}"
         dest: "{{wd}}"
       with_items: "{{scripts}}"
+
+    - name: Copy trace
+      copy:
+        src: "{{item}}"
+        dest: "{{wd}}"
+      with_items: "{{trace}}"

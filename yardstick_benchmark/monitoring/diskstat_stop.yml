@@ -1,28 +1,28 @@
 ---
-- name: Stop Telegraf
+- name: Stop DiskStat collection
   gather_facts: true
   hosts: all
   become: "{{ use_sudo }}"
   tasks:
-    - name: Lookup Telegraf PID
+    - name: Lookup diskstat pid
       shell: |
-        cat {{wd}}/telegraf-{{inventory_hostname}}.pid
-      register: shell_telegraf_pid
+        cat {{wd}}/diskstat.pid
+      register: shell_diskstat_pid
     - set_fact:
-        telegraf_pid: "{{ shell_telegraf_pid.stdout }}"
-    - name: Stop Telegraf
+        diskstat_pid: "{{ shell_diskstat_pid.stdout }}"
+    - name: Stop Diskstat
       shell:
         cmd: |
-          kill {{ telegraf_pid }}
-    - name: Wait for Telegraf to stop
+          kill {{ diskstat_pid }}
+    - name: Wait for diskstat to stop
       block:
         - wait_for:
             # Using https://stackoverflow.com/questions/46515704/how-to-kill-a-running-process-using-ansible/46541018#46541018
-            path: "/proc/{{ telegraf_pid }}/status"
+            path: "/proc/{{ diskstat_pid }}/status"
             state: absent
             timeout: 15
           register: wait_for_stop
       rescue:
         - name: Force kill stuck processes
           shell: |
-            kill -9 {{ telegraf_pid }}
+            kill -9 {{ diskstat_pid }}

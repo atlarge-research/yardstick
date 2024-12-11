@@ -2,14 +2,21 @@
 - name: Start Telegraf
   gather_facts: true
   hosts: all
-
+  become: "{{ use_sudo }}"
   tasks:
     - name: Find executable
       shell: |
         find {{wd}} -type f -executable -name telegraf
       register: find_telegraf
-    - name: Run Telegraf
+    - name: Run Telegraf under privelledged access
       shell:
         cmd: |
-          nohup {{find_telegraf.stdout}} --config telegraf-{{inventory_hostname}}.conf --pidfile {{wd}}/telegraf-{{inventory_hostname}}.pid &> telegraf.log &
+          nohup sh -c "sudo {{ find_telegraf.stdout }} --config telegraf-{{ inventory_hostname }}.conf --pidfile {{ wd }}/telegraf-{{ inventory_hostname }}.pid 2>&1 | sudo tee -a telegraf.log" > /dev/null &
         chdir: "{{wd}}"
+      when: use_sudo == true
+    - name: Run Telegraf under non-privelledged access
+      shell:
+        cmd: |
+          nohup sh -c "{{ find_telegraf.stdout }} --config telegraf-{{ inventory_hostname }}.conf --pidfile {{ wd }}/telegraf-{{ inventory_hostname }}.pid 2>&1 | tee -a telegraf.log" > /dev/null &
+        chdir: "{{wd}}"
+      when: use_sudo != true

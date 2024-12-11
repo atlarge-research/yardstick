@@ -2,15 +2,40 @@
 - name: Deploy PaperMC
   gather_facts: true
   hosts: all
+  become: "{{ use_sudo }}"
   tasks:
     - name: Run PaperMC
       shell:
         cmd: |
           module load java/jdk-17 || true # just in case we are on DAS
-          nohup java -javaagent:jolokia-agent-jvm-2.0.3-javaagent.jar -jar paper-1.20.1-58.jar &> /dev/null &
-          echo $! > papermc.pid
+          nohup sh -c "{{ 'strace -f -ttt -T -e trace=pread64,pwrite64,read,write,openat,close -o fsysstrace.log' if use_strace else '' }} java -Xms16G -Xmx16G -javaagent:jolokia-agent-jvm-2.0.3-javaagent.jar -jar paper-1.20.1-58.jar" {{ '' if use_strace else '> /dev/null' }} & 
+          NOHUP_PID=$!
+          echo $NOHUP_PID > nohup.pid 
+          sleep 2
+          {% if use_strace %}
+          STRACE_PID=$(pgrep -P $NOHUP_PID -x 'strace.*') 
+          JAVA_PID=$(pgrep -P $STRACE_PID -x 'java.*')
+          echo $JAVA_PID > papermc.pid
+          {% else %}
+          JAVA_PID=$(pgrep -P $NOHUP_PID -x 'java.*')
+          echo $JAVA_PID > papermc.pid
+          {% endif %}
         chdir: "{{ wd }}"
+    - name: Wait for the latest.log file to appear
+      wait_for:
+        path: "{{ wd }}/logs/latest.log"
+        state: present
+        timeout: 60
     - name: Waiting for server to become ready
       wait_for:
+        timeout: 60
         path: "{{wd}}/logs/latest.log"
         search_regex: 'For help, type "help"'
+      when: use_sudo != true
+    - name: Waiting for server to become ready using cat (used due to compatibility issue with nullblk)
+      shell: |
+        while ! cat "{{ wd }}/logs/latest.log" | grep -q 'For help, type "help"'; do
+          sleep 0.05
+        done
+      timeout: 60
+      when: use_sudo == true

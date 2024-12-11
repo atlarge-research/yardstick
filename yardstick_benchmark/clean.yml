@@ -2,6 +2,9 @@
 - name: Clean data from nodes
   gather_facts: true
   hosts: all
+  become: "{{ lookup('env', 'ANSIBLE_USE_SUDO') | default('false') == 'true' }}"
+  become_method: sudo
+  become_user: root
   tasks:
     - name: Remove data from nodes
       file:
