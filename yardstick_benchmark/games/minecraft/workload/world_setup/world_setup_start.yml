@@ -1,0 +1,18 @@
+---
+- hosts: all
+  gather_facts: True
+  environment:
+    NUM_PLAYERS: "{{num_players}}"
+    GLOBAL_SPREAD: "{{global_spread}}"
+  become: "{{ use_sudo }}"
+  tasks:
+    - name: Run Spawn Setup Routine
+      shell:
+        cmd: |
+          source ~/.bashrc
+          nvm use 18
+          node generate_spawnpoints.js | tee bot-{{ inventory_hostname }}.log
+          echo $! > bot-{{inventory_hostname}}.pid
+        chdir: "{{wd}}"
+      environment:
+        BOT_INDEX: "{{ groups['all'].index(inventory_hostname) }}"

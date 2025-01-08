@@ -98,10 +98,15 @@ async function remove_block(bot, args){
 
 async function place_block(bot, args){
     const INVENTORY_SLOT = 36;
+    console.log(1);
 
     return new Promise((resolve, reject) => {
         let [itemId, x, y, z, xFaceAgainst, yFaceAgainst, zFaceAgainst] = args;
+
         itemId = Number(itemId);
+        x = Number(x);
+        y = Number(y);
+        z = Number(z);
 
         if(!(itemId)){
             reject('Item is not specified');
@@ -116,17 +121,19 @@ async function place_block(bot, args){
         }
 
         const item = new Item(itemId, 1);
-
         bot.creative.clearInventory().then(() => {
             bot.creative.setInventorySlot(INVENTORY_SLOT, item).then(() => {
                 const inventoryItem = bot.inventory.findInventoryItem(itemId, null);
-    
+
                 bot.equip(inventoryItem, 'hand').then(() => {
-                    var targetBlock = bot.blockAt(Vec3(x, y, z));
-                    bot.placeBlock(targetBlock, new Vec3(xFaceAgainst, yFaceAgainst, zFaceAgainst)).then(() => {
-                        appendLog('issued.csv', bot._client.username, bot._client.username, 'placedBlock');
-                        resolve();
-                    });
+                    const xBot = bot.entity.position.x;
+                    const yBot = bot.entity.position.y;
+                    const zBot = bot.entity.position.z;
+
+                    var targetBlock = bot.blockAt(Vec3(Math.floor(xBot + x), Math.floor(yBot + y), Math.floor((zBot + z))));
+                    console.log(Math.floor(xBot + x), Math.floor(yBot + y), Math.floor((zBot + z)));
+                    bot.placeBlock(targetBlock, new Vec3(xFaceAgainst, yFaceAgainst, zFaceAgainst)).catch(() => {});
+                    resolve();
                 });
             });
         });
