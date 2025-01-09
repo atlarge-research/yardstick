@@ -7,7 +7,7 @@ function gaussianRandom(mu = 0, sigma = 1) {
   return mu + z0 * sigma;
 }
 
-function generateLog(filename) {
+function generateLog() {
   const args = process.argv.slice(2); // Skip the first two arguments (node and script name)
   const numPlayers = args[0] ? parseInt(args[0], 10) : 5; // Default to 5 if not provided
   const globalAttachment = args[1] ? parseInt(args[1], 10) : 5000; // Default to 5000 if not provided
@@ -88,9 +88,8 @@ function generateLog(filename) {
     }
   }
 
-  // Write the log to the specified file
   fs.writeFileSync(fpath, log.join('\n'), 'utf8');
 }
 
-generateLog('game_log_move.txt');
+generateLog();
 

@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 class PaperMC(RemoteApplication):
-    def __init__(self, nodes: list[Node], world_dir_path: str, copy_player_data=False, use_strace=False):
+    def __init__(self, nodes: list[Node], world_dir_path='', copy_player_data=False, use_strace=False):
         super().__init__(
             "papermc",
             nodes,

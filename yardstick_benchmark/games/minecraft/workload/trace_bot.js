@@ -84,7 +84,11 @@ async function remove_block(bot, args){
             reject('Block coordinates are not specified');
         }
 
-        const target = bot.blockAt(Vec3(x, y, z));
+        const xBot = bot.entity.position.x;
+        const yBot = bot.entity.position.y;
+        const zBot = bot.entity.position.z;
+
+        const target = bot.blockAt(Vec3(xBot + x, yBot + y, zBot + z));
 
         if(!(target & bot.canDigBlock(target))){
             reject('Cannot dig specified block');
