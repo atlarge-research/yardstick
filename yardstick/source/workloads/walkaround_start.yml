@@ -1,0 +1,32 @@
+---
+- hosts: all
+  gather_facts: True
+  environment:
+    DURATION: "{{duration}}"
+    MC_HOST: "{{mc_host}}"
+    SPAWN_X: "{{spawn_x}}"
+    SPAWN_Y: "{{spawn_y}}"
+    BOX_WIDTH: "{{box_width}}"
+    BOX_X: "{{box_x}}"
+    BOX_Z: "{{box_z}}"
+    BOTS_JOIN_DELAY: "{{bots_join_delay}}"
+    BOTS_PER_NODE: "{{bots_per_node}}"
+  tasks:
+    - name: Set game spawn location
+      shell:
+        cmd: |
+          source ~/.bashrc
+          node set_spawn.js
+        chdir: "{{wd}}"
+      run_once: true # Only run on one machine
+    - name: Run Minecraft bot
+      shell:
+        cmd: |
+          source ~/.bashrc
+          nvm use 18
+          # nohup node walkaround_bot.js &> bot-{{ inventory_hostname }}.log &
+          node walkaround_bot.js | tee bot-{{ inventory_hostname }}.log
+          echo $! > bot-{{inventory_hostname}}.pid
+        chdir: "{{wd}}"
+      environment:
+        BOT_INDEX: "{{ groups['all'].index(inventory_hostname) }}"

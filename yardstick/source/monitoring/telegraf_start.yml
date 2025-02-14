@@ -1,0 +1,15 @@
+---
+- name: Start Telegraf
+  gather_facts: true
+  hosts: all
+
+  tasks:
+    - name: Find executable
+      shell: |
+        find {{wd}} -type f -executable -name telegraf
+      register: find_telegraf
+    - name: Run Telegraf
+      shell:
+        cmd: |
+          nohup {{find_telegraf.stdout}} --config telegraf-{{inventory_hostname}}.conf --pidfile {{wd}}/telegraf-{{inventory_hostname}}.pid &> telegraf.log &
+        chdir: "{{wd}}"

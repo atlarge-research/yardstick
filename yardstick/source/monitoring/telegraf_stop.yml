@@ -1,0 +1,27 @@
+---
+- name: Stop Telegraf
+  gather_facts: true
+  hosts: all
+  tasks:
+    - name: Lookup Telegraf PID
+      shell: |
+        cat {{wd}}/telegraf-{{inventory_hostname}}.pid
+      register: shell_telegraf_pid
+    - set_fact:
+        telegraf_pid: "{{ shell_telegraf_pid.stdout }}"
+    - name: Stop Telegraf
+      shell:
+        cmd: |
+          kill {{ telegraf_pid }}
+    - name: Wait for Telegraf to stop
+      block:
+        - wait_for:
+            # Using https://stackoverflow.com/questions/46515704/how-to-kill-a-running-process-using-ansible/46541018#46541018
+            path: "/proc/{{ telegraf_pid }}/status"
+            state: absent
+            timeout: 15
+          register: wait_for_stop
+      rescue:
+        - name: Force kill stuck processes
+          shell: |
+            kill -9 {{ telegraf_pid }}
