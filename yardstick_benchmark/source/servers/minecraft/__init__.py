@@ -2,7 +2,7 @@
 import pkgutil
 import importlib
 from abc import ABC, abstractmethod
-from yardstick.model import RemoteApplication, Node
+from yardstick_benchmark.model import RemoteApplication, Node
 from pathlib import Path
 
 class Game(object):

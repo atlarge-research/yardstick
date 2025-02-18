@@ -1,6 +1,6 @@
 import time
 from plumbum import local
-from yardstick.model import Node
+from yardstick_benchmark.model import Node
 from pathlib import Path
 import os
 

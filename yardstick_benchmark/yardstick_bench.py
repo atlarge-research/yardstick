@@ -4,14 +4,14 @@ from pathlib import Path
 import os
 import shutil
 
-import yardstick.source.provisioning.provisioning as provisioning
-import yardstick.source.monitoring as monitoring
-import yardstick.source.servers.minecraft as server
-import yardstick.source.workloads as bot
+import yardstick_benchmark.source.provisioning.provisioning as provisioning
+import yardstick_benchmark.source.monitoring as monitoring
+import yardstick_benchmark.source.servers.minecraft as server
+import yardstick_benchmark.source.workloads as bot
 
-import yardstick.source.utils.data_processing.data as data
+import yardstick_benchmark.source.utils.data_processing.data as data
 
-from yardstick.model import Node, RemoteAction
+from yardstick_benchmark.model import Node, RemoteAction
 
 class Yardstick():
     ''' 
