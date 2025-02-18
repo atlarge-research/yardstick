@@ -30,12 +30,15 @@ def preprocess_data(location):
                 metric = data[1]
 
                 try:
+                    output_dir = f"./output/{now}/{node}/"
                     os.mkdir(f"./output/{now}/{node}")
                 except OSError as error:
                     print(error)
 
                 with open(f"./output/{now}/{node}/{metric}.csv", "a+") as metric_data:
                     metric_data.write(line)
+
+    return output_dir
 
 def print_metrics(metrics, location):
     ''' Metrics available:
@@ -53,7 +56,3 @@ def print_metrics(metrics, location):
                                             "time_idle", "time_iowait", "time_irq", "time_nice", "time_softirq", "time_steal", "time_system", "time_user"])
 
             print(data)
-
-
-def calculate_performance_variability(path):
-    pass
