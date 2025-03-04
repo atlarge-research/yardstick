@@ -1,0 +1,23 @@
+---
+- hosts: all
+  gather_facts: True
+  environment:
+    MC_HOST: "{{mc_host}}"
+    TRACE: "{{trace_file}}"
+    START_TIMESTAMP: 0,
+    DURATION: "{{duration}}"
+  become: "{{ lookup('env', 'ANSIBLE_USE_SUDO') | default('false') == 'true' }}"
+  become_method: sudo
+  become_user: root
+  tasks:
+    - name: Run Trace Based Simulation
+      shell:
+        cmd: |
+          source ~/.bashrc
+          nvm use 18
+          # nohup node walkaround_bot.js &> bot-{{ inventory_hostname }}.log &
+          node trace.js 2>&1 | tee bot-{{ inventory_hostname }}.log
+          echo $! > bot-{{inventory_hostname}}.pid
+        chdir: "{{wd}}"
+      environment:
+        BOT_INDEX: "{{ groups['all'].index(inventory_hostname) }}"

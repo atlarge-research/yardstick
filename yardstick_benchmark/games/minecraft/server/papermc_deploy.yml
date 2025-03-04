@@ -2,6 +2,7 @@
 - name: Deploy PaperMC
   gather_facts: true
   hosts: all
+  become: "{{ use_sudo }}"
   tasks:
     - file:
         path: "{{ wd }}"
@@ -22,3 +23,15 @@
       get_url:
         url: https://search.maven.org/remotecontent?filepath=org/jolokia/jolokia-agent-jvm/2.0.3/jolokia-agent-jvm-2.0.3-javaagent.jar
         dest: "{{wd}}/jolokia-agent-jvm-2.0.3-javaagent.jar"
+      
+    - name: Copy world dir to destination
+      copy:
+        src: "{{ world_dir_path }}"
+        dest: "{{ wd }}"
+      when: world_dir_path is defined and world_dir_path | length > 0
+  
+    - name: Delete playerdata subdirectory if necessary
+      file:
+        path: "{{ wd }}/world/playerdata"
+        state: absent
+      when: copy_player_data != true

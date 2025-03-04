@@ -1,10 +1,8 @@
 ---
-- name: Deploy Minecraft WalkAround workload
+- name: Deploy Minecraft Trace Based workload
   gather_facts: true
   hosts: all
-  become: "{{ lookup('env', 'ANSIBLE_USE_SUDO') | default('false') == 'true' }}"
-  become_method: sudo
-  become_user: root
+  become: "{{ use_sudo }}"
   tasks:
     - debug:
         msg: "working directory is: {{wd}}"
@@ -28,11 +26,8 @@
           nvm install 18
           npm install mineflayer
           npm install mineflayer-pathfinder
+          npm install rcon
         chdir: "{{wd}}"
-    - name: Checkout RCON client
-      git:
-        repo: https://github.com/tehbeard/node-rcon.git
-        dest: "{{wd}}/rcon"
     - name: Copy scripts
       copy:
         src: "{{item}}"

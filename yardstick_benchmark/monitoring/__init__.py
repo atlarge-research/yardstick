@@ -4,6 +4,29 @@ from enum import Enum
 import sys
 from pathlib import Path
 
+class DiskStat(RemoteApplication):
+    """ Runs diskstat collection script that collects disk data from Linux /proc/diskstat every 100 milliseconds 
+    """
+
+    def __init__(self, nodes: list[Node]):
+        """ 
+        Args:
+            nodes (list[Node]): The nodes on which to run diskstat collection
+        """
+        super().__init__(
+            "diskstat",
+            nodes,
+            Path(__file__).parent / "diskstat_deploy.yml",
+            Path(__file__).parent / "diskstat_start.yml",
+            Path(__file__).parent / "diskstat_stop.yml",
+            Path(__file__).parent / "diskstat_cleanup.yml",
+            extravars={
+                "diskstat_script": os.path.join(
+                    os.path.dirname(__file__), "collect_diskstat.sh"
+                )
+            }
+        )
+
 
 class Telegraf(RemoteApplication):
     """Runs the Telegraf metric collection tool
@@ -51,6 +74,16 @@ class Telegraf(RemoteApplication):
         self.extravars.setdefault("execd_minecraft_ticks", []).append(node.host)
         self.extravars["jolokia_get_minecraft_tick_script_path"] = os.path.join(
             os.path.dirname(__file__), "jolokia_get_minecraft_tick.py"
+        )
+        this_host = self.inv["all"]["hosts"][node.host]
+        self.inv.setdefault("minecraft_servers", {}).setdefault("hosts", {})[
+            node.host
+        ] = this_host
+
+    def add_fsys_activity_collection(self, node):
+        self.extravars.setdefault("execd_fs_activity", []).append(node.host)
+        self.extravars["fs_post_processing_script_path"] = os.path.join(
+            os.path.dirname(__file__), "fs_post_processing.py"
         )
         this_host = self.inv["all"]["hosts"][node.host]
         self.inv.setdefault("minecraft_servers", {}).setdefault("hosts", {})[

@@ -3,10 +3,20 @@
   gather_facts: true
   hosts: all
   tasks:
-    - name: Get data from nodes
-      ansible.posix.synchronize:
-        src: "{{node_wd}}"
-        dest: "{{dest}}"
-        mode: pull
-    - debug:
-        msg: "Output files have been written to {{dest}}"
+    - name: Archive the directory
+      ansible.builtin.archive:
+        path: "{{node_wd}}"
+        dest: "{{node_wd}}.tar.gz"
+        format: gz
+
+    - name: Fetch the archive
+      ansible.builtin.fetch:
+        src: "{{node_wd}}.tar.gz"
+        dest: "{{dest}}/"
+        flat: yes
+        
+    - name: Remove the archive file
+      ansible.builtin.file:
+        path: "{{node_wd}}.tar.gz"
+        state: absent
+    
