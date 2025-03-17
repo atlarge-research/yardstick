@@ -25,9 +25,9 @@ def plot_line_cpu(path, output_file_name):
     custom_params = {"axes.spines.right": False, "axes.spines.top": False}
     sns.set_theme(style="ticks", rc=custom_params)
 
-    f = plt.figure(figsize=[10, 6])
+    f = plt.figure()
     ax = f.add_subplot(111)
-    plt.xlim(0, 17)
+    # plt.xlim(0, 17)
 
     ax = sns.lineplot(data, x="timestamp_m", y="util")
     ax.grid(axis="y")
@@ -39,6 +39,8 @@ def plot_line_cpu(path, output_file_name):
     
     ax.get_figure().savefig(f"./plots/{output_file_name}.png")
     ax.get_figure().clf()
+
+    return f"{output_file_name}.png"
 
 def plot_line_tick_duration(path, output_file_name):
     data = pd.read_csv(path, names = ["timestamp", "label", "node", "jolokia_endpoint", "tick_duration_ms"])
@@ -63,6 +65,9 @@ def plot_line_tick_duration(path, output_file_name):
 
     ax.get_figure().savefig(f"./plots/{output_file_name}.png")
     ax.get_figure().clf()
+
+    return f"{output_file_name}.png"
+
 
 def plot_line_mem(path, output_file_name):
     data = pd.read_csv(path, names=["timestamp", "measurement", "host", "active", "available", "available_percent", "buffered", "cached", "commit_limit", 
@@ -92,6 +97,9 @@ def plot_line_mem(path, output_file_name):
     ax.get_figure().savefig(f"./plots/{output_file_name}.png")
     ax.get_figure().clf()
 
+    return f"{output_file_name}.png"
+
+
 def plot_box_cpu(path, output_file_name):
     data = pd.read_csv(path, names = ["timestamp","measurement","core_id","cpu","host","physical_id","time_active","time_guest","time_guest_nice","time_idle","time_iowait","time_irq","time_nice","time_softirq","time_steal","time_system","time_user"])
     data["timestamp"] = data["timestamp"].transform(lambda x: x - x.min())
@@ -118,6 +126,9 @@ def plot_box_cpu(path, output_file_name):
     ax.get_figure().savefig(f"./plots/{output_file_name}.png")
     ax.get_figure().clf()
 
+    return f"{output_file_name}.png"
+
+
 def plot_box_tick_duration(path, output_file_name):
     data = pd.read_csv(path, names = ["timestamp", "label", "node", "jolokia_endpoint", "tick_duration_ms"])
     data.head()
@@ -138,7 +149,10 @@ def plot_box_tick_duration(path, output_file_name):
     ax.get_figure().savefig(f"./plots/{output_file_name}.png")
     ax.get_figure().clf()
 
-def plot_box_memory(path, output_file_name):
+    return f"{output_file_name}.png"
+
+
+def plot_box_mem(path, output_file_name):
     data = pd.read_csv(path, names=["timestamp", "measurement", "host", "active", "available", "available_percent", "buffered", "cached", "commit_limit", 
                                     "committed_as", "dirty", "free", "high_free", "high_total", "huge_page_size", "huge_pages_free", "huge_pages_total", 
                                     "inactive", "low_free", "low_total", "mapped", "page_tables", "shared", "slab", "sreclaimable", "sunreclaim", "swap_cached", 
@@ -161,4 +175,7 @@ def plot_box_memory(path, output_file_name):
     f.tight_layout()
     ax.get_figure().savefig(f"./plots/{output_file_name}.png")
     ax.get_figure().clf()
+
+    return f"{output_file_name}.png"
+
 

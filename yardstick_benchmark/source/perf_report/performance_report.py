@@ -3,9 +3,6 @@ import datetime
 
 # All the data to go into the report goes here
 
-def get_plots(folder):
-    pass
-
 def get_score(metric, experiment):
     pass
 
@@ -16,7 +13,7 @@ def get_experiments():
 # Tick Duration + graphs
 
 #Report rendering goes here
-def render_report(filename):
+def render_report(filename, plots):
         
     a = Airium()
 
@@ -123,4 +120,4 @@ def render_report(filename):
         f.write(bytes(html))
 
 if __name__ == "__main__":
-    render_report("test")
+    render_report("test", [])

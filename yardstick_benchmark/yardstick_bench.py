@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import os
 import shutil
+from collections import defaultdict
 
 import yardstick_benchmark.source.provisioning.provisioning as provisioning
 import yardstick_benchmark.source.monitoring as monitoring
@@ -10,6 +11,9 @@ import yardstick_benchmark.source.servers.minecraft as server
 import yardstick_benchmark.source.workloads as bot
 
 import yardstick_benchmark.source.utils.data_processing.data as data
+import yardstick_benchmark.source.utils.data_processing.visualization as viz
+
+import yardstick_benchmark.source.perf_report.performance_report as report
 
 from yardstick_benchmark.model import Node, RemoteAction
 
@@ -31,13 +35,13 @@ class Yardstick():
         :param metrics: Default All
         :type metrics: String
     '''
-    def __init__(self, environment="DAS", monitor="Telegraf", server="PaperMC", workload="WalkAround", metrics="all"):
+    def __init__(self, environment="DAS", monitor="Telegraf", server="PaperMC", workload="WalkAround", metrics="all", dest="output/"):
         self.environment = environment
         self.monitoring = monitor
         self.server = server
         self.workload = workload
         self.metrics = metrics
-        self.dest = None
+        self.dest = dest
 
     def fetch(self, dest: Path, nodes: list[Node]):
         dest.mkdir(parents=True, exist_ok=True)
@@ -133,6 +137,26 @@ class Yardstick():
 
     def run_multiple():
         pass
+
+    def generate_report(self, filename=f"performance_report_{datetime.today().strftime('%Y-%m-%d_%H:%M')}"):
+        data_loc = data.preprocess_data(self.dest)
+
+        # List of plot filenames
+        plots = defaultdict(list)
+        
+        # CPU plots
+        plots["cpu_box"].append(viz.plot_box_cpu(data_loc + "cpu.csv", f"cpu_box{datetime.now()}"))
+        plots["cpu_line"].append(viz.plot_line_cpu(data_loc + "cpu.csv", f"cpu_line{datetime.now()}"))
+
+        # Tick Duration plots
+        plots["tick_duration_box"].append(viz.plot_box_tick_duration(data_loc + "minecraft_tick_times.csv", f"tick_duration_box{datetime.now()}"))
+        plots["tick_duration_line"].append(viz.plot_line_tick_duration(data_loc + "minecraft_tick_times.csv", f"tick_duration_line{datetime.now()}"))
+
+        # Memory plots
+        plots['mem_box'].append(viz.plot_box_mem(data_loc + "mem.csv", f"mem_box{datetime.now()}"))
+        plots['mem_line'].append(viz.plot_line_mem(data_loc + "mem.csv", f"mem_line{datetime.now()}"))
+
+        report.render_report(f"{self.dest}/{filename}", plots)
 
 
 if __name__ == "__main__":

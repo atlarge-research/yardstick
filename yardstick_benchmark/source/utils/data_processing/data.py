@@ -29,8 +29,8 @@ def preprocess_data(location):
                 data = line.split(",")
                 metric = data[1]
 
+                output_dir = f"./output/{now}/{node}/"
                 try:
-                    output_dir = f"./output/{now}/{node}/"
                     os.mkdir(f"./output/{now}/{node}")
                 except OSError as error:
                     print(error)
