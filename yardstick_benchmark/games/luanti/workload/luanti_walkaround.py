@@ -9,7 +9,7 @@ import random
 import logging
 import threading
 from datetime import datetime
-from luanti_bot import LuantiClient
+from luanti_bot import LuantiBot
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -34,75 +34,96 @@ class WalkAroundBot:
     
     def __init__(self, username, host, port, box_x, box_z, box_width):
         self.username = username
-        self.client = LuantiClient(username, host, port)
-        self.running = False
-        self.thread = None
+        self.bot = LuantiBot(host, port, username)
         self.box_x = box_x
         self.box_z = box_z
         self.box_width = box_width
-        # Initial position
-        self.x = random.uniform(box_x, box_x + box_width)
-        self.y = SPAWN_Y  # Start at ground level
-        self.z = random.uniform(box_z, box_z + box_width)
+        self.running = False
+        self.thread = None
         
     def start(self):
-        """Start the bot's walking behavior"""
-        if self.client.connect():
-            logger.info(f"Bot {self.username} connected successfully")
-            time.sleep(1)  # Wait a moment before starting to move
-            
-            # Move to initial position
-            self.client.move(self.x, self.y, self.z)
-            
-            # Start walking thread
-            self.running = True
-            self.thread = threading.Thread(target=self._walk_loop)
-            self.thread.daemon = True
-            self.thread.start()
-            return True
-        else:
-            logger.error(f"Bot {self.username} failed to connect")
-            return False
-            
-    def _walk_loop(self):
-        """Main loop for random walking behavior"""
-        move_interval = 0.5  # Move every half second
-        last_move = 0
+        """Start the bot"""
+        logger.info(f"Starting WalkAround bot {self.username}")
         
-        while self.running:
-            now = time.time()
-            if now - last_move >= move_interval:
-                # Generate new target within the box
-                target_x = random.uniform(self.box_x, self.box_x + self.box_width)
-                target_z = random.uniform(self.box_z, self.box_z + self.box_width)
-                
-                # Move in small steps toward target
-                step_size = 1.0
-                dx = target_x - self.x
-                dz = target_z - self.z
-                
-                # Normalize vector and apply step size
-                distance = (dx**2 + dz**2)**0.5
-                if distance > 0:
-                    dx = dx / distance * min(step_size, distance)
-                    dz = dz / distance * min(step_size, distance)
-                
-                self.x += dx
-                self.z += dz
-                
-                # Send movement to server
-                self.client.move(self.x, self.y, self.z)
-                last_move = now
+        # Start the bot with a custom walk pattern
+        self.running = True
+        self.thread = threading.Thread(target=self._controlled_walk)
+        self.thread.daemon = True
+        self.thread.start()
+        
+        return True
+        
+    def _controlled_walk(self):
+        """Control the bot's walking pattern to stay within defined area"""
+        # Connect and initialize
+        if not self.bot.connect():
+            logger.error(f"Bot {self.username} failed to connect")
+            return
+            
+        if not self.bot.send_init_packet():
+            logger.error(f"Bot {self.username} failed to send init packet")
+            return
+            
+        # Start receiver thread in the bot
+        self.bot.running = True
+        receiver_thread = threading.Thread(target=self.bot.receive_packets)
+        receiver_thread.daemon = True
+        receiver_thread.start()
+        
+        # Initial position
+        x = random.uniform(self.box_x, self.box_x + self.box_width)
+        y = SPAWN_Y  # Start at ground level
+        z = random.uniform(self.box_z, self.box_z + self.box_width)
+        
+        # Send initial position
+        self.bot.position = (x, y, z)
+        self.bot.send_move_packet(x, y, z)
+        
+        # Random walk within box
+        while self.running and self.bot.running:
+            # Generate new target within the box
+            target_x = random.uniform(self.box_x, self.box_x + self.box_width)
+            target_z = random.uniform(self.box_z, self.box_z + self.box_width)
+            
+            # Move in small steps toward target
+            step_size = 1.0
+            dx = target_x - x
+            dz = target_z - z
+            
+            # Normalize vector and apply step size
+            distance = (dx**2 + dz**2)**0.5
+            if distance > 0:
+                dx = dx / distance * min(step_size, distance)
+                dz = dz / distance * min(step_size, distance)
+            
+            x += dx
+            z += dz
+            
+            # Send movement to server
+            self.bot.position = (x, y, z)
+            self.bot.send_move_packet(x, y, z)
+            
+            # Send keepalive and chat occasionally
+            if random.random() < 0.05:
+                self.bot.send_keepalive()
+            
+            if random.random() < 0.01:
+                self.bot.send_chat_message(f"Hello from {self.username} at position ({x:.1f}, {y:.1f}, {z:.1f})")
             
             # Small sleep to avoid CPU hogging
-            time.sleep(0.05)
+            time.sleep(0.2)
     
     def stop(self):
         """Stop the bot"""
         self.running = False
+        if self.bot:
+            self.bot.running = False
+            if self.bot.socket:
+                self.bot.socket.close()
+        
         if self.thread:
             self.thread.join(timeout=1)
-        self.client.disconnect()
+        
         logger.info(f"Bot {self.username} stopped")
 
 

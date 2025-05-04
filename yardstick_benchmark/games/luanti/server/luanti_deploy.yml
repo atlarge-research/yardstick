@@ -9,28 +9,28 @@
 
     - name: Download Luanti (Engine)
       get_url:
-        url: https://github.com/minetest/minetest/releases/download/5.7.0/minetest-5.7.0-linux-x86_64.tar.gz
-        dest: "{{ wd }}/luanti-5.7.0-linux-x86_64.tar.gz"
+        url: https://github.com/luanti-org/luanti/releases/download/5.11.0/luanti_5.11.0-linux-x86_64.tar.gz
+        dest: "{{ wd }}/luanti-5.11.0-linux-x86_64.tar.gz"
 
     - name: Extract Luanti package
       ansible.builtin.unarchive:
-        src: "{{ wd }}/luanti-5.7.0-linux-x86_64.tar.gz"
+        src: "{{ wd }}/luanti-5.11.0-linux-x86_64.tar.gz"
         dest: "{{ wd }}"
         remote_src: yes
 
     # Rename to match our naming convention
     - name: Rename directory to luanti
       shell: |
-        mv {{ wd }}/minetest-5.7.0-linux-x86_64 {{ wd }}/luanti-5.7.0
+        mv {{ wd }}/minetest-* {{ wd }}/luanti-5.11.0
       args:
-        creates: "{{ wd }}/luanti-5.7.0"
+        creates: "{{ wd }}/luanti-5.11.0"
 
     # Handle different game modes
     - name: Set up Minetest game (default)
       block:
         - name: Ensure default Minetest game is available
           file:
-            path: "{{ wd }}/luanti-5.7.0/games/minetest_game"
+            path: "{{ wd }}/luanti-5.11.0/games/minetest_game"
             state: directory
       when: game_mode == "minetest" or game_mode is not defined
 
@@ -46,11 +46,11 @@
         - name: Clone Extra Ordinance repository
           git:
             repo: "{{ extra_ordinance_repo }}"
-            dest: "{{ wd }}/luanti-5.7.0/games/extra_ordinance"
+            dest: "{{ wd }}/luanti-5.11.0/games/extra_ordinance"
 
         - name: Update minetest.conf for Extra Ordinance
           lineinfile:
-            path: "{{ wd }}/luanti-5.7.0/minetest.conf"
+            path: "{{ wd }}/luanti-5.11.0/minetest.conf"
             line: "default_game = extra_ordinance"
             create: yes
       when: game_mode == "extra_ordinance"
@@ -67,11 +67,11 @@
         - name: Clone custom game repository
           git:
             repo: "{{ custom_game_url }}"
-            dest: "{{ wd }}/luanti-5.7.0/games/custom_game"
+            dest: "{{ wd }}/luanti-5.11.0/games/custom_game"
 
         - name: Update minetest.conf for custom game
           lineinfile:
-            path: "{{ wd }}/luanti-5.7.0/minetest.conf"
+            path: "{{ wd }}/luanti-5.11.0/minetest.conf"
             line: "default_game = custom_game"
             create: yes
       when: game_mode == "custom" and custom_game_url is defined
@@ -79,19 +79,19 @@
     - name: Copy config file
       template:
         src: "{{luanti_template}}"
-        dest: "{{wd}}/luanti-5.7.0/minetest.conf"
+        dest: "{{wd}}/luanti-5.11.0/minetest.conf"
         force: no
 
     - name: Create mods directory
       file:
-        path: "{{ wd }}/luanti-5.7.0/mods/yardstick_collector"
+        path: "{{ wd }}/luanti-5.11.0/mods/yardstick_collector"
         state: directory
 
     - name: Create Yardstick collector mod
       copy:
-        dest: "{{ wd }}/luanti-5.7.0/mods/yardstick_collector/init.lua"
+        dest: "{{ wd }}/luanti-5.11.0/mods/yardstick_collector/init.lua"
         content: |
-          -- Yardstick collector mod for Luanti (Engine)
+          -- Yardstick collector mod for Luanti engine
           local http = minetest.request_http_api()
           local metric_data = {}
           local last_tick_time = os.clock()
@@ -112,6 +112,15 @@
                   metric_data.packets_in = stats.packets_in or 0
                   metric_data.packets_out = stats.packets_out or 0
               end
+              
+              -- Log metrics for local testing
+              minetest.log("action", string.format(
+                  "METRICS: tick_duration=%.6f, players=%d, packets_in=%d, packets_out=%d",
+                  metric_data.tick_duration,
+                  metric_data.player_count,
+                  metric_data.packets_in or 0,
+                  metric_data.packets_out or 0
+              ))
               
               -- Expose metrics via HTTP API for collection
               if http then
