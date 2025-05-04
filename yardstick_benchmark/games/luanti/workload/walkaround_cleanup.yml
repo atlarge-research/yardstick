@@ -1,0 +1,9 @@
+---
+- name: Cleanup Luanti WalkAround workload
+  gather_facts: true
+  hosts: all
+  tasks:
+    - name: Remove workload directory
+      file:
+        path: "{{ wd }}"
+        state: absent

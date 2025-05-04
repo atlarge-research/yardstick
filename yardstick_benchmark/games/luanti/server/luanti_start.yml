@@ -1,0 +1,17 @@
+---
+- name: Start Luanti Server
+  gather_facts: true
+  hosts: all
+  tasks:
+    - name: Run Luanti server
+      shell:
+        cmd: |
+          cd luanti-5.7.0
+          nohup ./bin/minetest --server --config ./minetest.conf --gameid {{ game_mode | default('minetest') }} &> ./server.log &
+          echo $! > ../luanti.pid
+        chdir: "{{ wd }}"
+    - name: Waiting for server to become ready
+      wait_for:
+        path: "{{wd}}/luanti-5.7.0/server.log"
+        search_regex: 'Server for gameid=".*" listening on'
+        timeout: 60

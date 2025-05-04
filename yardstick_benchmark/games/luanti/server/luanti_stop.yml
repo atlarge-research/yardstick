@@ -1,0 +1,30 @@
+---
+- name: Stop Luanti Server
+  gather_facts: true
+  hosts: all
+  tasks:
+    - name: Find Luanti PID
+      shell: |
+        cat {{wd}}/luanti.pid
+      register: shell_luanti_pid
+      ignore_errors: yes
+    - name: Obtain Luanti pid
+      set_fact:
+        luanti_pid: "{{ shell_luanti_pid.stdout }}"
+      when: shell_luanti_pid.rc == 0
+    - name: Stop Luanti server
+      shell: |
+        kill {{luanti_pid}}
+      when: shell_luanti_pid.rc == 0
+    - name: Wait for Luanti to stop
+      block:
+        - wait_for:
+            path: "/proc/{{ luanti_pid }}/status"
+            state: absent
+            timeout: 15
+          register: wait_for_stop
+      rescue:
+        - name: Force kill stuck processes
+          shell: |
+            kill -9 {{luanti_pid}}
+      when: shell_luanti_pid.rc == 0

@@ -1,0 +1,26 @@
+---
+- name: Stop Luanti WalkAround workload
+  gather_facts: true
+  hosts: all
+  tasks:
+    - name: Find workload PID
+      shell: |
+        cat {{wd}}/walkaround.pid
+      register: walkaround_pid
+      ignore_errors: yes
+    - name: Stop WalkAround process
+      shell: |
+        kill {{ walkaround_pid.stdout }}
+      when: walkaround_pid.rc == 0
+    - name: Wait for WalkAround to stop
+      block:
+        - wait_for:
+            path: "/proc/{{ walkaround_pid.stdout }}/status"
+            state: absent
+            timeout: 15
+          register: wait_for_stop
+      rescue:
+        - name: Force kill stuck processes
+          shell: |
+            kill -9 {{ walkaround_pid.stdout }}
+      when: walkaround_pid.rc == 0

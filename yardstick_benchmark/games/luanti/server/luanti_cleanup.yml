@@ -1,0 +1,9 @@
+---
+- name: Cleanup Luanti Server
+  gather_facts: true
+  hosts: all
+  tasks:
+    - name: Remove Luanti server directory
+      file:
+        path: "{{ wd }}"
+        state: absent

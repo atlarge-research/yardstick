@@ -1,0 +1,31 @@
+---
+- name: Deploy Luanti WalkAround workload
+  gather_facts: true
+  hosts: all
+  tasks:
+    - file:
+        path: "{{ wd }}"
+        state: directory
+    - name: Check for Python 3
+      shell: |
+        python3 --version
+      register: python_version
+      failed_when: python_version.rc != 0
+    - name: Create Python virtual environment
+      shell:
+        cmd: |
+          python3 -m venv venv
+        chdir: "{{ wd }}"
+    - name: Install required Python packages
+      shell:
+        cmd: |
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install python-dotenv
+        chdir: "{{ wd }}"
+    - name: Copy scripts
+      copy:
+        src: "{{ item }}"
+        dest: "{{ wd }}"
+        mode: "0755"
+      with_items: "{{ scripts }}"
