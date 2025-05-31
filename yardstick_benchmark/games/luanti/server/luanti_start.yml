@@ -6,12 +6,13 @@
     - name: Run Luanti server
       shell:
         cmd: |
-          cd luanti-5.11.0
-          nohup ./bin/luanti --server --config ./minetest.conf --gameid {{ game_mode | default('minetest') }} &> ./server.log &
-          echo $! > ../luanti.pid
+          cd {{ wd }}
+          ./bin/luanti-server --gameid {{ game_mode }} --world worlds/benchmark --config luanti.conf --port 30000 > server.log 2>&1 &
+          echo $! > luanti.pid
         chdir: "{{ wd }}"
-    - name: Waiting for server to become ready
+
+    - name: Wait for server to start
       wait_for:
-        path: "{{wd}}/luanti-5.11.0/server.log"
-        search_regex: 'Server for gameid=".*" listening on'
+        path: "{{ wd }}/server.log"
+        search_regex: "Server started"
         timeout: 60

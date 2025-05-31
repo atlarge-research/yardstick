@@ -1,25 +1,26 @@
 ---
-- hosts: all
-  gather_facts: True
+- name: Start Luanti WalkAround workload
+  gather_facts: true
+  hosts: all
   environment:
-    DURATION: "{{duration}}"
-    LUANTI_HOST: "{{luanti_host}}"
+    DURATION: "{{ duration }}"
+    LUANTI_HOST: "{{ luanti_host }}"
     LUANTI_PORT: "30000"
-    SPAWN_X: "{{spawn_x}}"
-    SPAWN_Y: "{{spawn_y}}"
-    SPAWN_Z: "{{spawn_z}}"
-    BOX_WIDTH: "{{box_width}}"
-    BOX_X: "{{box_x}}"
-    BOX_Z: "{{box_z}}"
-    BOTS_JOIN_DELAY: "{{bots_join_delay}}"
-    BOTS_PER_NODE: "{{bots_per_node}}"
+    SPAWN_X: "{{ spawn_x }}"
+    SPAWN_Y: "{{ spawn_y }}"
+    SPAWN_Z: "{{ spawn_z }}"
+    BOX_WIDTH: "{{ box_width }}"
+    BOX_X: "{{ box_x }}"
+    BOX_Z: "{{ box_z }}"
+    BOTS_JOIN_DELAY: "{{ bots_join_delay }}"
+    BOTS_PER_NODE: "{{ bots_per_node }}"
   tasks:
-    - name: Run Luanti WalkAround workload
+    - name: Run Luanti bot
       shell:
         cmd: |
-          source venv/bin/activate
-          nohup python luanti_walkaround.py > walkaround-{{ inventory_hostname }}.log 2>&1 &
+          cd {{ wd }}
+          python3 walkaround.py > walkaround-{{ inventory_hostname }}.log 2>&1 &
           echo $! > walkaround.pid
-        chdir: "{{wd}}"
+        chdir: "{{ wd }}"
       environment:
         BOT_INDEX: "{{ groups['all'].index(inventory_hostname) }}"

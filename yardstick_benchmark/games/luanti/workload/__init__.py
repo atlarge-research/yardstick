@@ -1,8 +1,6 @@
 from yardstick_benchmark.model import RemoteApplication, Node
 from pathlib import Path
-import os
 from datetime import timedelta
-
 
 class WalkAround(RemoteApplication):
     def __init__(
@@ -11,7 +9,7 @@ class WalkAround(RemoteApplication):
         server_host: str,
         duration: timedelta = timedelta(seconds=60),
         spawn_x: int = 0,
-        spawn_y: int = 0,
+        spawn_y: int = 80,
         spawn_z: int = 0,
         box_width: int = 32,
         box_x: int = -16,
@@ -29,8 +27,7 @@ class WalkAround(RemoteApplication):
             extravars={
                 "hostnames": [n.host for n in nodes],
                 "scripts": [
-                    str(Path(__file__).parent / "luanti_bot.py"),
-                    str(Path(__file__).parent / "luanti_walkaround.py"),
+                    str(Path(__file__).parent / "walkaround.py"),
                 ],
                 "duration": duration.total_seconds(),
                 "luanti_host": server_host,

@@ -28,19 +28,19 @@ if __name__ == "__main__":
         # # Telegraf (https://www.influxdata.com/time-series-platform/telegraf/)
         # # is the metric collection tool we use to collect performance metrics from the
         # # nodes and any applications deployed on these nodes.
-        # telegraf = Telegraf(nodes)
+        telegraf = Telegraf(nodes)
         # # We plan to deploy our Minecraft-like game server on node 0.
         # # To obtain application level metrics from the game server,
         # # the next two lines configure node 0 to run additional metric collection
         # # tools.
-        # telegraf.add_input_jolokia_agent(nodes[0])
-        # telegraf.add_input_execd_minecraft_ticks(nodes[0])
+        telegraf.add_input_jolokia_agent(nodes[0])
+        telegraf.add_input_execd_minecraft_ticks(nodes[0])
         # # Perform the actual deployment of Telegraf.
         # # This includes downloading the Telegraf executable and preparing configuration
         # # files.
-        # res = telegraf.deploy()
+        res = telegraf.deploy()
         # # Start Telegraf on all remote nodes.
-        # telegraf.start()
+        telegraf.start()
 
         ### System Under Test (SUT) ###
 

@@ -1,0 +1,30 @@
+
+
+-------------
+  Separator
+-------------
+
+2025-05-07 22:57:07: [Main]: Using game specified by --gameid on the command line
+2025-05-07 22:57:08: ACTION[Main]: Server: Shutting down
+2025-05-07 22:57:08: ERROR[Main]: In thread 0x7ff858334fc0:
+2025-05-07 22:57:08: ERROR[Main]: /Users/sfence/Desktop/minetest/luanti_build_x86_64_11/src/serverenvironment.cpp:220: std::string LBMManager::createIntroductionTimesString(): A fatal error occurred: attempted to query on non fully set up LBMManager
+
+
+-------------
+  Separator
+-------------
+
+2025-05-11 16:37:59: [Main]: Using game specified by --gameid on the command line
+2025-05-11 16:38:00: ACTION[Main]: Server: Shutting down
+2025-05-11 16:38:00: ERROR[Main]: In thread 0x7ff858334fc0:
+2025-05-11 16:38:00: ERROR[Main]: /Users/sfence/Desktop/minetest/luanti_build_x86_64_11/src/serverenvironment.cpp:220: std::string LBMManager::createIntroductionTimesString(): A fatal error occurred: attempted to query on non fully set up LBMManager
+
+
+-------------
+  Separator
+-------------
+
+2025-05-11 16:38:08: [Main]: Using game specified by --gameid on the command line
+2025-05-11 16:38:09: ACTION[Main]: Server: Shutting down
+2025-05-11 16:38:09: ERROR[Main]: In thread 0x7ff858334fc0:
+2025-05-11 16:38:09: ERROR[Main]: /Users/sfence/Desktop/minetest/luanti_build_x86_64_11/src/serverenvironment.cpp:220: std::string LBMManager::createIntroductionTimesString(): A fatal error occurred: attempted to query on non fully set up LBMManager

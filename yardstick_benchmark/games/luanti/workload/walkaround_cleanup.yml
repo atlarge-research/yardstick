@@ -1,5 +1,5 @@
 ---
-- name: Cleanup Luanti WalkAround workload
+- name: Clean up Luanti WalkAround workload
   gather_facts: true
   hosts: all
   tasks:

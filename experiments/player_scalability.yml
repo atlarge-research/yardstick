@@ -1,0 +1,23 @@
+---
+name: luanti_player_scalability
+description: Test Luanti player scalability with increasing player counts
+platform: luanti
+game_mode: minetest_game
+nodes: 5 # 1 server + 4 workload nodes
+duration: 600 # seconds
+scenarios:
+  - name: players_10
+    description: Test with 10 concurrent players
+    bots_per_node: 2.5 # 10 total across 4 nodes
+  - name: players_20
+    description: Test with 20 concurrent players
+    bots_per_node: 5 # 20 total
+  - name: players_50
+    description: Test with 50 concurrent players
+    bots_per_node: 12.5 # 50 total
+  - name: players_100
+    description: Test with 100 concurrent players
+    bots_per_node: 25 # 100 total
+  - name: players_200
+    description: Test with 200 concurrent players
+    bots_per_node: 50 # 200 total
