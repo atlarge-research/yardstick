@@ -2,39 +2,111 @@
 - name: Deploy Luanti Server
   gather_facts: true
   hosts: all
+  become: yes
   tasks:
+    - name: Update package cache
+      apt:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Install required packages
+      package:
+        name:
+          - wget
+          - tar
+          - sqlite3
+          - build-essential
+        state: present
+      when: ansible_os_family == "Debian"
+
     - name: Create working directory
       file:
         path: "{{ wd }}"
         state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0755"
 
-    - name: Download Luanti Server
+    - name: Download Luanti Server (try multiple sources)
       get_url:
-        url: https://github.com/luanti-org/luanti/releases/download/5.11.0/luanti-5.11.0-linux-x86_64.tar.gz
+        url: "{{ item }}"
         dest: "{{ wd }}/luanti.tar.gz"
+        timeout: 30
+      loop:
+        - https://github.com/luanti-org/luanti/releases/download/5.11.0/luanti-5.11.0-linux-x86_64.tar.gz
+        - https://github.com/minetest/minetest/releases/download/5.8.0/minetest-5.8.0-linux.tar.gz
+      register: download_result
+      until: download_result is succeeded
+      retries: 3
+      delay: 10
+      ignore_errors: yes
 
     - name: Extract Luanti Server
       unarchive:
         src: "{{ wd }}/luanti.tar.gz"
         dest: "{{ wd }}"
         remote_src: yes
+        creates: "{{ wd }}/bin"
+      when: download_result is succeeded
+
+    - name: Find the actual server binary
+      find:
+        paths: "{{ wd }}"
+        patterns: "*server*"
+        file_type: file
+        recurse: yes
+      register: server_binaries
+
+    - name: Create symlink to server binary
+      file:
+        src: "{{ server_binaries.files[0].path }}"
+        dest: "{{ wd }}/luanti-server"
+        state: link
+      when: server_binaries.files | length > 0
 
     - name: Create mod directories
       file:
         path: "{{ wd }}/mods/yardstick_collector"
         state: directory
+        owner: ubuntu
+        group: ubuntu
 
     - name: Copy collector mod
       copy:
         src: "{{ collector_mod }}"
         dest: "{{ wd }}/mods/yardstick_collector/init.lua"
+        owner: ubuntu
+        group: ubuntu
 
     - name: Create world directory
       file:
         path: "{{ wd }}/worlds/benchmark"
         state: directory
+        owner: ubuntu
+        group: ubuntu
+
+    - name: Create world.mt file
+      copy:
+        content: |
+          enable_damage = false
+          creative_mode = true
+          gameid = {{ game_mode }}
+          world_name = benchmark
+          backend = sqlite3
+        dest: "{{ wd }}/worlds/benchmark/world.mt"
+        owner: ubuntu
+        group: ubuntu
 
     - name: Copy config file
       template:
         src: "{{ luanti_template }}"
         dest: "{{ wd }}/luanti.conf"
+        owner: ubuntu
+        group: ubuntu
+
+    - name: Set ownership of entire working directory
+      file:
+        path: "{{ wd }}"
+        owner: ubuntu
+        group: ubuntu
+        recurse: yes

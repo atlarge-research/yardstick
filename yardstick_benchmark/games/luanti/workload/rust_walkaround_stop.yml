@@ -1,0 +1,21 @@
+---
+- name: Stop Rust WalkAround bots
+  hosts: all
+  become: yes
+  tasks:
+    - name: Kill walkbot processes
+      shell: |
+        pkill -f "multi_walkbot" || true
+        pkill -f "walkbot" || true
+      ignore_errors: yes
+
+    - name: Wait for processes to terminate
+      pause:
+        seconds: 3
+
+    - name: Fetch bot logs
+      fetch:
+        src: "/tmp/walkbot_{{ inventory_hostname }}.log"
+        dest: "./logs/"
+        flat: yes
+      ignore_errors: yes
