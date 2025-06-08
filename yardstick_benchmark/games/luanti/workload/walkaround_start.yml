@@ -1,0 +1,26 @@
+---
+- name: Start Luanti WalkAround workload
+  gather_facts: true
+  hosts: all
+  environment:
+    DURATION: "{{ duration }}"
+    LUANTI_HOST: "{{ luanti_host }}"
+    LUANTI_PORT: "30000"
+    SPAWN_X: "{{ spawn_x }}"
+    SPAWN_Y: "{{ spawn_y }}"
+    SPAWN_Z: "{{ spawn_z }}"
+    BOX_WIDTH: "{{ box_width }}"
+    BOX_X: "{{ box_x }}"
+    BOX_Z: "{{ box_z }}"
+    BOTS_JOIN_DELAY: "{{ bots_join_delay }}"
+    BOTS_PER_NODE: "{{ bots_per_node }}"
+  tasks:
+    - name: Run Luanti bot
+      shell:
+        cmd: |
+          cd {{ wd }}
+          python3 walkaround.py > walkaround-{{ inventory_hostname }}.log 2>&1 &
+          echo $! > walkaround.pid
+        chdir: "{{ wd }}"
+      environment:
+        BOT_INDEX: "{{ groups['all'].index(inventory_hostname) }}"

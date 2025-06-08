@@ -1,0 +1,23 @@
+---
+- name: Deploy Luanti WalkAround workload
+  gather_facts: true
+  hosts: all
+  tasks:
+    - name: Create working directory
+      file:
+        path: "{{ wd }}"
+        state: directory
+
+    - name: Install required Python packages
+      pip:
+        name:
+          - socket
+          - threading
+        executable: pip3
+
+    - name: Copy bot script
+      copy:
+        src: "{{ item }}"
+        dest: "{{ wd }}"
+        mode: 0755
+      with_items: "{{ scripts }}"

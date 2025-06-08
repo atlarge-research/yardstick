@@ -1,0 +1,19 @@
+---
+- name: Clean up Luanti Server
+  gather_facts: true
+  hosts: all
+  become: yes
+  tasks:
+    - name: Stop any running server processes
+      shell: pkill -f luanti-server || pkill -f minetest || true
+      ignore_errors: yes
+
+    - name: Remove Luanti server directory
+      file:
+        path: "{{ wd }}"
+        state: absent
+
+    - name: Clean up any remaining processes
+      shell: |
+        ps aux | grep -E "(luanti|minetest)" | grep -v grep | awk '{print $2}' | xargs -r kill -9
+      ignore_errors: yes

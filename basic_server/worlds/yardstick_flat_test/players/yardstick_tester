@@ -1,0 +1,65 @@
+extended_attributes = null
+breath = 10
+yaw = 295.119995
+hp = 20
+position = (-108.79,85,204.39)
+pitch = 26.3199997
+name = yardstick_tester
+version = 1
+PlayerArgsEnd
+List main 32
+Width 0
+Item default:snow
+Item default:permafrost_with_stones
+Item default:permafrost
+Item default:cobble
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+EndInventoryList
+List craft 9
+Width 3
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+EndInventoryList
+List craftpreview 1
+Width 0
+Empty
+EndInventoryList
+List craftresult 1
+Width 0
+Empty
+EndInventoryList
+EndInventory

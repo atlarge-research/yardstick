@@ -1,0 +1,24 @@
+---
+- name: Start Rust WalkAround bots
+  hosts: all
+  become: yes
+  tasks:
+    - name: Start multiple walkbots
+      shell: |
+        source ~/.cargo/env
+        nohup cargo run --release --bin multi_walkbot -- \
+          --server {{ server_host }}:{{ server_port }} \
+          --count {{ bots_per_node }} \
+          --mode {{ movement_mode }} \
+          --speed {{ movement_speed }} \
+          --duration {{ duration | int }} \
+          > /tmp/walkbot_{{ inventory_hostname }}.log 2>&1 &
+      args:
+        chdir: "{{ texmodbot_path }}"
+      become_user: ubuntu
+      environment:
+        CARGO_HOME: /home/ubuntu/.cargo
+
+    - name: Wait for bots to initialize
+      pause:
+        seconds: 5

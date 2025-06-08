@@ -1,0 +1,48 @@
+---
+- name: Deploy Rust WalkAround bots
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install Rust if not present
+      shell: |
+        if ! command -v cargo &> /dev/null; then
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source ~/.cargo/env
+          rustup install nightly
+          rustup default nightly
+        fi
+      become_user: ubuntu
+
+    - name: Create texmodbot directory
+      file:
+        path: "{{ texmodbot_path }}"
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0755"
+
+    - name: Copy texmodbot source code
+      synchronize:
+        src: "{{ texmodbot_source }}/"
+        dest: "{{ texmodbot_path }}/"
+        delete: yes
+        recursive: yes
+      delegate_to: localhost
+
+    - name: Set ownership of texmodbot files
+      file:
+        path: "{{ texmodbot_path }}"
+        owner: ubuntu
+        group: ubuntu
+        recurse: yes
+
+    - name: Build Rust bots
+      shell: |
+        source ~/.cargo/env
+        rustup override set nightly
+        cargo build --release --bin multi_walkbot
+      args:
+        chdir: "{{ texmodbot_path }}"
+      become_user: ubuntu
+      environment:
+        CARGO_HOME: /home/ubuntu/.cargo

@@ -1,0 +1,48 @@
+---
+- name: Start Luanti Server
+  gather_facts: true
+  hosts: all
+  become: yes
+  tasks:
+    - name: Check if server binary exists
+      stat:
+        path: "{{ wd }}/luanti-server"
+      register: server_binary
+
+    - name: Find alternative server binary if needed
+      find:
+        paths: "{{ wd }}"
+        patterns: "*server*"
+        file_type: file
+        recurse: yes
+      register: alt_server_binaries
+      when: not server_binary.stat.exists
+
+    - name: Make server binary executable
+      file:
+        path: "{{ server_binary.stat.path if server_binary.stat.exists else alt_server_binaries.files[0].path }}"
+        mode: "0755"
+
+    - name: Run Luanti server
+      shell:
+        cmd: |
+          cd {{ wd }}
+          SERVER_BIN="{{ server_binary.stat.path if server_binary.stat.exists else alt_server_binaries.files[0].path }}"
+          nohup $SERVER_BIN --gameid {{ game_mode }} --world worlds/benchmark --config luanti.conf --port 30000 --logfile server.log > /dev/null 2>&1 &
+          echo $! > luanti.pid
+        chdir: "{{ wd }}"
+      become_user: ubuntu
+
+    - name: Wait for server to start
+      wait_for:
+        port: 30000
+        host: "0.0.0.0"
+        timeout: 60
+        msg: "Server failed to start on port 30000"
+
+    - name: Check server log for startup
+      wait_for:
+        path: "{{ wd }}/server.log"
+        search_regex: "(Server started|listening on|ACTION\\[Server\\])"
+        timeout: 30
+      ignore_errors: yes
