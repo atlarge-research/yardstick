@@ -1,0 +1,32 @@
+[package]
+name = "texmodbot"
+version = "0.1.0"
+edition = "2021"
+description = "Extract texture modifiers from minetest servers to obtain test data for texture modifier parsers"
+
+[[bin]]
+name = "texmodbot"
+path = "src/main.rs"
+
+[[bin]]
+name = "walkbot"
+path = "src/walkbot.rs"
+
+[[bin]]
+name = "multi_walkbot"
+path = "src/multi_walkbot.rs"
+
+[dependencies]
+mt_net = { git = "https://github.com/minetest-rust/mt_net", features = ["conn", "client"] }
+tokio = { version = "1.25.0", features = ["rt", "rt-multi-thread", "signal"] }
+mt_auth = { git = "https://github.com/minetest-rust/mt_auth" }
+clap = { version = "4.3.0", features = ["derive"] }
+futures-util = "0.3.28"
+enumset = "1.1.2"
+rand = "0.8.5"
+[patch."https://github.com/minetest-rust/mt_rudp"]
+mt_rudp = { path = "../mt_rudp" }
+[patch."https://github.com/minetest-rust/mt_auth"]
+mt_auth = { path = "../mt_auth" }
+[patch."https://github.com/minetest-rust/mt_net"]
+mt_net = { path = "../mt_net" }

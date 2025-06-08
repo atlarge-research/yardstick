@@ -1,0 +1,12 @@
+[package]
+name = "mt_auth"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+futures = { version = "0.3.26" }
+mt_net = { git = "https://github.com/minetest-rust/mt_net", features = ["conn", "client"] }
+rand = "0.8.5"
+sha2 = "0.10.6"
+srp = { git = "https://github.com/minetest-rust/PAKEs.git" }
+tokio = { version = "1.25.0" }
