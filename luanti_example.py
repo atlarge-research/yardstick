@@ -35,13 +35,8 @@ if __name__ == "__main__":
         # is the metric collection tool we use to collect performance metrics from the
         # nodes and any applications deployed on these nodes.
         telegraf = Telegraf(nodes)
-        # We plan to deploy our Luanti game server on node 0.
-        # To obtain application level metrics from the game server,
-        # the next two lines configure node 0 to run additional metric collection
-        # tools for Luanti.
-        telegraf.add_input_jolokia_agent(nodes[0])
-        # Note: Luanti uses different metrics than Minecraft, so we may need to adapt
-        # the metrics collection or create Luanti-specific collectors
+        # Configure metrics collection for the Luanti server on node 0
+        telegraf.add_input_luanti_metrics(nodes[0])
         
         # Perform the actual deployment of Telegraf.
         # This includes downloading the Telegraf executable and preparing configuration

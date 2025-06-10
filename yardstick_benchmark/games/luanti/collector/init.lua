@@ -1,48 +1,88 @@
 -- Yardstick collector mod for Luanti
+-- Collects performance metrics and exports them in Prometheus format
+
 local http = minetest.request_http_api()
 local metric_endpoint = "http://localhost:9091/metrics"
 local collection_interval = 1 -- seconds
 
--- Metrics
 local metrics = {
     tick_duration = 0,
+    packet_count = 0,
     player_count = 0,
-    packets_in = 0,
-    packets_out = 0,
-    last_timestamp = os.time()
+    last_tick_time = minetest.get_us_time()
 }
 
--- Track tick duration
+-- Register global step for tick timing
 minetest.register_globalstep(function(dtime)
-    metrics.tick_duration = dtime
-    metrics.player_count = #minetest.get_connected_players()
-    
-    -- Only send metrics once per second
-    local current_time = os.time()
-    if current_time - metrics.last_timestamp >= collection_interval then
-        send_metrics()
-        metrics.last_timestamp = current_time
-    end
+    local current_time = minetest.get_us_time()
+    metrics.tick_duration = (current_time - metrics.last_tick_time) / 1000000
+    metrics.last_tick_time = current_time
 end)
 
--- Track network packets
-minetest.register_on_modchannel_message(function(channel_name, sender, message)
-    metrics.packets_in = metrics.packets_in + 1
+-- Register packet counters
+minetest.register_on_modchannel_message(function(channel, sender, message)
+    metrics.packet_count = metrics.packet_count + 1
 end)
+
+-- Update player count
+minetest.register_on_joinplayer(function(player)
+    metrics.player_count = metrics.player_count + 1
+end)
+
+minetest.register_on_leaveplayer(function(player)
+    metrics.player_count = metrics.player_count - 1
+end)
+
+-- Export metrics to Prometheus format
+local function export_metrics()
+    local metrics_text = string.format([[
+# HELP luanti_tick_duration_seconds Server tick duration
+# TYPE luanti_tick_duration_seconds gauge
+luanti_tick_duration_seconds %f
+# HELP luanti_packet_total Total packets processed
+# TYPE luanti_packet_total counter
+luanti_packet_total %d
+# HELP luanti_player_count Current player count
+# TYPE luanti_player_count gauge
+luanti_player_count %d
+]], metrics.tick_duration, metrics.packet_count, metrics.player_count)
+    
+    -- Write to file for Prometheus textfile collector
+    local f = io.open("/var/lib/node_exporter/luanti_metrics.prom", "w")
+    if f then
+        f:write(metrics_text)
+        f:close()
+    end
+end
+
+-- Export metrics every second
+minetest.register_globalstep(function(dtime)
+    export_metrics()
+end)
+
+-- Log startup
+minetest.log("info", "Yardstick collector mod loaded")
+
+-- Track outgoing packets
+local old_send = core.send_chat_message
+if old_send then
+    core.send_chat_message = function(message)
+        metrics.packet_count = metrics.packet_count + 1
+        return old_send(message)
+    end
+end
 
 -- Send metrics to Prometheus endpoint
 function send_metrics()
     -- Format metrics for Prometheus
     local payload = string.format([[
 luanti_tick_duration_seconds %f
+luanti_packet_total %d
 luanti_player_count %d
-luanti_packet_in_total %d
-luanti_packet_out_total %d
     ]], 
     metrics.tick_duration,
-    metrics.player_count,
-    metrics.packets_in,
-    metrics.packets_out)
+    metrics.packet_count,
+    metrics.player_count)
     
     -- Send metrics via HTTP
     if http then
@@ -58,22 +98,7 @@ luanti_packet_out_total %d
     minetest.log("action", "[Yardstick] " .. payload)
 end
 
--- Track outgoing packets
-local old_send = core.send_chat_message
-if old_send then
-    core.send_chat_message = function(message)
-        metrics.packets_out = metrics.packets_out + 1
-        return old_send(message)
-    end
-end
-
--- Track player connections
-minetest.register_on_joinplayer(function(player)
-    minetest.log("action", "[Yardstick] Player joined: " .. player:get_player_name())
-end)
-
-minetest.register_on_leaveplayer(function(player)
-    minetest.log("action", "[Yardstick] Player left: " .. player:get_player_name())
-end)
-
-minetest.log("action", "Yardstick collector mod initialized") 
+-- Export metrics every second
+minetest.register_globalstep(function(dtime)
+    send_metrics()
+end) 

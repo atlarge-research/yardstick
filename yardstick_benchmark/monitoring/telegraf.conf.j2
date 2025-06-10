@@ -86,8 +86,7 @@
   # logfile = ""
 
   ## The logfile will be rotated after the time interval specified.  When set
-  ## to 0 no time based rotation is performed.  Logs are rotated only when
-  ## written to, if there is no log activity rotation may be delayed.
+  ## to 0 no time based rotation is performed.
   # logfile_rotation_interval = "0h"
 
   ## The logfile will be rotated when it becomes larger than the specified
@@ -368,6 +367,24 @@
   command = ["python3", "{{wd}}/jolokia_get_minecraft_tick.py"]
   data_format = "csv"
   csv_header_row_count = 1
+{% endif %}
+
+{% if inventory_hostname in luanti_servers %}
+[[inputs.prometheus]]
+  urls = ["file:///var/lib/node_exporter/luanti_metrics.prom"]
+  name_suffix = "_luanti"
+  metric_version = 2
+
+  # Luanti specific metrics
+  [[inputs.prometheus.metric]]
+    name = "luanti_tick_duration_seconds"
+    type = "gauge"
+  [[inputs.prometheus.metric]]
+    name = "luanti_packet_total"
+    type = "counter"
+  [[inputs.prometheus.metric]]
+    name = "luanti_player_count"
+    type = "gauge"
 {% endif %}
 
 ###############################################################################
