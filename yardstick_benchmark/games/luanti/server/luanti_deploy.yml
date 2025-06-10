@@ -3,6 +3,7 @@
   gather_facts: true
   hosts: all
   become: yes
+  become_user: ubuntu
   tasks:
     - name: Update package cache
       apt:
@@ -74,7 +75,7 @@
         creates: "{{ wd }}/bin"
       when: download_result is succeeded
 
-    - name: Find the actual server binary
+    - name: Find server binary
       find:
         paths: "{{ wd }}"
         patterns: "*server*"
