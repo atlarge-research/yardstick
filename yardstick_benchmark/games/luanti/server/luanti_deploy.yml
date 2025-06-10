@@ -3,7 +3,6 @@
   gather_facts: true
   hosts: all
   become: yes
-  become_user: ubuntu
   tasks:
     - name: Update package cache
       apt:
@@ -25,32 +24,24 @@
       file:
         path: "{{ wd }}"
         state: directory
-        owner: ubuntu
-        group: ubuntu
         mode: "0755"
 
     - name: Create mods directory
       file:
         path: "{{ wd }}/worlds/benchmark/mods"
         state: directory
-        owner: ubuntu
-        group: ubuntu
         mode: "0755"
 
     - name: Create yardstick_collector mod directory
       file:
         path: "{{ wd }}/worlds/benchmark/mods/yardstick_collector"
         state: directory
-        owner: ubuntu
-        group: ubuntu
         mode: "0755"
 
     - name: Copy collector mod
       copy:
         src: "{{ collector_mod }}"
         dest: "{{ wd }}/worlds/benchmark/mods/yardstick_collector/init.lua"
-        owner: ubuntu
-        group: ubuntu
         mode: "0644"
 
     - name: Download Luanti Server (try multiple sources)
@@ -94,22 +85,16 @@
       template:
         src: "{{ luanti_template }}"
         dest: "{{ wd }}/luanti.conf"
-        owner: ubuntu
-        group: ubuntu
         mode: "0644"
 
     - name: Create metrics directory
       file:
         path: /var/lib/node_exporter
         state: directory
-        owner: ubuntu
-        group: ubuntu
         mode: "0755"
-      become: yes
 
     - name: Start node_exporter
       systemd:
         name: node_exporter
         state: started
         enabled: yes
-      become: yes

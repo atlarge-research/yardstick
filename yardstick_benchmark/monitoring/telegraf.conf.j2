@@ -313,62 +313,6 @@
   ## dump metrics with 0 values too
   dump_zeros       = true
 
-{% if inventory_hostname in jolokia2_agent %}
-# Read JMX metrics from a Jolokia REST agent endpoint
-[[inputs.jolokia2_agent]]
-  # default_tag_prefix      = ""
-  # default_field_prefix    = ""
-  # default_field_separator = "."
-  # Add agents URLs to query
-  urls = ["http://localhost:8778/jolokia"]
-  # username = ""
-  # password = ""
-  # response_timeout = "5s"
-  ## Optional origin URL to include as a header in the request. Some endpoints
-  ## may reject an empty origin.
-  # origin = ""
-  ## Optional TLS config
-  # tls_ca   = "/var/private/ca.pem"
-  # tls_cert = "/var/private/client.pem"
-  # tls_key  = "/var/private/client-key.pem"
-  # insecure_skip_verify = false
-  ## Add metrics to read
-  [[inputs.jolokia2_agent.metric]]
-    name  = "java_runtime"
-    mbean = "java.lang:type=Runtime"
-    paths = ["Uptime"]
-  [[inputs.jolokia2_agent.metric]]
-    name  = "jvm_memory"
-    mbean = "java.lang:type=Memory"
-    paths = ["HeapMemoryUsage", "NonHeapMemoryUsage", "ObjectPendingFinalizationCount"]
-  [[inputs.jolokia2_agent.metric]]
-    name     = "jvm_garbage_collector"
-    mbean    = "java.lang:name=*,type=GarbageCollector"
-    paths    = ["CollectionTime", "CollectionCount"]
-    tag_keys = ["name"]
-  [[inputs.jolokia2_agent.metric]]
-    name       = "jvm_memory_pool"
-    mbean      = "java.lang:name=*,type=MemoryPool"
-    paths      = ["Usage", "PeakUsage", "CollectionUsage"]
-    tag_keys   = ["name"]
-    tag_prefix = "pool_"
-  [[inputs.jolokia2_agent.metric]]
-    name  = "java_lang_OperatingSystem"
-    mbean = "java.lang:type=OperatingSystem"
-    paths = ["AvailableProcessors", "CommittedVirtualMemorySize", "FreePhysicalMemorySize", "FreeSwapSpaceSize", "MaxFileDescriptorCount", "OpenFileDescriptorCount", "ProcessCpuLoad", "ProcessCpuTime", "SystemCpuLoad", "SystemLoadAverage", "TotalPhysicalMemorySize", "TotalSwapSpaceSize"]
-  [[inputs.jolokia2_agent.metric]]
-    name  = "minecraft_tick_times"
-    mbean = "net.minecraft.server:type=Server"
-    paths = ["averageTickTime", "tickTimes"]
-{% endif %}
-
-{% if inventory_hostname in execd_minecraft_ticks %}
-[[inputs.execd]]
-  command = ["python3", "{{wd}}/jolokia_get_minecraft_tick.py"]
-  data_format = "csv"
-  csv_header_row_count = 1
-{% endif %}
-
 {% if inventory_hostname in luanti_servers %}
 [[inputs.prometheus]]
   urls = ["file:///var/lib/node_exporter/luanti_metrics.prom"]

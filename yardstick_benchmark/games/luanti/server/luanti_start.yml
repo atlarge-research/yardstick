@@ -31,7 +31,6 @@
           nohup $SERVER_BIN --gameid {{ game_mode }} --world worlds/benchmark --config luanti.conf --port 30000 --logfile server.log > /dev/null 2>&1 &
           echo $! > luanti.pid
         chdir: "{{ wd }}"
-      become_user: ubuntu
 
     - name: Wait for server to start
       wait_for:
