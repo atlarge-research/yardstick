@@ -3,5 +3,5 @@ lbm_introduction_times = default:upgrade_chest_locked_v2~0;:doors:replace_doors_
 lbm_introduction_times_version = 1
 time_of_day = 6125
 last_clear_objects_time = 0
-game_time = 209335
+game_time = 5686
 EnvArgsEnd

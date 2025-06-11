@@ -1,16 +1,16 @@
 extended_attributes = null
 breath = 10
-yaw = 242.330017
+yaw = 163.429993
 hp = 20
-position = (-33.99,85,4.38)
-pitch = 32.3699989
+position = (91.24,85,-76.77)
+pitch = 10.6099997
 name = yardstick_tester1
 version = 1
 PlayerArgsEnd
 List main 32
 Width 0
-Item default:snow
-Item default:permafrost_with_stones
+Item default:dirt
+Empty
 Empty
 Empty
 Empty

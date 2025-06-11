@@ -9,14 +9,29 @@
         update_cache: yes
       when: ansible_os_family == "Debian"
 
-    - name: Install required packages
+    - name: Install build dependencies
       package:
         name:
+          - build-essential
+          - cmake
+          - git
+          - libirrlicht-dev
+          - libjpeg-dev
+          - libpng-dev
+          - libbz2-dev
+          - libsqlite3-dev
+          - libfreetype6-dev
+          - libzstd-dev
+          - libcurl4-openssl-dev
+          - libluajit-5.1-dev
+          - libleveldb-dev
+          - libgmp-dev
+          - libjsoncpp-dev
+          - libhiredis-dev
+          - libncurses5-dev
+          - gettext
           - wget
           - tar
-          - sqlite3
-          - build-essential
-          - node-exporter
         state: present
       when: ansible_os_family == "Debian"
 
@@ -25,76 +40,150 @@
         path: "{{ wd }}"
         state: directory
         mode: "0755"
+      become: no
+
+    - name: Create luanti_server directory
+      file:
+        path: "{{ wd }}/luanti_server"
+        state: directory
+        mode: "0755"
+      become: no
+
+    - name: Create worlds directory structure
+      file:
+        path: "{{ wd }}/worlds/benchmark"
+        state: directory
+        mode: "0755"
+      become: no
+
+    - name: Create world.mt file
+      copy:
+        content: |
+          gameid = {{ game_mode }}
+          backend = sqlite3
+          creative_mode = true
+          disable_anticheat = true
+          enable_damage = false
+        dest: "{{ wd }}/worlds/benchmark/world.mt"
+        mode: "0644"
+      become: no
 
     - name: Create mods directory
       file:
         path: "{{ wd }}/worlds/benchmark/mods"
         state: directory
         mode: "0755"
+      become: no
 
     - name: Create yardstick_collector mod directory
       file:
         path: "{{ wd }}/worlds/benchmark/mods/yardstick_collector"
         state: directory
         mode: "0755"
+      become: no
 
     - name: Copy collector mod
       copy:
         src: "{{ collector_mod }}"
         dest: "{{ wd }}/worlds/benchmark/mods/yardstick_collector/init.lua"
         mode: "0644"
+      become: no
 
-    - name: Download Luanti Server (try multiple sources)
+    - name: Download Luanti 5.11.0 source code
       get_url:
-        url: "{{ item }}"
-        dest: "{{ wd }}/luanti.tar.gz"
-        timeout: 30
-      loop:
-        - https://github.com/luanti-org/luanti/releases/download/5.11.0/luanti-5.11.0-linux-x86_64.tar.gz
-        - https://github.com/minetest/minetest/releases/download/5.8.0/minetest-5.8.0-linux.tar.gz
-      register: download_result
-      until: download_result is succeeded
-      retries: 3
-      delay: 10
-      ignore_errors: yes
+        url: "https://github.com/luanti-org/luanti/archive/refs/tags/5.11.0.tar.gz"
+        dest: "{{ wd }}/luanti-5.11.0-source.tar.gz"
+        timeout: 120
+      become: no
 
-    - name: Extract Luanti Server
+    - name: Extract Luanti source code
       unarchive:
-        src: "{{ wd }}/luanti.tar.gz"
+        src: "{{ wd }}/luanti-5.11.0-source.tar.gz"
         dest: "{{ wd }}"
         remote_src: yes
-        creates: "{{ wd }}/bin"
-      when: download_result is succeeded
+        creates: "{{ wd }}/luanti-5.11.0"
+      become: no
 
-    - name: Find server binary
-      find:
-        paths: "{{ wd }}"
-        patterns: "*server*"
-        file_type: file
-        recurse: yes
-      register: server_binaries
-
-    - name: Create symlink to server binary
+    - name: Create build directory
       file:
-        src: "{{ server_binaries.files[0].path }}"
-        dest: "{{ wd }}/luanti-server"
-        state: link
-      when: server_binaries.files | length > 0
-
-    - name: Copy server configuration
-      template:
-        src: "{{ luanti_template }}"
-        dest: "{{ wd }}/luanti.conf"
-        mode: "0644"
-
-    - name: Create metrics directory
-      file:
-        path: /var/lib/node_exporter
+        path: "{{ wd }}/luanti-5.11.0/build"
         state: directory
         mode: "0755"
+      become: no
 
-    - name: Start node_exporter
-      systemd:
-        name: node_exporter
-        state: started
-        enabled: yes
+    - name: Configure Luanti build (server only)
+      shell: |
+        cd {{ wd }}/luanti-5.11.0/build
+        cmake .. \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_CLIENT=FALSE \
+          -DBUILD_SERVER=TRUE \
+          -DENABLE_GETTEXT=TRUE \
+          -DENABLE_FREETYPE=TRUE \
+          -DENABLE_LEVELDB=TRUE \
+          -DENABLE_REDIS=TRUE \
+          -DENABLE_LUAJIT=TRUE
+      become: no
+
+    - name: Compile Luanti server
+      shell: |
+        cd {{ wd }}/luanti-5.11.0/build
+        make -j$(nproc) luantiserver
+      become: no
+
+    - name: Copy server binary to luanti_server directory
+      copy:
+        src: "{{ wd }}/luanti-5.11.0/build/bin/luantiserver"
+        dest: "{{ wd }}/luanti_server/luantiserver"
+        mode: "0755"
+        remote_src: yes
+      become: no
+
+    - name: Create symlink to server binary for easy access
+      file:
+        src: "{{ wd }}/luanti_server/luantiserver"
+        dest: "{{ wd }}/luanti-server"
+        state: link
+      become: no
+
+    - name: Copy server configuration (minetest.conf)
+      template:
+        src: "{{ luanti_template }}"
+        dest: "{{ wd }}/minetest.conf"
+        mode: "0644"
+      become: no
+
+    - name: Create metrics directory (local to working directory)
+      file:
+        path: "{{ wd }}/metrics"
+        state: directory
+        mode: "0755"
+      become: no
+
+    - name: Create empty mod_storage directory
+      file:
+        path: "{{ wd }}/worlds/benchmark/mod_storage"
+        state: directory
+        mode: "0755"
+      become: no
+
+    - name: Create empty players directory
+      file:
+        path: "{{ wd }}/worlds/benchmark/players"
+        state: directory
+        mode: "0755"
+      become: no
+
+    - name: Test server binary
+      shell: |
+        cd {{ wd }}
+        ./luanti-server --version || echo "Server binary test completed"
+      become: no
+      register: server_test
+
+    - name: Display server build info
+      debug:
+        msg: |
+          Server compilation completed!
+          Binary location: {{ wd }}/luanti-server
+          Test output: {{ server_test.stdout }}

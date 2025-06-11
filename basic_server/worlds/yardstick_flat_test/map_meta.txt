@@ -1,13 +1,3 @@
-
-chunksize = 1
-mg_name = flat
-seed = 12345
-water_level = -50
-ymin = 0
-ymax = 20
-flat_ground_level = 1
-disable_caves = true
-disable_decorations = true
 mgflat_np_cave2 = {
 	octaves = 3
 	lacunarity = 2
@@ -28,22 +18,13 @@ mgflat_np_cave1 = {
 	flags = defaults
 	offset = 0
 	}
+mgflat_dungeon_ymax = 31000
 mgflat_cavern_threshold = 0.699999988
 mgflat_cavern_taper = 256
 mgflat_cavern_limit = -256
 mgflat_hill_threshold = 0.449999988
-mgflat_lake_steepness = 48
-mgflat_np_dungeons = {
-	octaves = 2
-	lacunarity = 2
-	persistence = 0.800000012
-	spread = (500,500,500)
-	scale = 0.5
-	seed = 0
-	flags = defaults
-	offset = 0.899999976
-	}
-mgflat_cave_width = 0.0900000036
+seed = 8417008745581054761
+mgflat_lake_threshold = -0.449999988
 mg_biome_np_humidity = {
 	octaves = 3
 	lacunarity = 2
@@ -57,6 +38,18 @@ mg_biome_np_humidity = {
 mgflat_large_cave_flooded = 0.5
 mgflat_large_cave_num_max = 2
 mgflat_large_cave_num_min = 0
+mgflat_small_cave_num_max = 0
+mgflat_np_dungeons = {
+	octaves = 2
+	lacunarity = 2
+	persistence = 0.800000012
+	spread = (500,500,500)
+	scale = 0.5
+	seed = 0
+	flags = defaults
+	offset = 0.899999976
+	}
+mgflat_cave_width = 0.0900000036
 mgflat_np_filler_depth = {
 	octaves = 3
 	lacunarity = 2
@@ -68,8 +61,20 @@ mgflat_np_filler_depth = {
 	offset = 0
 	}
 mgflat_small_cave_num_min = 0
+mg_biome_np_heat = {
+	octaves = 3
+	lacunarity = 2
+	persistence = 0.5
+	spread = (1000,1000,1000)
+	scale = 50
+	seed = 5349
+	flags = defaults
+	offset = 50
+	}
+mgflat_hill_steepness = 64
 mgflat_ground_level = 8
 mgflat_dungeon_ymin = -31000
+water_level = 1
 mg_biome_np_humidity_blend = {
 	octaves = 2
 	lacunarity = 2
@@ -101,23 +106,11 @@ mg_biome_np_heat_blend = {
 	flags = defaults
 	offset = 0
 	}
-mgflat_hill_steepness = 64
-mg_biome_np_heat = {
-	octaves = 3
-	lacunarity = 2
-	persistence = 0.5
-	spread = (1000,1000,1000)
-	scale = 50
-	seed = 5349
-	flags = defaults
-	offset = 50
-	}
-mapgen_limit = 50
-mg_flags = nocaves, nodungeons, light, decorations, biomes, ores
-mgflat_small_cave_num_max = 0
-mgflat_dungeon_ymax = 31000
+mg_flags = caves, dungeons, light, decorations, biomes, ores
 mgflat_spflags = nolakes, nohills, nocaverns
-mgflat_lake_threshold = -0.449999988
+mapgen_limit = 31007
+mgflat_lake_steepness = 48
+chunksize = 5
 mgflat_np_terrain = {
 	octaves = 5
 	lacunarity = 2
@@ -128,4 +121,5 @@ mgflat_np_terrain = {
 	flags = defaults
 	offset = 0
 	}
+mg_name = flat
 [end_of_params]

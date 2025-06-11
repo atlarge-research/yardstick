@@ -2,7 +2,6 @@
 - name: Stop Luanti Server
   gather_facts: true
   hosts: all
-  become: yes
   tasks:
     - name: Check if the server is running
       stat:
@@ -13,7 +12,6 @@
       command: cat {{ wd }}/luanti.pid
       register: pid_content
       when: pid_file.stat.exists
-      become_user: ubuntu
 
     - name: Stop server process gracefully
       shell: kill -TERM {{ pid_content.stdout }}
@@ -34,7 +32,7 @@
       ignore_errors: yes
 
     - name: Kill any remaining luanti processes
-      shell: pkill -f luanti-server || pkill -f minetest || true
+      shell: pkill -f luanti || pkill -f minetest || true
       ignore_errors: yes
 
     - name: Remove PID file
@@ -42,9 +40,14 @@
         path: "{{ wd }}/luanti.pid"
         state: absent
 
-    - name: Fetch server logs
-      fetch:
-        src: "{{ wd }}/server.log"
-        dest: "./logs/"
-        flat: yes
+    - name: Display final server log
+      shell: |
+        cd {{ wd }}
+        echo "=== Final server log (last 10 lines) ==="
+        tail -10 server.log || echo "No server log found"
+      register: final_log
       ignore_errors: yes
+
+    - name: Show server shutdown status
+      debug:
+        msg: "{{ final_log.stdout }}"

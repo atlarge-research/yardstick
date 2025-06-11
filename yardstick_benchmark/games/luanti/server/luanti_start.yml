@@ -2,7 +2,6 @@
 - name: Start Luanti Server
   gather_facts: true
   hosts: all
-  become: yes
   tasks:
     - name: Check if server binary exists
       stat:
@@ -11,37 +10,82 @@
 
     - name: Find alternative server binary if needed
       find:
-        paths: "{{ wd }}"
-        patterns: "*server*"
+        paths: "{{ wd }}/luanti_server"
+        patterns: ["luantiserver", "luanti", "minetest"]
         file_type: file
         recurse: yes
       register: alt_server_binaries
       when: not server_binary.stat.exists
 
+    - name: Set server binary path
+      set_fact:
+        server_bin_path: "{{ server_binary.stat.path if server_binary.stat.exists else alt_server_binaries.files[0].path }}"
+
     - name: Make server binary executable
       file:
-        path: "{{ server_binary.stat.path if server_binary.stat.exists else alt_server_binaries.files[0].path }}"
+        path: "{{ server_bin_path }}"
         mode: "0755"
 
-    - name: Run Luanti server
+    - name: Test server binary
+      shell: |
+        {{ server_bin_path }} --version
+      register: version_check
+      ignore_errors: yes
+
+    - name: Display server version
+      debug:
+        msg: "Server version check: {{ version_check.stdout }}"
+
+    - name: Start Luanti server (compiled from source)
       shell:
         cmd: |
           cd {{ wd }}
-          SERVER_BIN="{{ server_binary.stat.path if server_binary.stat.exists else alt_server_binaries.files[0].path }}"
-          nohup $SERVER_BIN --gameid {{ game_mode }} --world worlds/benchmark --config luanti.conf --port 30000 --logfile server.log > /dev/null 2>&1 &
+          echo "Starting Luanti server with binary: {{ server_bin_path }}"
+          echo "Using config file: {{ wd }}/minetest.conf"
+          echo "Using world directory: {{ wd }}/worlds/benchmark"
+          echo "Running command: {{ server_bin_path }} --config {{ wd }}/minetest.conf --world {{ wd }}/worlds/benchmark --gameid {{ game_mode }}"
+          nohup {{ server_bin_path }} --config {{ wd }}/minetest.conf --world {{ wd }}/worlds/benchmark --gameid {{ game_mode }} > server.log 2>&1 &
           echo $! > luanti.pid
+          echo "Server started with PID $(cat luanti.pid)"
         chdir: "{{ wd }}"
 
-    - name: Wait for server to start
+    - name: Wait a moment for server to initialize
+      pause:
+        seconds: 5
+
+    - name: Check if server process is running
+      shell: |
+        if [ -f "{{ wd }}/luanti.pid" ]; then
+          PID=$(cat {{ wd }}/luanti.pid)
+          if ps -p $PID > /dev/null 2>&1; then
+            echo "Server is running with PID $PID"
+          else
+            echo "Server process not found"
+            exit 1
+          fi
+        else
+          echo "PID file not found"
+          exit 1
+        fi
+      register: server_check
+
+    - name: Wait for server to start listening on port 30000
       wait_for:
         port: 30000
         host: "0.0.0.0"
         timeout: 60
-        msg: "Server failed to start on port 30000"
+        msg: "Server failed to start listening on port 30000"
 
-    - name: Check server log for startup
-      wait_for:
-        path: "{{ wd }}/server.log"
-        search_regex: "(Server started|listening on|ACTION\\[Server\\])"
-        timeout: 30
-      ignore_errors: yes
+    - name: Check server log for startup messages
+      shell: |
+        cd {{ wd }}
+        echo "=== Server startup log ==="
+        tail -30 server.log
+      register: server_log
+
+    - name: Display server status
+      debug:
+        msg: |
+          Server Status: {{ server_check.stdout }}
+          Server Log Output:
+          {{ server_log.stdout }}
