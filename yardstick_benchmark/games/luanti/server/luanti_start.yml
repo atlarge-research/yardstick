@@ -2,6 +2,10 @@
 - name: Start Luanti Server
   gather_facts: true
   hosts: all
+  environment:
+    TMPDIR: "{{ wd }}/tmp"
+    TEMP: "{{ wd }}/tmp"
+    TMP: "{{ wd }}/tmp"
   tasks:
     - name: Check if server binary exists
       stat:
@@ -19,7 +23,24 @@
 
     - name: Set server binary path
       set_fact:
-        server_bin_path: "{{ server_binary.stat.path if server_binary.stat.exists else alt_server_binaries.files[0].path }}"
+        server_bin_path: >-
+          {%- if server_binary.stat.exists -%}
+            {{ server_binary.stat.path }}
+          {%- elif alt_server_binaries.files | length > 0 -%}
+            {{ alt_server_binaries.files[0].path }}
+          {%- else -%}
+            {{ wd }}/luanti-server
+          {%- endif -%}
+
+    - name: Check if server binary actually exists
+      stat:
+        path: "{{ server_bin_path }}"
+      register: final_binary_check
+
+    - name: Fail if no server binary found
+      fail:
+        msg: "No Luanti server binary found. Deployment may have failed. Expected at: {{ server_bin_path }}"
+      when: not final_binary_check.stat.exists
 
     - name: Make server binary executable
       file:

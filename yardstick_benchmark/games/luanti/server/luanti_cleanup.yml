@@ -2,7 +2,10 @@
 - name: Clean up Luanti Server
   gather_facts: true
   hosts: all
-  become: yes
+  environment:
+    TMPDIR: "{{ wd }}/tmp"
+    TEMP: "{{ wd }}/tmp"
+    TMP: "{{ wd }}/tmp"
   tasks:
     - name: Stop any running server processes
       shell: pkill -f luanti-server || pkill -f minetest || true

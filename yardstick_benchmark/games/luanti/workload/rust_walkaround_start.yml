@@ -1,7 +1,10 @@
 ---
 - name: Start Rust WalkAround bots
   hosts: all
-  become: yes
+  environment:
+    TMPDIR: "{{ wd }}/tmp"
+    TEMP: "{{ wd }}/tmp"
+    TMP: "{{ wd }}/tmp"
   tasks:
     - name: Start multiple walkbots
       shell: |
@@ -11,13 +14,12 @@
           --count {{ bots_per_node }} \
           --mode {{ movement_mode }} \
           --speed {{ movement_speed }} \
-          --duration {{ duration | int }} \
+          --duration {{ duration_seconds | int }} \
           > /tmp/walkbot_{{ inventory_hostname }}.log 2>&1 &
       args:
         chdir: "{{ texmodbot_path }}"
-      become_user: ubuntu
       environment:
-        CARGO_HOME: /home/ubuntu/.cargo
+        CARGO_HOME: ~/.cargo
 
     - name: Wait for bots to initialize
       pause:

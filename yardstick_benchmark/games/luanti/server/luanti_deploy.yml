@@ -2,99 +2,58 @@
 - name: Deploy Luanti Server
   gather_facts: true
   hosts: all
-  become: yes
   tasks:
-    - name: Update package cache
-      apt:
-        update_cache: yes
-      when: ansible_os_family == "Debian"
-
-    - name: Install build dependencies
-      package:
-        name:
-          - build-essential
-          - cmake
-          - git
-          - libirrlicht-dev
-          - libjpeg-dev
-          - libpng-dev
-          - libbz2-dev
-          - libsqlite3-dev
-          - libfreetype6-dev
-          - libzstd-dev
-          - libcurl4-openssl-dev
-          - libluajit-5.1-dev
-          - libleveldb-dev
-          - libgmp-dev
-          - libjsoncpp-dev
-          - libhiredis-dev
-          - libncurses5-dev
-          - gettext
-          - wget
-          - tar
-        state: present
-      when: ansible_os_family == "Debian"
-
     - name: Create working directory
       file:
         path: "{{ wd }}"
         state: directory
         mode: "0755"
-      become: no
 
     - name: Create luanti_server directory
       file:
         path: "{{ wd }}/luanti_server"
         state: directory
         mode: "0755"
-      become: no
 
     - name: Create worlds directory structure
       file:
         path: "{{ wd }}/worlds/benchmark"
         state: directory
         mode: "0755"
-      become: no
 
     - name: Create world.mt file
       copy:
         content: |
           gameid = {{ game_mode }}
-          backend = sqlite3
           creative_mode = true
           disable_anticheat = true
           enable_damage = false
         dest: "{{ wd }}/worlds/benchmark/world.mt"
         mode: "0644"
-      become: no
 
     - name: Create mods directory
       file:
         path: "{{ wd }}/worlds/benchmark/mods"
         state: directory
         mode: "0755"
-      become: no
 
     - name: Create yardstick_collector mod directory
       file:
         path: "{{ wd }}/worlds/benchmark/mods/yardstick_collector"
         state: directory
         mode: "0755"
-      become: no
 
     - name: Copy collector mod
       copy:
         src: "{{ collector_mod }}"
         dest: "{{ wd }}/worlds/benchmark/mods/yardstick_collector/init.lua"
         mode: "0644"
-      become: no
 
     - name: Download Luanti 5.11.0 source code
       get_url:
         url: "https://github.com/luanti-org/luanti/archive/refs/tags/5.11.0.tar.gz"
         dest: "{{ wd }}/luanti-5.11.0-source.tar.gz"
         timeout: 120
-      become: no
 
     - name: Extract Luanti source code
       unarchive:
@@ -102,34 +61,125 @@
         dest: "{{ wd }}"
         remote_src: yes
         creates: "{{ wd }}/luanti-5.11.0"
-      become: no
 
     - name: Create build directory
       file:
         path: "{{ wd }}/luanti-5.11.0/build"
         state: directory
         mode: "0755"
-      become: no
 
-    - name: Configure Luanti build (server only)
+    - name: Configure Luanti build (server only, minimal dependencies)
       shell: |
+        # Load environment modules that might provide cmake
+        source /etc/bashrc || true
+        module load cmake gcc || true
+        
         cd {{ wd }}/luanti-5.11.0/build
-        cmake .. \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DBUILD_CLIENT=FALSE \
-          -DBUILD_SERVER=TRUE \
-          -DENABLE_GETTEXT=TRUE \
-          -DENABLE_FREETYPE=TRUE \
-          -DENABLE_LEVELDB=TRUE \
-          -DENABLE_REDIS=TRUE \
-          -DENABLE_LUAJIT=TRUE
-      become: no
+        
+        # Try to find cmake in different locations
+        CMAKE_CMD=""
+        for cmd in cmake cmake3 /usr/bin/cmake /usr/local/bin/cmake; do
+          if command -v "$cmd" >/dev/null 2>&1; then
+            CMAKE_CMD="$cmd"
+            break
+          fi
+        done
+        
+        if [ -z "$CMAKE_CMD" ]; then
+          echo "CMake not found, trying to use system paths"
+          export PATH="/usr/bin:/usr/local/bin:$PATH"
+          CMAKE_CMD="cmake"
+        fi
+        
+        echo "Using cmake command: $CMAKE_CMD"
+        
+        # Install SQLite3 development package if not available
+        # Try different package managers without requiring sudo
+        if command -v yum >/dev/null 2>&1; then
+          yum install -y sqlite-devel 2>/dev/null || echo "Could not install sqlite-devel via yum (might need sudo)"
+        elif command -v apt-get >/dev/null 2>&1; then
+          apt-get update && apt-get install -y libsqlite3-dev 2>/dev/null || echo "Could not install libsqlite3-dev via apt (might need sudo)"
+        elif command -v dnf >/dev/null 2>&1; then
+          dnf install -y sqlite-devel 2>/dev/null || echo "Could not install sqlite-devel via dnf (might need sudo)"
+        fi
+        
+        # Try to find SQLite3 libraries in common locations
+        export PKG_CONFIG_PATH="/usr/lib64/pkgconfig:/usr/lib/pkgconfig:/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
+        
+        # First try with explicit SQLite3 paths
+        if [ -f "/usr/lib64/libsqlite3.so" ] && [ -f "/usr/include/sqlite3.h" ]; then
+          echo "Found system SQLite3, using explicit paths"
+          $CMAKE_CMD .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_CLIENT=FALSE \
+            -DBUILD_SERVER=TRUE \
+            -DENABLE_GETTEXT=FALSE \
+            -DENABLE_FREETYPE=FALSE \
+            -DENABLE_LEVELDB=FALSE \
+            -DENABLE_REDIS=FALSE \
+            -DENABLE_LUAJIT=FALSE \
+            -DENABLE_SOUND=FALSE \
+            -DENABLE_CURL=FALSE \
+            -DENABLE_POSTGRESQL=FALSE \
+            -DENABLE_SPATIAL=FALSE \
+            -DENABLE_SQLITE3=TRUE \
+            -DSQLITE3_INCLUDE_DIR="/usr/include" \
+            -DSQLITE3_LIBRARY="/usr/lib64/libsqlite3.so"
+        elif [ -f "/usr/lib/libsqlite3.so" ] && [ -f "/usr/include/sqlite3.h" ]; then
+          echo "Found system SQLite3 in /usr/lib, using explicit paths"
+          $CMAKE_CMD .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_CLIENT=FALSE \
+            -DBUILD_SERVER=TRUE \
+            -DENABLE_GETTEXT=FALSE \
+            -DENABLE_FREETYPE=FALSE \
+            -DENABLE_LEVELDB=FALSE \
+            -DENABLE_REDIS=FALSE \
+            -DENABLE_LUAJIT=FALSE \
+            -DENABLE_SOUND=FALSE \
+            -DENABLE_CURL=FALSE \
+            -DENABLE_POSTGRESQL=FALSE \
+            -DENABLE_SPATIAL=FALSE \
+            -DENABLE_SQLITE3=TRUE \
+            -DSQLITE3_INCLUDE_DIR="/usr/include" \
+            -DSQLITE3_LIBRARY="/usr/lib/libsqlite3.so"
+        else
+          echo "System SQLite3 not found, using bundled version"
+          # Luanti has a bundled SQLite3 - use that instead
+          $CMAKE_CMD .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_CLIENT=FALSE \
+            -DBUILD_SERVER=TRUE \
+            -DENABLE_GETTEXT=FALSE \
+            -DENABLE_FREETYPE=FALSE \
+            -DENABLE_LEVELDB=FALSE \
+            -DENABLE_REDIS=FALSE \
+            -DENABLE_LUAJIT=FALSE \
+            -DENABLE_SOUND=FALSE \
+            -DENABLE_CURL=FALSE \
+            -DENABLE_POSTGRESQL=FALSE \
+            -DENABLE_SPATIAL=FALSE
+        fi
 
     - name: Compile Luanti server
       shell: |
         cd {{ wd }}/luanti-5.11.0/build
-        make -j$(nproc) luantiserver
-      become: no
+        echo "Starting compilation with $(nproc) cores..."
+        make -j$(nproc) luantiserver || {
+          echo "Parallel build failed, trying single-threaded..."
+          make luantiserver
+        }
+        echo "Build completed"
+        
+    - name: Verify server binary was built
+      stat:
+        path: "{{ wd }}/luanti-5.11.0/build/bin/luantiserver"
+      register: built_binary
+      
+    - name: Fail if server binary not built
+      fail:
+        msg: "Server binary was not built successfully"
+      when: not built_binary.stat.exists
 
     - name: Copy server binary to luanti_server directory
       copy:
@@ -137,53 +187,47 @@
         dest: "{{ wd }}/luanti_server/luantiserver"
         mode: "0755"
         remote_src: yes
-      become: no
 
     - name: Create symlink to server binary for easy access
       file:
         src: "{{ wd }}/luanti_server/luantiserver"
         dest: "{{ wd }}/luanti-server"
         state: link
-      become: no
 
     - name: Copy server configuration (minetest.conf)
       template:
         src: "{{ luanti_template }}"
         dest: "{{ wd }}/minetest.conf"
         mode: "0644"
-      become: no
 
     - name: Create metrics directory (local to working directory)
       file:
         path: "{{ wd }}/metrics"
         state: directory
         mode: "0755"
-      become: no
 
     - name: Create empty mod_storage directory
       file:
         path: "{{ wd }}/worlds/benchmark/mod_storage"
         state: directory
         mode: "0755"
-      become: no
 
     - name: Create empty players directory
       file:
         path: "{{ wd }}/worlds/benchmark/players"
         state: directory
         mode: "0755"
-      become: no
 
     - name: Test server binary
       shell: |
         cd {{ wd }}
-        ./luanti-server --version || echo "Server binary test completed"
-      become: no
+        ./luanti-server --version || echo "Server binary test completed (binary may not support --version)"
       register: server_test
+      ignore_errors: yes
 
     - name: Display server build info
       debug:
         msg: |
-          Server compilation completed!
+          Server deployment completed!
           Binary location: {{ wd }}/luanti-server
           Test output: {{ server_test.stdout }}

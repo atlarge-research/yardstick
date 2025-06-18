@@ -52,7 +52,12 @@ class RemoteAction(object):
     def run(self):
         assert self.script.is_file()
 
-        self.private_data_dir = tempfile.mkdtemp(prefix="yardstick-")
+        # Use scratch directory for ansible temp files to avoid disk quota issues
+        import os
+        scratch_tmp = f"/var/scratch/{os.getlogin()}/ansible_tmp"
+        os.makedirs(scratch_tmp, exist_ok=True)
+        
+        self.private_data_dir = tempfile.mkdtemp(prefix="yardstick-", dir=scratch_tmp)
         res = ansible_runner.interface.run(
             private_data_dir=self.private_data_dir,
             playbook=str(self.script),

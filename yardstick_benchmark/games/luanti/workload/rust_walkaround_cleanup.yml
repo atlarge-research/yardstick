@@ -1,7 +1,10 @@
 ---
 - name: Cleanup Rust WalkAround bots
   hosts: all
-  become: yes
+  environment:
+    TMPDIR: "{{ wd }}/tmp"
+    TEMP: "{{ wd }}/tmp"
+    TMP: "{{ wd }}/tmp"
   tasks:
     - name: Remove bot log files
       file:
@@ -14,7 +17,6 @@
         cargo clean
       args:
         chdir: "{{ texmodbot_path }}"
-      become_user: ubuntu
       environment:
-        CARGO_HOME: /home/ubuntu/.cargo
+        CARGO_HOME: ~/.cargo
       ignore_errors: yes

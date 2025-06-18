@@ -1,7 +1,10 @@
 ---
 - name: Stop Rust WalkAround bots
   hosts: all
-  become: yes
+  environment:
+    TMPDIR: "{{ wd }}/tmp"
+    TEMP: "{{ wd }}/tmp"
+    TMP: "{{ wd }}/tmp"
   tasks:
     - name: Kill walkbot processes
       shell: |

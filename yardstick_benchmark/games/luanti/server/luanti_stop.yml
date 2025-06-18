@@ -2,6 +2,10 @@
 - name: Stop Luanti Server
   gather_facts: true
   hosts: all
+  environment:
+    TMPDIR: "{{ wd }}/tmp"
+    TEMP: "{{ wd }}/tmp"
+    TMP: "{{ wd }}/tmp"
   tasks:
     - name: Check if the server is running
       stat:

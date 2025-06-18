@@ -11,8 +11,10 @@ class RustWalkAround(RemoteApplication):
         bots_per_node: int = 1,
         movement_mode: str = "random",
         movement_speed: float = 2.0,
-        texmodbot_path: str = "/home/ubuntu/texmodbot",  # Path on remote nodes
     ):
+        # Use working directory from nodes instead of hardcoded path
+        texmodbot_path = str(nodes[0].wd / "texmodbot")
+        
         super().__init__(
             "rust_walkaround",
             nodes,
@@ -25,6 +27,7 @@ class RustWalkAround(RemoteApplication):
                 "server_host": server_host,
                 "server_port": 30000,  # Default Luanti port
                 "duration": duration.total_seconds(),
+                "duration_seconds": int(duration.total_seconds()),
                 "bots_per_node": bots_per_node,
                 "movement_mode": movement_mode,
                 "movement_speed": movement_speed,
