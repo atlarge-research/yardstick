@@ -1,0 +1,265 @@
+---
+- name: Deploy Luanti Server using PPA (Linux)
+  gather_facts: true
+  hosts: all
+  tasks:
+    - name: Create working directory
+      file:
+        path: "{{ wd }}"
+        state: directory
+        mode: "0755"
+
+    - name: Create luanti_server directory
+      file:
+        path: "{{ wd }}/luanti_server"
+        state: directory
+        mode: "0755"
+
+    - name: Create worlds directory structure
+      file:
+        path: "{{ wd }}/worlds/benchmark"
+        state: directory
+        mode: "0755"
+
+    - name: Create world.mt file
+      copy:
+        content: |
+          gameid = {{ game_mode }}
+          creative_mode = true
+          disable_anticheat = true
+          enable_damage = false
+        dest: "{{ wd }}/worlds/benchmark/world.mt"
+        mode: "0644"
+
+    - name: Create mods directory
+      file:
+        path: "{{ wd }}/worlds/benchmark/mods"
+        state: directory
+        mode: "0755"
+
+    - name: Create yardstick_collector mod directory
+      file:
+        path: "{{ wd }}/worlds/benchmark/mods/yardstick_collector"
+        state: directory
+        mode: "0755"
+
+    - name: Copy collector mod
+      copy:
+        src: "{{ collector_mod }}"
+        dest: "{{ wd }}/worlds/benchmark/mods/yardstick_collector/init.lua"
+        mode: "0644"
+
+    # Try different installation methods for Luanti
+    - name: Check if Luanti is already installed
+      command: which luanti
+      register: luanti_check
+      ignore_errors: yes
+
+    - name: Check if Minetest is already installed (fallback)
+      command: which minetest
+      register: minetest_check
+      ignore_errors: yes
+      when: luanti_check.rc != 0
+
+    # Method 1: Try PPA installation (Ubuntu/Debian)
+    - name: Install software-properties-common for PPA support
+      package:
+        name: software-properties-common
+        state: present
+      become: yes
+      ignore_errors: yes
+      when: luanti_check.rc != 0 and minetest_check.rc != 0
+
+    - name: Add Luanti PPA repository
+      apt_repository:
+        repo: "ppa:minetestdevs/stable"
+        state: present
+        update_cache: yes
+      become: yes
+      ignore_errors: yes
+      when: luanti_check.rc != 0 and minetest_check.rc != 0
+
+    - name: Install Luanti from PPA
+      package:
+        name: luanti
+        state: present
+      become: yes
+      register: ppa_install
+      ignore_errors: yes
+      when: luanti_check.rc != 0 and minetest_check.rc != 0
+
+    # Method 2: Try Flatpak installation
+    - name: Install Flatpak
+      package:
+        name: flatpak
+        state: present
+      become: yes
+      ignore_errors: yes
+      when: (luanti_check.rc != 0 and minetest_check.rc != 0) and (ppa_install is failed or ppa_install is skipped)
+
+    - name: Add Flathub repository
+      flatpak_remote:
+        name: flathub
+        state: present
+        flatpakrepo_url: https://dl.flathub.org/repo/flathub.flatpakrepo
+      become: yes
+      ignore_errors: yes
+      when: (luanti_check.rc != 0 and minetest_check.rc != 0) and (ppa_install is failed or ppa_install is skipped)
+
+    - name: Install Luanti via Flatpak
+      flatpak:
+        name: net.minetest.Minetest
+        state: present
+      become: yes
+      register: flatpak_install
+      ignore_errors: yes
+      when: (luanti_check.rc != 0 and minetest_check.rc != 0) and (ppa_install is failed or ppa_install is skipped)
+
+    # Method 3: Try package manager installation (fallback to minetest)
+    - name: Install Minetest from package manager (fallback)
+      package:
+        name: minetest
+        state: present
+      become: yes
+      register: pkg_install
+      ignore_errors: yes
+      when: (luanti_check.rc != 0 and minetest_check.rc != 0) and (ppa_install is failed or ppa_install is skipped) and (flatpak_install is failed or flatpak_install is skipped)
+
+    # Method 4: Source compilation (last resort)
+    - name: Download Luanti source code (last resort)
+      get_url:
+        url: "https://github.com/luanti-org/luanti/archive/refs/tags/5.11.0.tar.gz"
+        dest: "{{ wd }}/luanti-5.11.0-source.tar.gz"
+        timeout: 120
+      when: (luanti_check.rc != 0 and minetest_check.rc != 0) and (ppa_install is failed or ppa_install is skipped) and (flatpak_install is failed or flatpak_install is skipped) and (pkg_install is failed or pkg_install is skipped)
+
+    - name: Install build dependencies for source compilation
+      package:
+        name:
+          - build-essential
+          - cmake
+          - git
+          - libsqlite3-dev
+          - libcurl4-openssl-dev
+          - libfreetype6-dev
+          - libluajit-5.1-dev
+          - libssl-dev
+        state: present
+      become: yes
+      ignore_errors: yes
+      when: (luanti_check.rc != 0 and minetest_check.rc != 0) and (ppa_install is failed or ppa_install is skipped) and (flatpak_install is failed or flatpak_install is skipped) and (pkg_install is failed or pkg_install is skipped)
+
+    - name: Extract Luanti source code
+      unarchive:
+        src: "{{ wd }}/luanti-5.11.0-source.tar.gz"
+        dest: "{{ wd }}"
+        remote_src: yes
+        creates: "{{ wd }}/luanti-5.11.0"
+      when: (luanti_check.rc != 0 and minetest_check.rc != 0) and (ppa_install is failed or ppa_install is skipped) and (flatpak_install is failed or flatpak_install is skipped) and (pkg_install is failed or pkg_install is skipped)
+
+    - name: Create build directory
+      file:
+        path: "{{ wd }}/luanti-5.11.0/build"
+        state: directory
+        mode: "0755"
+      when: (luanti_check.rc != 0 and minetest_check.rc != 0) and (ppa_install is failed or ppa_install is skipped) and (flatpak_install is failed or flatpak_install is skipped) and (pkg_install is failed or pkg_install is skipped)
+
+    - name: Configure Luanti build (server only)
+      shell: |
+        cd {{ wd }}/luanti-5.11.0/build
+        cmake .. \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_CLIENT=FALSE \
+          -DBUILD_SERVER=TRUE \
+          -DENABLE_GETTEXT=FALSE \
+          -DENABLE_FREETYPE=FALSE \
+          -DENABLE_LEVELDB=FALSE \
+          -DENABLE_REDIS=FALSE \
+          -DENABLE_LUAJIT=FALSE \
+          -DENABLE_SOUND=FALSE \
+          -DENABLE_CURL=FALSE \
+          -DENABLE_POSTGRESQL=FALSE \
+          -DENABLE_SPATIAL=FALSE
+      when: (luanti_check.rc != 0 and minetest_check.rc != 0) and (ppa_install is failed or ppa_install is skipped) and (flatpak_install is failed or flatpak_install is skipped) and (pkg_install is failed or pkg_install is skipped)
+
+    - name: Compile Luanti server
+      shell: |
+        cd {{ wd }}/luanti-5.11.0/build
+        make -j$(nproc) luantiserver
+      when: (luanti_check.rc != 0 and minetest_check.rc != 0) and (ppa_install is failed or ppa_install is skipped) and (flatpak_install is failed or flatpak_install is skipped) and (pkg_install is failed or pkg_install is skipped)
+
+    - name: Copy compiled server binary
+      copy:
+        src: "{{ wd }}/luanti-5.11.0/build/bin/luantiserver"
+        dest: "{{ wd }}/luanti_server/luantiserver"
+        mode: "0755"
+        remote_src: yes
+      when: (luanti_check.rc != 0 and minetest_check.rc != 0) and (ppa_install is failed or ppa_install is skipped) and (flatpak_install is failed or flatpak_install is skipped) and (pkg_install is failed or pkg_install is skipped)
+
+    # Determine which server binary to use
+    - name: Check final Luanti installation
+      command: which luanti
+      register: final_luanti_check
+      ignore_errors: yes
+
+    - name: Check final Minetest installation
+      command: which minetest
+      register: final_minetest_check
+      ignore_errors: yes
+
+    - name: Set server binary path
+      set_fact:
+        server_binary: >-
+          {%- if final_luanti_check.rc == 0 -%}
+            {{ final_luanti_check.stdout }}
+          {%- elif final_minetest_check.rc == 0 -%}
+            {{ final_minetest_check.stdout }}
+          {%- else -%}
+            {{ wd }}/luanti_server/luantiserver
+          {%- endif -%}
+
+    - name: Create symlink to server binary for easy access
+      file:
+        src: "{{ server_binary }}"
+        dest: "{{ wd }}/luanti-server"
+        state: link
+
+    - name: Copy server configuration (minetest.conf)
+      template:
+        src: "{{ luanti_template }}"
+        dest: "{{ wd }}/minetest.conf"
+        mode: "0644"
+
+    - name: Create metrics directory (local to working directory)
+      file:
+        path: "{{ wd }}/metrics"
+        state: directory
+        mode: "0755"
+
+    - name: Create empty mod_storage directory
+      file:
+        path: "{{ wd }}/worlds/benchmark/mod_storage"
+        state: directory
+        mode: "0755"
+
+    - name: Create empty players directory
+      file:
+        path: "{{ wd }}/worlds/benchmark/players"
+        state: directory
+        mode: "0755"
+
+    - name: Test server binary
+      shell: |
+        cd {{ wd }}
+        {{ server_binary }} --version || echo "Server binary test completed (binary may not support --version)"
+      register: server_test
+      ignore_errors: yes
+
+    - name: Display server installation info
+      debug:
+        msg: |
+          Server deployment completed!
+          Binary location: {{ server_binary }}
+          Symlink: {{ wd }}/luanti-server
+          Test output: {{ server_test.stdout }}
+          Installation method: {% if final_luanti_check.rc == 0 %}PPA/System{% elif final_minetest_check.rc == 0 %}Package Manager{% else %}Source Compilation{% endif %}

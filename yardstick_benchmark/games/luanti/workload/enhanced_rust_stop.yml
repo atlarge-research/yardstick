@@ -1,0 +1,74 @@
+---
+- name: Stop Enhanced Rust Bots
+  hosts: all
+  tasks:
+    - name: Check if bot PIDs file exists
+      stat:
+        path: "{{ texmodbot_path }}/bot_pids.txt"
+      register: pid_file
+
+    - name: Stop bot processes gracefully
+      shell: |
+        cd {{ texmodbot_path }}
+        if [ -f bot_pids.txt ]; then
+          echo "Stopping bots gracefully..."
+          while read pid; do
+            if ps -p $pid > /dev/null 2>&1; then
+              echo "Stopping bot with PID $pid"
+              kill -TERM $pid
+            fi
+          done < bot_pids.txt
+        else
+          echo "No bot PIDs file found"
+        fi
+      when: pid_file.stat.exists
+      ignore_errors: yes
+
+    - name: Wait for bots to stop
+      pause:
+        seconds: 10
+
+    - name: Kill remaining bot processes forcefully
+      shell: |
+        cd {{ texmodbot_path }}
+        if [ -f bot_pids.txt ]; then
+          echo "Killing any remaining bot processes..."
+          while read pid; do
+            if ps -p $pid > /dev/null 2>&1; then
+              echo "Force killing bot with PID $pid"
+              kill -KILL $pid
+            fi
+          done < bot_pids.txt
+        fi
+
+        # Also kill any remaining walkbot/blockbot processes
+        pkill -f "walkbot" || true
+        pkill -f "blockbot" || true
+      when: pid_file.stat.exists
+      ignore_errors: yes
+
+    - name: Remove PID file
+      file:
+        path: "{{ texmodbot_path }}/bot_pids.txt"
+        state: absent
+
+    - name: Display bot logs summary
+      shell: |
+        cd {{ texmodbot_path }}
+        echo "=== Bot Logs Summary ==="
+        for log in *.log; do
+          if [ -f "$log" ]; then
+            echo "--- $log (last 5 lines) ---"
+            tail -5 "$log"
+          fi
+        done
+      register: logs_summary
+      ignore_errors: yes
+
+    - name: Show bot shutdown status
+      debug:
+        msg: |
+          Enhanced bot shutdown completed on {{ inventory_hostname }}!
+          Bot type: {{ bot_type }}
+          Logs summary:
+          {{ logs_summary.stdout }}

@@ -1,0 +1,27 @@
+---
+- name: Clean up Enhanced Rust Bots
+  hosts: all
+  tasks:
+    - name: Stop any remaining bot processes
+      shell: |
+        pkill -f "walkbot" || true
+        pkill -f "blockbot" || true
+        pkill -f "multi_walkbot" || true
+      ignore_errors: yes
+
+    - name: Remove bot working directory
+      file:
+        path: "{{ texmodbot_path }}"
+        state: absent
+
+    - name: Clean up any remaining processes
+      shell: |
+        ps aux | grep -E "(walkbot|blockbot)" | grep -v grep | awk '{print $2}' | xargs -r kill -9
+      ignore_errors: yes
+
+    - name: Display cleanup status
+      debug:
+        msg: |
+          Enhanced bot cleanup completed on {{ inventory_hostname }}!
+          Removed directory: {{ texmodbot_path }}
+          Bot type: {{ bot_type }}

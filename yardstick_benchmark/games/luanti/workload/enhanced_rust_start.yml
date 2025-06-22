@@ -1,0 +1,115 @@
+---
+- name: Start Enhanced Rust Bots
+  hosts: all
+  tasks:
+    - name: Check if bot binary exists
+      stat:
+        path: "{{ texmodbot_path }}/target/release/{{ bot_type }}"
+      register: bot_binary
+
+    - name: Fail if bot binary not found
+      fail:
+        msg: "Bot binary not found at {{ texmodbot_path }}/target/release/{{ bot_type }}"
+      when: not bot_binary.stat.exists
+
+    - name: Calculate spawn positions for bots
+      set_fact:
+        bot_positions: >-
+          {%- set positions = [] -%}
+          {%- set node_index = groups['all'].index(inventory_hostname) -%}
+          {%- for i in range(bots_per_node) -%}
+            {%- set bot_id = node_index * bots_per_node + i -%}
+            {%- if use_spawn_area -%}
+              {%- set x = spawn_x + (bot_id % 5) * 3 -%}
+              {%- set y = spawn_y -%}
+              {%- set z = spawn_z - 3 + (bot_id // 5) * 3 -%}
+            {%- else -%}
+              {%- set x = bot_id * 10 -%}
+              {%- set y = 8.0 -%}
+              {%- set z = bot_id * 10 -%}
+            {%- endif -%}
+            {%- set _ = positions.append({'id': bot_id, 'x': x, 'y': y, 'z': z}) -%}
+          {%- endfor -%}
+          {{ positions }}
+
+    - name: Start enhanced bots
+      shell: |
+        cd {{ texmodbot_path }}
+
+        # Start each bot with appropriate arguments
+        {% for pos in bot_positions %}
+
+        # Bot {{ pos.id }} at position ({{ pos.x }}, {{ pos.y }}, {{ pos.z }})
+        {% if bot_type == "walkbot" %}
+        nohup ./target/release/walkbot {{ server_host }}:{{ server_port }} \
+          --username "benchbot_{{ '%03d' | format(pos.id) }}" \
+          --password "benchmark123" \
+          --auto-register \
+          --quit-after-seconds {{ duration_seconds }} \
+          --mode {{ movement_mode }} \
+          --speed {{ movement_speed }} \
+          > walkbot_{{ pos.id }}.log 2>&1 &
+        {% else %}
+        nohup ./target/release/blockbot {{ server_host }}:{{ server_port }} \
+          --username "benchblockbot_{{ '%03d' | format(pos.id) }}" \
+          --password "benchmark123" \
+          --auto-register \
+          --quit-after-seconds {{ duration_seconds }} \
+          --pattern {{ building_pattern }} \
+          --speed {{ movement_speed }} \
+          --max-blocks {{ max_blocks_per_bot }} \
+          --start-x {{ pos.x }} \
+          --start-y {{ pos.y }} \
+          --start-z {{ pos.z }} \
+          > blockbot_{{ pos.id }}.log 2>&1 &
+        {% endif %}
+
+        echo $! >> bot_pids.txt
+
+        # Stagger bot connections to avoid overwhelming the server
+        sleep 1
+
+        {% endfor %}
+
+        echo "Started {{ bots_per_node }} {{ bot_type }}s on {{ inventory_hostname }}"
+        echo "Bot PIDs saved to bot_pids.txt"
+
+    - name: Wait for bots to connect
+      pause:
+        seconds: 5
+
+    - name: Check bot processes
+      shell: |
+        cd {{ texmodbot_path }}
+        if [ -f bot_pids.txt ]; then
+          echo "Checking bot processes..."
+          running=0
+          failed=0
+          while read pid; do
+            if ps -p $pid > /dev/null 2>&1; then
+              running=$((running + 1))
+            else
+              failed=$((failed + 1))
+            fi
+          done < bot_pids.txt
+          echo "Bot status: $running running, $failed failed"
+        else
+          echo "No bot PIDs file found"
+        fi
+      register: bot_status
+
+    - name: Display bot startup status
+      debug:
+        msg: |
+          Enhanced bot startup completed on {{ inventory_hostname }}!
+          Bot type: {{ bot_type }}
+          Bots per node: {{ bots_per_node }}
+          {% if bot_type == "walkbot" %}
+          Movement mode: {{ movement_mode }}
+          {% else %}
+          Building pattern: {{ building_pattern }}
+          {% endif %}
+          Status: {{ bot_status.stdout }}
+          {% if use_spawn_area %}
+          Positioned near spawn area: ({{ spawn_x }}, {{ spawn_y }}, {{ spawn_z }})
+          {% endif %}
