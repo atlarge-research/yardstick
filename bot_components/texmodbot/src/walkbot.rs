@@ -164,14 +164,29 @@ impl WalkBot {
                         pos: fixed_pos,
                         vel: [0.0, 0.0, 0.0].into(),
                         pitch: Deg(0.0),
-                        yaw: Deg(0.0),
+                        yaw: Deg(self.yaw),
                         keys: EnumSet::new(),
                         fov: Rad(1.0),
                         wanted_range: 10,
                     });
                     self.last_movement = Some(Instant::now());
-                    eprintln!("Initial position set: ({}, {}, {}) (Y fixed to 8.5)", 
-                              fixed_pos[0], fixed_pos[1], fixed_pos[2]);
+                    eprintln!("[{}] Initial position set: ({:.2}, {:.2}, {:.2}) (Y fixed to 8.5)", 
+                              self.username, fixed_pos[0], fixed_pos[1], fixed_pos[2]);
+                } else {
+                    // Server is trying to override our position - this might be why bots stop moving
+                    let current_pos = self.position.as_ref().map(|p| (p.pos[0], p.pos[1], p.pos[2]));
+                    eprintln!("[{}] Server sent MovePlayer override: ({:.2}, {:.2}, {:.2}) vs current: {:?} - ignoring to maintain bot control", 
+                              self.username, pos[0], pos[1], pos[2], current_pos);
+                    
+                    // Check if server position is very different from our position (might indicate desync)
+                    if let Some(current) = self.position.as_ref() {
+                        let distance = ((pos[0] - current.pos[0]).powi(2) + 
+                                      (pos[2] - current.pos[2]).powi(2)).sqrt();
+                        if distance > 10.0 {
+                            eprintln!("[{}] WARNING: Large position desync detected (distance: {:.2}), this may cause movement issues", 
+                                      self.username, distance);
+                        }
+                    }
                 }
             },
             _ => {}
@@ -195,6 +210,18 @@ impl WalkBot {
         // if self.last_movement.is_some() && now.duration_since(self.last_movement.unwrap()) < self.change_interval {
         //     return;
         // }
+        
+        // Check if position is None (this would stop movement)
+        if self.position.is_none() {
+            // Silent return - position not initialized yet
+            return;
+        }
+        
+        // Check if bot is ready
+        if !self.state.ready {
+            // Silent return - bot not ready yet
+            return;
+        }
         
         let mut keys = EnumSet::new();
         // let mut rng = thread_rng(); // Moved into MovementMode::Random
@@ -226,15 +253,15 @@ impl WalkBot {
                 }
             },
             MovementMode::Circular => {
-                // Walk in a circle
+                // Walk in a circle by constantly moving forward and turning
                 keys.insert(Key::Forward);
-                // Add a slight sideways motion to make the circle smoother
-                if (self.yaw % 90.0) < 45.0 {
-                    keys.insert(Key::Left);
-                } else {
-                    keys.insert(Key::Right);
+                // Continuously rotate to create circular motion
+                self.yaw = (self.yaw + 2.0) % 360.0; // Constant rotation speed for circular movement
+                
+                // Minimal debug output - only log full circles to avoid spam
+                if (self.yaw as i32) % 360 == 0 && self.yaw > 0.0 {
+                    eprintln!("[{}] Completed full circle at yaw={:.1}°", self.username, self.yaw);
                 }
-                self.yaw = (self.yaw + 3.0) % 360.0; // Slower rotation for a wider circle
             },
             MovementMode::Static => {
                 // Stand in place, just look around
@@ -420,14 +447,20 @@ impl WalkBot {
             pos.yaw = Deg(self.yaw);
             
             // Send position update to server
-            self.conn.send(&ToSrvPkt::PlayerPos(pos.clone())).await.unwrap();
-            
-            // Debug output to show movement with direction indicators
-            eprintln!("Position updated: ({:.2}, {:.2}, {:.2}), Yaw: {:.1}°, Movement: dx={:.3}, dz={:.3}", 
-                pos.pos[0], pos.pos[1], pos.pos[2], self.yaw, dx, dz);
+            match self.conn.send(&ToSrvPkt::PlayerPos(pos.clone())).await {
+                Ok(_) => {
+                    // Silent success - no debug output to avoid performance impact
+                },
+                Err(e) => {
+                    eprintln!("[{}] CRITICAL: Failed to send position update: {}", self.username, e);
+                    eprintln!("[{}] Connection may be broken, movement will stop", self.username);
+                },
+            }
         }
         
         self.last_movement = Some(now);
+        
+        // No heartbeat output to avoid performance impact
     }
 
     // No longer need this method as we're running movement updates in the main loop
@@ -460,8 +493,9 @@ async fn main() {
     // Parse movement mode
     let movement_mode = match mode.to_lowercase().as_str() {
         "random" => MovementMode::Random,
-        "circular" => MovementMode::Circular,
-        "static" => MovementMode::Static,
+        "circular" | "circle" => MovementMode::Circular,
+        "static" | "still" => MovementMode::Static,
+        "straight" => MovementMode::Static, // Map straight to static for now
         "follow" => {
             // Need target coordinates for follow mode
             let target_x = target_x.unwrap_or_else(|| {

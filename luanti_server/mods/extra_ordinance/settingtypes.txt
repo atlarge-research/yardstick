@@ -1,0 +1,7 @@
+
+#    Disable node darkening.
+#    Substantially reduces RAM and startup time.
+exord_no_node_darken (Disable Node Darkening) bool false
+
+#    Disable environmental effects.
+exord_no_env_fx (Disable Environmental Effects) bool false

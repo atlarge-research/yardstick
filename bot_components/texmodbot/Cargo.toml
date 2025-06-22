@@ -13,6 +13,10 @@ name = "walkbot"
 path = "src/walkbot.rs"
 
 [[bin]]
+name = "blockbot"
+path = "src/blockbot.rs"
+
+[[bin]]
 name = "multi_walkbot"
 path = "src/multi_walkbot.rs"
 

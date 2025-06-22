@@ -1,0 +1,83 @@
+Entity API
+
+Definition constants
+
+_animations:
+A list of tables of the form:
+{
+    frames = {x=0, y=0},
+    speed = 24,
+    blend = 0,
+    loop = true,
+    mesh = "meshname.b3d",
+    textures = {"texture.png"},
+}
+
+_states:
+A list of tables of the form:
+{
+    animation = "idle",
+    step = function(step, dtime, moveresult) end
+}
+The step function should return nil if the current state should continue,
+and should return the name of another state to switch.
+
+_default_state: the initial state
+
+_pmb_speed: The speed of the entity
+
+_pmb_wander: The number of ticks between each time it wanders
+
+_pmb_range: The range it will wander to or track an entity to
+
+_pmb_hostile: Mob types that will be used as default second argument to get_target
+Use "player" to target players
+
+
+LuaEntity variables
+
+_animation: The name of the animation that the entity is currently in.
+
+_pmb_last_pos: The position the last tick. Used internally for detecting if the entity is stuck and should abort pathfinding
+
+_pmb_stuck_timer: The number of ticks that the entity has been stuck for. The path will abort after this reaches 70
+
+_pmb_to_pos: The position that the entity is moving towards. Will be nil if the entity is not pathfinding.
+
+_pmb_path: A list of vectors which differ by at most sqrt(3) that ends in _pmb_to_pos
+
+_pmb_path_timer: The amount of ticks since the entity last generated a path. If this is less than 70, the mob will not make a new path
+
+_pmb_target: The entity that a hostile entity is currently following.
+
+Functions:
+
+pmb_entity_api.do_states()
+Does given state code, using _states
+
+pmb_entity_api.get_path(self, cost)
+Gets a path from current position to self._pmb_to_pos using the given cost function
+
+pmb_entity_api.do_path(self, speed)
+Takes a step along the current self._pmb_path
+
+pmb_entity_api.get_target(self, targets)
+Sets self._pmb_to_pos to the position of the nearest mob of a type in targets
+use "player" to target players
+
+pmb_entity_api.get_wander(self, freq)
+Sets self._pmb_to_pos to a random position every freq calls
+
+pmb_entity_api.min_cost(pos1, pos2)
+Get vector distance between the two points
+
+pmb_entity_api.min_cost_2d(pos1, pos2)
+Get vector distance between the two points, ignoring the y coordinate
+
+pmb_entity_api.set_my_animation(self, animation_name, overrides, from_blacklist)
+Will set the current animation to the given one is conditions are met.
+overrides: A table of overrides to the given entry in _animations
+from_blacklist: The animation will not be updated if the name of the current animation is in this list.
+
+pmb_entity_api.check_jump(self, strength)
+Will try to step up one block if there is one in the way.

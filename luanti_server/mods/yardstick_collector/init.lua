@@ -1,157 +1,115 @@
--- Yardstick Collector mod for Minetest
--- Provides HTTP metrics for benchmarking
+-- Luanti Tick Duration Collector for Yardstick Benchmarking
+-- Based on Option 1: Minimal Tick Duration Collector
 
--- Print debug info to console immediately 
-print("==========================================")
-print("YARDSTICK COLLECTOR MOD INITIALIZING")
-print("==========================================")
+local last_time = minetest.get_us_time()
+local tick_count = 0
+local start_time = minetest.get_us_time()
 
--- Store server start time
-local server_start_time = os.time()
+-- Create metrics file in mod_storage (where Luanti has write permissions)
+local metrics_file = minetest.get_worldpath() .. "/mod_storage/tick_metrics.tsv"
+local player_file = minetest.get_worldpath() .. "/mod_storage/player_metrics.tsv"
 
--- Request HTTP API
-local http = minetest.request_http_api()
-
--- Check if HTTP API is available
-if not http then
-    print("ERROR: HTTP API not available! Check your minetest.conf settings:")
-    print("  - secure.enable_security = false")
-    print("  - http_enable = true")
-    print("  - secure.trusted_mods = yardstick_collector")
-    print("  - secure.http_mods = yardstick_collector")
-    minetest.log("error", "[yardstick_collector] HTTP API not available")
-    return
-else
-    print("SUCCESS: HTTP API is available")
-end
-
--- Initialize metrics
-local metrics = {
-    players_count = 0,
-    entities_count = 0,
-    loaded_blocks = 0,
-    mem_usage = 0,
-    uptime = 0,
-    cpu_usage = 0,
-    tps = 0  -- ticks per second (20 is ideal)
-}
-
--- Register HTTP endpoint
-local port = tonumber(minetest.settings:get("port")) or 30000
-print("Server port: " .. port)
-
--- Debug settings
-local settings_debug = {
-    ["secure.enable_security"] = minetest.settings:get("secure.enable_security"),
-    ["http_enable"] = minetest.settings:get("http_enable"),
-    ["secure.trusted_mods"] = minetest.settings:get("secure.trusted_mods"),
-    ["secure.http_mods"] = minetest.settings:get("secure.http_mods"),
-    ["load_mod_yardstick_collector"] = minetest.settings:get("load_mod_yardstick_collector")
-}
-
--- Print settings
-print("Settings:")
-for name, value in pairs(settings_debug) do
-    print("  - " .. name .. " = " .. (value or "nil"))
-end
-
--- Update metrics periodically
-local function update_metrics()
-    -- Count players
-    metrics.players_count = #minetest.get_connected_players()
+-- Initialize metrics files
+local function init_metrics()
+    -- Create mod_storage directory if it doesn't exist
+    minetest.mkdir(minetest.get_worldpath() .. "/mod_storage")
     
-    -- Memory usage
-    metrics.mem_usage = collectgarbage("count") -- in KB
-    
-    -- Get uptime
-    metrics.uptime = os.difftime(os.time(), server_start_time)
-    
-    -- Attempt to get loaded blocks
-    if minetest.get_mapgen_stats then
-        local mapgen_stats = minetest.get_mapgen_stats()
-        metrics.loaded_blocks = mapgen_stats.loaded_blocks or 0
+    -- Initialize tick metrics file
+    local file = io.open(metrics_file, "w")
+    if file then
+        file:write("timestamp_s\ttick_duration_ms\ttick_count\tplayers_online\n")
+        file:close()
+        minetest.log("action", "YARDSTICK: Initialized tick metrics file: " .. metrics_file)
+    else
+        minetest.log("error", "YARDSTICK: Failed to create tick metrics file: " .. metrics_file)
     end
     
-    -- Entity count (ensure luaentities exists)
-    metrics.entities_count = 0
-    if minetest.luaentities then
-        local count = 0
-        for _ in pairs(minetest.luaentities) do
-            count = count + 1
-        end
-        metrics.entities_count = count
+    -- Initialize player metrics file
+    local pfile = io.open(player_file, "w")
+    if pfile then
+        pfile:write("timestamp_s\tevent_type\tplayer_name\ttotal_players\n")
+        pfile:close()
+        minetest.log("action", "YARDSTICK: Initialized player metrics file: " .. player_file)
+    else
+        minetest.log("error", "YARDSTICK: Failed to create player metrics file: " .. player_file)
     end
-    
-    -- Schedule next update
-    minetest.after(5, update_metrics)  -- Update every 5 seconds
 end
 
--- Handle HTTP requests
-minetest.register_on_mods_loaded(function()
-    print("REGISTERING METRICS ENDPOINT")
+-- Record tick performance
+minetest.register_globalstep(function(dtime)
+    local now = minetest.get_us_time()
+    local duration_us = now - last_time
+    last_time = now
+    tick_count = tick_count + 1
     
-    -- Start metrics collection
-    update_metrics()
+    -- Convert to useful units
+    local timestamp_s = now / 1e6  -- seconds since epoch
+    local duration_ms = duration_us / 1000  -- milliseconds
+    local players_online = #minetest.get_connected_players()
     
-    -- Register metrics endpoint
-    http.register_endpoint("/metrics", function(request)
-        print("RECEIVED METRICS REQUEST FROM: " .. (request.peer or "unknown"))
-        
-        if request.method ~= "GET" then
-            return {status = 405, body = "Method not allowed"}
-        end
-        
-        local response = "# Yardstick Metrics for Minetest/Luanti\n\n"
-        
-        -- Format metrics
-        response = response .. "# HELP players_count Number of connected players\n"
-        response = response .. "# TYPE players_count gauge\n"
-        response = response .. "players_count " .. metrics.players_count .. "\n\n"
-        
-        response = response .. "# HELP entities_count Number of active entities\n"
-        response = response .. "# TYPE entities_count gauge\n"
-        response = response .. "entities_count " .. metrics.entities_count .. "\n\n"
-        
-        response = response .. "# HELP loaded_blocks Number of loaded map blocks\n"
-        response = response .. "# TYPE loaded_blocks gauge\n"
-        response = response .. "loaded_blocks " .. metrics.loaded_blocks .. "\n\n"
-        
-        response = response .. "# HELP mem_usage Memory usage in KB\n"
-        response = response .. "# TYPE mem_usage gauge\n"
-        response = response .. "mem_usage " .. metrics.mem_usage .. "\n\n"
-        
-        response = response .. "# HELP uptime Server uptime in seconds\n"
-        response = response .. "# TYPE uptime counter\n"
-        response = response .. "uptime " .. metrics.uptime .. "\n\n"
-        
-        response = response .. "# HELP cpu_usage CPU usage percentage\n"
-        response = response .. "# TYPE cpu_usage gauge\n"
-        response = response .. "cpu_usage " .. metrics.cpu_usage .. "\n\n"
-        
-        response = response .. "# HELP tps Server ticks per second\n"
-        response = response .. "# TYPE tps gauge\n"
-        response = response .. "tps " .. metrics.tps .. "\n\n"
-        
-        print("SENDING METRICS RESPONSE, SIZE: " .. #response)
-        return {status = 200, body = response}
-    end)
+    -- Write metrics every tick (for detailed analysis)
+    local file = io.open(metrics_file, "a")
+    if file then
+        file:write(string.format("%.3f\t%.3f\t%d\t%d\n", 
+            timestamp_s, duration_ms, tick_count, players_online))
+        file:close()
+    end
     
-    -- Also register a root endpoint for testing
-    http.register_endpoint("/", function(request)
-        print("RECEIVED ROOT REQUEST FROM: " .. (request.peer or "unknown"))
-        return {
-            status = 200, 
-            body = "Yardstick Collector is running. Access metrics at /metrics"
-        }
-    end)
-    
-    print("METRICS ENDPOINT REGISTERED at http://localhost:" .. port .. "/metrics")
-    minetest.log("action", "[yardstick_collector] Metrics endpoint registered at http://localhost:" .. port .. "/metrics")
+    -- Log significant lag events
+    if duration_ms > 100 then  -- More than 100ms (should be ~50ms for 20 TPS)
+        minetest.log("warning", string.format("YARDSTICK: High tick duration: %.2fms (players: %d)", 
+            duration_ms, players_online))
+    end
 end)
 
--- Log successful initialization
-print("==========================================")
-print("YARDSTICK COLLECTOR MOD INITIALIZED")
-print("METRICS URL: http://localhost:" .. port .. "/metrics")
-print("==========================================")
-minetest.log("action", "[yardstick_collector] Mod initialized") 
+-- Track player connections
+minetest.register_on_joinplayer(function(player)
+    local now = minetest.get_us_time()
+    local timestamp_s = now / 1e6
+    local player_name = player:get_player_name()
+    local total_players = #minetest.get_connected_players()
+    
+    local file = io.open(player_file, "a")
+    if file then
+        file:write(string.format("%.3f\tjoin\t%s\t%d\n", 
+            timestamp_s, player_name, total_players))
+        file:close()
+    end
+    
+    minetest.log("action", string.format("YARDSTICK: Player joined: %s (total: %d)", 
+        player_name, total_players))
+end)
+
+minetest.register_on_leaveplayer(function(player, timed_out)
+    local now = minetest.get_us_time()
+    local timestamp_s = now / 1e6
+    local player_name = player:get_player_name()
+    local total_players = #minetest.get_connected_players() - 1  -- Player hasn't left yet
+    
+    local file = io.open(player_file, "a")
+    if file then
+        file:write(string.format("%.3f\tleave\t%s\t%d\n", 
+            timestamp_s, player_name, total_players))
+        file:close()
+    end
+    
+    local reason = timed_out and "timeout" or "quit"
+    minetest.log("action", string.format("YARDSTICK: Player left: %s (%s, total: %d)", 
+        player_name, reason, total_players))
+end)
+
+-- Initialize when mods are loaded
+minetest.register_on_mods_loaded(function()
+    init_metrics()
+    minetest.log("action", "YARDSTICK: Tick duration collector loaded successfully")
+end)
+
+-- Final summary on shutdown
+minetest.register_on_shutdown(function()
+    local now = minetest.get_us_time()
+    local total_time_s = (now - start_time) / 1e6
+    local avg_tps = tick_count / total_time_s
+    
+    minetest.log("action", string.format("YARDSTICK: Shutdown summary - Ticks: %d, Time: %.1fs, Avg TPS: %.2f", 
+        tick_count, total_time_s, avg_tps))
+end) 

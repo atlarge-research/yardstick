@@ -1,0 +1,386 @@
+---
+- name: Deploy Luanti Server with Configurable Mod Impact Testing
+  gather_facts: true
+  hosts: all
+  tasks:
+    - name: Create working directory
+      file:
+        path: "{{ wd }}"
+        state: directory
+        mode: "0755"
+
+    - name: Create luanti_server directory
+      file:
+        path: "{{ wd }}/luanti_server"
+        state: directory
+        mode: "0755"
+
+    - name: Create worlds directory structure
+      file:
+        path: "{{ wd }}/worlds/benchmark"
+        state: directory
+        mode: "0755"
+
+    - name: Create world.mt file
+      copy:
+        content: |
+          gameid = {{ mod_config.game_mode }}
+          creative_mode = true
+          disable_anticheat = true
+          enable_damage = false
+        dest: "{{ wd }}/worlds/benchmark/world.mt"
+        mode: "0644"
+
+    - name: Create mods directory
+      file:
+        path: "{{ wd }}/worlds/benchmark/mods"
+        state: directory
+        mode: "0755"
+
+    - name: Create yardstick_collector mod directory (always present)
+      file:
+        path: "{{ wd }}/worlds/benchmark/mods/yardstick_collector"
+        state: directory
+        mode: "0755"
+
+    - name: Copy collector mod (always present)
+      copy:
+        src: "{{ collector_mod }}"
+        dest: "{{ wd }}/worlds/benchmark/mods/yardstick_collector/init.lua"
+        mode: "0644"
+
+    # Extra Ordinance mod installation
+    - name: Download Extra Ordinance mod
+      get_url:
+        url: "https://content.luanti.org/packages/Sumianvoice/extra_ordinance/download/"
+        dest: "{{ wd }}/extra_ordinance.zip"
+        timeout: 120
+      when: mod_config.extra_ordinance_enabled
+
+    - name: Extract Extra Ordinance mod
+      unarchive:
+        src: "{{ wd }}/extra_ordinance.zip"
+        dest: "{{ wd }}/temp_extract"
+        remote_src: yes
+        creates: "{{ wd }}/temp_extract"
+      when: mod_config.extra_ordinance_enabled
+
+    - name: Copy Extra Ordinance to mods directory
+      shell: |
+        cd {{ wd }}/temp_extract
+        # Find the extracted directory (it might be named differently)
+        EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "*extra*ordinance*" -o -name "*extra_ordinance*" | head -1)
+        if [ -z "$EXTRACTED_DIR" ]; then
+          # If not found, look for any directory that isn't the current one
+          EXTRACTED_DIR=$(find . -maxdepth 1 -type d ! -name "." | head -1)
+        fi
+        if [ -n "$EXTRACTED_DIR" ]; then
+          cp -r "$EXTRACTED_DIR"/* {{ wd }}/worlds/benchmark/mods/extra_ordinance/
+        else
+          echo "Could not find extracted mod directory"
+          exit 1
+        fi
+      when: mod_config.extra_ordinance_enabled
+
+    - name: Create Extra Ordinance mod directory
+      file:
+        path: "{{ wd }}/worlds/benchmark/mods/extra_ordinance"
+        state: directory
+        mode: "0755"
+      when: mod_config.extra_ordinance_enabled
+
+    # Other test mods (weather, etc.)
+    - name: Create weather mod directory
+      file:
+        path: "{{ wd }}/worlds/benchmark/mods/weather"
+        state: directory
+        mode: "0755"
+      when: mod_config.weather_enabled
+
+    - name: Create simple weather mod
+      copy:
+        content: |
+          -- Simple weather mod for testing
+          local weather_timer = 0
+          local weather_effects = {"rain", "snow", "clear", "storm"}
+          local current_weather = 1
+
+          minetest.register_globalstep(function(dtime)
+              weather_timer = weather_timer + dtime
+              if weather_timer > 30 then  -- Change weather every 30 seconds
+                  weather_timer = 0
+                  current_weather = (current_weather % #weather_effects) + 1
+                  local weather = weather_effects[current_weather]
+                  
+                  -- Broadcast weather change to all players
+                  for _, player in pairs(minetest.get_connected_players()) do
+                      minetest.chat_send_player(player:get_player_name(), 
+                          "Weather changed to: " .. weather)
+                  end
+              end
+          end)
+        dest: "{{ wd }}/worlds/benchmark/mods/weather/init.lua"
+        mode: "0644"
+      when: mod_config.weather_enabled
+
+    - name: Create weather mod configuration
+      copy:
+        content: |
+          name = weather
+          description = Simple weather simulation for benchmarking
+          depends = default
+        dest: "{{ wd }}/worlds/benchmark/mods/weather/mod.conf"
+        mode: "0644"
+      when: mod_config.weather_enabled
+
+    # Performance-heavy test mod
+    - name: Create performance_test mod directory
+      file:
+        path: "{{ wd }}/worlds/benchmark/mods/performance_test"
+        state: directory
+        mode: "0755"
+      when: mod_config.performance_test_enabled
+
+    - name: Create performance test mod
+      copy:
+        content: |
+          -- Performance test mod - intentionally CPU/memory intensive
+          local particle_count = 0
+          local calculation_timer = 0
+
+          -- Heavy calculation function
+          local function heavy_calculation()
+              local sum = 0
+              for i = 1, 10000 do
+                  sum = sum + math.sin(i) * math.cos(i) * math.sqrt(i)
+              end
+              return sum
+          end
+
+          -- Spawn lots of particles for visual/network load
+          local function spawn_particles(pos)
+              if particle_count < 500 then
+                  minetest.add_particlespawner({
+                      amount = 50,
+                      time = 1,
+                      minpos = {x=pos.x-10, y=pos.y-10, z=pos.z-10},
+                      maxpos = {x=pos.x+10, y=pos.y+10, z=pos.z+10},
+                      minvel = {x=-2, y=-2, z=-2},
+                      maxvel = {x=2, y=2, z=2},
+                      minacc = {x=0, y=-10, z=0},
+                      maxacc = {x=0, y=-5, z=0},
+                      minexptime = 1,
+                      maxexptime = 3,
+                      minsize = 1,
+                      maxsize = 3,
+                      texture = "default_dirt.png",
+                  })
+                  particle_count = particle_count + 50
+              end
+          end
+
+          minetest.register_globalstep(function(dtime)
+              calculation_timer = calculation_timer + dtime
+              if calculation_timer > 0.1 then  -- Every 100ms
+                  calculation_timer = 0
+                  
+                  -- Do heavy calculations
+                  local result = heavy_calculation()
+                  
+                  -- Spawn particles around players
+                  for _, player in pairs(minetest.get_connected_players()) do
+                      local pos = player:get_pos()
+                      spawn_particles(pos)
+                  end
+                  
+                  -- Reset particle count periodically
+                  if particle_count > 1000 then
+                      particle_count = 0
+                  end
+              end
+          end)
+        dest: "{{ wd }}/worlds/benchmark/mods/performance_test/init.lua"
+        mode: "0644"
+      when: mod_config.performance_test_enabled
+
+    - name: Create performance test mod configuration
+      copy:
+        content: |
+          name = performance_test
+          description = CPU and memory intensive mod for benchmarking
+          depends = default
+        dest: "{{ wd }}/worlds/benchmark/mods/performance_test/mod.conf"
+        mode: "0644"
+      when: mod_config.performance_test_enabled
+
+    - name: Download Luanti 5.11.0 source code
+      get_url:
+        url: "https://github.com/luanti-org/luanti/archive/refs/tags/5.11.0.tar.gz"
+        dest: "{{ wd }}/luanti-5.11.0-source.tar.gz"
+        timeout: 120
+
+    - name: Extract Luanti source code
+      unarchive:
+        src: "{{ wd }}/luanti-5.11.0-source.tar.gz"
+        dest: "{{ wd }}"
+        remote_src: yes
+        creates: "{{ wd }}/luanti-5.11.0"
+
+    - name: Create build directory
+      file:
+        path: "{{ wd }}/luanti-5.11.0/build"
+        state: directory
+        mode: "0755"
+
+    - name: Configure Luanti build (server only, minimal dependencies)
+      shell: |
+        # Load environment modules that might provide cmake
+        source /etc/bashrc || true
+        module load cmake gcc || true
+
+        cd {{ wd }}/luanti-5.11.0/build
+
+        # Try to find cmake in different locations
+        CMAKE_CMD=""
+        for cmd in cmake cmake3 /usr/bin/cmake /usr/local/bin/cmake; do
+          if command -v "$cmd" >/dev/null 2>&1; then
+            CMAKE_CMD="$cmd"
+            break
+          fi
+        done
+
+        if [ -z "$CMAKE_CMD" ]; then
+          echo "CMake not found, trying to use system paths"
+          export PATH="/usr/bin:/usr/local/bin:$PATH"
+          CMAKE_CMD="cmake"
+        fi
+
+        echo "Using cmake command: $CMAKE_CMD"
+
+        # Try to find SQLite3 libraries in common locations
+        export PKG_CONFIG_PATH="/usr/lib64/pkgconfig:/usr/lib/pkgconfig:/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
+
+        # First try with explicit SQLite3 paths
+        if [ -f "/usr/lib64/libsqlite3.so" ] && [ -f "/usr/include/sqlite3.h" ]; then
+          echo "Found system SQLite3, using explicit paths"
+          $CMAKE_CMD .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_CLIENT=FALSE \
+            -DBUILD_SERVER=TRUE \
+            -DENABLE_GETTEXT=FALSE \
+            -DENABLE_FREETYPE=FALSE \
+            -DENABLE_LEVELDB=FALSE \
+            -DENABLE_REDIS=FALSE \
+            -DENABLE_LUAJIT=FALSE \
+            -DENABLE_SOUND=FALSE \
+            -DENABLE_CURL=FALSE \
+            -DENABLE_POSTGRESQL=FALSE \
+            -DENABLE_SPATIAL=FALSE \
+            -DENABLE_SQLITE3=TRUE \
+            -DSQLITE3_INCLUDE_DIR="/usr/include" \
+            -DSQLITE3_LIBRARY="/usr/lib64/libsqlite3.so"
+        elif [ -f "/usr/lib/libsqlite3.so" ] && [ -f "/usr/include/sqlite3.h" ]; then
+          echo "Found system SQLite3 in /usr/lib, using explicit paths"
+          $CMAKE_CMD .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_CLIENT=FALSE \
+            -DBUILD_SERVER=TRUE \
+            -DENABLE_GETTEXT=FALSE \
+            -DENABLE_FREETYPE=FALSE \
+            -DENABLE_LEVELDB=FALSE \
+            -DENABLE_REDIS=FALSE \
+            -DENABLE_LUAJIT=FALSE \
+            -DENABLE_SOUND=FALSE \
+            -DENABLE_CURL=FALSE \
+            -DENABLE_POSTGRESQL=FALSE \
+            -DENABLE_SPATIAL=FALSE \
+            -DENABLE_SQLITE3=TRUE \
+            -DSQLITE3_INCLUDE_DIR="/usr/include" \
+            -DSQLITE3_LIBRARY="/usr/lib/libsqlite3.so"
+        else
+          echo "System SQLite3 not found, using bundled version"
+          $CMAKE_CMD .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_CLIENT=FALSE \
+            -DBUILD_SERVER=TRUE \
+            -DENABLE_GETTEXT=FALSE \
+            -DENABLE_FREETYPE=FALSE \
+            -DENABLE_LEVELDB=FALSE \
+            -DENABLE_REDIS=FALSE \
+            -DENABLE_LUAJIT=FALSE \
+            -DENABLE_SOUND=FALSE \
+            -DENABLE_CURL=FALSE \
+            -DENABLE_POSTGRESQL=FALSE \
+            -DENABLE_SPATIAL=FALSE
+        fi
+
+    - name: Compile Luanti server
+      shell: |
+        cd {{ wd }}/luanti-5.11.0/build
+        echo "Starting compilation with $(nproc) cores..."
+        make -j$(nproc) luantiserver || {
+          echo "Parallel build failed, trying single-threaded..."
+          make luantiserver
+        }
+        echo "Build completed"
+
+    - name: Verify server binary was built
+      stat:
+        path: "{{ wd }}/luanti-5.11.0/build/bin/luantiserver"
+      register: built_binary
+
+    - name: Fail if server binary not built
+      fail:
+        msg: "Server binary was not built successfully"
+      when: not built_binary.stat.exists
+
+    - name: Copy server binary to luanti_server directory
+      copy:
+        src: "{{ wd }}/luanti-5.11.0/build/bin/luantiserver"
+        dest: "{{ wd }}/luanti_server/luantiserver"
+        mode: "0755"
+        remote_src: yes
+
+    - name: Create symlink to server binary for easy access
+      file:
+        src: "{{ wd }}/luanti_server/luantiserver"
+        dest: "{{ wd }}/luanti-server"
+        state: link
+
+    - name: Copy server configuration (minetest.conf)
+      template:
+        src: "{{ luanti_template }}"
+        dest: "{{ wd }}/minetest.conf"
+        mode: "0644"
+
+    - name: Create metrics directory (local to working directory)
+      file:
+        path: "{{ wd }}/metrics"
+        state: directory
+        mode: "0755"
+
+    - name: Create empty mod_storage directory
+      file:
+        path: "{{ wd }}/worlds/benchmark/mod_storage"
+        state: directory
+        mode: "0755"
+
+    - name: Create empty players directory
+      file:
+        path: "{{ wd }}/worlds/benchmark/players"
+        state: directory
+        mode: "0755"
+
+    - name: Test server binary
+      shell: |
+        cd {{ wd }}
+        ./luanti-server --version || echo "Server binary test completed (binary may not support --version)"
+      register: server_test
+      ignore_errors: yes
+
+    - name: Display server build info
+      debug:
+        msg: |
+          Server deployment completed with mod configuration: {{ mod_config }}
+          Binary location: {{ wd }}/luanti-server
+          Test output: {{ server_test.stdout }}

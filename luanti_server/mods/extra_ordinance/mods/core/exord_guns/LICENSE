@@ -1,0 +1,109 @@
+Copyright (c) 2024 Sumi, SumianVoice <info[at]sumianvoice.com> <https://content.minetest.net/packages/Sumianvoice>
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL 
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, 
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER 
+IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR 
+PERFORMANCE OF THIS SOFTWARE.
+
+===
+Media Licenses
+===
+Copyright (c) 2023 Sumi, SumianVoice <info[at]sumianvoice.com> <https://content.minetest.net/packages/Sumianvoice>
+License: CC-BY-4.0. <https://creativecommons.org/licenses/by/4.0/>
+Files:
+crosshair.png
+crosshair_*.png
+exord_guns_amr30.png
+exord_guns_asm100.png
+exord_guns_concrete.png
+exord_guns_dodge_wallbreak.png
+exord_guns_gl30ca.png
+exord_guns_gl80.png
+exord_guns_he20.png
+exord_guns_mg70.png
+exord_guns_mining_laser.png
+exord_guns_mtaw_mk3.png
+exord_guns_palette.png
+exord_guns_shockwave.png
+exord_guns_similon4b.png
+exord_guns_turret.png
+exord_smoke_anim.png
+explosion_anim.png
+
+exord_guns_beam_reload_start.ogg
+exord_guns_beam_reload_end.ogg
+exord_guns_beam_fire_loop_end.ogg
+exord_guns_beam_fire_loop_start.ogg
+exord_guns_beam_fire_loop.ogg
+exord_guns_beep_lockon.ogg
+exord_guns_explosion_5.0.ogg
+exord_guns_explosion_5.1.ogg
+exord_guns_explosion_4.0.ogg
+exord_guns_explosion_4.1.ogg
+exord_guns_explosion_4.2.ogg
+
+exord_beam_mesh.b3d
+===
+acidsnowflake, 2017 <https://freesound.org/people/acidsnowflake/sounds/402791/>
+License: Creative Commons 0 <http://creativecommons.org/publicdomain/zero/1.0/>
+Files:
+exord_guns_pistol_empty.ogg
+exord_guns_pistol_cocked.ogg
+===
+michorvath, 2018 <https://freesound.org/people/michorvath/>
+License: Creative Commons 0 <http://creativecommons.org/publicdomain/zero/1.0/>
+Files:
+exord_guns_generic_bolt_throw.ogg <sounds/427599>
+===
+CGEffex, 2010 <https://freesound.org/people/CGEffex/sounds/89770/>
+License: CC-BY 4.0 <https://creativecommons.org/licenses/by/4.0/>
+Files:
+exord_guns_sonic_crack_2.ogg (changes: cropped)
+===
+worthahep88, 2015 <https://freesound.org/people/worthahep88/sounds/319214/>
+License: Creative Commons 0 <http://creativecommons.org/publicdomain/zero/1.0/>
+Files:
+exord_guns_generic_impact.0.ogg
+exord_guns_generic_impact.1.ogg
+exord_guns_generic_impact.2.ogg
+exord_guns_generic_impact.3.ogg
+===
+qubodup, 2013 <https://freesound.org/people/qubodup/>
+License: Creative Commons 0 <http://creativecommons.org/publicdomain/zero/1.0/>
+Files:
+exord_guns_mk19_gl.ogg <sounds/182792/>
+exord_guns_explosion_1.ogg 
+exord_guns_explosion_2.1.ogg <sounds/67472/>
+exord_guns_explosion_2.0.ogg <sounds/67474/>
+===
+SuperPhat, 2017 <https://freesound.org/people/SuperPhat/>
+License: Creative Commons 0 <http://creativecommons.org/publicdomain/zero/1.0/>
+Files:
+exord_guns_heavy_fire.2.ogg
+exord_guns_heavy_fire.1.ogg
+exord_guns_heavy_fire.0.ogg
+exord_guns_mg_fire.1.ogg
+exord_guns_mg_fire.0.ogg
+exord_guns_mg_fire_loop.ogg
+exord_guns_rifle_fire_2.ogg
+exord_guns_rifle_fire_alt.2.ogg
+exord_guns_rifle_fire_alt.1.ogg
+exord_guns_rifle_fire_alt.0.ogg
+exord_guns_sniper.1.ogg
+exord_guns_sniper.0.ogg
+exord_guns_heavy_rifle.1.ogg
+exord_guns_heavy_rifle.0.ogg
+===
+Various CC0 Sounds From Freesound.org
+Format (* is wildcard): https://freesound.org/people/*
+License: Creative Commons 0 <http://creativecommons.org/publicdomain/zero/1.0/>
+Files:
+exord_guns_reload_start_whirring.ogg <Rudmer_Rotteveel/sounds/699195/> <jhumbucker/sounds/193779/> <dnewtonjr/sounds/157677/>
+exord_guns_reload_start_whirring_clank.ogg <dnewtonjr/sounds/[164009,157677]/> <Infinita08/sounds/546444/>
+exord_guns_reload_click_in.ogg <dnewtonjr/sounds/157677/>
+exord_guns_explosion_3.ogg <modusmogulus/sounds/737321/>
+exord_guns_generic_impact_close.ogg <u1769092/sounds/423301/>
+===

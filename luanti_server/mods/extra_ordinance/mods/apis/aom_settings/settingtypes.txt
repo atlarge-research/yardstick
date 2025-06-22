@@ -1,0 +1,3 @@
+
+#    Disables the /settings command and /settings server command.
+aom_settings_disable_command (Disable Settings Command) bool false

@@ -473,3 +473,5 @@ inventory.ini
 scratch
 pamuk_ssh_key
 ansible-test
+
+local_benchmark_results
