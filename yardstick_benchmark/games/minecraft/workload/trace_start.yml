@@ -6,6 +6,7 @@
     TRACE: "{{trace_file}}"
     START_TIMESTAMP: 0,
     DURATION: "{{duration}}"
+  become: "{{ use_sudo }}"
   tasks:
     - name: Run Trace Based Simulation
       shell:
@@ -13,7 +14,7 @@
           source ~/.bashrc
           nvm use 18
           # nohup node walkaround_bot.js &> bot-{{ inventory_hostname }}.log &
-          node trace.js | tee bot-{{ inventory_hostname }}.log
+          node trace.js 2>&1 | tee bot-{{ inventory_hostname }}.log
           echo $! > bot-{{inventory_hostname}}.pid
         chdir: "{{wd}}"
       environment:

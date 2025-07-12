@@ -2,6 +2,7 @@
 - name: Virtualize Storage
   gather_facts: true
   hosts: all
+  become: "{{ use_sudo }}"
   tasks:
     - name: Make createnullblk executable
       shell:
@@ -9,11 +10,22 @@
         chdir: "{{wd}}"
     - name: Run create nullblk, set up file system, and mount on the root folder
       shell:
-        cmd: sudo ./createnullblk.sh 512 8192 {{storage_latency}} >> result.txt 2>&1
+        cmd: ./createnullblk.sh 512 8192 {{storage_latency}} {{throughput}} >> drive.dev
         chdir: "{{wd}}"
+    - name: Read the device name from drive.dev file
+      shell: cat {{ wd }}/drive.dev
+      register: drive_device
+      changed_when: false
+    - name: Save the device name as a fact
+      set_fact:
+        saved_device: "{{ drive_device.stdout }}"
+        cacheable: yes
     - name: Make fs on the drive
       shell:
-        cmd: sudo mkfs.ext4 /dev/nullb0
-    - name:
+        cmd: mkfs.ext4 /dev/{{saved_device}}
+    - name: Mount drive onto working directory
       shell:
-        cmd: sudo mount /dev/nullb0 ~
+        cmd: mount /dev/{{saved_device}} {{node_wd}}
+    - name: Write device name inside virtualized storage
+      shell:
+        cmd: echo {{saved_device}} >> {{node_wd}}/drive.dev

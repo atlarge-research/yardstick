@@ -2,8 +2,8 @@
 
 # This script is adapted from the Zoned Storage Documentation at 
 
-if [ $# != 3 ]; then
-    echo "Usage: $0 <sect size (B)> <total size (MB)> <latency (ns)>"
+if [ $# != 4 ]; then
+    echo "Usage: $0 <sect size (B)> <total size (MB)> <latency (ns)> <throughput <MBytes>"
     exit 1
 fi
 

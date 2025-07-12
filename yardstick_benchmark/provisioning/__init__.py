@@ -1,6 +1,6 @@
 import time
 from plumbum import local
-from yardstick_benchmark_2.model import Node, RemoteApplication
+from yardstick_benchmark.model import Node, RemoteApplication
 from pathlib import Path
 import os
 
@@ -8,7 +8,7 @@ class VirtualStorage(RemoteApplication):
     """ Runs createnullblk script and creates virtualized storage on the node 
     """
 
-    def __init__(self, nodes: list[Node], storage_latency):
+    def __init__(self, nodes: list[Node], storage_latency, throughput):
         """ 
         Args:
             nodes (list[Node]): The nodes on which to run diskstat collection
@@ -24,14 +24,15 @@ class VirtualStorage(RemoteApplication):
                 "nullblk_script": os.path.join(
                     os.path.dirname(__file__), "createnullblk.sh"
                 ),
-                "storage_latency": storage_latency
+                "storage_latency": storage_latency,
+                "throughput": throughput
             }
         )
 
 class SSH:    
-    def provision(self, hosts: list[str]):
+    def provision(self, hosts: list[str], path, use_sudo=False):
         return [
-            Node(host=host, wd=Path(f"~"))
+            Node(host=host, wd=path, use_sudo=use_sudo)
             for host in hosts
         ]
 

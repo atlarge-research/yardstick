@@ -2,6 +2,7 @@
 - name: Deploy nullblock
   gather_facts: true
   hosts: all
+  become: "{{ use_sudo }}"
   tasks:
     - name: Create nullblock folder
       file:
