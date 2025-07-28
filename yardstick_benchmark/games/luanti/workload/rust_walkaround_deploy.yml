@@ -58,7 +58,7 @@
       shell: |
         source ~/.cargo/env
         rustup override set nightly
-        cargo build --release --bin multi_walkbot
+        cargo build --release --bin walkbot
       args:
         chdir: "{{ texmodbot_path }}"
       environment:

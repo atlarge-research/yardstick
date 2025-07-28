@@ -1,233 +1,178 @@
 ---
-- name: Deploy Luanti Server
+- name: Deploy Pre-compiled Luanti Server
   gather_facts: true
   hosts: all
+  become: no
+  vars:
+    lib_source_path: "/var/scratch/aco237/luanti_headless"
+    headless_source: "/var/scratch/aco237/luanti_headless"
   tasks:
-    - name: Create working directory
+    - name: Create working directory and subdirectories
       file:
-        path: "{{ wd }}"
+        path: "{{ item }}"
         state: directory
         mode: "0755"
+      with_items:
+        - "{{ wd }}"
+        - "{{ wd }}/lib"
+        - "{{ wd }}/logs"
+        - "{{ wd }}/games"
+        - "{{ wd }}/builtin"
+        - "{{ wd }}/worlds/benchmark"
+        - "{{ wd }}/worlds/benchmark/worldmods"  # ADD: Ensure worldmods directory exists
 
-    - name: Create luanti_server directory
-      file:
-        path: "{{ wd }}/luanti_server"
-        state: directory
-        mode: "0755"
-
-    - name: Create worlds directory structure
-      file:
-        path: "{{ wd }}/worlds/benchmark"
-        state: directory
-        mode: "0755"
-
-    - name: Create world.mt file
-      copy:
-        content: |
-          gameid = {{ game_mode }}
-          creative_mode = true
-          disable_anticheat = true
-          enable_damage = false
-        dest: "{{ wd }}/worlds/benchmark/world.mt"
-        mode: "0644"
-
-    - name: Create mods directory
-      file:
-        path: "{{ wd }}/worlds/benchmark/mods"
-        state: directory
-        mode: "0755"
-
-    - name: Create yardstick_collector mod directory
-      file:
-        path: "{{ wd }}/worlds/benchmark/mods/yardstick_collector"
-        state: directory
-        mode: "0755"
-
-    - name: Copy collector mod
-      copy:
-        src: "{{ collector_mod }}"
-        dest: "{{ wd }}/worlds/benchmark/mods/yardstick_collector/init.lua"
-        mode: "0644"
-
-    - name: Download Luanti 5.11.0 source code
-      get_url:
-        url: "https://github.com/luanti-org/luanti/archive/refs/tags/5.11.0.tar.gz"
-        dest: "{{ wd }}/luanti-5.11.0-source.tar.gz"
-        timeout: 120
-
-    - name: Extract Luanti source code
-      unarchive:
-        src: "{{ wd }}/luanti-5.11.0-source.tar.gz"
-        dest: "{{ wd }}"
-        remote_src: yes
-        creates: "{{ wd }}/luanti-5.11.0"
-
-    - name: Create build directory
-      file:
-        path: "{{ wd }}/luanti-5.11.0/build"
-        state: directory
-        mode: "0755"
-
-    - name: Configure Luanti build (server only, minimal dependencies)
+    - name: Copy required shared libraries from node
       shell: |
-        # Load environment modules that might provide cmake
-        source /etc/bashrc || true
-        module load cmake gcc || true
+        # Copy jsoncpp library - check multiple locations
+        COPIED=false
         
-        cd {{ wd }}/luanti-5.11.0/build
+        # Check on the NODE (not source system)
+        if [ -f "/usr/lib64/libjsoncpp.so.19" ]; then
+          cp "/usr/lib64/libjsoncpp.so.19" "{{ wd }}/lib/"
+          echo "✓ Copied jsoncpp library from /usr/lib64/ (node)"
+          COPIED=true
+        elif [ -f "/lib64/libjsoncpp.so.19" ]; then
+          cp "/lib64/libjsoncpp.so.19" "{{ wd }}/lib/"
+          echo "✓ Copied jsoncpp library from /lib64/ (node)"
+          COPIED=true
+        fi
         
-        # Try to find cmake in different locations
-        CMAKE_CMD=""
-        for cmd in cmake cmake3 /usr/bin/cmake /usr/local/bin/cmake; do
-          if command -v "$cmd" >/dev/null 2>&1; then
-            CMAKE_CMD="$cmd"
-            break
+        # Copy GCC libraries if they exist on the node
+        for lib in libatomic.so.1 libstdc++.so.6 libgcc_s.so.1; do
+          if [ -f "/opt/ohpc/pub/compiler/gcc/12.4.0/lib64/$lib" ]; then
+            cp "/opt/ohpc/pub/compiler/gcc/12.4.0/lib64/$lib" "{{ wd }}/lib/"
+            echo "✓ Copied $lib"
           fi
         done
         
-        if [ -z "$CMAKE_CMD" ]; then
-          echo "CMake not found, trying to use system paths"
-          export PATH="/usr/bin:/usr/local/bin:$PATH"
-          CMAKE_CMD="cmake"
-        fi
-        
-        echo "Using cmake command: $CMAKE_CMD"
-        
-        # Install SQLite3 development package if not available
-        # Try different package managers without requiring sudo
-        if command -v yum >/dev/null 2>&1; then
-          yum install -y sqlite-devel 2>/dev/null || echo "Could not install sqlite-devel via yum (might need sudo)"
-        elif command -v apt-get >/dev/null 2>&1; then
-          apt-get update && apt-get install -y libsqlite3-dev 2>/dev/null || echo "Could not install libsqlite3-dev via apt (might need sudo)"
-        elif command -v dnf >/dev/null 2>&1; then
-          dnf install -y sqlite-devel 2>/dev/null || echo "Could not install sqlite-devel via dnf (might need sudo)"
-        fi
-        
-        # Try to find SQLite3 libraries in common locations
-        export PKG_CONFIG_PATH="/usr/lib64/pkgconfig:/usr/lib/pkgconfig:/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
-        
-        # First try with explicit SQLite3 paths
-        if [ -f "/usr/lib64/libsqlite3.so" ] && [ -f "/usr/include/sqlite3.h" ]; then
-          echo "Found system SQLite3, using explicit paths"
-          $CMAKE_CMD .. \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_CLIENT=FALSE \
-            -DBUILD_SERVER=TRUE \
-            -DENABLE_GETTEXT=FALSE \
-            -DENABLE_FREETYPE=FALSE \
-            -DENABLE_LEVELDB=FALSE \
-            -DENABLE_REDIS=FALSE \
-            -DENABLE_LUAJIT=FALSE \
-            -DENABLE_SOUND=FALSE \
-            -DENABLE_CURL=FALSE \
-            -DENABLE_POSTGRESQL=FALSE \
-            -DENABLE_SPATIAL=FALSE \
-            -DENABLE_SQLITE3=TRUE \
-            -DSQLITE3_INCLUDE_DIR="/usr/include" \
-            -DSQLITE3_LIBRARY="/usr/lib64/libsqlite3.so"
-        elif [ -f "/usr/lib/libsqlite3.so" ] && [ -f "/usr/include/sqlite3.h" ]; then
-          echo "Found system SQLite3 in /usr/lib, using explicit paths"
-          $CMAKE_CMD .. \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_CLIENT=FALSE \
-            -DBUILD_SERVER=TRUE \
-            -DENABLE_GETTEXT=FALSE \
-            -DENABLE_FREETYPE=FALSE \
-            -DENABLE_LEVELDB=FALSE \
-            -DENABLE_REDIS=FALSE \
-            -DENABLE_LUAJIT=FALSE \
-            -DENABLE_SOUND=FALSE \
-            -DENABLE_CURL=FALSE \
-            -DENABLE_POSTGRESQL=FALSE \
-            -DENABLE_SPATIAL=FALSE \
-            -DENABLE_SQLITE3=TRUE \
-            -DSQLITE3_INCLUDE_DIR="/usr/include" \
-            -DSQLITE3_LIBRARY="/usr/lib/libsqlite3.so"
-        else
-          echo "System SQLite3 not found, using bundled version"
-          # Luanti has a bundled SQLite3 - use that instead
-          $CMAKE_CMD .. \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_CLIENT=FALSE \
-            -DBUILD_SERVER=TRUE \
-            -DENABLE_GETTEXT=FALSE \
-            -DENABLE_FREETYPE=FALSE \
-            -DENABLE_LEVELDB=FALSE \
-            -DENABLE_REDIS=FALSE \
-            -DENABLE_LUAJIT=FALSE \
-            -DENABLE_SOUND=FALSE \
-            -DENABLE_CURL=FALSE \
-            -DENABLE_POSTGRESQL=FALSE \
-            -DENABLE_SPATIAL=FALSE
-        fi
-
-    - name: Compile Luanti server
-      shell: |
-        cd {{ wd }}/luanti-5.11.0/build
-        echo "Starting compilation with $(nproc) cores..."
-        make -j$(nproc) luantiserver || {
-          echo "Parallel build failed, trying single-threaded..."
-          make luantiserver
-        }
-        echo "Build completed"
-        
-    - name: Verify server binary was built
-      stat:
-        path: "{{ wd }}/luanti-5.11.0/build/bin/luantiserver"
-      register: built_binary
-      
-    - name: Fail if server binary not built
-      fail:
-        msg: "Server binary was not built successfully"
-      when: not built_binary.stat.exists
-
-    - name: Copy server binary to luanti_server directory
-      copy:
-        src: "{{ wd }}/luanti-5.11.0/build/bin/luantiserver"
-        dest: "{{ wd }}/luanti_server/luantiserver"
-        mode: "0755"
-        remote_src: yes
-
-    - name: Create symlink to server binary for easy access
-      file:
-        src: "{{ wd }}/luanti_server/luantiserver"
-        dest: "{{ wd }}/luanti-server"
-        state: link
-
-    - name: Copy server configuration (minetest.conf)
-      template:
-        src: "{{ luanti_template }}"
-        dest: "{{ wd }}/minetest.conf"
-        mode: "0644"
-
-    - name: Create metrics directory (local to working directory)
-      file:
-        path: "{{ wd }}/metrics"
-        state: directory
-        mode: "0755"
-
-    - name: Create empty mod_storage directory
-      file:
-        path: "{{ wd }}/worlds/benchmark/mod_storage"
-        state: directory
-        mode: "0755"
-
-    - name: Create empty players directory
-      file:
-        path: "{{ wd }}/worlds/benchmark/players"
-        state: directory
-        mode: "0755"
-
-    - name: Test server binary
-      shell: |
-        cd {{ wd }}
-        ./luanti-server --version || echo "Server binary test completed (binary may not support --version)"
-      register: server_test
+        echo "Found libs in {{ wd }}/lib:"
+        ls -la "{{ wd }}/lib/"
+      register: node_lib_copy
       ignore_errors: yes
 
-    - name: Display server build info
+    - name: Upload jsoncpp from source system if not found on node
+      copy:
+        src: "/usr/lib64/libjsoncpp.so.19"
+        dest: "{{ wd }}/lib/"
+        mode: "0755"
+      when: "'libjsoncpp.so.19' not in node_lib_copy.stdout"
+      ignore_errors: yes
+      
+    - name: Copy pre-compiled server binary
+      copy:
+        src: "{{ headless_source }}/luantiserver"
+        dest: "{{ wd }}/luantiserver"
+        mode: "0755"
+
+    - name: Copy configuration file
+      copy:
+        src: "{{ headless_source }}/luanti.conf"
+        dest: "{{ wd }}/luanti.conf"
+        mode: "0644"
+
+    # ADD: Copy the working world.mt with yardstick_collector enabled
+    - name: Copy world.mt with yardstick_collector configuration
+      copy:
+        src: "{{ headless_source }}/worlds/benchmark/world.mt"
+        dest: "{{ wd }}/worlds/benchmark/world.mt"
+        mode: "0644"
+
+    # ADD: Copy worldmods directory (contains yardstick_collector)
+    - name: Copy worldmods directory with yardstick_collector
+      shell: |
+        if [ -d "{{ headless_source }}/worlds/benchmark/worldmods" ]; then
+          rsync -av "{{ headless_source }}/worlds/benchmark/worldmods/" "{{ wd }}/worlds/benchmark/worldmods/"
+          echo "✓ Copied worldmods directory with yardstick_collector"
+          ls -la "{{ wd }}/worlds/benchmark/worldmods/"
+        else
+          echo "⚠ No worldmods directory found in source"
+        fi
+      register: worldmods_copy
+
+    # ADD: Copy mod_storage directory if it exists (preserves previous metrics)
+    - name: Copy mod_storage directory if exists
+      shell: |
+        if [ -d "{{ headless_source }}/worlds/benchmark/mod_storage" ]; then
+          rsync -av "{{ headless_source }}/worlds/benchmark/mod_storage/" "{{ wd }}/worlds/benchmark/mod_storage/"
+          echo "✓ Copied mod_storage directory"
+        else
+          echo "ℹ No existing mod_storage directory (will be created by mod)"
+        fi
+      register: mod_storage_copy
+
+    - name: Copy minetest_game with extra ordinance
+      shell: |
+        # First try to copy minetest_game
+        if [ -d "{{ headless_source }}/games/minetest_game" ]; then
+          rsync -av "{{ headless_source }}/games/minetest_game/" "{{ wd }}/games/minetest_game/"
+          echo "✓ Copied minetest_game files"
+        else
+          echo "✗ minetest_game directory not found at {{ headless_source }}/games/minetest_game"
+        fi
+        
+        # Also copy extra ordinance if it exists
+        if [ -d "{{ headless_source }}/games/extra_ordinance" ]; then
+          rsync -av "{{ headless_source }}/games/extra_ordinance/" "{{ wd }}/games/extra_ordinance/"
+          echo "✓ Copied extra_ordinance files"
+        else
+          echo "⚠ extra_ordinance directory not found (optional)"
+        fi
+        
+        # Show what games we have
+        echo "Available games:"
+        ls -la "{{ wd }}/games/"
+      register: game_copy
+      ignore_errors: yes
+
+    - name: Verify libraries are properly linked
+      shell: |
+        cd "{{ wd }}"
+        export LD_LIBRARY_PATH="{{ wd }}/lib:/usr/lib64:/lib64:/opt/ohpc/pub/compiler/gcc/12.4.0/lib64:$LD_LIBRARY_PATH"
+        echo "Library directory contents:"
+        ls -la "{{ wd }}/lib/"
+        echo "Library dependencies:"
+        ldd ./luantiserver | grep jsoncpp || echo "No jsoncpp found in ldd output"
+      register: lib_verification
+      ignore_errors: yes
+
+    # ADD: Verify yardstick_collector mod deployment
+    - name: Verify yardstick_collector mod deployment
+      shell: |
+        cd "{{ wd }}"
+        echo "=== WORLD.MT CONFIGURATION ==="
+        cat worlds/benchmark/world.mt
+        echo ""
+        echo "=== WORLDMODS DIRECTORY ==="
+        ls -la worlds/benchmark/worldmods/ 2>/dev/null || echo "No worldmods directory"
+        echo ""
+        echo "=== YARDSTICK_COLLECTOR MOD ==="
+        if [ -d "worlds/benchmark/worldmods/yardstick_collector" ]; then
+          echo "✓ yardstick_collector mod found"
+          ls -la worlds/benchmark/worldmods/yardstick_collector/
+        else
+          echo "❌ yardstick_collector mod missing"
+        fi
+      register: yardstick_verification
+
+    - name: Display library verification
+      debug:
+        var: lib_verification.stdout_lines
+
+    - name: Display yardstick verification
+      debug:
+        var: yardstick_verification.stdout_lines
+
+    - name: Display deployment summary
       debug:
         msg: |
-          Server deployment completed!
-          Binary location: {{ wd }}/luanti-server
-          Test output: {{ server_test.stdout }}
+          Server deployment summary:
+          - Working directory: {{ wd }}
+          - Server binary: {{ 'FOUND' if server_check.stat.exists else 'MISSING' }}
+          - Libraries: {{ 'VERIFIED' if 'libjsoncpp.so.19' in lib_verification.stdout else 'ISSUE DETECTED' }}
+          - Game files: {{ 'COPIED' if 'Copied minetest_game files' in game_copy.stdout else 'ISSUE DETECTED' }}
+          - Worldmods: {{ 'COPIED' if 'Copied worldmods directory' in worldmods_copy.stdout else 'MISSING' }}
+          - Yardstick mod: {{ 'VERIFIED' if 'yardstick_collector mod found' in yardstick_verification.stdout else 'MISSING' }}
+      vars:
+        server_check:
+          stat:
+            exists: "{{ lookup('file', wd + '/luantiserver', errors='ignore') != '' }}"

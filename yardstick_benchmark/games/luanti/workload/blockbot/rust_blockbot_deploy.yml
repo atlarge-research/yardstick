@@ -1,5 +1,5 @@
 ---
-- name: Deploy Enhanced Rust Bots (WalkBots and BlockBots)
+- name: Deploy Rust BlockBot bots
   hosts: all
   tasks:
     - name: Debug path information
@@ -7,7 +7,6 @@
         msg: |
           Working directory: {{ wd }}
           Texmodbot path: {{ texmodbot_path }}
-          Bot type: {{ bot_type }}
           Current user: {{ ansible_user | default('unknown') }}
           Home directory: {{ ansible_env.HOME | default('unknown') }}
 
@@ -44,60 +43,23 @@
         delete: yes
         recursive: yes
       delegate_to: localhost
-
+      
     - name: Verify source code was copied
       stat:
         path: "{{ texmodbot_path }}/Cargo.toml"
       register: cargo_toml_check
-
+      
     - name: Fail if Cargo.toml not found
       fail:
         msg: "Cargo.toml not found in {{ texmodbot_path }}. Source copy may have failed."
       when: not cargo_toml_check.stat.exists
 
-    - name: Check if bot binaries exist
-      stat:
-        path: "{{ texmodbot_path }}/target/release/{{ item }}"
-      register: bot_binaries
-      loop:
-        - walkbot
-        - blockbot
-        - multi_walkbot
-
-    - name: Build Rust bots (both walkbot and blockbot)
+    - name: Build Rust blockbot
       shell: |
         source ~/.cargo/env
         rustup override set nightly
-        cargo build --release --bin walkbot --bin blockbot --bin multi_walkbot
+        cargo build --release --bin blockbot
       args:
         chdir: "{{ texmodbot_path }}"
       environment:
         CARGO_HOME: ~/.cargo
-      when: bot_binaries.results | selectattr('stat.exists', 'equalto', false) | list | length > 0
-
-    - name: Verify bot binaries were built
-      stat:
-        path: "{{ texmodbot_path }}/target/release/{{ bot_type }}"
-      register: target_bot_binary
-
-    - name: Fail if target bot binary not found
-      fail:
-        msg: "{{ bot_type }} binary not found after build"
-      when: not target_bot_binary.stat.exists
-
-    - name: Display bot deployment info
-      debug:
-        msg: |
-          Enhanced bot deployment completed!
-          Bot type: {{ bot_type }}
-          Binary location: {{ texmodbot_path }}/target/release/{{ bot_type }}
-          Bots per node: {{ bots_per_node }}
-          {% if bot_type == "walkbot" %}
-          Movement mode: {{ movement_mode }}
-          {% else %}
-          Building pattern: {{ building_pattern }}
-          Max blocks per bot: {{ max_blocks_per_bot }}
-          {% endif %}
-          {% if use_spawn_area %}
-          Spawn area: ({{ spawn_x }}, {{ spawn_y }}, {{ spawn_z }})
-          {% endif %}

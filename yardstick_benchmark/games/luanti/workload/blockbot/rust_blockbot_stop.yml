@@ -1,0 +1,25 @@
+---
+- name: Stop Rust BlockBot bots
+  hosts: all
+  tasks:
+    - name: Kill all blockbot processes
+      shell: |
+        # Kill cargo processes running blockbot
+        pkill -f "cargo run.*blockbot" || true
+        
+        # Kill any remaining blockbot binaries
+        pkill -f "blockbot" || true
+        
+        # Wait a moment for processes to die
+        sleep 2
+        
+        # Force kill if necessary
+        pkill -9 -f "cargo run.*blockbot" || true
+        pkill -9 -f "blockbot" || true
+        
+        echo "All blockbot processes stopped"
+      
+    - name: Clean up log files
+      shell: |
+        rm -f /tmp/blockbot_*_{{ inventory_hostname }}.log
+        echo "Cleaned up blockbot log files"

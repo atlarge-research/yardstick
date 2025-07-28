@@ -6,16 +6,31 @@
     TEMP: "{{ wd }}/tmp"
     TMP: "{{ wd }}/tmp"
   tasks:
-    - name: Start multiple walkbots
+    - name: Start multiple individual walkbots
       shell: |
         source ~/.cargo/env
-        nohup cargo run --release --bin multi_walkbot -- \
-          --server {{ server_host }}:{{ server_port }} \
-          --count {{ bots_per_node }} \
-          --mode {{ movement_mode }} \
-          --speed {{ movement_speed }} \
-          --duration {{ duration_seconds | int }} \
-          > /tmp/walkbot_{{ inventory_hostname }}.log 2>&1 &
+        
+        # Start individual walkbots in a loop
+        for i in $(seq 1 {{ bots_per_node }}); do
+          USERNAME="walkbot_$(printf "%03d" $i)"
+          
+          nohup cargo run --release --bin walkbot -- \
+            {{ server_host }}:{{ server_port }} \
+            --username "$USERNAME" \
+            --password "benchmark123" \
+            --auto-register \
+            --quit-after-seconds {{ duration_seconds | int }} \
+            --mode {{ movement_mode }} \
+            --speed {{ movement_speed }} \
+            > /tmp/walkbot_${i}_{{ inventory_hostname }}.log 2>&1 &
+          
+          # Stagger connections to avoid overwhelming the server
+          sleep 0.5
+          
+          echo "Started walkbot $i: $USERNAME"
+        done
+        
+        echo "All {{ bots_per_node }} walkbots started on {{ inventory_hostname }}"
       args:
         chdir: "{{ texmodbot_path }}"
       environment:
@@ -24,3 +39,13 @@
     - name: Wait for bots to initialize
       pause:
         seconds: 5
+        
+    - name: Check bot processes
+      shell: |
+        echo "Active walkbot processes on {{ inventory_hostname }}:"
+        ps aux | grep "cargo run" | grep walkbot | wc -l
+      register: bot_count
+      
+    - name: Display bot status
+      debug:
+        msg: "{{ bot_count.stdout }} walkbot processes running on {{ inventory_hostname }}"

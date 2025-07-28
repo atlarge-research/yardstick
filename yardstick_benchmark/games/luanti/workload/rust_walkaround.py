@@ -7,6 +7,7 @@ class RustWalkAround(RemoteApplication):
         self,
         nodes: list[Node],
         server_host: str,
+        server_port: int = 30000,  # Default Luanti port
         duration: timedelta = timedelta(seconds=60),
         bots_per_node: int = 1,
         movement_mode: str = "random",
@@ -25,13 +26,13 @@ class RustWalkAround(RemoteApplication):
             extravars={
                 "hostnames": [n.host for n in nodes],
                 "server_host": server_host,
-                "server_port": 30000,  # Default Luanti port
+                "server_port": server_port,  # Default Luanti port
                 "duration": duration.total_seconds(),
                 "duration_seconds": int(duration.total_seconds()),
                 "bots_per_node": bots_per_node,
                 "movement_mode": movement_mode,
                 "movement_speed": movement_speed,
                 "texmodbot_path": texmodbot_path,
-                "texmodbot_source": str(Path(__file__).parent.parent.parent.parent.parent / "bot_components" / "texmodbot"),
+                "texmodbot_source": "/var/scratch/aco237/luantick/bot_components/texmodbot"
             },
         )

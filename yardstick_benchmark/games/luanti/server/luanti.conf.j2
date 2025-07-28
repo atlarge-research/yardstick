@@ -1,21 +1,27 @@
-# Luanti server configuration for benchmarking
-# Based on working local configuration
+# Luanti server configuration for Yardstick benchmarking
 
-# Basic server settings
-server_name = Yardstick Benchmark Server
-server_description = Performance benchmark for Luanti
-server_address = 0.0.0.0
+# Server settings
+server_name = Yardstick Benchmark Server ({{ game_mode }})
+server_description = Performance benchmark for Luanti with {{ game_mode }} game
+server_address = 127.0.0.1
+bind_address = 127.0.0.1
 port = 30000
-disable_anticheat = true
-creative_mode = true
-enable_damage = false
-default_privs = interact, shout, build, give, use, kick, ban, op, privs, server, admin, owner
-max_users = 1000
-motd = Welcome to the Yardstick benchmark server!
+max_users = 500
+motd = Welcome to the Yardstick benchmark server! Game: {{ game_mode }}
+
+# Admin settings  
+name = admin
+
+# Network settings - IPv4 only for better compatibility
+enable_ipv6 = false
+ipv6_server = false
+enable_server = true
+strict_protocol_version_checking = false
 
 # Game mechanics settings
 creative_mode = true
 enable_damage = false
+default_privs = interact, shout, build, give, use, kick, ban, op, privs, server, admin, owner
 
 # Performance settings
 max_block_send_distance = 10
@@ -23,36 +29,25 @@ max_simultaneous_block_sends_per_client = 40
 max_simultaneous_block_sends_server_total = 250
 time_speed = 0
 
-# World generation settings
-fixed_map_seed = grass
-mg_name = v7
-mg_flags = trees, caves, dungeons, decorations
-water_level = 1
-static_spawn_point = 0,20,0
+# Network settings to handle more bots
+max_packets_per_iteration = 2048
+max_out_chat_queue_size = 50
+dedicated_server_step = 0.05
+player_transfer_distance = 15
+active_object_send_range_blocks = 6
+active_block_range = 3
 
-# Network settings
-enable_ipv6 = false
-enable_server = true
-default_game = {{ game_mode }}
-strict_protocol_version_checking = false
-player_transfer_distance = 10
-max_packets_per_iteration = 1024
-time_send_interval = 5
-server_map_save_interval = 600
-full_block_send_enable_min_time_from_building = 2.0
-sqlite_synchronous = 0
-curl_verify_cert = false
+# World generation settings - use flat for consistent testing
+fixed_map_seed = benchmark
+mg_name = flat
+static_spawnpoint = 0, 80, 0
 
-# Database backends (to avoid warnings)
-backend = sqlite3
-player_backend = sqlite3
-auth_backend = sqlite3
-
-# Logging settings
-debug_log_level = warning
+# Logging settings for enhanced debugging
+debug_log_level = action
+enable_debug_log = true
 chat_log_level = warning
 http_fetch_timeout = 30
-enable_debug_log = true
 
-# Yardstick collector mod
-load_mod_yardstick_collector = true 
+# Mod settings
+load_mod_yardstick_collector = true
+disable_anticheat = true 

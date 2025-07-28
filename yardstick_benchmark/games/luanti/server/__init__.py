@@ -1,23 +1,30 @@
 from yardstick_benchmark.model import RemoteApplication, Node
 from pathlib import Path
 
-
 class LuantiServer(RemoteApplication):
-    def __init__(self, nodes: list[Node], game_mode="minetest_game", use_ppa=True):
-        # Choose deployment method based on use_ppa flag
-        deploy_yml = "luanti_ppa_deploy.yml" if use_ppa else "luanti_deploy.yml"
-        
+    def __init__(
+        self,
+        nodes: list[Node],
+        game_mode: str = "minetest_game",     # ADD: Support different games
+        use_source_build: bool = False,
+        enable_luajit: bool = False,
+        ipv4_only: bool = True,
+    ):
         super().__init__(
-            "luanti",
+            "luanti_server",
             nodes,
-            Path(__file__).parent / deploy_yml,
+            Path(__file__).parent / "luanti_deploy.yml",
             Path(__file__).parent / "luanti_start.yml",
             Path(__file__).parent / "luanti_stop.yml",
             Path(__file__).parent / "luanti_cleanup.yml",
             extravars={
-                "hostnames": [n.host for n in nodes],
-                "luanti_template": str(Path(__file__).parent / "luanti.conf.j2"),
-                "collector_mod": str(Path(__file__).parent.parent / "collector" / "init.lua"),
-                "game_mode": game_mode
+                "game_mode": game_mode,           # ADD: Pass game mode to playbooks
+                "use_source_build": use_source_build,
+                "enable_luajit": enable_luajit,
+                "ipv4_only": ipv4_only,
             },
-        ) 
+        )
+
+    @property
+    def game_mode(self) -> str:
+        return self.extravars["game_mode"]

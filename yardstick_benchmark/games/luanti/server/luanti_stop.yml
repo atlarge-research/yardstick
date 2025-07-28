@@ -2,10 +2,6 @@
 - name: Stop Luanti Server
   gather_facts: true
   hosts: all
-  environment:
-    TMPDIR: "{{ wd }}/tmp"
-    TEMP: "{{ wd }}/tmp"
-    TMP: "{{ wd }}/tmp"
   tasks:
     - name: Check if the server is running
       stat:
@@ -17,9 +13,15 @@
       register: pid_content
       when: pid_file.stat.exists
 
+    - name: Check if process is actually running
+      shell: ps -p {{ pid_content.stdout }} > /dev/null
+      register: process_check
+      when: pid_file.stat.exists and pid_content.stdout is defined
+      ignore_errors: yes
+
     - name: Stop server process gracefully
       shell: kill -TERM {{ pid_content.stdout }}
-      when: pid_file.stat.exists and pid_content.stdout is defined
+      when: pid_file.stat.exists and pid_content.stdout is defined and process_check.rc == 0
       ignore_errors: yes
 
     - name: Wait for process to stop
@@ -27,16 +29,16 @@
         path: "/proc/{{ pid_content.stdout }}/status"
         state: absent
         timeout: 30
-      when: pid_file.stat.exists and pid_content.stdout is defined
+      when: pid_file.stat.exists and pid_content.stdout is defined and process_check.rc == 0
       ignore_errors: yes
 
-    - name: Kill process forcefully if still running
+    - name: Force kill if still running
       shell: kill -KILL {{ pid_content.stdout }}
       when: pid_file.stat.exists and pid_content.stdout is defined
       ignore_errors: yes
 
-    - name: Kill any remaining luanti processes
-      shell: pkill -f luanti || pkill -f minetest || true
+    - name: Kill any remaining luantiserver processes
+      shell: pkill -f luantiserver || true
       ignore_errors: yes
 
     - name: Remove PID file
@@ -44,14 +46,38 @@
         path: "{{ wd }}/luanti.pid"
         state: absent
 
-    - name: Display final server log
+    - name: Show final server status
       shell: |
-        cd {{ wd }}
-        echo "=== Final server log (last 10 lines) ==="
-        tail -10 server.log || echo "No server log found"
-      register: final_log
+        echo "=== Final Server Status ==="
+        if pgrep -f luantiserver > /dev/null; then
+          echo "WARNING: Some luantiserver processes may still be running:"
+          pgrep -f luantiserver
+        else
+          echo "All luantiserver processes stopped"
+        fi
+      register: final_status
+
+    - name: Display final status
+      debug:
+        msg: "{{ final_status.stdout_lines }}"
+
+    - name: Kill process forcefully if still running
+      shell: kill -KILL {{ pid_content.stdout }}
+      when: pid_file.stat.exists and pid_content.stdout is defined
       ignore_errors: yes
 
-    - name: Show server shutdown status
-      debug:
-        msg: "{{ final_log.stdout }}"
+    - name: Kill any remaining luanti processes
+      shell: pkill -f luanti-server || pkill -f minetest || true
+      ignore_errors: yes
+
+    - name: Remove PID file
+      file:
+        path: "{{ wd }}/luanti.pid"
+        state: absent
+
+    - name: Fetch server logs
+      fetch:
+        src: "{{ wd }}/server.log"
+        dest: "./logs/"
+        flat: yes
+      ignore_errors: yes

@@ -2,111 +2,68 @@
 - name: Start Luanti Server
   gather_facts: true
   hosts: all
-  environment:
-    TMPDIR: "{{ wd }}/tmp"
-    TEMP: "{{ wd }}/tmp"
-    TMP: "{{ wd }}/tmp"
+  vars:
+    game_id: "{{ game_mode | default('minetest_game') }}"
   tasks:
-    - name: Check if server binary exists
-      stat:
-        path: "{{ wd }}/luanti-server"
-      register: server_binary
-
-    - name: Find alternative server binary if needed
-      find:
-        paths: "{{ wd }}/luanti_server"
-        patterns: ["luantiserver", "luanti", "minetest"]
-        file_type: file
-        recurse: yes
-      register: alt_server_binaries
-      when: not server_binary.stat.exists
-
-    - name: Set server binary path
-      set_fact:
-        server_bin_path: >-
-          {%- if server_binary.stat.exists -%}
-            {{ server_binary.stat.path }}
-          {%- elif alt_server_binaries.files | length > 0 -%}
-            {{ alt_server_binaries.files[0].path }}
-          {%- else -%}
-            {{ wd }}/luanti-server
-          {%- endif -%}
-
-    - name: Check if server binary actually exists
-      stat:
-        path: "{{ server_bin_path }}"
-      register: final_binary_check
-
-    - name: Fail if no server binary found
-      fail:
-        msg: "No Luanti server binary found. Deployment may have failed. Expected at: {{ server_bin_path }}"
-      when: not final_binary_check.stat.exists
-
-    - name: Make server binary executable
-      file:
-        path: "{{ server_bin_path }}"
-        mode: "0755"
-
-    - name: Test server binary
+    - name: Fix game path for RUN_IN_PLACE mode
       shell: |
-        {{ server_bin_path }} --version
-      register: version_check
-      ignore_errors: yes
+        cd "{{ wd }}/.." && 
+        ln -sf "{{ wd }}/games" games 2>/dev/null || true
+        ln -sf "{{ wd }}/builtin" builtin 2>/dev/null || true
+        echo "✓ Game and builtin symlinks created"
+      register: game_symlink
 
-    - name: Display server version
-      debug:
-        msg: "Server version check: {{ version_check.stdout }}"
-
-    - name: Start Luanti server (compiled from source)
-      shell:
-        cmd: |
-          cd {{ wd }}
-          echo "Starting Luanti server with binary: {{ server_bin_path }}"
-          echo "Using config file: {{ wd }}/minetest.conf"
-          echo "Using world directory: {{ wd }}/worlds/benchmark"
-          echo "Running command: {{ server_bin_path }} --config {{ wd }}/minetest.conf --world {{ wd }}/worlds/benchmark --gameid {{ game_mode }}"
-          nohup {{ server_bin_path }} --config {{ wd }}/minetest.conf --world {{ wd }}/worlds/benchmark --gameid {{ game_mode }} > server.log 2>&1 &
-          echo $! > luanti.pid
-          echo "Server started with PID $(cat luanti.pid)"
-        chdir: "{{ wd }}"
-
-    - name: Wait a moment for server to initialize
-      pause:
-        seconds: 5
-
-    - name: Check if server process is running
+    - name: Copy builtin files if missing
       shell: |
-        if [ -f "{{ wd }}/luanti.pid" ]; then
-          PID=$(cat {{ wd }}/luanti.pid)
-          if ps -p $PID > /dev/null 2>&1; then
-            echo "Server is running with PID $PID"
+        if [ -d "/var/scratch/aco237/luanti_headless/builtin" ]; then
+          rsync -av "/var/scratch/aco237/luanti_headless/builtin/" "{{ wd }}/builtin/"
+          echo "✓ Copied builtin files"
+        else
+          echo "⚠ No builtin directory found in source"
+        fi
+      register: builtin_copy
+
+    - name: Ensure proper game directory structure
+      shell: |
+        cd "{{ wd }}"
+        echo "Checking for game: {{ game_id }}"
+        
+        if [ ! -d "games/{{ game_id }}" ]; then
+          echo "❌ {{ game_id }} directory missing"
+          echo "Available games:"
+          ls -la games/
+          
+          if [ "{{ game_id }}" != "minetest_game" ] && [ -d "games/minetest_game" ]; then
+            echo "⚠ Falling back to minetest_game"
           else
-            echo "Server process not found"
             exit 1
           fi
         else
-          echo "PID file not found"
-          exit 1
+          echo "✓ {{ game_id }} directory found"
         fi
-      register: server_check
+      register: game_structure
 
-    - name: Wait for server to start listening on port 30000
-      wait_for:
-        port: 30000
-        host: "0.0.0.0"
-        timeout: 60
-        msg: "Server failed to start listening on port 30000"
-
-    - name: Check server log for startup messages
+    - name: Start Luanti server with specified game
       shell: |
-        cd {{ wd }}
-        echo "=== Server startup log ==="
-        tail -30 server.log
-      register: server_log
-
-    - name: Display server status
-      debug:
-        msg: |
-          Server Status: {{ server_check.stdout }}
-          Server Log Output:
-          {{ server_log.stdout }}
+        cd "{{ wd }}" && 
+        export LD_LIBRARY_PATH="{{ wd }}/lib:/usr/lib64:/lib64:/opt/ohpc/pub/compiler/gcc/12.4.0/lib64:$LD_LIBRARY_PATH" && 
+        chmod +x luantiserver && 
+        
+        ACTUAL_GAME="{{ game_id }}"
+        if [ ! -d "games/{{ game_id }}" ] && [ -d "games/minetest_game" ]; then
+          ACTUAL_GAME="minetest_game"
+          echo "⚠ Using fallback game: $ACTUAL_GAME"
+        fi
+        
+        echo "Starting server with game: $ACTUAL_GAME"
+        nohup ./luantiserver \
+          --world worlds/benchmark \
+          --gameid "$ACTUAL_GAME" \
+          --config luanti.conf \
+          --port 30000 \
+          --logfile logs/server.log \
+          </dev/null >logs/startup.log 2>&1 &
+        echo $! > luantiserver.pid
+        
+        echo "Server started with game: $ACTUAL_GAME"
+      poll: 0
