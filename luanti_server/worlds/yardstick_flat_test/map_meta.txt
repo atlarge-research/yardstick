@@ -1,0 +1,131 @@
+
+chunksize = 1
+mg_name = flat
+seed = 12345
+water_level = -50
+ymin = 0
+ymax = 20
+flat_ground_level = 1
+disable_caves = true
+disable_decorations = true
+mgflat_np_cave2 = {
+	octaves = 3
+	lacunarity = 2
+	persistence = 0.5
+	spread = (67,67,67)
+	scale = 12
+	seed = 10325
+	flags = defaults
+	offset = 0
+	}
+mgflat_np_cave1 = {
+	octaves = 3
+	lacunarity = 2
+	persistence = 0.5
+	spread = (61,61,61)
+	scale = 12
+	seed = 52534
+	flags = defaults
+	offset = 0
+	}
+mgflat_cavern_threshold = 0.699999988
+mgflat_cavern_taper = 256
+mgflat_cavern_limit = -256
+mgflat_hill_threshold = 0.449999988
+mgflat_lake_steepness = 48
+mgflat_np_dungeons = {
+	octaves = 2
+	lacunarity = 2
+	persistence = 0.800000012
+	spread = (500,500,500)
+	scale = 0.5
+	seed = 0
+	flags = defaults
+	offset = 0.899999976
+	}
+mgflat_cave_width = 0.0900000036
+mg_biome_np_humidity = {
+	octaves = 3
+	lacunarity = 2
+	persistence = 0.5
+	spread = (1000,1000,1000)
+	scale = 50
+	seed = 842
+	flags = defaults
+	offset = 50
+	}
+mgflat_large_cave_flooded = 0.5
+mgflat_large_cave_num_max = 2
+mgflat_large_cave_num_min = 0
+mgflat_np_filler_depth = {
+	octaves = 3
+	lacunarity = 2
+	persistence = 0.699999988
+	spread = (150,150,150)
+	scale = 1.20000005
+	seed = 261
+	flags = defaults
+	offset = 0
+	}
+mgflat_small_cave_num_min = 0
+mgflat_ground_level = 8
+mgflat_dungeon_ymin = -31000
+mg_biome_np_humidity_blend = {
+	octaves = 2
+	lacunarity = 2
+	persistence = 1
+	spread = (8,8,8)
+	scale = 1.5
+	seed = 90003
+	flags = defaults
+	offset = 0
+	}
+mgflat_np_cavern = {
+	octaves = 5
+	lacunarity = 2
+	persistence = 0.629999995
+	spread = (384,128,384)
+	scale = 1
+	seed = 723
+	flags = defaults
+	offset = 0
+	}
+mgflat_large_cave_depth = -33
+mg_biome_np_heat_blend = {
+	octaves = 2
+	lacunarity = 2
+	persistence = 1
+	spread = (8,8,8)
+	scale = 1.5
+	seed = 13
+	flags = defaults
+	offset = 0
+	}
+mgflat_hill_steepness = 64
+mg_biome_np_heat = {
+	octaves = 3
+	lacunarity = 2
+	persistence = 0.5
+	spread = (1000,1000,1000)
+	scale = 50
+	seed = 5349
+	flags = defaults
+	offset = 50
+	}
+mapgen_limit = 50
+mg_flags = nocaves, nodungeons, light, decorations, biomes, ores
+mgflat_small_cave_num_max = 0
+mgflat_dungeon_ymax = 31000
+mgflat_spflags = nolakes, nohills, nocaverns
+mgflat_lake_threshold = -0.449999988
+mgflat_np_terrain = {
+	octaves = 5
+	lacunarity = 2
+	persistence = 0.600000024
+	spread = (600,600,600)
+	scale = 1
+	seed = 7244
+	flags = defaults
+	offset = 0
+	}
+[end_of_params]

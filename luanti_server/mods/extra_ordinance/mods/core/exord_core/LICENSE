@@ -1,0 +1,62 @@
+Copyright (c) 2024 Sumi, SumianVoice <info[at]sumianvoice.com> <https://content.minetest.net/packages/Sumianvoice>
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL 
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, 
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER 
+IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR 
+PERFORMANCE OF THIS SOFTWARE.
+
+===
+Media Licenses
+===
+Copyright (c) 2023 Sumi, SumianVoice <info[at]sumianvoice.com> <https://content.minetest.net/packages/Sumianvoice>
+License: CC-BY-4.0. <https://creativecommons.org/licenses/by/4.0/>
+Files:
+exord_core_gui_player_icon.png
+exord_core_gui_ready.png
+exord_core_gui_ready_on.png
+exord_core_gui_slot_bg.png
+exord_core_gui_slot_bg_hover.png
+exord_core_gui_slot_bg_press.png
+exord_core_gui_slot_bg_select.png
+exord_core_gui_arrow.png
+exord_core_gui_panel_bg.png
+exord_core_gui_panel_bg_small.png
+exord_hud_capture.png
+
+exord_core_beep_notallowed.ogg
+exord_fan_heavyogg.ogg
+exord_fan_low.ogg
+exord_igm_click.ogg
+All files starting with `exord_m_`
+All files starting with `exord_f_`
+
+exord_waypoint.b3d
+exord_waypoint_objective.b3d
+===
+jhumbucker, 2013 <https://freesound.org/people/jhumbucker/sounds/193822/>
+License: Creative Commons 0 <http://creativecommons.org/publicdomain/zero/1.0/>
+Files:
+exord_ambient_rumble.ogg
+===
+SoundBiterSFX, 2024 <https://freesound.org/people/SoundBiterSFX/sounds/732209/>
+License: Creative Commons 0 <http://creativecommons.org/publicdomain/zero/1.0/>
+Files:
+exord_radio_start.ogg
+exord_radio_stop.ogg
+===
+Magmi.Soundtracks, 2020 <https://freesound.org/people/Magmi.Soundtracks/sounds/507747/>
+License: Creative Commons 0 <http://creativecommons.org/publicdomain/zero/1.0/>
+Files:
+507747_magmisoundtracks_action.ogg
+476556_magmisoundtracks_tension.ogg
+===
+Nox_Sound, 2021 <https://freesound.org/people/Nox_Sound/sounds/560510/>
+License: Creative Commons 0 <http://creativecommons.org/publicdomain/zero/1.0/>
+Files:
+exord_rubble_explosion.0.ogg
+exord_rubble_explosion.1.ogg
+exord_rubble_explosion.2.ogg
+===

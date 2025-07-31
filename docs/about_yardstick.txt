@@ -1,0 +1,29 @@
+Luanti ↔ Yardstick Quick‑Guide (plain text)
+	•	What is Luanti?
+	◦	Open‑source voxel game engine (formerly Minetest) written in C++ with a Lua scripting layer.
+	◦	Uses a modified Irrlicht renderer; cross‑platform (Windows, macOS, Linux, FreeBSD, Android).
+	◦	Client–server architecture; default server tick ≈ 0.05 s (≈ 20 Hz); custom UDP‑based protocol defined in doc/protocol.txt.
+	◦	Modding via Lua API (minetest.register_* callbacks) executed inside the main game loop.
+	•	How Luanti differs from Minecraft (vanilla/Spigot):
+	◦	C++ core + Lua mods vs Java core + Bukkit plugins.
+	◦	Packet stream is little‑endian binary over UDP; Minecraft uses framed packets over TCP/Netty.
+	◦	Server loop called global‑step; exposed directly to mods, so collectors can be pure Lua.
+	◦	Build & deploy is CMake/Ninja; no JVM needed.
+	•	Yardstick components that must be adapted:
+	1	Player Emulation Adapter 1.1 Implement a headless Luanti bot in Python (or re‑use C++ CLI client); map Yardstick abstract actions → Luanti packet IDs (T_MOVE, T_DIG, T_PLACE). 1.2 Expose a thin yardstick.platforms.luanti.Client class with connect(), walk(x,y,z), dig(pos), place(pos,node).
+	2	Collector 2.1 Create server‑side Lua mod mods/yardstick_collector/init.lua that: - Captures per‑tick duration via minetest.register_globalstep(function(dtime) … end). - Counts packets using minetest.register_on_modchannel_message. - Pushes metrics every second to Prometheus Pushgateway (use Lua‑HTTP or textfile exporter). 2.2 Metrics to expose (match Yardstick schema): - luanti_tick_duration_seconds (gauge). - luanti_packet_total{type="T_MOVE"} (counter).
+	3	Orchestration & Build 3.1 Modify Yardstick Ansible playbooks: - Replace java -jar start‑command with ./luanti-server --world ${WORLD}. - Ensure dependencies: apt-get install libirrlicht-dev luajit ninja-build cmake. 3.2 Update experiment YAML: platform: luanti.
+	4	Metric Translation Layer 4.1 Implement yardstick/platforms/luanti/metric_map.py that renames: - tick_duration ← luanti_tick_duration_seconds. - msg_count ← sum of luanti_packet_total counters.
+	•	Recommended workflow on DAS‑5:
+	1	Reserve nodes: preserve -np 7 -t 3600.
+	2	Compile Luanti on login node; rsync binaries to all reserved nodes.
+	3	Populate ~/.ssh/config with ProxyJump to reach worker nodes.
+	4	Run Yardstick: yardstick run experiments/luanti_scalability.yml.
+	•	Common pitfalls and fixes:
+	◦	Version mismatch → build client & server from same commit SHA.
+	◦	http_fetch disabled on compute nodes → fall back to Prometheus textfile collector in /var/lib/node_exporter/.
+	◦	Packet compression (zstd) differs → set enable_zstd = false in minetest.conf.
+	•	Validation checklist:
+	◦	Server reports 20 Hz tick under low load.
+	◦	Bots can walk, dig, place using API mapping.
+	◦	Prometheus endpoint shows luanti_* metrics; Yardstick CSV contains packet logs.

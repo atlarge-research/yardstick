@@ -1,0 +1,28 @@
+---
+name: luanti_environment_modification
+description: Quantify performance effects of environmental modifications
+platform: luanti
+game_mode: minetest_game
+nodes: 5 # 1 server + 4 workload nodes
+duration: 300 # seconds
+players: 50 # 12.5 per node
+scenarios:
+  - name: no_modification
+    description: Baseline with no environment modification
+    modification_level: none
+  - name: small_modification
+    description: Small environmental changes (~100 blocks)
+    modification_level: small
+    blocks_changed: 100
+  - name: medium_modification
+    description: Medium environmental changes (~1000 blocks)
+    modification_level: medium
+    blocks_changed: 1000
+  - name: large_modification
+    description: Large environmental changes (~10000 blocks)
+    modification_level: large
+    blocks_changed: 10000
+  - name: extreme_modification
+    description: Extreme environmental changes (~100000 blocks)
+    modification_level: extreme
+    blocks_changed: 100000

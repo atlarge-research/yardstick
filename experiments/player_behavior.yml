@@ -1,0 +1,79 @@
+---
+name: luanti_player_behavior
+description: Assess the impact of different player behaviors on server performance
+platform: luanti
+game_mode: minetest_game
+nodes: 5 # 1 server + 4 workload nodes
+duration: 300 # seconds
+players: 50 # 12.5 per node
+scenarios:
+  - name: idle_clustered
+    description: Players standing still in a small area
+    behavior: idle
+    distribution: clustered
+    box_width: 10
+    box_x: -5
+    box_z: -5
+  - name: idle_dispersed
+    description: Players standing still spread out
+    behavior: idle
+    distribution: dispersed
+    box_width: 100
+    box_x: -50
+    box_z: -50
+  - name: walking_clustered
+    description: Players walking around in a small area
+    behavior: walking
+    distribution: clustered
+    box_width: 10
+    box_x: -5
+    box_z: -5
+  - name: walking_dispersed
+    description: Players walking around spread out
+    behavior: walking
+    distribution: dispersed
+    box_width: 100
+    box_x: -50
+    box_z: -50
+  - name: building_clustered
+    description: Players building in a small area
+    behavior: building
+    distribution: clustered
+    box_width: 10
+    box_x: -5
+    box_z: -5
+  - name: building_dispersed
+    description: Players building spread out
+    behavior: building
+    distribution: dispersed
+    box_width: 100
+    box_x: -50
+    box_z: -50
+  - name: mining_clustered
+    description: Players mining in a small area
+    behavior: mining
+    distribution: clustered
+    box_width: 10
+    box_x: -5
+    box_z: -5
+  - name: mining_dispersed
+    description: Players mining spread out
+    behavior: mining
+    distribution: dispersed
+    box_width: 100
+    box_x: -50
+    box_z: -50
+  - name: mixed_clustered
+    description: Players with mixed behaviors in a small area
+    behavior: mixed
+    distribution: clustered
+    box_width: 10
+    box_x: -5
+    box_z: -5
+  - name: mixed_dispersed
+    description: Players with mixed behaviors spread out
+    behavior: mixed
+    distribution: dispersed
+    box_width: 100
+    box_x: -50
+    box_z: -50

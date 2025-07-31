@@ -1,0 +1,17 @@
+---
+- name: Cleanup Rust BlockBot deployment
+  hosts: all
+  tasks:
+    - name: Remove blockbot build artifacts
+      shell: |
+        cd {{ texmodbot_path }}
+        cargo clean || true
+        echo "Cleaned up build artifacts"
+      ignore_errors: yes
+      
+    - name: Remove temporary files
+      shell: |
+        rm -rf {{ wd }}/tmp/blockbot_*
+        rm -f /tmp/blockbot_*
+        echo "Cleaned up temporary files"
+      ignore_errors: yes

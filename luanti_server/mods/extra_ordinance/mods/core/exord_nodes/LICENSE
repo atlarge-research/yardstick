@@ -1,0 +1,31 @@
+Copyright (c) 2024 Sumi, SumianVoice <info[at]sumianvoice.com> <https://content.minetest.net/packages/Sumianvoice>
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL 
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, 
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER 
+IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR 
+PERFORMANCE OF THIS SOFTWARE.
+
+===
+Media Licenses
+===
+CC0, Polyhaven
+<https://polyhaven.com/a/*>		<*texture_name>
+Files:
+polyhaven_gravel.jpg 			<rock_ground>
+polyhaven_lava.jpg				<rock_06>
+polyhaven_concrete.jpg			<concrete_wall_007>
+polyhaven_dirt_gravel.jpg		<gravelly_sand>
+polyhaven_dirt_rocks_2.jpg		<rocks_ground_05> <gravelly_sand>
+polyhaven_rocks.jpg 			<gray_rocks>
+polyhaven_rocks_lava.jpg		<gray_rocks> <rock_06>
+polyhaven_sandstone.jpg			<rock_08>
+polyhaven_steel_container.jpg	<container_side>
+polyhaven_tan_dirt.jpg          <dirt_floor>
+polyhaven_tan_rock.jpg          <rock_face_03>
+polyhaven_tan_mud_cracked.jpg   <mud_cracked_dry_03>
+polyhaven_tan_mud_cracked_blend.jpg <dirt_floor> <mud_cracked_dry_03>
+polyhaven_grass_stone_blend.jpg <gray_rocks> <forrest_ground_01>
+===

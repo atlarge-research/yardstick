@@ -1,0 +1,35 @@
+# Mod Impact Assessment Configuration
+# This file configures the experiment parameters for testing mod performance impact
+
+# Node configuration - adapt these to your actual test infrastructure
+nodes:
+  - host: "node001.example.com" # Replace with your actual node hostname/IP
+    user: "testuser" # Replace with your username
+    keyfile: "~/.ssh/id_rsa" # Replace with path to your SSH key
+
+# Experiment parameters
+test_duration_seconds: 180 # How long each test runs (3 minutes)
+bot_count: 20 # Number of bots per node
+warmup_seconds: 45 # Server warmup time before starting bots
+cooldown_seconds: 30 # Time between tests for cleanup
+
+# Mod configurations to test
+# These will be tested in sequence, each with the same bot workload
+mod_configurations:
+  - "vanilla" # Baseline: no mods except monitoring
+  - "extra_ordinance_only" # Extra Ordinance mod (CPU-intensive)
+  - "weather_only" # Simple weather mod
+  - "performance_test_only" # Synthetic performance test mod
+  - "weather_and_performance" # Multiple mods combined
+
+# Output configuration
+output_dir: "mod_impact_results" # Directory to save results
+
+# Additional experiment notes
+experiment_notes: |
+  This experiment measures the performance impact of different mod configurations
+  on Luanti server performance. The Extra Ordinance mod is expected to have
+  significant impact due to its intensive graphics and computation requirements.
+
+  Expected outcome: Extra Ordinance will show the highest performance impact,
+  followed by the synthetic performance test mod.

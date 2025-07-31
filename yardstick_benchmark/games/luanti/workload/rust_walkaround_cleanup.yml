@@ -1,0 +1,22 @@
+---
+- name: Cleanup Rust WalkAround bots
+  hosts: all
+  environment:
+    TMPDIR: "{{ wd }}/tmp"
+    TEMP: "{{ wd }}/tmp"
+    TMP: "{{ wd }}/tmp"
+  tasks:
+    - name: Remove bot log files
+      file:
+        path: "/tmp/walkbot_{{ inventory_hostname }}.log"
+        state: absent
+
+    - name: Clean cargo build cache (optional)
+      shell: |
+        source ~/.cargo/env
+        cargo clean
+      args:
+        chdir: "{{ texmodbot_path }}"
+      environment:
+        CARGO_HOME: ~/.cargo
+      ignore_errors: yes

@@ -1,0 +1,27 @@
+---
+name: luanti_mod_impact
+description: Evaluate the performance impact of various mods on Luanti
+platform: luanti
+game_mode: minetest_game
+nodes: 5 # 1 server + 4 workload nodes
+duration: 300 # seconds
+players: 50 # 12.5 per node
+scenarios:
+  - name: base_game
+    description: Baseline with no additional mods
+    mods: []
+  - name: terrain_mod
+    description: Test with terrain generation mod
+    mods: ["terrain_gen"]
+  - name: physics_mod
+    description: Test with advanced physics mod
+    mods: ["physics"]
+  - name: ai_mod
+    description: Test with NPC AI mod
+    mods: ["npc_ai"]
+  - name: weather_mod
+    description: Test with weather effects mod
+    mods: ["weather"]
+  - name: all_mods
+    description: Test with all mods combined
+    mods: ["terrain_gen", "physics", "npc_ai", "weather"]

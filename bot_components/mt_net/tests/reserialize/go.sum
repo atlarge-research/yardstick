@@ -1,0 +1,10 @@
+github.com/dragonfireclient/mt v0.0.1 h1:iX6pW8L20orCrAYQTa+ADdm6OdNvIyP7Mev6VadQ1z8=
+github.com/dragonfireclient/mt v0.0.1/go.mod h1:3oHbcSQytW21mTF7ozw3Il3UzdOAG30gPzO2XUAqvGs=
+github.com/dragonfireclient/mt v0.0.2-0.20220709120709-173ad6e339cf h1:0CY1XyRPpNTgPQJjgsqvBzBgXdf6NN6deKw81G0qeHQ=
+github.com/dragonfireclient/mt v0.0.2-0.20220709120709-173ad6e339cf/go.mod h1:3oHbcSQytW21mTF7ozw3Il3UzdOAG30gPzO2XUAqvGs=
+github.com/dragonfireclient/mt v0.0.2-0.20230212182515-e1bfd543b068 h1:iseIXyVyA45MomwUdnWXoKm6V+Pp6ZLhXPKdlOQksAg=
+github.com/dragonfireclient/mt v0.0.2-0.20230212182515-e1bfd543b068/go.mod h1:3oHbcSQytW21mTF7ozw3Il3UzdOAG30gPzO2XUAqvGs=
+github.com/klauspost/compress v1.15.5 h1:qyCLMz2JCrKADihKOh9FxnW3houKeNsp2h5OEz0QSEA=
+github.com/klauspost/compress v1.15.5/go.mod h1:PhcZ0MbTNciWF3rruxRgKxI5NkcHHrHUDtV4Yw2GlzU=
+github.com/klauspost/compress v1.15.15 h1:EF27CXIuDsYJ6mmvtBRlEuB2UVOqHG1tAXgZ7yIO+lw=
+github.com/klauspost/compress v1.15.15/go.mod h1:ZcK2JAFqKOpnBlxcLsJzYfrS9X1akm9fHZNnD9+Vo/4=

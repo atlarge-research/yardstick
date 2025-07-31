@@ -1,0 +1,61 @@
+---
+- name: Start Rust BlockBot bots
+  hosts: all
+  environment:
+    TMPDIR: "{{ wd }}/tmp"
+    TEMP: "{{ wd }}/tmp"
+    TMP: "{{ wd }}/tmp"
+  tasks:
+    - name: Start multiple individual blockbots
+      shell: |
+        source ~/.cargo/env
+        
+        # Start individual blockbots in a loop
+        for i in $(seq 1 {{ bots_per_node }}); do
+          USERNAME="blockbot_$(printf "%03d" $i)"
+          
+          # Calculate starting position for this bot (spread them out)
+          START_X=$(echo "{{ start_x }} + ($i - 1) * 5" | bc -l)
+          START_Z=$(echo "{{ start_z }} + ($i - 1) * 3" | bc -l)
+          
+          nohup cargo run --release --bin blockbot -- \
+            {{ server_host }}:{{ server_port }} \
+            --username "$USERNAME" \
+            --password "benchmark123" \
+            --auto-register \
+            --quit-after-seconds {{ duration_seconds | int }} \
+            --pattern {{ building_pattern }} \
+            --speed {{ building_speed }} \
+            --max-blocks {{ max_blocks }} \
+            --start-x "$START_X" \
+            --start-y {{ start_y }} \
+            --start-z "$START_Z" \
+            --block-slot 0 \
+            {% if destructive_mode %}--destructive{% endif %} \
+            > /tmp/blockbot_${i}_{{ inventory_hostname }}.log 2>&1 &
+          
+          # Stagger connections to avoid overwhelming the server
+          sleep 1.0
+          
+          echo "Started blockbot $i: $USERNAME (position: $START_X, {{ start_y }}, $START_Z)"
+        done
+        
+        echo "All {{ bots_per_node }} blockbots started on {{ inventory_hostname }}"
+      args:
+        chdir: "{{ texmodbot_path }}"
+      environment:
+        CARGO_HOME: ~/.cargo
+
+    - name: Wait for bots to initialize
+      pause:
+        seconds: 10
+        
+    - name: Check bot processes
+      shell: |
+        echo "Active blockbot processes on {{ inventory_hostname }}:"
+        ps aux | grep "cargo run" | grep blockbot | wc -l
+      register: bot_count
+      
+    - name: Display bot status
+      debug:
+        msg: "{{ bot_count.stdout }} blockbot processes running on {{ inventory_hostname }}"

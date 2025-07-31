@@ -56,3 +56,15 @@ class Telegraf(RemoteApplication):
         self.inv.setdefault("minecraft_servers", {}).setdefault("hosts", {})[
             node.host
         ] = this_host
+
+    def add_input_luanti_metrics(self, node: Node):
+        """Configure Telegraf to collect metrics from a Luanti server.
+
+        Args:
+            node (Node): The node running the Luanti server
+        """
+        self.extravars.setdefault("luanti_servers", []).append(node.host)
+        this_host = self.inv["all"]["hosts"][node.host]
+        self.inv.setdefault("luanti_servers", {}).setdefault("hosts", {})[
+            node.host
+        ] = this_host

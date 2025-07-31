@@ -1,0 +1,53 @@
+# Luanti server configuration for Yardstick benchmarking
+
+# Server settings
+server_name = Yardstick Benchmark Server ({{ game_mode }})
+server_description = Performance benchmark for Luanti with {{ game_mode }} game
+server_address = 127.0.0.1
+bind_address = 127.0.0.1
+port = 30000
+max_users = 500
+motd = Welcome to the Yardstick benchmark server! Game: {{ game_mode }}
+
+# Admin settings  
+name = admin
+
+# Network settings - IPv4 only for better compatibility
+enable_ipv6 = false
+ipv6_server = false
+enable_server = true
+strict_protocol_version_checking = false
+
+# Game mechanics settings
+creative_mode = true
+enable_damage = false
+default_privs = interact, shout, build, give, use, kick, ban, op, privs, server, admin, owner
+
+# Performance settings
+max_block_send_distance = 10
+max_simultaneous_block_sends_per_client = 40
+max_simultaneous_block_sends_server_total = 250
+time_speed = 0
+
+# Network settings to handle more bots
+max_packets_per_iteration = 2048
+max_out_chat_queue_size = 50
+dedicated_server_step = 0.05
+player_transfer_distance = 15
+active_object_send_range_blocks = 6
+active_block_range = 3
+
+# World generation settings - use flat for consistent testing
+fixed_map_seed = benchmark
+mg_name = flat
+static_spawnpoint = 0, 80, 0
+
+# Logging settings for enhanced debugging
+debug_log_level = action
+enable_debug_log = true
+chat_log_level = warning
+http_fetch_timeout = 30
+
+# Mod settings
+load_mod_yardstick_collector = true
+disable_anticheat = true 

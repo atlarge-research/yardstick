@@ -1,0 +1,69 @@
+---
+- name: Start Luanti Server
+  gather_facts: true
+  hosts: all
+  vars:
+    game_id: "{{ game_mode | default('minetest_game') }}"
+  tasks:
+    - name: Fix game path for RUN_IN_PLACE mode
+      shell: |
+        cd "{{ wd }}/.." && 
+        ln -sf "{{ wd }}/games" games 2>/dev/null || true
+        ln -sf "{{ wd }}/builtin" builtin 2>/dev/null || true
+        echo "✓ Game and builtin symlinks created"
+      register: game_symlink
+
+    - name: Copy builtin files if missing
+      shell: |
+        if [ -d "/var/scratch/aco237/luanti_headless/builtin" ]; then
+          rsync -av "/var/scratch/aco237/luanti_headless/builtin/" "{{ wd }}/builtin/"
+          echo "✓ Copied builtin files"
+        else
+          echo "⚠ No builtin directory found in source"
+        fi
+      register: builtin_copy
+
+    - name: Ensure proper game directory structure
+      shell: |
+        cd "{{ wd }}"
+        echo "Checking for game: {{ game_id }}"
+        
+        if [ ! -d "games/{{ game_id }}" ]; then
+          echo "❌ {{ game_id }} directory missing"
+          echo "Available games:"
+          ls -la games/
+          
+          if [ "{{ game_id }}" != "minetest_game" ] && [ -d "games/minetest_game" ]; then
+            echo "⚠ Falling back to minetest_game"
+          else
+            exit 1
+          fi
+        else
+          echo "✓ {{ game_id }} directory found"
+        fi
+      register: game_structure
+
+    - name: Start Luanti server with specified game
+      shell: |
+        cd "{{ wd }}" && 
+        export LD_LIBRARY_PATH="{{ wd }}/lib:/usr/lib64:/lib64:/opt/ohpc/pub/compiler/gcc/12.4.0/lib64:$LD_LIBRARY_PATH" && 
+        chmod +x luantiserver && 
+        
+        ACTUAL_GAME="{{ game_id }}"
+        if [ ! -d "games/{{ game_id }}" ] && [ -d "games/minetest_game" ]; then
+          ACTUAL_GAME="minetest_game"
+          echo "⚠ Using fallback game: $ACTUAL_GAME"
+        fi
+        
+        echo "Starting server with game: $ACTUAL_GAME"
+        nohup ./luantiserver \
+          --world worlds/benchmark \
+          --gameid "$ACTUAL_GAME" \
+          --config luanti.conf \
+          --port 30000 \
+          --logfile logs/server.log \
+          </dev/null >logs/startup.log 2>&1 &
+        echo $! > luantiserver.pid
+        
+        echo "Server started with game: $ACTUAL_GAME"
+      poll: 0

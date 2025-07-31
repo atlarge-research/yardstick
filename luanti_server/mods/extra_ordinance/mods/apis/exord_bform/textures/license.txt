@@ -1,0 +1,7 @@
+
+Copyright (c) 2023 Sumi, SumianVoice <info[at]sumianvoice.com> <https://content.minetest.net/packages/Sumianvoice>
+License: CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/)
+bform_bg.png
+bform_bg_outline.png
+bform_btn.png
+bform_btn_press.png

@@ -1,0 +1,48 @@
+---
+name: luanti_network_resilience
+description: Evaluate how Luanti handles unreliable network conditions
+platform: luanti
+game_mode: minetest_game
+nodes: 5 # 1 server + 4 workload nodes
+duration: 300 # seconds
+players: 50 # 12.5 per node
+scenarios:
+  - name: baseline
+    description: Baseline with no network impairment
+    network_impairment: none
+  - name: packet_loss_1
+    description: Test with 1% packet loss
+    network_impairment: loss
+    loss_percentage: 1
+  - name: packet_loss_5
+    description: Test with 5% packet loss
+    network_impairment: loss
+    loss_percentage: 5
+  - name: packet_loss_10
+    description: Test with 10% packet loss
+    network_impairment: loss
+    loss_percentage: 10
+  - name: latency_50
+    description: Test with 50ms network latency
+    network_impairment: delay
+    delay_ms: 50
+  - name: latency_100
+    description: Test with 100ms network latency
+    network_impairment: delay
+    delay_ms: 100
+  - name: latency_200
+    description: Test with 200ms network latency
+    network_impairment: delay
+    delay_ms: 200
+  - name: bandwidth_10
+    description: Test with 10Mbps bandwidth limit
+    network_impairment: bandwidth
+    bandwidth_mbps: 10
+  - name: bandwidth_5
+    description: Test with 5Mbps bandwidth limit
+    network_impairment: bandwidth
+    bandwidth_mbps: 5
+  - name: bandwidth_1
+    description: Test with 1Mbps bandwidth limit
+    network_impairment: bandwidth
+    bandwidth_mbps: 1
