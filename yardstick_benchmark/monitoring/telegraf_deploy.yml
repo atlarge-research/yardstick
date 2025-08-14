@@ -17,7 +17,7 @@
       template:
         src: "{{config_template}}"
         dest: "{{wd}}/telegraf-{{inventory_hostname}}.conf"
-- name: Deploy Minecraft tick collection execd input script
+- name: Deploy Minecraft tick collection execd input script (only when Minecraft benchmarking is enabled)
   gather_facts: true
   hosts: minecraft_servers
   tasks:
@@ -25,3 +25,6 @@
       copy:
         src: "{{jolokia_get_minecraft_tick_script_path}}"
         dest: "{{wd}}"
+      when: jolokia_get_minecraft_tick_script_path is defined
+      # If you're running a Luanti-only benchmark, the variable above won't be set
+      # (because add_input_execd_minecraft_ticks wasn't called) and this task is skipped.

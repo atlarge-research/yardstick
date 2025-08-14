@@ -6,20 +6,64 @@
     TEMP: "{{ wd }}/tmp"
     TMP: "{{ wd }}/tmp"
   tasks:
+    - name: Calculate timing parameters
+      set_fact:
+        total_stagger_time: "{{ (bots_per_node - 1) * 0.5 }}"
+        buffer_time: 30
+        adjusted_bot_duration: "{{ (duration_seconds | int) + ((bots_per_node - 1) * 0.5) + 30 }}"
+
+    - name: Display timing calculation
+      debug:
+        msg: |
+          Timing Analysis:
+          - Requested benchmark duration: {{ duration_seconds }}s
+          - Bot deployment stagger time: {{ total_stagger_time }}s
+          - Safety buffer: {{ buffer_time }}s
+          - Adjusted bot lifetime: {{ adjusted_bot_duration }}s
+          - All {{ bots_per_node }} bots will overlap for {{ duration_seconds }}s
+  
     - name: Start multiple individual walkbots
       shell: |
         source ~/.cargo/env
+
+        # Calculate total stagger time
+        STAGGER_TIME={{ total_stagger_time }}
+        ADJUSTED_DURATION={{ adjusted_bot_duration | int }}
+        
+        echo "Original duration: {{ duration_seconds }}s"
+        echo "Stagger time needed: ${STAGGER_TIME}s" 
+        echo "Adjusted bot duration: ${ADJUSTED_DURATION}s"
+        echo "This ensures all {{ bots_per_node }} bots overlap for {{ duration_seconds }}s"
+        
+        # Extract node number from hostname (e.g., node031 -> 31)
+        NODE_NUM=$(echo "{{ inventory_hostname }}" | sed 's/^node0*//')
+        if [ -z "$NODE_NUM" ]; then
+          NODE_NUM="1"
+        fi
+        
+        echo "Node number: $NODE_NUM (from hostname: {{ inventory_hostname }})"
         
         # Start individual walkbots in a loop
         for i in $(seq 1 {{ bots_per_node }}); do
-          USERNAME="walkbot_$(printf "%03d" $i)"
+          # Create unique username: walkbot_<node>_<bot_number>
+          USERNAME="walkbot_${NODE_NUM}_$(printf "%03d" $i)"
           
-          nohup cargo run --release --bin walkbot -- \
+          # Determine if this is the interaction initiator bot (0-based index comparison)
+          INITIATOR_INDEX={{ interaction_initiator_bot_index | default(0) | int + 1 }}
+          INTERACTION_ENV=""
+          if [ "{{ interaction_latency_enabled | default(false) }}" = "True" ] || [ "{{ interaction_latency_enabled | default(false) }}" = "true" ] || [ "{{ interaction_latency_enabled | default(false) }}" = "1" ]; then
+            if [ "$i" -eq "$INITIATOR_INDEX" ]; then
+              INTERACTION_ENV="INTERACTION_ENABLED=1 INTERACTION_INTERVAL_S={{ interaction_action_interval | default(15) }} INTERACTION_INITIATOR_USERNAME=$USERNAME"
+              echo "[interaction] Marking $USERNAME as initiator (interval={{ interaction_action_interval | default(15) }}s)"
+            fi
+          fi
+          
+          nohup env $INTERACTION_ENV cargo run --release --bin walkbot -- \
             {{ server_host }}:{{ server_port }} \
             --username "$USERNAME" \
             --password "benchmark123" \
             --auto-register \
-            --quit-after-seconds {{ duration_seconds | int }} \
+            --quit-after-seconds ${ADJUSTED_DURATION} \
             --mode {{ movement_mode }} \
             --speed {{ movement_speed }} \
             > /tmp/walkbot_${i}_{{ inventory_hostname }}.log 2>&1 &
@@ -49,3 +93,15 @@
     - name: Display bot status
       debug:
         msg: "{{ bot_count.stdout }} walkbot processes running on {{ inventory_hostname }}"
+
+    - name: Show interaction initiator log tail (if enabled and on initiator bot)
+      shell: |
+        INITIATOR_INDEX={{ interaction_initiator_bot_index | default(0) | int + 1 }}
+        if [ "{{ interaction_latency_enabled | default(false) }}" = "True" ] || [ "{{ interaction_latency_enabled | default(false) }}" = "true" ] || [ "{{ interaction_latency_enabled | default(false) }}" = "1" ]; then
+          if [ $INITIATOR_INDEX -le {{ bots_per_node }} ]; then
+            LOG="/tmp/walkbot_$(printf '%03d' $INITIATOR_INDEX)_{{ inventory_hostname }}.log"
+            echo "--- Interaction Initiator ($INITIATOR_INDEX) recent log lines ---"
+            tail -n 15 "$LOG" || echo "No log yet"
+          fi
+        fi
+      when: interaction_latency_enabled | default(false)

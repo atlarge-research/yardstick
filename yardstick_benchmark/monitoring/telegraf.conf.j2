@@ -314,21 +314,57 @@
   dump_zeros       = true
 
 {% if inventory_hostname in luanti_servers %}
-[[inputs.prometheus]]
-  urls = ["file:///var/lib/node_exporter/luanti_metrics.prom"]
-  name_suffix = "_luanti"
-  metric_version = 2
+# ---------------------------------------------------------------------------
+# Luanti server metrics (ingest TSV files written by yardstick_collector mod)
+# ---------------------------------------------------------------------------
+# The Luanti instrumentation writes two tab-separated files under the world:
+#   tick_metrics.tsv  -> timestamp_s, tick_duration_ms, tick_count, players_online
+#   player_metrics.tsv -> timestamp_s, event_type, player_name, total_players
+# We tail these files directly so Telegraf emits structured measurements.
 
-  # Luanti specific metrics
-  [[inputs.prometheus.metric]]
-    name = "luanti_tick_duration_seconds"
-    type = "gauge"
-  [[inputs.prometheus.metric]]
-    name = "luanti_packet_total"
-    type = "counter"
-  [[inputs.prometheus.metric]]
-    name = "luanti_player_count"
-    type = "gauge"
+[[inputs.tail]]
+  # Use wildcard to match the dynamically generated Luanti server working directory (different from Telegraf wd)
+  files = ["{{ node_wd }}/luanti_server-*/worlds/benchmark/mod_storage/tick_metrics.tsv"]
+  from_beginning = true            # Read historical ticks for full run context
+  data_format = "csv"
+  csv_header_row_count = 1         # First line is header
+  csv_delimiter = "\t"
+  csv_column_names = ["timestamp_s", "tick_duration_ms", "tick_count", "players_online"]
+  csv_column_types = ["float", "float", "int", "int"]
+  name_override = "luanti_tick_metrics"
+  csv_timestamp_column = "timestamp_s"
+  csv_timestamp_format = "unix"
+  tagexclude = ["path"]           # Remove file path tag noise
+
+[[inputs.tail]]
+  files = ["{{ node_wd }}/luanti_server-*/worlds/benchmark/mod_storage/player_metrics.tsv"]
+  from_beginning = true
+  data_format = "csv"
+  csv_header_row_count = 1
+  csv_delimiter = "\t"
+  csv_column_names = ["timestamp_s", "event_type", "player_name", "total_players"]
+  csv_column_types = ["float", "string", "string", "int"]
+  name_override = "luanti_player_events"
+  csv_timestamp_column = "timestamp_s"
+  csv_timestamp_format = "unix"
+  tagexclude = ["path"]
+
+[[inputs.tail]]
+  files = ["{{ node_wd }}/luanti_server-*/worlds/benchmark/mod_storage/interaction_metrics.tsv"]
+  from_beginning = true
+  data_format = "csv"
+  csv_header_row_count = 1
+  csv_delimiter = "\t"
+  csv_column_names = ["uuid", "phase", "timestamp_s", "tick_count", "players_online"]
+  csv_column_types = ["string", "string", "float", "int", "int"]
+  name_override = "luanti_interaction_events"
+  csv_timestamp_column = "timestamp_s"
+  csv_timestamp_format = "unix"
+  tagexclude = ["path"]
+
+# NOTE: Previous configuration used a Prometheus file scrape (luanti_metrics.prom)
+# which is currently not produced by the codebase. If a Prometheus exporter is
+# added later, re-introduce that block here.
 {% endif %}
 
 ###############################################################################

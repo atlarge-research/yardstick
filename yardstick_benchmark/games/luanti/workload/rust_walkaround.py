@@ -33,6 +33,10 @@ class RustWalkAround(RemoteApplication):
                 "movement_mode": movement_mode,
                 "movement_speed": movement_speed,
                 "texmodbot_path": texmodbot_path,
-                "texmodbot_source": "/var/scratch/aco237/luantick/bot_components/texmodbot"
+                "texmodbot_source": "/var/scratch/aco237/luantick/bot_components/texmodbot",
+                # Interaction latency experiment parameters (optional)
+                "interaction_latency_enabled": True,
+                "interaction_action_interval": 15,   # seconds between actions from a designated bot
+                "interaction_initiator_bot_index": 0
             },
         )

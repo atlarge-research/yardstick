@@ -22,3 +22,8 @@
         dest: "./logs/"
         flat: yes
       ignore_errors: yes
+
+    - name: Note interaction latency feature
+      debug:
+        msg: "Interaction latency feature uses in-process env vars; no separate teardown required."
+      when: interaction_latency_enabled | default(false)

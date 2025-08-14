@@ -7,9 +7,9 @@
     TMP: "{{ wd }}/tmp"
   tasks:
     - name: Remove bot log files
-      file:
-        path: "/tmp/walkbot_{{ inventory_hostname }}.log"
-        state: absent
+      shell: |
+        rm -f /tmp/walkbot_*_{{ inventory_hostname }}.log || true
+      ignore_errors: yes
 
     - name: Clean cargo build cache (optional)
       shell: |
@@ -20,3 +20,8 @@
       environment:
         CARGO_HOME: ~/.cargo
       ignore_errors: yes
+
+    - name: Interaction latency cleanup note
+      debug:
+        msg: "All interaction logs removed with bot logs; no additional artifacts."
+      when: interaction_latency_enabled | default(false)

@@ -145,7 +145,7 @@ class LocalLuantiBenchmark:
         world_dir.mkdir(parents=True, exist_ok=True)
         
         # Create world.mt file with appropriate game
-        game_id = "extra_ordinance" if self.args.mod_config == "extra_ordinance" else "minetest_game"
+        game_id = "extra_ordinance" if self.args.mod_config == "extra_ordinance" else "minetest"
         
         with open(world_dir / "world.mt", 'w') as f:
             f.write(f"""gameid = {game_id}
@@ -740,7 +740,7 @@ minetest.log("action", "Performance test mod loaded")
         logger.info("Starting Luanti server...")
         
         # Determine game ID and setup games path
-        game_id = "extra_ordinance" if self.args.mod_config == "extra_ordinance" else "minetest_game"
+        game_id = "extra_ordinance" if self.args.mod_config == "extra_ordinance" else "minetest"
         
         cmd = [
             str(Path(self.args.luanti_path).absolute()),

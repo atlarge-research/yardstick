@@ -12,6 +12,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 use tokio::time::{sleep, Sleep};
 use rand::prelude::*;
+use std::env; // For interaction feature flags
+use uuid::Uuid; // For generating UUIDs for /yard_act
 
 #[derive(Parser, Debug)]
 #[clap(version, about = "A simple walking bot for Minetest", long_about = None)]
@@ -97,6 +99,7 @@ pub struct WalkBot {
     pub yaw: f32,
     pub last_movement: Option<Instant>,
     pub running: Arc<AtomicBool>,
+    pub last_interaction: Option<Instant>,
 }
 
 // Helper function for atan2 that returns the correct angle for our coordinate system
@@ -464,6 +467,31 @@ impl WalkBot {
     }
 
     // No longer need this method as we're running movement updates in the main loop
+
+    pub async fn maybe_send_interaction(&mut self) {
+        // Environment driven to avoid changing CLI contract:
+        //   INTERACTION_ENABLED=1|true enables
+        //   INTERACTION_INTERVAL_S (float, default 15)
+        //   INTERACTION_INITIATOR_USERNAME limits to that username (optional)
+        let enabled = env::var("INTERACTION_ENABLED").ok().map(|v| v == "1" || v.to_lowercase() == "true").unwrap_or(false);
+        if !enabled { return; }
+        if !self.state.ready { return; }
+        if let Ok(init_name) = env::var("INTERACTION_INITIATOR_USERNAME") {
+            if init_name != self.username { return; }
+        }
+        let interval_s: f32 = env::var("INTERACTION_INTERVAL_S").ok().and_then(|v| v.parse().ok()).unwrap_or(15.0);
+        let now = Instant::now();
+        if let Some(last) = self.last_interaction { if now.duration_since(last).as_secs_f32() < interval_s { return; } }
+        let uuid = Uuid::new_v4().simple().to_string();
+        let cmd = format!("/yard_act {}", uuid);
+        match self.conn.send(&ToSrvPkt::ChatMsg { msg: cmd.clone() }).await {
+            Ok(_) => {
+                eprintln!("[{}] Sent interaction /yard_act {}", self.username, uuid);
+                self.last_interaction = Some(now);
+            },
+            Err(e) => eprintln!("[{}] Failed to send /yard_act: {}", self.username, e),
+        }
+    }
 }
 
 #[tokio::main]
@@ -547,6 +575,7 @@ async fn main() {
         yaw: 0.0,
         last_movement: None,
         running,
+        last_interaction: None,
     };
 
     let worker = tokio::spawn(worker.run());
@@ -595,7 +624,7 @@ async fn main() {
             _ = movement_interval.tick() => {
                 // Update movement directly in the main loop
                 bot.update_movement().await;
-                // bot.send_position_update().await;
+                bot.maybe_send_interaction().await; // Interaction probe
             },
             Some(_) = OptionFuture::from(quit_sleep.as_mut()) => {
                 eprintln!("Quitting after time limit...");

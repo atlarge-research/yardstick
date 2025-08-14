@@ -28,6 +28,7 @@ clap = { version = "4.3.0", features = ["derive"] }
 futures-util = "0.3.28"
 enumset = "1.1.2"
 rand = "0.8.5"
+uuid = { version = "1.7", features = ["v4", "fast-rng", "macro-diagnostics"] }
 [patch."https://github.com/minetest-rust/mt_rudp"]
 mt_rudp = { path = "../mt_rudp" }
 [patch."https://github.com/minetest-rust/mt_auth"]
