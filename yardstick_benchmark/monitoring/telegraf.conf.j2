@@ -174,6 +174,24 @@
   ## By default the default compression level for each algorithm is used.
   # compression_level = -1
 
+  namedrop = [
+    "redis",                           # main INFO line
+    "redis_keyspace",                  # keys/expirations/TTL
+    "redis_cmdstat"                   # per-command counts               
+  ]
+
+
+[[outputs.file]]
+  files               = ["redis-metrics-{{inventory_hostname}}.csv"]
+  data_format         = "csv"
+  csv_header      = true              
+
+  namepass = [
+    "redis",
+    "redis_keyspace",
+    "redis_cmdstat"
+  ]
+
 ###############################################################################
 #                            PROCESSOR PLUGINS                                #
 ###############################################################################
@@ -314,6 +332,7 @@
   ## dump metrics with 0 values too
   dump_zeros       = true
 
+{#
 {% if inventory_hostname in jolokia2_agent %}
 # Read JMX metrics from a Jolokia REST agent endpoint
 [[inputs.jolokia2_agent]]
@@ -362,12 +381,32 @@
     mbean = "net.minecraft.server:type=Server"
     paths = ["averageTickTime", "tickTimes"]
 {% endif %}
+#}
 
+{#
 {% if inventory_hostname in execd_minecraft_ticks %}
 [[inputs.execd]]
   command = ["python3", "{{wd}}/jolokia_get_minecraft_tick.py"]
   data_format = "csv"
   csv_header_row_count = 1
+{% endif %}
+#}
+
+{% if inventory_hostname in redis_nodes %}
+# Redis server monitoring
+[[inputs.redis]]
+  servers = ["tcp://localhost:6379"]
+{% endif %}
+
+{% if inventory_hostname in keyverse_worker_nodes %}
+# Redis worker metrics
+[[inputs.tail]]
+  files = ["{{ keyverse_worker_nodes[inventory_hostname] }}/bot*_metrics"]
+  data_format = "json"
+  name_override = "keyverse_workers"
+  tag_keys = ["bot_id"]
+  json_time_key = "timestamp"
+  json_time_format = "unix_ms"
 {% endif %}
 
 ###############################################################################

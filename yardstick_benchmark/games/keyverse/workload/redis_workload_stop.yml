@@ -1,0 +1,12 @@
+---
+- name: Stop Redis workload
+  hosts: all
+  tasks:
+    - name: Stop worker processes
+      shell: |
+        if [ -f "{{ wd }}/bot.pid" ]; then
+          kill $(cat "{{ wd }}/bot.pid") || true
+          rm -f "{{ wd }}/bot.pid"
+        fi
+      args:
+        chdir: "{{ wd }}"

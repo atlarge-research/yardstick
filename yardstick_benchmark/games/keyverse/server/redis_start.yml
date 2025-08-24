@@ -1,0 +1,34 @@
+---
+- name: Start Redis
+  gather_facts: true
+  hosts: all
+  vars:
+    redis_version: 6.0.16
+  tasks:
+    - name: Check if Redis is already running
+      shell: |
+        if [ -f "{{ wd }}/redis.pid" ]; then
+          kill -0 $(cat "{{ wd }}/redis.pid") 2>/dev/null && echo "running" || echo "not running"
+        else
+          echo "not running"
+        fi
+      register: redis_status
+      changed_when: false
+
+    - name: Start Redis server if not running
+      shell: |
+        cd {{ wd }}/redis-{{ redis_version }} &&
+        ./src/redis-server redis.conf > ../redis.log 2>&1 &
+        echo $! > ./redis.pid
+      args:
+        chdir: "{{ wd }}"
+      when: redis_status.stdout == "not running"
+      register: start_redis
+      changed_when: start_redis.rc == 0
+
+    - name: Verify Redis started
+      command: "{{ wd }}/redis-{{ redis_version }}/src/redis-cli ping"
+      register: redis_ping
+      changed_when: false
+      failed_when: fales
+      when: start_redis.changed     # Only check if we started Redis

@@ -1,0 +1,26 @@
+---
+- name: Stop Redis
+  gather_facts: true
+  hosts: all
+  vars:
+    redis_version: 6.0.16
+  tasks:
+    - name: Stop Redis process
+      shell: |
+        if [ -f "{{ wd }}/redis.pid" ]; then
+          kill $(cat "{{ wd }}/redis.pid") || true
+          rm -f "{{ wd }}/redis.pid"
+        fi
+      args:
+        chdir: "{{ wd }}"
+      register: stop_result
+      changed_when: "'stopped' in stop_result.stdout"
+
+    - name: Verify Redis stopped
+      command: "{{ wd }}/redis-{{ redis_version }}/src/redis-cli ping"
+      register: redis_ping
+      failed_when: >
+        redis_ping.rc == 0 or
+        "Connection refused" not in redis_ping.stderr
+      ignore_errors: yes
+      when: "'stopped' in stop_result.stdout"

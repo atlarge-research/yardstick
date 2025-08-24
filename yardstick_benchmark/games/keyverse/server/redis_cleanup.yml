@@ -1,0 +1,16 @@
+---
+- name: Cleanup Redis
+  gather_facts: false
+  hosts: all
+  vars:
+    redis_version: 6.0.16
+  tasks:
+    - name: Remove Redis binaries
+      file:
+        path: "{{ wd }}/redis-{{ redis_version }}"
+        state: absent
+      
+    - name: Remove Redis tarball
+      file:
+        path: "{{ wd }}/redis-{{ redis_version }}.tar.gz"
+        state: absent

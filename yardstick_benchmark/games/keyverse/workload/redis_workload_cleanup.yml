@@ -1,0 +1,8 @@
+---
+- name: Cleanup Redis workload
+  hosts: all
+  tasks:
+    - name: Remove workload files
+      file:
+        path: "{{ wd }}/dynamic_redis_worker.py"
+        state: absent

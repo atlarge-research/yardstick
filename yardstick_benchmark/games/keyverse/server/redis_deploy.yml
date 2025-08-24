@@ -1,0 +1,59 @@
+---
+- name: Deploy Redis
+  gather_facts: true
+  hosts: all
+  vars:
+    redis_version: 6.0.16
+    redis_download_url: "http://download.redis.io/releases/redis-{{ redis_version }}.tar.gz"
+  tasks:
+    - name: Create working directory structure
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      with_items:
+        - "{{ wd }}"
+        - "{{ wd }}/redis_data"
+
+    - name: Download Redis
+      get_url:
+        url: "{{ redis_download_url }}"
+        dest: "{{ wd }}/redis-{{ redis_version }}.tar.gz"
+      retries: 3
+      delay: 10
+
+    - name: Extract and build Redis
+      shell: |
+        set -e
+        tar xzf redis-{{ redis_version }}.tar.gz
+        cd redis-{{ redis_version }}
+        make -j$(nproc) 
+      args:
+        chdir: "{{ wd }}"
+      register: build_result
+      changed_when: "'successfully' in build_result.stdout"
+
+    - name: Configure Redis
+      template:
+        src: redis.conf.j2
+        dest: "{{ wd }}/redis-{{ redis_version }}/redis.conf"
+
+    - name: Start Redis server
+      shell: |
+        cd {{ wd }}/redis-{{ redis_version }} &&
+        ./src/redis-server redis.conf > ../redis.log 2>&1 &
+        echo $! > ../redis.pid
+      args:
+        chdir: "{{ wd }}"
+      register: start_redis
+      changed_when: start_redis.rc == 0
+
+    # - name: Verify Redis is running
+    #   shell: |
+    #     sleep 2 
+    #     {{ wd }}/redis-{{ redis_version }}/src/redis-cli -h 127.0.0.1 ping
+    #   register: redis_ping
+    #   until: redis_ping.stdout == "PONG"
+    #   retries: 5
+    #   delay: 3
+    #   ignore_errors: no         # Fail if Redis does not start

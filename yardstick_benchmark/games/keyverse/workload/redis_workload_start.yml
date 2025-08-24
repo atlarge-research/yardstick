@@ -1,0 +1,31 @@
+---
+- name: Start Redis bots
+  hosts: all
+  tasks:
+    - name: Launch worker
+      shell: |
+        source /var/scratch/spr203/miniconda3/etc/profile.d/conda.sh &&
+        conda activate yardstick &&
+        nohup python {{ wd }}/dynamic_redis_worker.py \
+          --host {{ redis_host }} \
+          --duration {{ duration }} \
+          --bots {{ bots_per_node }} \
+          --node-index {{ node_indices[inventory_hostname] }} \
+          --hz {{ hz }} \
+          --work-dir {{ wd }} \
+          --grid-radius {{ grid_radius }} \
+          > "{{ wd }}/bot-{{ inventory_hostname }}.log" 2>&1 &
+        echo $! > "{{ wd }}/bot.pid"
+      args:
+        chdir: "{{ wd }}"
+
+    # - name: Verify worker
+    #   shell: |
+    #     if [ -f "{{ wd }}/bot.pid" ]; then
+    #       ps -p $(cat {{ wd }}/bot.pid) > /dev/null
+    #     else
+    #       exit 0
+    #     fi
+    #   register: worker_check
+    #   changed_when: false
+    #   failed_when: worker_check.rc != 0 and worker_check.stdout != ""

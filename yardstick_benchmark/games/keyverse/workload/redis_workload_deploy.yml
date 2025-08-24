@@ -1,0 +1,23 @@
+---
+- name: Deploy Redis workload tools
+  hosts: all
+  tasks:
+    - name: Create workload directory
+      file:
+        path: "{{ wd }}"
+        state: directory
+        mode: '0755'
+
+    - name: Copy worker script
+      copy:
+        src: dynamic_redis_worker.py
+        dest: "{{ wd }}/dynamic_redis_worker.py"
+        mode: '0755' 
+
+    - name: Install Python dependencies via Conda
+      shell: |
+        source /var/scratch/spr203/miniconda3/etc/profile.d/conda.sh &&
+        conda activate yardstick &&
+        pip install redis aioredis
+      args:
+        executable: /bin/bash

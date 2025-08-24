@@ -1,0 +1,26 @@
+# Redis benchmark configuration
+bind 0.0.0.0
+port 6379
+protected-mode no
+
+# Performance tuning for benchmark
+maxclients 10000
+tcp-backlog 4096
+timeout 300
+tcp-keepalive 60
+client-output-buffer-limit pubsub 512mb 128mb 60
+io-threads 1
+io-threads-do-reads yes
+
+# Memory management
+maxmemory 2gb
+maxmemory-policy allkeys-lru
+
+# Persistence disabled for benchmark
+save ""
+appendonly no
+
+daemonize no
+pidfile {{ wd }}/redis.pid
+logfile {{ wd }}/redis.log
+dir {{ wd }}/redis_data

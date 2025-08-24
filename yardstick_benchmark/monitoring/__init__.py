@@ -56,3 +56,13 @@ class Telegraf(RemoteApplication):
         self.inv.setdefault("minecraft_servers", {}).setdefault("hosts", {})[
             node.host
         ] = this_host
+
+    def add_input_redis(self, node: Node):
+        """Configure Telegraf to monitor a Redis server on the given node."""
+        assert node in self.nodes
+        self.extravars.setdefault("redis_nodes", []).append(node.host)
+
+    def add_input_keyverse_workers(self, node: Node, work_dir: str):
+        """Configure Telegraf to monitor Redis worker metrics on the given node."""
+        assert node in self.nodes
+        self.extravars.setdefault("keyverse_worker_nodes", {})[node.host] = work_dir
