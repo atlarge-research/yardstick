@@ -27,6 +27,7 @@ class Telegraf(RemoteApplication):
                 "config_template": os.path.join(
                     os.path.dirname(__file__), "telegraf.conf.j2"
                 ),
+                "luanti_servers": [],  # Initialize empty list to avoid undefined variable errors
             },
         )
 

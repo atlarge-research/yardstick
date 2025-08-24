@@ -12,8 +12,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 use tokio::time::{sleep, Sleep};
 use rand::prelude::*;
-use std::env; // For interaction feature flags
-use uuid::Uuid; // For generating UUIDs for /yard_act
 
 #[derive(Parser, Debug)]
 #[clap(version, about = "A simple walking bot for Minetest", long_about = None)]
@@ -65,6 +63,10 @@ struct Args {
     /// Target Z coordinate for "follow" mode
     #[clap(long, value_parser)]
     target_z: Option<f32>,
+    
+    /// Spawn radius for random positioning (0 = spawn at same location)
+    #[clap(long, value_parser, default_value_t = 0.0)]
+    spawn_radius: f32,
 }
 
 // Instead of using EnumSet for the bot state, use simple boolean flags
@@ -100,6 +102,7 @@ pub struct WalkBot {
     pub last_movement: Option<Instant>,
     pub running: Arc<AtomicBool>,
     pub last_interaction: Option<Instant>,
+    pub spawn_radius: f32,
 }
 
 // Helper function for atan2 that returns the correct angle for our coordinate system
@@ -162,6 +165,16 @@ impl WalkBot {
                     // to ensure the bot doesn't spawn in the air
                     let mut fixed_pos = *pos;
                     fixed_pos[1] = 8.5; // Set Y coordinate to 8.5
+                    
+                    // Apply spawn radius randomization if specified
+                    if self.spawn_radius > 0.0 {
+                        let mut rng = thread_rng();
+                        let angle = rng.gen_range(0.0..2.0 * std::f32::consts::PI);
+                        let radius = rng.gen_range(0.0..self.spawn_radius);
+                        fixed_pos[0] += radius * angle.cos();
+                        fixed_pos[2] += radius * angle.sin();
+                        eprintln!("[{}] Randomized spawn position within radius {:.1}", self.username, self.spawn_radius);
+                    }
                     
                     self.position = Some(PlayerPos {
                         pos: fixed_pos,
@@ -466,32 +479,7 @@ impl WalkBot {
         // No heartbeat output to avoid performance impact
     }
 
-    // No longer need this method as we're running movement updates in the main loop
 
-    pub async fn maybe_send_interaction(&mut self) {
-        // Environment driven to avoid changing CLI contract:
-        //   INTERACTION_ENABLED=1|true enables
-        //   INTERACTION_INTERVAL_S (float, default 15)
-        //   INTERACTION_INITIATOR_USERNAME limits to that username (optional)
-        let enabled = env::var("INTERACTION_ENABLED").ok().map(|v| v == "1" || v.to_lowercase() == "true").unwrap_or(false);
-        if !enabled { return; }
-        if !self.state.ready { return; }
-        if let Ok(init_name) = env::var("INTERACTION_INITIATOR_USERNAME") {
-            if init_name != self.username { return; }
-        }
-        let interval_s: f32 = env::var("INTERACTION_INTERVAL_S").ok().and_then(|v| v.parse().ok()).unwrap_or(15.0);
-        let now = Instant::now();
-        if let Some(last) = self.last_interaction { if now.duration_since(last).as_secs_f32() < interval_s { return; } }
-        let uuid = Uuid::new_v4().simple().to_string();
-        let cmd = format!("/yard_act {}", uuid);
-        match self.conn.send(&ToSrvPkt::ChatMsg { msg: cmd.clone() }).await {
-            Ok(_) => {
-                eprintln!("[{}] Sent interaction /yard_act {}", self.username, uuid);
-                self.last_interaction = Some(now);
-            },
-            Err(e) => eprintln!("[{}] Failed to send /yard_act: {}", self.username, e),
-        }
-    }
 }
 
 #[tokio::main]
@@ -509,6 +497,7 @@ async fn main() {
         target_x,
         target_y,
         target_z,
+        spawn_radius,
     } = Args::parse();
 
     // Use lowercase username if force_lowercase is true
@@ -574,8 +563,9 @@ async fn main() {
         change_interval: Duration::from_secs_f32(speed),
         yaw: 0.0,
         last_movement: None,
+        last_interaction: None,  // Initialize interaction timing
         running,
-        last_interaction: None,
+        spawn_radius,
     };
 
     let worker = tokio::spawn(worker.run());
@@ -624,7 +614,7 @@ async fn main() {
             _ = movement_interval.tick() => {
                 // Update movement directly in the main loop
                 bot.update_movement().await;
-                bot.maybe_send_interaction().await; // Interaction probe
+                // bot.send_position_update().await;
             },
             Some(_) = OptionFuture::from(quit_sleep.as_mut()) => {
                 eprintln!("Quitting after time limit...");

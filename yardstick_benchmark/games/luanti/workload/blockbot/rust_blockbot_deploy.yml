@@ -43,6 +43,7 @@
         delete: yes
         recursive: yes
       delegate_to: localhost
+      throttle: 1  # ← This ensures only one node syncs at a time
       
     - name: Verify source code was copied
       stat:
@@ -58,8 +59,11 @@
       shell: |
         source ~/.cargo/env
         rustup override set nightly
+        cargo clean || true
+        cargo fetch
         cargo build --release --bin blockbot
       args:
         chdir: "{{ texmodbot_path }}"
       environment:
         CARGO_HOME: ~/.cargo
+      throttle: 1  # Serialize build operations to avoid Git conflicts

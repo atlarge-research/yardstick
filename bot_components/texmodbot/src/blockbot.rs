@@ -76,6 +76,10 @@ struct Args {
     /// Also dig/remove blocks (destructive mode)
     #[clap(long, value_parser, default_value_t = false)]
     destructive: bool,
+        
+    /// Spawn radius for random positioning (0 = spawn at same location)
+    #[clap(long, value_parser, default_value_t = 0.0)]
+    spawn_radius: f32,
 }
 
 #[derive(Debug, Clone)]
@@ -120,6 +124,7 @@ pub struct BlockBot {
     pub spiral_radius: f32,
     pub spiral_angle: f32,
     pub house_progress: u32,  // Which part of house we're building
+    pub spawn_radius: f32,
 }
 
 impl BlockBot {
@@ -163,6 +168,19 @@ impl BlockBot {
                     let mut fixed_pos = *pos;
                     fixed_pos[1] = self.current_build_pos[1]; // Use our intended Y position
                     
+                    // Apply spawn radius randomization if specified
+                    if self.spawn_radius > 0.0 {
+                        let mut rng = thread_rng();
+                        let angle = rng.gen_range(0.0..2.0 * std::f32::consts::PI);
+                        let radius = rng.gen_range(0.0..self.spawn_radius);
+                        fixed_pos[0] += radius * angle.cos();
+                        fixed_pos[2] += radius * angle.sin();
+                        // Also randomize the building position
+                        self.current_build_pos[0] = fixed_pos[0];
+                        self.current_build_pos[2] = fixed_pos[2];
+                        eprintln!("[{}] Randomized spawn position within radius {:.1}", self.username, self.spawn_radius);
+                    }
+
                     self.position = Some(PlayerPos {
                         pos: fixed_pos,
                         vel: [0.0, 0.0, 0.0].into(),
@@ -260,13 +278,13 @@ impl BlockBot {
             },
             BuildingPattern::Wall => {
                 // Build horizontally in X direction
-                [base[0] + self.build_direction as i16, base[1], base[2]]
+                [base[0] + self.build_direction as i16, base[1] + 1, base[2]]
             },
             BuildingPattern::Platform => {
                 // Build a platform (5x5)
                 let row = self.build_direction / 5;
                 let col = self.build_direction % 5;
-                [base[0] + col as i16 - 2, base[1], base[2] + row as i16 - 2]
+                [base[0] + col as i16 - 2, base[1] + 1, base[2] + row as i16 - 2]
             },
             BuildingPattern::Random => {
                 // Random position within 10 blocks
@@ -296,11 +314,11 @@ impl BlockBot {
         
         // House is 5x5x4 (width x depth x height)
         match progress {
-            // Foundation (0-24): 5x5 floor
+            // Foundation (0-24): 5x5 floor above ground
             0..=24 => {
                 let row = (progress / 5) as i16;
                 let col = (progress % 5) as i16;
-                [base[0] + col - 2, base[1], base[2] + row - 2]
+                [base[0] + col - 2, base[1] + 1, base[2] + row - 2]
             },
             // Walls (25-84): 4 walls, 3 blocks high, with door opening
             25..=84 => {
@@ -317,10 +335,10 @@ impl BlockBot {
                     8..=12 => {
                         let pos = wall_block - 8;
                         if level == 0 && pos == 2 {
-                            // Skip door position on ground level
-                            [base[0] + pos as i16 - 2, base[1] + level + 1, base[2] + 2]
+                            // Skip door position on ground level - return a dummy position that won't be placed
+                            [base[0] - 100, base[1] - 100, base[2] - 100] // Far away, won't be placed
                         } else {
-                            [base[0] + pos as i16 - 2, base[1] + level + 1, base[2] + 2]
+                            [base[0] + pos as i16 - 2, base[1] + level + 2, base[2] + 2]
                         }
                     },
                     // West wall (3 blocks, skip corners) 
@@ -520,6 +538,7 @@ async fn main() {
         start_z,
         block_slot,
         destructive,
+        spawn_radius,
     } = Args::parse();
 
     // Use lowercase username if force_lowercase is true
@@ -584,6 +603,7 @@ async fn main() {
         spiral_radius: 2.0,
         spiral_angle: 0.0,
         house_progress: 0,
+        spawn_radius,
     };
 
     let worker = tokio::spawn(worker.run());

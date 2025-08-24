@@ -8,9 +8,9 @@
   tasks:
     - name: Calculate timing parameters
       set_fact:
-        total_stagger_time: "{{ (bots_per_node - 1) * 0.5 }}"
+        total_stagger_time: "{{bots_per_node - 1}}"
         buffer_time: 30
-        adjusted_bot_duration: "{{ (duration_seconds | int) + ((bots_per_node - 1) * 0.5) + 30 }}"
+        adjusted_bot_duration: "{{ (duration_seconds | int) + (bots_per_node - 1) + 30 }}"
 
     - name: Display timing calculation
       debug:
@@ -48,15 +48,6 @@
           # Create unique username: walkbot_<node>_<bot_number>
           USERNAME="walkbot_${NODE_NUM}_$(printf "%03d" $i)"
           
-          # Determine if this is the interaction initiator bot (0-based index comparison)
-          INITIATOR_INDEX={{ interaction_initiator_bot_index | default(0) | int + 1 }}
-          INTERACTION_ENV=""
-          if [ "{{ interaction_latency_enabled | default(false) }}" = "True" ] || [ "{{ interaction_latency_enabled | default(false) }}" = "true" ] || [ "{{ interaction_latency_enabled | default(false) }}" = "1" ]; then
-            if [ "$i" -eq "$INITIATOR_INDEX" ]; then
-              INTERACTION_ENV="INTERACTION_ENABLED=1 INTERACTION_INTERVAL_S={{ interaction_action_interval | default(15) }} INTERACTION_INITIATOR_USERNAME=$USERNAME"
-              echo "[interaction] Marking $USERNAME as initiator (interval={{ interaction_action_interval | default(15) }}s)"
-            fi
-          fi
           
           nohup env $INTERACTION_ENV cargo run --release --bin walkbot -- \
             {{ server_host }}:{{ server_port }} \
@@ -66,10 +57,11 @@
             --quit-after-seconds ${ADJUSTED_DURATION} \
             --mode {{ movement_mode }} \
             --speed {{ movement_speed }} \
+            --spawn-radius {{spawn_radius}} \
             > /tmp/walkbot_${i}_{{ inventory_hostname }}.log 2>&1 &
           
           # Stagger connections to avoid overwhelming the server
-          sleep 0.5
+          sleep 1
           
           echo "Started walkbot $i: $USERNAME"
         done
@@ -93,15 +85,3 @@
     - name: Display bot status
       debug:
         msg: "{{ bot_count.stdout }} walkbot processes running on {{ inventory_hostname }}"
-
-    - name: Show interaction initiator log tail (if enabled and on initiator bot)
-      shell: |
-        INITIATOR_INDEX={{ interaction_initiator_bot_index | default(0) | int + 1 }}
-        if [ "{{ interaction_latency_enabled | default(false) }}" = "True" ] || [ "{{ interaction_latency_enabled | default(false) }}" = "true" ] || [ "{{ interaction_latency_enabled | default(false) }}" = "1" ]; then
-          if [ $INITIATOR_INDEX -le {{ bots_per_node }} ]; then
-            LOG="/tmp/walkbot_$(printf '%03d' $INITIATOR_INDEX)_{{ inventory_hostname }}.log"
-            echo "--- Interaction Initiator ($INITIATOR_INDEX) recent log lines ---"
-            tail -n 15 "$LOG" || echo "No log yet"
-          fi
-        fi
-      when: interaction_latency_enabled | default(false)

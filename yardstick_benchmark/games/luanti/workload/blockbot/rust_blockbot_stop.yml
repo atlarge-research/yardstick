@@ -1,6 +1,10 @@
 ---
 - name: Stop Rust BlockBot bots
   hosts: all
+  environment:
+    TMPDIR: "{{ wd }}/tmp"
+    TEMP: "{{ wd }}/tmp"
+    TMP: "{{ wd }}/tmp"
   tasks:
     - name: Kill all blockbot processes
       shell: |
@@ -18,6 +22,12 @@
         pkill -9 -f "blockbot" || true
         
         echo "All blockbot processes stopped"
+    - name: Fetch bot logs
+      fetch:
+        src: "/tmp/blockbot_{{ inventory_hostname }}.log"
+        dest: "./logs/"
+        flat: yes
+      ignore_errors: yes
       
     - name: Clean up log files
       shell: |

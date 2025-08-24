@@ -2,46 +2,6 @@ from yardstick_benchmark.model import RemoteApplication, Node
 from pathlib import Path
 from datetime import timedelta
 
-class WalkAround(RemoteApplication):
-    def __init__(
-        self,
-        nodes: list[Node],
-        server_host: str,
-        duration: timedelta = timedelta(seconds=60),
-        spawn_x: int = 0,
-        spawn_y: int = 80,
-        spawn_z: int = 0,
-        box_width: int = 32,
-        box_x: int = -16,
-        box_z: int = -16,
-        bots_join_delay: timedelta = timedelta(seconds=5),
-        bots_per_node: int = 1,
-    ):
-        super().__init__(
-            "luanti_walkaround",
-            nodes,
-            Path(__file__).parent / "walkaround_deploy.yml",
-            Path(__file__).parent / "walkaround_start.yml",
-            Path(__file__).parent / "walkaround_stop.yml",
-            Path(__file__).parent / "walkaround_cleanup.yml",
-            extravars={
-                "hostnames": [n.host for n in nodes],
-                "scripts": [
-                    str(Path(__file__).parent / "walkaround.py"),
-                ],
-                "duration": duration.total_seconds(),
-                "luanti_host": server_host,
-                "spawn_x": spawn_x,
-                "spawn_y": spawn_y,
-                "spawn_z": spawn_z,
-                "box_width": box_width,
-                "box_x": box_x,
-                "box_z": box_z,
-                "bots_join_delay": bots_join_delay.total_seconds(),
-                "bots_per_node": bots_per_node,
-            },
-        )
-
 class RustWalkAround(RemoteApplication):
     """
     RustWalkAround workload uses the texmodbot Rust implementation
@@ -58,6 +18,7 @@ class RustWalkAround(RemoteApplication):
         movement_speed: float = 2.0,    # seconds between movements
         server_port: int = 30000,
         texmodbot_path: str = None,     # Path on remote nodes - will use working directory if None
+        spawn_radius: int = 0,
     ):
         # If no custom path provided, use working directory
         if texmodbot_path is None:
@@ -79,7 +40,8 @@ class RustWalkAround(RemoteApplication):
                 "movement_speed": movement_speed,
                 "texmodbot_archive": str(Path(__file__).parent.parent.parent.parent.parent / "bot_components" / "texmodbot"),
                 "texmodbot_path": texmodbot_path,
-                "texmodbot_source": "/var/scratch/aco237/luantick/bot_components/texmodbot"
+                "texmodbot_source": "/var/scratch/aco237/luantick/bot_components/texmodbot",
+                "spawn_radius": spawn_radius
             },
         )
 
@@ -120,6 +82,7 @@ class RustBlockBot(RemoteApplication):
         start_x: float = 0.0,             # Starting X coordinate for building
         start_y: float = 8.0,             # Starting Y coordinate for building  
         start_z: float = 0.0,             # Starting Z coordinate for building
+        spawn_radius: int = 0,
     ):
         # If no custom path provided, use working directory
         if texmodbot_path is None:
@@ -146,7 +109,8 @@ class RustBlockBot(RemoteApplication):
                 "start_z": start_z,
                 "texmodbot_archive": str(Path(__file__).parent.parent.parent.parent.parent / "bot_components" / "texmodbot"),
                 "texmodbot_path": texmodbot_path,
-                "texmodbot_source": "/var/scratch/aco237/luantick/bot_components/texmodbot"
+                "texmodbot_source": "/var/scratch/aco237/luantick/bot_components/texmodbot",
+                "spawn_radius": spawn_radius
             },
         )
 

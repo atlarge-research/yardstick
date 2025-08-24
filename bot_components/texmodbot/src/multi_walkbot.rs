@@ -100,6 +100,8 @@ async fn run_bot(config: BotConfig) {
         change_interval: Duration::from_secs_f32(config.speed),
         yaw: 0.0,
         last_movement: None,
+        last_interaction: None,  // Initialize interaction timing
+        spawn_radius: 0.0,      // Default spawn radius
         running: running.clone(),
     };
 
