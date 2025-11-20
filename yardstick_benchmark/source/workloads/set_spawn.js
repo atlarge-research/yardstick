@@ -3,7 +3,7 @@ var rcon = new RCON();
 
 const host = process.env.MC_HOST;
 const spawn_x = process.env.SPAWN_X;
-const spawn_z = process.env.SPAWN_Y;
+const spawn_z = process.env.SPAWN_Z;
 
 rcon.connect(host, 25575, 'password')
     .then(() => {

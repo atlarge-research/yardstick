@@ -9,6 +9,7 @@ const v = require("vec3");
 const { workerData, parentPort } = require("worker_threads");
 
 const host = workerData.host
+    console.log("Adding wood types")
 const username = workerData.username
 const time_left_ms = workerData.time_left_ms
 const box_center = workerData.box_center

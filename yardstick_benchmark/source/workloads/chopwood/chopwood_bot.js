@@ -16,7 +16,7 @@ const start = Date.now()
 
 const workers = new Set();
 
-const center = v(box_x, 90, box_z);
+const center = v(box_x, 200, box_z);
 
 function sleep(ms) {
     return new Promise((resolve) => {
@@ -33,7 +33,8 @@ function start_worker(username) {
         box_width: box_width,
     }
     return new Promise((resolve, reject) => {
-        const worker = new Worker("./walkaround_worker_bot.js", { workerData });
+        console.log("Worker data set. Adding new worker")
+        const worker = new Worker("./chopwood_worker_bot.js", { workerData });
 
         worker.on("message", resolve);
         worker.on("error", reject);
@@ -52,18 +53,19 @@ async function run() {
         username: `jeff-${bot_index}`, // minecraft username
         port: 25565,                // only set if you need a port that isn't 25565
     })
-    // bot.on("message", (jsonMsg, position, sender, verified) => console.log(jsonMsg))
-    // bot._client.on("packet", (jsonMsg, meta, sender, verified) => {
-    //     if (meta.name != "map_chunk") {
-    //         console.log(meta)
-    //         console.log(jsonMsg)
-    //     }
-    // });
+    // // bot.on("message", (jsonMsg, position, sender, verified) => console.log(jsonMsg))
+    // // bot._client.on("packet", (jsonMsg, meta, sender, verified) => {
+    // //     if (meta.name != "map_chunk") {
+    // //         console.log(meta)
+    // //         console.log(jsonMsg)
+    // //     }
+    // // });
     bot.once("spawn", async () => {
         bot.creative.startFlying()
         bot.creative
             .flyTo(center) // in view range of the constructs we will spawn in
-            .then(async () => {
+            .then(
+    async () => {
                 bot.quit("constructs have been placed. jeff's job is done")
                 let b = 0;
                 // Create x new bots that connect and walk around.
@@ -79,7 +81,8 @@ async function run() {
                     }
                     await sleep(bot_join_delay * 1000)
                 }
-            })
+            }
+        )
     });
     // Log errors and kick reasons:
     bot.on('kicked', console.log)

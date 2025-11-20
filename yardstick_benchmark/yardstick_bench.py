@@ -120,6 +120,11 @@ class Yardstick():
             workload.deploy()
             workload.start()
 
+        if self.workload == "ChopWood":
+            workload = bot.ChopWood(nodes[1:], nodes[0].host, bots_per_node=bots, duration=timedelta(seconds=duration), bots_join_delay=timedelta(seconds=bots_join_delay))
+            workload.deploy()
+            workload.start()
+
         sleep(10)
 
         self.stop_server(server)
