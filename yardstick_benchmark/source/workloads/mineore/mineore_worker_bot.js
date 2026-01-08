@@ -1,6 +1,8 @@
 const mineflayer = require('mineflayer');
 const pathfinder = require('mineflayer-pathfinder').pathfinder
 const Movements = require('mineflayer-pathfinder').Movements
+const collectBlock = require('mineflayer-collectblock').plugin
+const toolPlugin = require('mineflayer-tool').plugin
 const { GoalNear, GoalXZ } = require('mineflayer-pathfinder').goals
 const v = require("vec3");
 
@@ -26,7 +28,17 @@ worker_bot.on('error', console.log)
 let mcData
 
 worker_bot.loadPlugin(pathfinder)
-worker_bot.loadPlugin(require('mineflayer-collectblock').plugin)
+worker_bot.loadPlugin(collectBlock)
+worker_bot.loadPlugin(toolPlugin)
+
+function sayItems (items = worker_bot.inventory.items()) {
+  const output = items.map(itemToString).join(', ')
+  if (output) {
+    worker_bot.chat(output)
+  } else {
+    worker_bot.chat('empty')
+  }
+}
 
 worker_bot.once("spawn", async () => {
     let defaultMove = new Movements(worker_bot)
@@ -50,24 +62,30 @@ worker_bot.once("spawn", async () => {
         mcData.blocksByName['iron_ore'].id,     
         ]
 
-    let block = 0
+    let block
+    let distance = 2
 
     while (true) {
 
         try {
 
-            block = worker_bot.findBlock({
-                point: worker_bot.entity.position,
-                matching: ore_ids,
-                maxDistance: 128
+          block = worker_bot.findBlock({
+              point: worker_bot.entity.position,
+              matching: ore_ids,
+              maxDistance: distance
             })
 
-            let goal = new GoalNear(block.position.x, block.position.y, block.position.z, 1)
-            await worker_bot.pathfinder.goto(goal)
-            await worker_bot.dig(worker_bot.blockAt(block.position))
+          if (block == null) {
+            // We want to expand our search space if we do not find at matching block 
+            distance *= 2
+            continue;
+          }
+
+          let goal = new GoalNear(block.position.x, block.position.y, block.position.z, 1)
+          await worker_bot.pathfinder.goto(goal)
+          await worker_bot.dig(worker_bot.blockAt(block.position))
+            
         } catch (e) {
-
-
             (console.error || console.log).call(console, e.stack || e);
         }
     }
