@@ -18,7 +18,8 @@ Both approaches are explained below.
 1. Install the `uv` python package manager by following the official instructions: https://docs.astral.sh/uv/getting-started/installation/
 2. Clone this repository into `yardstick`
 3. In the `yardstick` directory, run `uv sync` to install dependencies.
-4. Open `example.ipynb` and run all cells.
+4. Open `example.ipynb` in [VSCode](https://code.visualstudio.com/) and install the necessary plugins for running Jupyter Notebooks. VSCode should suggest the necessary plugins automatically.
+5. Run all cells.
 
 ### Build Your Own Workloads
 
