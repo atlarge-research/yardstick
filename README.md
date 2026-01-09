@@ -6,7 +6,7 @@ Learn how to benchmark your MVE by reading the [tutorial](docs/tutorial.md).
 
 ## Usage
 
-To run Yardstick in your own environment, you can:
+To run Yardstick yourself on DAS5 or DAS6, you can:
 
 1. [Run the provided workloads](#run-provided-workloads).
 2. [Build your own workloads](#build-your-own-workloads).
