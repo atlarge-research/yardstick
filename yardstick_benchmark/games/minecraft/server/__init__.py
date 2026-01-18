@@ -1,19 +1,33 @@
-from yardstick_benchmark.model import RemoteApplication, Node
-import os
-from pathlib import Path
 
+from plumbum import local
+import tempfile
+import uuid
 
-class PaperMC(RemoteApplication):
-    def __init__(self, nodes: list[Node]):
-        super().__init__(
-            "papermc",
-            nodes,
-            Path(__file__).parent / "papermc_deploy.yml",
-            Path(__file__).parent / "papermc_start.yml",
-            Path(__file__).parent / "papermc_stop.yml",
-            Path(__file__).parent / "papermc_cleanup.yml",
-            extravars={
-                "hostnames": [n.host for n in nodes],
-                "papermc_template": str(Path(__file__).parent / "server.properties.j2"),
-            },
-        )
+# https://gist.github.com/tensoralex/a278b39a965d7c509dbd06b57797c6c1
+class MinecraftServer:
+    def __init__(self, name: str = "") -> None:
+        self.container_name = "docker://itzg/minecraft-server"
+        self.data_dir = tempfile.mkdtemp(dir="/tmp", prefix="mc-data-")
+        self.instance_name = name if name else f"mc-{uuid.uuid4()}"
+        self.running = False
+
+    def start(self):
+        res = local["apptainer"].run((
+            "instance",
+            "run",
+            "--compat",
+            "--bind", f"{self.data_dir}:/data",
+            "--env", "\"EULA=TRUE\"",
+            self.container_name,
+            self.instance_name))
+        if res[0] == 0:
+            self.running = True
+        else:
+            raise RuntimeError(f"Failed to start Minecraft server instance {self.instance_name}")
+
+    def stop(self):
+        res = local["apptainer"].run(("instance", "stop", self.instance_name))
+        if res[0] == 0:
+            self.running = False
+        else:
+            raise RuntimeError(f"Failed to stop Minecraft server instance {self.instance_name}")
