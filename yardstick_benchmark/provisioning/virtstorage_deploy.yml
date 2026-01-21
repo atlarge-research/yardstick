@@ -1,0 +1,14 @@
+---
+- name: Deploy nullblock
+  gather_facts: true
+  hosts: all
+  become: "{{ use_sudo }}"
+  tasks:
+    - name: Create nullblock folder
+      file:
+        path: "{{wd}}"
+        state: directory
+    - name: Copy nullblock executable
+      copy:
+        src: "{{nullblk_script}}"
+        dest: "{{wd}}"

@@ -1,0 +1,45 @@
+---
+- name: Deploy Minecraft Trace Based workload
+  gather_facts: true
+  hosts: all
+  become: "{{ use_sudo }}"
+  tasks:
+    - debug:
+        msg: "working directory is: {{wd}}"
+    - file:
+        path: "{{ wd }}"
+        state: directory
+    - name: Check if nvm is available
+      shell: |
+        source ~/.bashrc
+        nvm --version
+      register: nvm_version
+      failed_when: nvm_version.rc != 0 and nvm_version.rc != 127
+    - name: Install nvm
+      shell: |
+        wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.2/install.sh | bash
+      when: nvm_version.rc == 127
+    - name: Install node 18 and Mineflayer
+      shell:
+        cmd: |
+          source ~/.bashrc
+          nvm install 18
+          npm install mineflayer
+          npm install mineflayer-pathfinder
+          npm install rcon
+        chdir: "{{wd}}"
+    - name: Checkout RCON client
+      git:
+        repo: https://github.com/tehbeard/node-rcon.git
+        dest: "{{wd}}/rcon"
+    - name: Copy scripts
+      copy:
+        src: "{{item}}"
+        dest: "{{wd}}"
+      with_items: "{{scripts}}"
+
+    - name: Copy trace
+      copy:
+        src: "{{item}}"
+        dest: "{{wd}}"
+      with_items: "{{trace}}"

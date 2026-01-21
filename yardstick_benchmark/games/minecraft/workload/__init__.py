@@ -1,4 +1,4 @@
-from yardstick_benchmark.model import RemoteApplication, Node
+from yardstick_benchmark_2.model import RemoteApplication, Node
 from pathlib import Path
 import os
 from datetime import timedelta
@@ -41,5 +41,35 @@ class WalkAround(RemoteApplication):
                 "box_z": box_z,
                 "bots_join_delay": bots_join_delay.total_seconds(),
                 "bots_per_node": bots_per_node,
+            },
+        )
+
+class TraceBased(RemoteApplication):
+    def __init__(
+            self, 
+            nodes: list[Node], 
+            server_host: str, 
+            trace_file: str,
+            duration: timedelta = timedelta(seconds=60)
+    ):
+        super().__init__(
+            "trace_based",
+            nodes,
+            Path(__file__).parent / "trace_deploy.yml",
+            Path(__file__).parent / "trace_start.yml",
+            Path(__file__).parent / "trace_stop.yml",
+            Path(__file__).parent / "trace_cleanup.yml",
+            extravars={
+                "hostnames": [n.host for n in nodes],
+                "mc_host": server_host,
+                "scripts": [
+                    str(Path(__file__).parent / "trace.js"),
+                    str(Path(__file__).parent / "trace_bot.js"),
+                ],
+                "trace": [
+                    trace_file,
+                ],
+                "trace_file": Path(trace_file).name,
+                "duration": duration.total_seconds()
             },
         )

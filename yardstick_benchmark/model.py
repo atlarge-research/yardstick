@@ -48,6 +48,10 @@ class RemoteAction(object):
         self.script = script
         self.envvars = envvars
         self.extravars = extravars
+        self.extravars.update({
+            "ansible_ssh_pass": os.getenv("ANSIBLE_SSH_PASS", ""),
+            "ansible_port": os.getenv("ANSIBLE_PORT", "22"),  # Default to port 22
+        })
 
     def run(self):
         assert self.script.is_file()

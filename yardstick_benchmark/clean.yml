@@ -2,6 +2,9 @@
 - name: Clean data from nodes
   gather_facts: true
   hosts: all
+  become: "{{ use_sudo }}"
+  become_method: sudo
+  become_user: root
   tasks:
     - name: Remove data from nodes
       file:

@@ -7,7 +7,10 @@
       shell:
         cmd: |
           module load java/jdk-17 || true # just in case we are on DAS
-          nohup java -javaagent:jolokia-agent-jvm-2.0.3-javaagent.jar -jar paper-1.20.1-58.jar &> /dev/null &
+          nohup strace -f -ttt -T -e trace=pread64,pwrite64,read,write,file -o fsysstrace.log java -javaagent:jolokia-agent-jvm-2.0.3-javaagent.jar -jar paper-1.20.1-58.jar &
+          PARENT_PID=$!
+          sleep 2
+          CHILD_PID=$(ps --ppid $PARENT_PID -o pid= | head -n 1)
           echo $! > papermc.pid
         chdir: "{{ wd }}"
     - name: Waiting for server to become ready

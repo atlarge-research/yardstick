@@ -1,0 +1,18 @@
+---
+- name: Cleanup Virtualized Storage
+  gather_facts: true
+  hosts: all
+  become: "{{ use_sudo }}"
+  tasks:
+    - name: Read the device name from drive.dev file
+      shell: cat {{ node_wd }}/drive.dev
+      register: drive_device
+      changed_when: false
+    - name: Delete a file
+      shell:
+        cmd: |
+          rm -rf /dev/{{drive_device.stdout}}
+          rmdir /sys/kernel/config/nullb/{{drive_device.stdout}}
+    - name: Unmount directory
+      shell:
+        cmd: umount -f {{node_wd}}
