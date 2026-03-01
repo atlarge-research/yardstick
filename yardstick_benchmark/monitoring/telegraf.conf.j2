@@ -177,9 +177,9 @@
 {% if outputs_influxdb_v2 %}
 [[outputs.influxdb_v2]]
   urls = {{ outputs_influxdb_v2_urls }}
-  token = {{ outputs_influxdb_v2_token }}
-  organization = {{ outputs_influxdb_v2_organization }}
-  bucket = {{ outputs_influxdb_v2_bucket }}
+  token = "{{ outputs_influxdb_v2_token }}"
+  organization = "{{ outputs_influxdb_v2_organization }}"
+  bucket = "{{ outputs_influxdb_v2_bucket }}"
 {% endif %}
 
 ###############################################################################
@@ -367,15 +367,13 @@
     paths = ["AvailableProcessors", "CommittedVirtualMemorySize", "FreePhysicalMemorySize", "FreeSwapSpaceSize", "MaxFileDescriptorCount", "OpenFileDescriptorCount", "ProcessCpuLoad", "ProcessCpuTime", "SystemCpuLoad", "SystemLoadAverage", "TotalPhysicalMemorySize", "TotalSwapSpaceSize"]
   [[inputs.jolokia2_agent.metric]]
     name  = "minecraft_tick_times"
-    mbean = "net.minecraft.server:type=Server"
+    mbean = "net.minecraft.server:type=Serve"
     paths = ["averageTickTime", "tickTimes"]
 {% endif %}
 
 {% if jolokia_to_mc_ticks_script %}
 [[inputs.execd]]
-  command = ["python3", "{{wd}}/jolokia_get_minecraft_tick.py"]
-  data_format = "csv"
-  csv_header_row_count = 1
+  command = ["/opt/jolokia_get_minecraft_tick"]
 {% endif %}
 
 ###############################################################################

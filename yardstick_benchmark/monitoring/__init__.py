@@ -21,7 +21,7 @@ class InfluxDB(object):
     def __init__(self, nodes: List[Node]):
         self.nodes = nodes
         self.image_url = "docker://influxdb:2.8"
-        self.admin_password = random_string(16)
+        self.admin_password = "password"  # random_string(16)
         self.admin_token = random_string(16)
 
     def deploy(self) -> None:
@@ -95,7 +95,9 @@ class Telegraf(object):
             nodes (list[Node]): The nodes on which to run Telegraf
         """
         self.nodes = nodes
-        self.image_url = "docker://telegraf:1.37-alpine"
+        # self.image_url = "docker://telegraf:1.37-alpine"
+        # TODO make container registry configurable
+        self.image_url = "docker://localhost:5000/telegraf:1.37"
         self.config_template = os.path.join(
             os.path.dirname(__file__), "telegraf.conf.j2"
         )
@@ -183,6 +185,7 @@ class Telegraf(object):
                 machine["apptainer"][
                     "instance",
                     "run",
+                    "--no-https",  # FIXME Remove when using https backend
                     "--compat",
                     "--bind",
                     f"/{wd}/telegraf.conf:/etc/telegraf/telegraf.conf",
