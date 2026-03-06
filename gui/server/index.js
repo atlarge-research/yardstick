@@ -435,13 +435,6 @@ __YS_PROBE__`;
       });
     }
 
-    const checkOrder = [
-      { key: 'miniconda', label: 'Miniconda' },
-      { key: 'condaEnv',  label: 'Conda environment' },
-      { key: 'packages',  label: 'Python packages' },
-      { key: 'workspace', label: 'Tutorial workspace' },
-    ];
-
     function emitProgress(currentKey) {
       socket.emit('env:check-progress', { checks: { ...checks }, checking: currentKey });
     }
