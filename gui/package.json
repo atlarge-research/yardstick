@@ -1,0 +1,49 @@
+{
+  "name": "yardstick-gui",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GUI for automating Yardstick benchmark setup and installation",
+  "main": "electron/main.js",
+  "scripts": {
+    "install:all": "npm install && cd client && npm install",
+    "build": "cd client && npx vite build",
+    "start": "npm run build && electron .",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "socket.io": "^4.7.4",
+    "ssh2": "^1.15.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.yardstick.gui",
+    "productName": "Yardstick",
+    "files": [
+      "electron/**/*",
+      "server/**/*",
+      "client/dist/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Development"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    }
+  }
+}
