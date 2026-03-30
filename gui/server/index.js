@@ -190,16 +190,9 @@ function buildPipelineCommands(mode, user) {
 
     setupWorkspace: [
       `set -e`,
-      `mkdir -p ~/yardstick-tutorial`,
-      `cd ~/yardstick-tutorial`,
-      `if [ -f "example.ipynb" ]; then`,
-      `  echo "[OK] example.ipynb already exists -- skipping download."`,
-      `else`,
-      `  echo "Downloading example notebook..."`,
-      `  wget -q https://raw.githubusercontent.com/atlarge-research/yardstick/master/example.ipynb -O example.ipynb 2>&1 || echo "[WARN] Download failed, you can copy it manually."`,
-      `  echo "[OK] Workspace set up."`,
-      `fi`,
-      `ls -la ~/yardstick-tutorial`,
+      `mkdir -p ~/experiments`,
+      `echo "[OK] Workspace directory ready: ~/experiments"`,
+      `ls -la ~/experiments`,
     ].join('\n'),
 
     verifyInstall: [
@@ -461,7 +454,7 @@ __YS_PROBE__`;
       emitProgress(null);
 
       emitProgress('workspace');
-      checks.workspace = await probe('Workspace', 'test -f ~/yardstick-tutorial/example.ipynb');
+      checks.workspace = await probe('Workspace', 'test -d ~/experiments');
       emitProgress(null);
     } catch (e) {
       // defaults are fine
@@ -544,7 +537,7 @@ __YS_PROBE__`;
         miniconda:  await quickProbe(`test -f "${condaDir}/bin/conda"`),
         condaEnv:   false,
         packages:   false,
-        workspace:  await quickProbe('test -f ~/yardstick-tutorial/example.ipynb'),
+        workspace:  await quickProbe('test -d ~/experiments'),
       };
       if (pf.miniconda) {
         pf.condaEnv = await quickProbe(`"${condaDir}/bin/conda" env list 2>/dev/null | grep -q "^yardstick "`);
@@ -557,7 +550,7 @@ __YS_PROBE__`;
       if (!pf.miniconda)  missing.push('Miniconda');
       if (!pf.condaEnv)   missing.push('Conda environment (yardstick)');
       if (!pf.packages)   missing.push('Python packages (yardstick-benchmark)');
-      if (!pf.workspace)  missing.push('Tutorial workspace (~/yardstick-tutorial)');
+      if (!pf.workspace)  missing.push('Experiments workspace (~/experiments)');
 
       if (missing.length > 0) {
         socket.emit('experiment:preflight-failed', { missing });
@@ -687,7 +680,7 @@ finally:
       const experimentScript = isLocalMode ? localExperimentScript : dasExperimentScript;
 
       const pythonBin = `${cmds.condaDir}/envs/yardstick/bin/python`;
-      const experimentCmd = `cd ~/yardstick-tutorial && ${pythonBin} <<'__YS_EXPERIMENT__'
+      const experimentCmd = `cd ~/experiments && ${pythonBin} <<'__YS_EXPERIMENT__'
 ${experimentScript}
 __YS_EXPERIMENT__`;
 

@@ -32,7 +32,7 @@ export default function ManualCommand({ connected, onRunCommand, terminalOutput 
           <Text color={c.warning}>Please connect via SSH first.</Text>
         ) : (
           <Flex as="form" onSubmit={handleSubmit} gap={2.5}>
-            <StyledInput {...inputProps} flex={1} value={command} onChange={(e) => setCommand(e.target.value)} placeholder="e.g., ls -la ~/yardstick-tutorial" />
+            <StyledInput {...inputProps} flex={1} value={command} onChange={(e) => setCommand(e.target.value)} placeholder="e.g., ls -la ~/experiments" />
             <Button
               type="submit"
               variant="plain"

@@ -21,7 +21,7 @@ const CHECK_ITEMS: CheckItem[] = [
   { key: 'miniconda', label: 'Miniconda' },
   { key: 'condaEnv', label: 'Conda environment' },
   { key: 'packages', label: 'Python packages' },
-  { key: 'workspace', label: 'Tutorial workspace' },
+  { key: 'workspace', label: 'Experiments workspace' },
 ];
 
 const INSTALL_SUBSTEPS: InstallSubstep[] = [
@@ -211,9 +211,7 @@ export default function PipelineView({
         <Box {...cardProps} borderColor={c.success}>
           <Heading fontSize="1rem" fontWeight={600} color={c.success} mb={2}>Setup Complete</Heading>
           <Text color={c.textDim}>
-            Yardstick is ready. You can proceed to the <Text as="strong">Experiment</Text> tab or open{' '}
-            <Text as="code" color={c.accentLight}>~/yardstick-tutorial/example.ipynb</Text>{' '}
-            in VSCode.
+            Yardstick is ready. You can proceed to the <Text as="strong">Experiment</Text> tab.
           </Text>
         </Box>
       )}
