@@ -518,7 +518,9 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
                     labelFormatter={(v) => `${v} ms`}
                   />
                   <Line type="monotone" dataKey="cdf" stroke="#fdcb6e" dot={false} strokeWidth={1.6} name="Tick CDF" />
-                  <ReferenceLine x={50} stroke="#e17055" strokeDasharray="5 5" label={{ value: '50 ms threshold', position: 'top', fill: c.error }} />
+                  {tickCdf.length > 0 && tickCdf[tickCdf.length - 1].value >= 50 && (
+                    <ReferenceLine x={50} stroke="#e17055" strokeDasharray="5 5" label={{ value: '50 ms threshold', position: 'top', fill: c.error }} />
+                  )}
                 </LineChart>
               </ResponsiveContainer>
             </Box>
