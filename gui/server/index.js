@@ -709,7 +709,15 @@ __YS_EXPERIMENT__`;
     const user = dasUsername || session.username;
     const isLocal = m === 'local';
     const scratchDir = isLocal ? '$HOME/yardstick' : `/var/scratch/${user}/yardstick`;
-    const cmd = `ls -1d ${scratchDir}/*/ 2>/dev/null | while read d; do basename "$d"; done`;
+    const cmd = `
+set -e
+base=${scratchDir}
+if [ ! -d "$base" ]; then
+  exit 0
+fi
+
+find "$base" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort
+`;
 
     function execOnce(command) {
       return new Promise((resolve, reject) => {
