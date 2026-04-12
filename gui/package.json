@@ -3,13 +3,21 @@
   "version": "1.0.0",
   "private": true,
   "description": "GUI for automating Yardstick benchmark setup and installation",
+  "homepage": "https://github.com/atlarge-research/yardstick",
+  "author": {
+    "name": "marwan amrhar",
+    "email": "marwan1amrhar@gmail.com"
+  },
   "main": "electron/main.js",
   "scripts": {
     "install:all": "npm install && cd client && npm install",
     "build": "cd client && npx vite build",
     "start": "npm run build && electron .",
     "pack": "npm run build && electron-builder --dir",
-    "dist": "npm run build && electron-builder"
+    "dist": "npm run build && electron-builder",
+    "dist:linux": "npm run build && electron-builder --linux",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:linux-win": "npm run build && electron-builder --linux --win"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -25,6 +33,7 @@
   "build": {
     "appId": "com.yardstick.gui",
     "productName": "Yardstick",
+    "npmRebuild": false,
     "files": [
       "electron/**/*",
       "server/**/*",
@@ -40,6 +49,7 @@
         "AppImage",
         "deb"
       ],
+      "maintainer": "marwan amrhar <marwan1amrhar@gmail.com>",
       "category": "Development"
     },
     "mac": {

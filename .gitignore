@@ -258,6 +258,16 @@ cython_debug/
 **/.terraform/*
 
 # .tfstate files
+.terraform.lock.hcl
+
+# GUI packaging artifacts
+gui/release/
+gui/dist/
+gui/client/dist/
+gui/**/win-unpacked/
+gui/**/linux-unpacked/
+gui/**/builder-effective-config.yaml
+gui/**/builder-debug.yml
 *.tfstate
 *.tfstate.*
 

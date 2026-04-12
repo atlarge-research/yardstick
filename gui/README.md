@@ -7,6 +7,7 @@ Desktop application for automating the Yardstick benchmark setup, experiment exe
 - [Architecture](#architecture)
 - [Quick Start](#quick-start)
 - [Scripts](#scripts)
+- [Release Packaging](#release-packaging)
 - [Development workflow](#development-workflow-without-electron)
 - [To Do](#to-do)
 
@@ -75,6 +76,36 @@ All commands are run from the `gui/` root unless noted otherwise.
 | `npm run install:all` | Runs `npm install` in `gui/` to install server and Electron dependencies, then `cd client && npm install` to install frontend dependencies. One command to set up both halves of the project. |
 | `npm run build` | Runs `cd client && npx vite build`. Compiles the TypeScript/React source in `client/src/` into static files in `client/dist/` (HTML, CSS, JS bundle). This is the production build of the frontend only, the server needs no build step because it is plain JavaScript. |
 | `npm start` | Runs `npm run build && electron .`. First builds the client (see above), then launches Electron. Electron loads `electron/main.js`, which boots the Express server in-process on port 3001 and opens a `BrowserWindow` pointed at `http://localhost:3001`. This is the primary way to run the app. |
+| `npm run dist:linux` | Builds release artifacts for Linux (`AppImage` and `.deb`) in `gui/release/`. |
+| `npm run dist:win` | Builds a Windows NSIS installer (`.exe`) in `gui/release/`. |
+| `npm run dist:linux-win` | Builds both Linux and Windows release artifacts in one command. |
+
+## Release Packaging
+
+All packaging commands are run from `gui/`.
+
+```bash
+# Linux artifacts (.AppImage + .deb)
+npm run dist:linux
+
+# Windows installer (.exe)
+npm run dist:win
+
+# Build Linux + Windows in one run
+npm run dist:linux-win
+```
+
+Generated files are written to:
+
+```text
+gui/release/
+```
+
+Typical outputs:
+
+- `Yardstick-<version>.AppImage`
+- `yardstick-gui_<version>_amd64.deb`
+- `Yardstick Setup <version>.exe`
 
 ## Development workflow (without Electron)
 
