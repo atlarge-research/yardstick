@@ -105,8 +105,42 @@ class Yardstick():
             server_handle.stop()
             server_handle.cleanup()
 
+    def generate_report(self, filename=f"performance_report_{datetime.today().strftime('%Y-%m-%d_%H:%M')}"):
+        data_loc = data.preprocess_data(self.dest)
+
+        experiment_details = {}
+
+        experiment_details["environment"] = self.environment
+        experiment_details["monitor"] = self.monitoring
+        experiment_details["server"] = self.server
+        experiment_details["workload"] = self.workload
+        experiment_details["bots"] = self.bots
+        experiment_details["duration"] = self.duration
+        experiment_details["join_delay"] = self.bots_join_delay
+
+        # List of plot filenames
+        plots = defaultdict(list)
+        
+        # CPU plots
+        plots["cpu_box"].append(viz.plot_box_cpu(data_loc + "cpu.csv", f"cpu_box{datetime.now()}"))
+        plots["cpu_line"].append(viz.plot_line_cpu(data_loc + "cpu.csv", f"cpu_line{datetime.now()}"))
+
+        # Tick Duration plots
+        plots["tick_duration_box"].append(viz.plot_box_tick_duration(data_loc + "minecraft_tick_times.csv", f"tick_duration_box{datetime.now()}"))
+        plots["tick_duration_line"].append(viz.plot_line_tick_duration(data_loc + "minecraft_tick_times.csv", f"tick_duration_line{datetime.now()}"))
+
+        # Memory plots
+        plots['mem_box'].append(viz.plot_box_mem(data_loc + "mem.csv", f"mem_box{datetime.now()}"))
+        plots['mem_line'].append(viz.plot_line_mem(data_loc + "mem.csv", f"mem_line{datetime.now()}"))
+
+        report.render_report(f"./{filename}", experiment_details, plots)
+
 
     def run(self, bots=10, duration=60, bots_join_delay=5):
+        self.bots = bots
+        self.duration = duration
+        self.bots_join_delay = bots_join_delay
+
         provison, nodes = self.provision(time_s=duration+900)
         self.clean(nodes)
 
@@ -130,6 +164,16 @@ class Yardstick():
             workload.deploy()
             workload.start()
 
+        if self.workload == "Fight":
+            workload = bot.Fight(nodes[1:], nodes[0].host, bots_per_node=bots, duration=timedelta(seconds=duration), bots_join_delay=timedelta(seconds=bots_join_delay))
+            workload.deploy()
+            workload.start()
+
+        if self.workload == "Explore":
+            workload = bot.Explore(nodes[1:], nodes[0].host, bots_per_node=bots, duration=timedelta(seconds=duration), bots_join_delay=timedelta(seconds=bots_join_delay))
+            workload.deploy()
+            workload.start()
+
         sleep(10)
 
         self.stop_server(server)
@@ -145,28 +189,12 @@ class Yardstick():
         self.clean(nodes)
         self.free_provisioned_nodes(provison, nodes)
 
-    def run_multiple():
+        self.generate_report()
+
+    def run_multiple(self):
         pass
 
-    def generate_report(self, filename=f"performance_report_{datetime.today().strftime('%Y-%m-%d_%H:%M')}"):
-        data_loc = data.preprocess_data(self.dest)
 
-        # List of plot filenames
-        plots = defaultdict(list)
-        
-        # CPU plots
-        plots["cpu_box"].append(viz.plot_box_cpu(data_loc + "cpu.csv", f"cpu_box{datetime.now()}"))
-        plots["cpu_line"].append(viz.plot_line_cpu(data_loc + "cpu.csv", f"cpu_line{datetime.now()}"))
-
-        # Tick Duration plots
-        plots["tick_duration_box"].append(viz.plot_box_tick_duration(data_loc + "minecraft_tick_times.csv", f"tick_duration_box{datetime.now()}"))
-        plots["tick_duration_line"].append(viz.plot_line_tick_duration(data_loc + "minecraft_tick_times.csv", f"tick_duration_line{datetime.now()}"))
-
-        # Memory plots
-        plots['mem_box'].append(viz.plot_box_mem(data_loc + "mem.csv", f"mem_box{datetime.now()}"))
-        plots['mem_line'].append(viz.plot_line_mem(data_loc + "mem.csv", f"mem_line{datetime.now()}"))
-
-        report.render_report(f"{self.dest}/{filename}", plots)
 
 
 if __name__ == "__main__":
