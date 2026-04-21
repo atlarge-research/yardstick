@@ -25,7 +25,6 @@ from yardstick_benchmark.monitoring import InfluxDB, Telegraf
 
 
 APPTAINER_PATH = shutil.which("apptainer")
-CUSTOM_TELEGRAF_IMAGE = "telegraf:1.37"
 
 pytestmark = [
     pytest.mark.slow,
@@ -35,12 +34,6 @@ pytestmark = [
 
 def _stop_instance(name: str) -> None:
     local["apptainer"]["instance", "stop", name].run(retcode=None)
-
-
-def _docker_image_present(image: str) -> bool:
-    if shutil.which("docker") is None:
-        return False
-    return local["docker"]["image", "inspect", image].run(retcode=None)[0] == 0
 
 
 def _wait_for_url(url: str, timeout_s: float, poll_s: float = 1.0) -> None:
@@ -123,13 +116,6 @@ def test_telegraf_ingests_into_influxdb(tmp_path, apptainer_cleanup):
             pass
 
 
-@pytest.mark.skipif(
-    not _docker_image_present(CUSTOM_TELEGRAF_IMAGE),
-    reason=(
-        f"custom '{CUSTOM_TELEGRAF_IMAGE}' image (with "
-        "/opt/jolokia_get_minecraft_tick baked in) not present in docker daemon"
-    ),
-)
 def test_minecraft_tick_ingests_into_influxdb(tmp_path, apptainer_cleanup):
     """End-to-end: a running Minecraft server's tick metric reaches InfluxDB
     via Telegraf's execd input + /opt/jolokia_get_minecraft_tick.
@@ -141,11 +127,7 @@ def test_minecraft_tick_ingests_into_influxdb(tmp_path, apptainer_cleanup):
     apptainer_cleanup.append(mc_instance)
 
     influxdb = InfluxDB(nodes)
-    # Custom Telegraf image bakes in /opt/jolokia_get_minecraft_tick, which is
-    # required by the execd input configured by add_input_execd_minecraft_ticks.
-    telegraf = Telegraf(
-        nodes, image_url=f"docker-daemon:{CUSTOM_TELEGRAF_IMAGE}"
-    )
+    telegraf = Telegraf(nodes)
     telegraf.set_output_influxdb2(influxdb.get_info(nodes))
     telegraf.add_input_jolokia_agent(node)
     telegraf.add_input_execd_minecraft_ticks(node)

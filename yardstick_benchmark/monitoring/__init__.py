@@ -187,11 +187,11 @@ class Telegraf(object):
         self.influxdb_info = info
 
     def deploy(self) -> None:
+        mc_ticks_binary = Path(__file__).parent / "jolokia_get_minecraft_tick"
         for node in self.nodes:
             host = node.host
             machine = SshMachine(host) if not is_localhost(host) else local
             try:
-                # machine["apptainer"]["pull", "/dev/null", self.image_url]()
                 with open(self.config_template) as f:
                     template = Template(f.read())
                 fd, name = tempfile.mkstemp()
@@ -217,9 +217,10 @@ class Telegraf(object):
                 local.path(name).copy(machine.path(dst))
                 os.remove(name)
 
-                src = Path(__file__).parent / "jolokia_get_minecraft_tick.py"
-                dst = Path(self.wds[node]) / "jolokia_get_minecraft_tick.py"
-                local.path(src).copy(machine.path(dst))
+                if jolokia_to_mc_ticks_script:
+                    dst = f"{self.wds[node]}/jolokia_get_minecraft_tick"
+                    local.path(mc_ticks_binary).copy(machine.path(dst))
+                    machine["chmod"]["+x", dst]()
             finally:
                 if isinstance(machine, SshMachine):
                     machine.close()
@@ -230,16 +231,21 @@ class Telegraf(object):
             machine = SshMachine(host) if not is_localhost(host) else local
             try:
                 wd = self.wds[node]
-                machine["apptainer"][
-                    "instance",
-                    "run",
-                    "--no-https",  # FIXME Remove when using https backend
-                    "--compat",
-                    "--bind",
-                    f"/{wd}/telegraf.conf:/etc/telegraf/telegraf.conf",
-                    self.image_url,
-                    "telegraf",
-                ]()
+                binds = [f"{wd}/telegraf.conf:/etc/telegraf/telegraf.conf"]
+                if node in self.config_nodes_jolokia_mc_ticks_enabled:
+                    binds.append(
+                        f"{wd}/jolokia_get_minecraft_tick:/opt/jolokia_get_minecraft_tick"
+                    )
+                bind_args: List[str] = []
+                for bind in binds:
+                    bind_args += ["--bind", bind]
+
+                args = (
+                    ["instance", "run", "--no-https", "--compat"]
+                    + bind_args
+                    + [self.image_url, "telegraf"]
+                )
+                machine["apptainer"][args]()
             finally:
                 if isinstance(machine, SshMachine):
                     machine.close()
