@@ -17,6 +17,14 @@ dependencies = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build]
+# Ship the Jolokia Java agent jar in the wheel even though *.jar is
+# gitignored; MinecraftServer bind-mounts it into the upstream itzg image
+# at start time, so users don't need a custom container.
+artifacts = [
+    "yardstick_benchmark/games/minecraft/server/jolokia-agent-jvm-*.jar",
+]
+
 [dependency-groups]
 dev = [
     "pytest>=8.4.2",

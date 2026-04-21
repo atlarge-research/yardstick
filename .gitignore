@@ -505,3 +505,7 @@ ansible-test
 notes.md
 *.sif
 *.jar
+# But do ship the Jolokia agent jar; it's bind-mounted into the upstream
+# itzg/minecraft-server image by MinecraftServer.start() and must be
+# present in both source checkouts and the PyPI wheel.
+!yardstick_benchmark/games/minecraft/server/jolokia-agent-jvm-*.jar

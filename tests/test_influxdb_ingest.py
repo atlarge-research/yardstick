@@ -14,7 +14,6 @@ import socket
 import time
 import urllib.error
 import urllib.request
-from pathlib import Path
 from typing import List, Optional
 
 import pytest
@@ -26,11 +25,6 @@ from yardstick_benchmark.monitoring import InfluxDB, Telegraf
 
 
 APPTAINER_PATH = shutil.which("apptainer")
-REPO_ROOT = Path(__file__).resolve().parent.parent
-MC_SERVER_SIF = (
-    REPO_ROOT
-    / "yardstick_benchmark/games/minecraft/server/minecraft-server-java25-jolokia.sif"
-)
 CUSTOM_TELEGRAF_IMAGE = "telegraf:1.37"
 
 pytestmark = [
@@ -130,10 +124,6 @@ def test_telegraf_ingests_into_influxdb(tmp_path, apptainer_cleanup):
 
 
 @pytest.mark.skipif(
-    not MC_SERVER_SIF.exists(),
-    reason=f"Minecraft server SIF missing at {MC_SERVER_SIF}",
-)
-@pytest.mark.skipif(
     not _docker_image_present(CUSTOM_TELEGRAF_IMAGE),
     reason=(
         f"custom '{CUSTOM_TELEGRAF_IMAGE}' image (with "
@@ -161,9 +151,6 @@ def test_minecraft_tick_ingests_into_influxdb(tmp_path, apptainer_cleanup):
     telegraf.add_input_execd_minecraft_ticks(node)
 
     minecraft = MinecraftServer(name=mc_instance)
-    # Point at the locally-committed SIF instead of the private registry so
-    # this test is self-contained.
-    minecraft.container_name = str(MC_SERVER_SIF)
 
     try:
         influxdb.deploy()
