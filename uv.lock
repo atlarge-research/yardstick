@@ -52,6 +52,15 @@ wheels = [
 ]
 
 [[package]]
+name = "certifi"
+version = "2026.2.25"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/af/2d/7bf41579a8986e348fa033a31cdd0e4121114f6bce2457e8876010b092dd/certifi-2026.2.25.tar.gz", hash = "sha256:e887ab5cee78ea814d3472169153c2d12cd43b14bd03329a39a9c6e2e80bfba7", size = 155029, upload-time = "2026-02-25T02:54:17.342Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9a/3c/c17fb3ca2d9c3acff52e30b309f538586f9f5b9c9cf454f3845fc9af4881/certifi-2026.2.25-py3-none-any.whl", hash = "sha256:027692e4402ad994f1c42e52a4997a9763c646b73e4096e4d5d6db8af1d6f0fa", size = 153684, upload-time = "2026-02-25T02:54:15.766Z" },
+]
+
+[[package]]
 name = "cffi"
 version = "1.16.0"
 source = { registry = "https://pypi.org/simple" }
@@ -196,6 +205,21 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/4a/d5/22aa0454c06788e59f406a2b0e569fac835c6c45e5ad6ed968804920f0ac/importlib_resources-5.0.7.tar.gz", hash = "sha256:4df460394562b4581bb4e4087ad9447bd433148fba44241754ec3152499f1d1b", size = 31354, upload-time = "2021-10-10T00:49:47.236Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/46/10/7cc167fe072037c3cd2a15a92bb963b86f2bab8ac0995fab95fb7a152b80/importlib_resources-5.0.7-py3-none-any.whl", hash = "sha256:2238159eb743bd85304a16e0536048b3e991c531d1cd51c4a834d1ccf2829057", size = 24373, upload-time = "2021-10-10T00:49:45.959Z" },
+]
+
+[[package]]
+name = "influxdb-client"
+version = "1.50.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "certifi" },
+    { name = "python-dateutil" },
+    { name = "reactivex" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/07/23/77a945465a556a8067917ba84bac04e312cee2a4fe03d41198fe79ed9c84/influxdb_client-1.50.0.tar.gz", hash = "sha256:c2a4906573097103fa6f9a2ab08efe2eb48c2fed60b8129a3e320affde445743", size = 386749, upload-time = "2026-01-23T09:39:39.322Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7f/ec/6b120b4a86f6fadc7ddb1d7c7cdcb15bcfb332deb022ab60df51bcd4494c/influxdb_client-1.50.0-py3-none-any.whl", hash = "sha256:f172975cf7f0c95bfe74f288b31273393b164d2c58a948de55497d9956ab49be", size = 746289, upload-time = "2026-01-23T09:39:37.377Z" },
 ]
 
 [[package]]
@@ -417,6 +441,18 @@ wheels = [
 ]
 
 [[package]]
+name = "python-dateutil"
+version = "2.9.0.post0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "six" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/66/c0/0c8b6ad9f17a802ee498c46e004a0eb49bc148f2fd230864601a86dcf6db/python-dateutil-2.9.0.post0.tar.gz", hash = "sha256:37dd54208da7e1cd875388217d5e00ebd4179249f90fb72437e91a35459a0ad3", size = 342432, upload-time = "2024-03-01T18:36:20.211Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ec/57/56b9bcc3c9c6a792fcbaf139543cee77261f3651ca9da0c93f5c1221264b/python_dateutil-2.9.0.post0-py2.py3-none-any.whl", hash = "sha256:a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427", size = 229892, upload-time = "2024-03-01T18:36:18.57Z" },
+]
+
+[[package]]
 name = "pywin32"
 version = "306"
 source = { registry = "https://pypi.org/simple" }
@@ -473,6 +509,18 @@ wheels = [
 ]
 
 [[package]]
+name = "reactivex"
+version = "4.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b6/af/38a4b62468e4c5bd50acf511d86fe62e65a466aa6abb55b1d59a4a9e57f3/reactivex-4.1.0.tar.gz", hash = "sha256:c7499e3c802bccaa20839b3e17355a7d939573fded3f38ba3d4796278a169a3d", size = 113482, upload-time = "2025-11-05T21:44:24.557Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ba/9e/3c2f5d3abb6c5d82f7696e1e3c69b7279049e928596ce82ed25ca97a08f3/reactivex-4.1.0-py3-none-any.whl", hash = "sha256:485750ec8d9b34bcc8ff4318971d234dc4f595058a1b4435a74aefef4b2bc9bd", size = 218588, upload-time = "2025-11-05T21:44:23.015Z" },
+]
+
+[[package]]
 name = "resolvelib"
 version = "1.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -513,6 +561,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/1c/1c/8a56622f2fc9ebb0df743373ef1a96c8e20410350d12f44ef03c588318c3/setuptools-70.1.0.tar.gz", hash = "sha256:01a1e793faa5bd89abc851fa15d0a0db26f160890c7102cd8dce643e886b47f5", size = 2291927, upload-time = "2024-06-19T12:54:51.388Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/55/b3/b3a3415d2debd837106ed417f8681d8af63037fed367fa1b85dbfef081f1/setuptools-70.1.0-py3-none-any.whl", hash = "sha256:d9b8b771455a97c8a9f3ab3448ebe0b29b5e105f1228bba41028be116985a267", size = 882588, upload-time = "2024-06-19T12:54:40.517Z" },
+]
+
+[[package]]
+name = "six"
+version = "1.17.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031, upload-time = "2024-12-04T17:35:28.174Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
 ]
 
 [[package]]
@@ -579,12 +636,22 @@ wheels = [
 ]
 
 [[package]]
+name = "urllib3"
+version = "2.6.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c7/24/5f1b3bdffd70275f6661c76461e25f024d5a38a46f04aaca912426a2b1d3/urllib3-2.6.3.tar.gz", hash = "sha256:1b62b6884944a57dbe321509ab94fd4d3b307075e0c2eae991ac71ee15ad38ed", size = 435556, upload-time = "2026-01-07T16:24:43.925Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/39/08/aaaad47bc4e9dc8c725e68f9d04865dbcb2052843ff09c97b08904852d84/urllib3-2.6.3-py3-none-any.whl", hash = "sha256:bf272323e553dfb2e87d9bfd225ca7b0f467b919d7bbd355436d3fd37cb0acd4", size = 131584, upload-time = "2026-01-07T16:24:42.685Z" },
+]
+
+[[package]]
 name = "yardstick-benchmark"
 version = "0.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "ansible" },
     { name = "ansible-runner" },
+    { name = "influxdb-client" },
     { name = "plumbum" },
     { name = "pyyaml" },
 ]
@@ -600,6 +667,7 @@ dev = [
 requires-dist = [
     { name = "ansible", specifier = ">=8.0.0,<9" },
     { name = "ansible-runner", specifier = ">=2.3.3,<3" },
+    { name = "influxdb-client", specifier = ">=1.50.0" },
     { name = "plumbum", specifier = ">=1.8.2,<2" },
     { name = "pyyaml", specifier = ">=6.0,<7" },
 ]

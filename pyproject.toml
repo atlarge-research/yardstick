@@ -8,6 +8,7 @@ readme = "README.md"
 dependencies = [
     "ansible-runner>=2.3.3,<3",
     "ansible>=8.0.0,<9",
+    "influxdb-client>=1.50.0",
     "plumbum>=1.8.2,<2",
     "pyyaml>=6.0,<7",
 ]
@@ -20,4 +21,9 @@ build-backend = "hatchling.build"
 dev = [
     "pytest>=8.4.2",
     "ruff>=0.15.2",
+]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: integration tests that start real apptainer instances; skipped by default with '-m \"not slow\"'",
 ]

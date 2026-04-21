@@ -2,11 +2,13 @@ from yardstick_benchmark.model import Node
 from yardstick_benchmark.util import is_localhost, random_string
 import os
 from plumbum import local, SshMachine
-from typing import List
+from typing import Dict, List, Optional
 from jinja2 import Template
 import tempfile
 from pathlib import Path
 from dataclasses import dataclass
+
+from influxdb_client import InfluxDBClient
 
 
 @dataclass(frozen=True)
@@ -82,22 +84,68 @@ class InfluxDB(object):
             [f"http://{node.host}:8086" for node in nodes], self.admin_token
         )
 
+    def verify_data(
+        self,
+        expected_measurements: Optional[List[str]] = None,
+        lookback: str = "-5m",
+        target_node: Optional[Node] = None,
+    ) -> Dict[str, int]:
+        info = self.get_info(self.nodes)
+        target = target_node or self.nodes[0]
+        url = f"http://{target.host}:8086"
+
+        query = f'''
+from(bucket: "{info.bucket}")
+  |> range(start: {lookback})
+  |> group(columns: ["_measurement"])
+  |> count()
+  |> keep(columns: ["_measurement", "_value"])
+'''
+        counts: Dict[str, int] = {}
+        with InfluxDBClient(url=url, token=info.token, org=info.organization) as client:
+            tables = client.query_api().query(query=query, org=info.organization)
+            for table in tables:
+                for record in table.records:
+                    measurement = record.values.get("_measurement")
+                    if measurement is None:
+                        continue
+                    counts[measurement] = counts.get(measurement, 0) + int(
+                        record.get_value() or 0
+                    )
+
+        if expected_measurements:
+            missing = [m for m in expected_measurements if counts.get(m, 0) == 0]
+            if missing:
+                raise RuntimeError(
+                    f"InfluxDB verification failed: no points for {missing} in bucket "
+                    f"'{info.bucket}' within {lookback}. Counts observed: {counts}"
+                )
+        return counts
+
 
 class Telegraf(object):
     """Runs the Telegraf metric collection tool
     (https://www.influxdata.com/time-series-platform/telegraf/) on remote nodes.
     """
 
-    def __init__(self, nodes: List[Node]):
+    DEFAULT_IMAGE_URL = "docker://telegraf:1.37-alpine"
+
+    def __init__(
+        self,
+        nodes: List[Node],
+        image_url: str = DEFAULT_IMAGE_URL,
+    ):
         """Create a new instance to run Telegraf on the given nodes.
 
         Args:
             nodes (list[Node]): The nodes on which to run Telegraf
+            image_url: Container image to run. Defaults to the upstream
+                Telegraf image on Docker Hub. Override with e.g.
+                ``"docker://localhost:5000/telegraf:1.37"`` to pull from a
+                private registry instead.
         """
         self.nodes = nodes
-        # self.image_url = "docker://telegraf:1.37-alpine"
-        # TODO make container registry configurable
-        self.image_url = "docker://localhost:5000/telegraf:1.37"
+        self.image_url = image_url
         self.config_template = os.path.join(
             os.path.dirname(__file__), "telegraf.conf.j2"
         )
