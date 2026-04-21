@@ -1,9 +1,0 @@
----
-- name: Clean data from nodes
-  gather_facts: true
-  hosts: all
-  tasks:
-    - name: Remove data from nodes
-      file:
-        path: "{{node_wd}}"
-        state: absent
