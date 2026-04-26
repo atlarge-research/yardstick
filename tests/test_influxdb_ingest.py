@@ -19,7 +19,7 @@ from plumbum import local
 from yardstick_benchmark.games.minecraft.server import MinecraftServer
 from yardstick_benchmark.model import Node
 from yardstick_benchmark.monitoring import InfluxDB, Telegraf
-from yardstick_benchmark.util import wait_for_tcp, wait_for_url
+from yardstick_benchmark.util import wait_for_url
 
 
 APPTAINER_PATH = shutil.which("apptainer")
@@ -103,9 +103,10 @@ def test_minecraft_tick_ingests_into_influxdb(tmp_path, apptainer_cleanup):
         wait_for_url(f"http://{node.host}:8086/health", timeout_s=60)
 
         minecraft.start()
-        # Wait for the server to finish booting (game port listening) before
-        # starting Telegraf so the execd Go binary finds a ticking server.
-        wait_for_tcp("localhost", 25565, timeout_s=180)
+        # Wait for the server to be fully ready (RCON port up, "Done!"
+        # logged) before starting Telegraf so the execd Go binary finds a
+        # ticking server.
+        minecraft.wait_until_ready()
 
         telegraf.deploy()
         telegraf.start()
@@ -136,10 +137,7 @@ def test_minecraft_set_world_spawn(apptainer_cleanup):
     minecraft = MinecraftServer(name=mc_instance)
     try:
         minecraft.start()
-        # The MC server binds the game port (25565) several seconds before it
-        # binds the RCON port (25575); wait for the RCON port directly so we
-        # don't race the listener.
-        wait_for_tcp("localhost", 25575, timeout_s=180)
+        minecraft.wait_until_ready()
         # rcon-cli exits non-zero if the command fails or RCON refuses; a
         # successful setworldspawn returns "Set the world spawn point to ...".
         # plumbum raises ProcessExecutionError on non-zero, so passing here

@@ -3,11 +3,12 @@ from plumbum import local
 import tempfile
 import uuid
 
-from yardstick_benchmark.util import random_string
+from yardstick_benchmark.util import random_string, wait_for_tcp
 
 
 JOLOKIA_JAR = Path(__file__).parent / "jolokia-agent-jvm-2.5.1-javaagent.jar"
 JOLOKIA_PORT = 8778
+GAME_PORT = 25565
 RCON_PORT = 25575
 
 
@@ -81,6 +82,17 @@ class MinecraftServer:
             raise RuntimeError(
                 f"Failed to stop Minecraft server instance {self.instance_name}"
             )
+
+    def wait_until_ready(self, timeout_s: float = 180) -> None:
+        """Block until the server has finished booting and is ready to accept
+        both gameplay connections and RCON commands.
+
+        Polls the RCON listener port (25575). Minecraft binds RCON *after*
+        the game port (25565) and after its "Done!" startup log line, so a
+        successful return here means rcon() / set_world_spawn() will work
+        and the server is fully ticking.
+        """
+        wait_for_tcp("localhost", RCON_PORT, timeout_s=timeout_s)
 
     def rcon(self, *commands: str) -> None:
         """Send one or more commands to the running server via RCON.

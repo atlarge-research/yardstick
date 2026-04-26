@@ -17,7 +17,7 @@ import yardstick_benchmark
 from yardstick_benchmark.games.minecraft.server import MinecraftServer
 from yardstick_benchmark.model import Node
 from yardstick_benchmark.monitoring import InfluxDB, Telegraf
-from yardstick_benchmark.util import wait_for_tcp, wait_for_url
+from yardstick_benchmark.util import wait_for_url
 
 
 def main() -> None:
@@ -43,10 +43,10 @@ def main() -> None:
         wait_for_url(f"{influxdb.url}/health", timeout_s=60)
 
         minecraft.start()
-        # Wait for the server to finish booting (game port listening) so the
-        # execd minecraft_tick collector finds a ticking server when Telegraf
-        # starts it.
-        wait_for_tcp("localhost", 25565, timeout_s=180)
+        # Wait for the server to be fully ready (RCON listener up, "Done!"
+        # logged) so the execd minecraft_tick collector finds a ticking
+        # server when Telegraf starts it.
+        minecraft.wait_until_ready()
 
         telegraf.deploy()
         telegraf.start()
