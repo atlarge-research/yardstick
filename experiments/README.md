@@ -19,23 +19,30 @@ since the filename only carries the variable axis.
 ## Running a notebook
 
 The base `yardstick-benchmark` install doesn't pull in matplotlib /
-pandas / Jupyter. Install the `notebooks` extra and a Jupyter frontend:
+pandas / ipykernel. Install the `notebooks` extra:
 
 ```sh
 uv sync --extra notebooks
-uv pip install jupyterlab        # or `jupyter notebook`
 ```
 
-Then launch and open the notebook you want:
+Pick a frontend:
 
-```sh
-uv run jupyter lab experiments/tick_latency.ipynb
-```
+- **VS Code**: open any `experiments/*.ipynb`. When prompted, select the
+  `.venv/bin/python` interpreter (the one matching this project). VS Code
+  may also prompt to install `pip` into the venv -- click *Install* (uv
+  doesn't seed pip into venvs by default; pip is what the editor uses to
+  manage kernel installs).
+- **JupyterLab / Notebook**: install one and launch:
+
+  ```sh
+  uv pip install jupyterlab          # or `jupyter notebook`
+  uv run jupyter lab experiments/tick_latency.ipynb
+  ```
 
 Run cells top-to-bottom. The deploy/run cell takes a few minutes (image
 pulls on first run, Minecraft boot, workload duration, plus a Telegraf
 flush margin). The query cell captures the data into a DataFrame *before*
-teardown, so the plot cell can be re-run independently — iterate on
+teardown, so the plot cell can be re-run independently -- iterate on
 matplotlib styling without re-running the whole experiment.
 
 ## Shared helpers

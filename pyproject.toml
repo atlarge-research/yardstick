@@ -14,8 +14,11 @@ dependencies = [
 [project.optional-dependencies]
 # Install with: `uv sync --extra notebooks` (or `uv pip install
 # yardstick-benchmark[notebooks]` from PyPI). Required to run the
-# experiment notebooks under experiments/.
+# experiment notebooks under experiments/. ipykernel is needed for
+# VS Code / Jupyter to attach to this venv as a kernel; matplotlib +
+# pandas are used by the notebooks themselves.
 notebooks = [
+    "ipykernel>=6",
     "matplotlib>=3.7",
     "pandas>=2",
 ]
