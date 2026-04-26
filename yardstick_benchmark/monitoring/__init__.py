@@ -20,65 +20,72 @@ class InfluxDBInfo:
 
 
 class InfluxDB(object):
-    def __init__(self, nodes: List[Node]):
-        self.nodes = nodes
+    """A single InfluxDB v2 deployment on one node.
+
+    To run multiple independent InfluxDB instances (rare), construct one
+    `InfluxDB` per target node. To have several Telegraf agents write to the
+    *same* InfluxDB, share the same instance's `get_info()` with each Telegraf.
+    """
+
+    def __init__(
+        self,
+        node: Node,
+        admin_password: str = "password",
+        admin_token: Optional[str] = None,
+    ):
+        self.node = node
         self.image_url = "docker://influxdb:2.8"
-        self.admin_password = "password"  # random_string(16)
-        self.admin_token = random_string(16)
+        self.admin_password = admin_password
+        self.admin_token = admin_token or random_string(16)
+
+    @property
+    def url(self) -> str:
+        return f"http://{self.node.host}:8086"
 
     def deploy(self) -> None:
-        for node in self.nodes:
-            with remote(node.host):
-                pass
-                # machine["apptainer"]["pull", "/dev/null", self.image_url]()
-                # TODO save local storage of database in some local file that we can pull before cleanup.
+        with remote(self.node.host):
+            pass
+            # machine["apptainer"]["pull", "/dev/null", self.image_url]()
+            # TODO save local storage of database in some local file that we can pull before cleanup.
 
     def start(self) -> None:
-        for node in self.nodes:
-            with remote(node.host) as machine:
-                machine["apptainer"][
-                    "instance",
-                    "run",
-                    "--compat",
-                    "--env",
-                    "DOCKER_INFLUXDB_INIT_MODE=setup",
-                    "--env",
-                    "DOCKER_INFLUXDB_INIT_USERNAME=admin",
-                    "--env",
-                    f"DOCKER_INFLUXDB_INIT_PASSWORD={self.admin_password}",
-                    "--env",
-                    "DOCKER_INFLUXDB_INIT_ORG=yardstick",
-                    "--env",
-                    "DOCKER_INFLUXDB_INIT_BUCKET=yardstick",
-                    "--env",
-                    f"DOCKER_INFLUXDB_INIT_ADMIN_TOKEN={self.admin_token}",
-                    self.image_url,
-                    "influxdb",
-                ]()
+        with remote(self.node.host) as machine:
+            machine["apptainer"][
+                "instance",
+                "run",
+                "--compat",
+                "--env",
+                "DOCKER_INFLUXDB_INIT_MODE=setup",
+                "--env",
+                "DOCKER_INFLUXDB_INIT_USERNAME=admin",
+                "--env",
+                f"DOCKER_INFLUXDB_INIT_PASSWORD={self.admin_password}",
+                "--env",
+                "DOCKER_INFLUXDB_INIT_ORG=yardstick",
+                "--env",
+                "DOCKER_INFLUXDB_INIT_BUCKET=yardstick",
+                "--env",
+                f"DOCKER_INFLUXDB_INIT_ADMIN_TOKEN={self.admin_token}",
+                self.image_url,
+                "influxdb",
+            ]()
 
     def stop(self) -> None:
-        for node in self.nodes:
-            with remote(node.host) as machine:
-                machine["apptainer"]["instance", "stop", "influxdb"]()
+        with remote(self.node.host) as machine:
+            machine["apptainer"]["instance", "stop", "influxdb"]()
 
     def cleanup(self) -> None:
         pass
 
-    def get_info(self, nodes: List[Node]) -> InfluxDBInfo:
-        return InfluxDBInfo(
-            [f"http://{node.host}:8086" for node in nodes], self.admin_token
-        )
+    def get_info(self) -> InfluxDBInfo:
+        return InfluxDBInfo([self.url], self.admin_token)
 
     def verify_data(
         self,
         expected_measurements: Optional[List[str]] = None,
         lookback: str = "-5m",
-        target_node: Optional[Node] = None,
     ) -> Dict[str, int]:
-        info = self.get_info(self.nodes)
-        target = target_node or self.nodes[0]
-        url = f"http://{target.host}:8086"
-
+        info = self.get_info()
         query = f'''
 from(bucket: "{info.bucket}")
   |> range(start: {lookback})
@@ -87,7 +94,7 @@ from(bucket: "{info.bucket}")
   |> keep(columns: ["_measurement", "_value"])
 '''
         counts: Dict[str, int] = {}
-        with InfluxDBClient(url=url, token=info.token, org=info.organization) as client:
+        with InfluxDBClient(url=self.url, token=info.token, org=info.organization) as client:
             tables = client.query_api().query(query=query, org=info.organization)
             for table in tables:
                 for record in table.records:

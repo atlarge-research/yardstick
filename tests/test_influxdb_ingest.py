@@ -84,9 +84,9 @@ def test_telegraf_ingests_into_influxdb(tmp_path, apptainer_cleanup):
     node = Node("localhost", tmp_path)
     nodes = [node]
 
-    influxdb = InfluxDB(nodes)
+    influxdb = InfluxDB(node)
     telegraf = Telegraf(nodes)
-    telegraf.set_output_influxdb2(influxdb.get_info(nodes))
+    telegraf.set_output_influxdb2(influxdb.get_info())
 
     try:
         influxdb.deploy()
@@ -126,9 +126,9 @@ def test_minecraft_tick_ingests_into_influxdb(tmp_path, apptainer_cleanup):
     mc_instance = "yardstick-test-mc"
     apptainer_cleanup.append(mc_instance)
 
-    influxdb = InfluxDB(nodes)
+    influxdb = InfluxDB(node)
     telegraf = Telegraf(nodes)
-    telegraf.set_output_influxdb2(influxdb.get_info(nodes))
+    telegraf.set_output_influxdb2(influxdb.get_info())
     telegraf.add_input_jolokia_agent(node)
     telegraf.add_input_execd_minecraft_ticks(node)
 
