@@ -46,7 +46,6 @@ class WalkAround:
     DEFAULT_IMAGE_URL = "docker://jdonkervliet/yardstick-mineflayer:1.0"
     INSTANCE_NAME = "yardstick-walkaround"
     CONTAINER_SCRIPTS_ROOT = "/opt/workload/scripts"
-    CONTAINER_PWD = f"{CONTAINER_SCRIPTS_ROOT}/walkaround"
     ENTRY_SCRIPT = f"{CONTAINER_SCRIPTS_ROOT}/walkaround/main.js"
 
     def __init__(
@@ -96,12 +95,15 @@ class WalkAround:
 
     def start(self) -> None:
         with remote(self.node.host) as machine:
+            # Note: `apptainer instance run` doesn't accept --pwd / --cwd
+            # (only the non-instance `run` and `exec` do). The workload .js
+            # files use __dirname-relative paths for require() and Worker
+            # spawning, so CWD inside the container doesn't matter here.
             args = (
                 [
                     "instance", "run",
                     "--no-https",
                     "--compat",
-                    "--pwd", self.CONTAINER_PWD,
                     "--bind",
                     f"{self.wd}:{self.CONTAINER_SCRIPTS_ROOT}",
                 ]
