@@ -8,7 +8,7 @@ import tempfile
 from pathlib import Path
 from dataclasses import dataclass
 
-from influxdb_client import InfluxDBClient
+from influxdb_client.client.influxdb_client import InfluxDBClient
 
 
 @dataclass(frozen=True)
