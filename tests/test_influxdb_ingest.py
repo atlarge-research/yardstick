@@ -10,11 +10,8 @@ Run with::
 """
 
 import shutil
-import socket
 import time
-import urllib.error
-import urllib.request
-from typing import List, Optional
+from typing import List
 
 import pytest
 from plumbum import local
@@ -22,6 +19,7 @@ from plumbum import local
 from yardstick_benchmark.games.minecraft.server import MinecraftServer
 from yardstick_benchmark.model import Node
 from yardstick_benchmark.monitoring import InfluxDB, Telegraf
+from yardstick_benchmark.util import wait_for_tcp, wait_for_url
 
 
 APPTAINER_PATH = shutil.which("apptainer")
@@ -34,37 +32,6 @@ pytestmark = [
 
 def _stop_instance(name: str) -> None:
     local["apptainer"]["instance", "stop", name].run(retcode=None)
-
-
-def _wait_for_url(url: str, timeout_s: float, poll_s: float = 1.0) -> None:
-    deadline = time.monotonic() + timeout_s
-    last_err: Optional[Exception] = None
-    while time.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(url, timeout=2) as resp:
-                if resp.status == 200:
-                    return
-        except (urllib.error.URLError, ConnectionError, OSError) as exc:
-            last_err = exc
-        time.sleep(poll_s)
-    raise TimeoutError(
-        f"{url} was not ready within {timeout_s}s (last error: {last_err!r})"
-    )
-
-
-def _wait_for_tcp(host: str, port: int, timeout_s: float) -> None:
-    deadline = time.monotonic() + timeout_s
-    last_err: Optional[Exception] = None
-    while time.monotonic() < deadline:
-        try:
-            with socket.create_connection((host, port), timeout=2):
-                return
-        except (ConnectionRefusedError, OSError) as exc:
-            last_err = exc
-        time.sleep(2)
-    raise TimeoutError(
-        f"{host}:{port} not listening within {timeout_s}s (last error: {last_err!r})"
-    )
 
 
 @pytest.fixture
@@ -90,7 +57,7 @@ def test_telegraf_ingests_into_influxdb(tmp_path, apptainer_cleanup):
     try:
         influxdb.deploy()
         influxdb.start()
-        _wait_for_url(f"http://{node.host}:8086/health", timeout_s=60)
+        wait_for_url(f"http://{node.host}:8086/health", timeout_s=60)
 
         telegraf.deploy()
         telegraf.start()
@@ -133,12 +100,12 @@ def test_minecraft_tick_ingests_into_influxdb(tmp_path, apptainer_cleanup):
     try:
         influxdb.deploy()
         influxdb.start()
-        _wait_for_url(f"http://{node.host}:8086/health", timeout_s=60)
+        wait_for_url(f"http://{node.host}:8086/health", timeout_s=60)
 
         minecraft.start()
         # Wait for the server to finish booting (game port listening) before
         # starting Telegraf so the execd Go binary finds a ticking server.
-        _wait_for_tcp("localhost", 25565, timeout_s=180)
+        wait_for_tcp("localhost", 25565, timeout_s=180)
 
         telegraf.deploy()
         telegraf.start()

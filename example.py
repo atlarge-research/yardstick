@@ -17,6 +17,7 @@ import yardstick_benchmark
 from yardstick_benchmark.games.minecraft.server import MinecraftServer
 from yardstick_benchmark.model import Node
 from yardstick_benchmark.monitoring import InfluxDB, Telegraf
+from yardstick_benchmark.util import wait_for_tcp, wait_for_url
 
 
 def main() -> None:
@@ -37,18 +38,27 @@ def main() -> None:
     try:
         influxdb.deploy()
         influxdb.start()
+        # Wait for InfluxDB before starting Telegraf so the first batch
+        # doesn't fail to write.
+        wait_for_url(f"{influxdb.url}/health", timeout_s=60)
+
+        minecraft.start()
+        # Wait for the server to finish booting (game port listening) so the
+        # execd minecraft_tick collector finds a ticking server when Telegraf
+        # starts it.
+        wait_for_tcp("localhost", 25565, timeout_s=180)
 
         telegraf.deploy()
         telegraf.start()
 
-        minecraft.start()
-
+        # Give Telegraf time to flush at least one batch (flush_interval is
+        # 10s) and the Go tick collector time to produce a window of data.
         run_for_s = 30
         print(f"running for {run_for_s} seconds...")
         sleep(run_for_s)
 
         counts = influxdb.verify_data(
-            expected_measurements=["cpu", "mem", "disk", "system"]
+            expected_measurements=["cpu", "mem", "disk", "system", "minecraft_tick"]
         )
         print(f"InfluxDB point counts by measurement: {counts}")
     finally:
