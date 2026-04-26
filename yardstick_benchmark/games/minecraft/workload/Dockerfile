@@ -7,12 +7,12 @@
 # not when the workload itself does. Any workload that requires only the
 # bundled npm packages can be run from this image.
 #
-# Build and publish (replace YOUR_NAMESPACE with your Docker Hub
-# namespace, e.g. atlarge-research):
+# Build and publish (the published image lives at
+# docker.io/jdonkervliet/yardstick-mineflayer):
 #
-#   docker build -t YOUR_NAMESPACE/yardstick-mineflayer:1.0 \
+#   docker build -t jdonkervliet/yardstick-mineflayer:1.0 \
 #       yardstick_benchmark/games/minecraft/workload
-#   docker push YOUR_NAMESPACE/yardstick-mineflayer:1.0
+#   docker push jdonkervliet/yardstick-mineflayer:1.0
 #
 # At runtime, point the container at the entry script via apptainer's
 # CMD-override: e.g. `apptainer instance run ... <image> <instance>` will

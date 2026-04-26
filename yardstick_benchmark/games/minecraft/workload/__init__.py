@@ -37,7 +37,7 @@ def _remote(host: str):
 class WalkAround:
     """Run the WalkAround Mineflayer workload across one or more nodes."""
 
-    DEFAULT_IMAGE_URL = "docker://atlarge-research/yardstick-mineflayer:1.0"
+    DEFAULT_IMAGE_URL = "docker://jdonkervliet/yardstick-mineflayer:1.0"
     INSTANCE_NAME = "yardstick-walkaround"
     ENTRY_SCRIPT = "/opt/workload/scripts/walkaround_bot.js"
 
