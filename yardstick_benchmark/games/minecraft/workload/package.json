@@ -1,0 +1,15 @@
+{
+  "name": "yardstick-mineflayer-workload",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mineflayer-based workload runners for the yardstick Minecraft benchmark. Runtime deps are baked into the docker image (see Dockerfile); workload .js files are bind-mounted from this folder at experiment time.",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "mineflayer": "^4.30.0",
+    "mineflayer-pathfinder": "^2.4.5",
+    "rcon-client": "^4.2.4",
+    "vec3": "^0.1.10"
+  }
+}

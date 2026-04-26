@@ -14,19 +14,18 @@
 #       yardstick_benchmark/games/minecraft/workload
 #   docker push jdonkervliet/yardstick-mineflayer:1.0
 #
-# At runtime, point the container at the entry script via apptainer's
-# CMD-override: e.g. `apptainer instance run ... <image> <instance>` will
-# default to the CMD set below; override per-workload by passing a
-# different script path.
+# At runtime, point the container at the entry script as the trailing
+# argument to `apptainer instance run ... <image> <instance> <script>`.
+# Dependency versions are pinned by package-lock.json; bump them by
+# editing package.json and re-running `npm install --package-lock-only`
+# in this directory.
 
 FROM node:22-alpine
 
 WORKDIR /opt/workload
 
-RUN npm install --omit=dev --omit=optional \
-      mineflayer@^4.30.0 \
-      mineflayer-pathfinder@^2.4.5 \
-      rcon-client@^4.2.4
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --omit=optional
 
 # /opt/workload/scripts is created by the bind-mount at runtime; the
 # image just needs node_modules at /opt/workload/node_modules so that
