@@ -1,14 +1,10 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from plumbum import SshMachine, local
+from plumbum import local
 
 from yardstick_benchmark.model import Node
-from yardstick_benchmark.util import is_localhost
-
-
-def _remote(host: str):
-    return local if is_localhost(host) else SshMachine(host)
+from yardstick_benchmark.util import is_localhost, remote
 
 
 def _pool(nodes: list[Node]) -> ThreadPoolExecutor:
@@ -21,12 +17,8 @@ def clean(nodes: list[Node]) -> None:
     """
 
     def _rm(node: Node) -> None:
-        machine = _remote(node.host)
-        try:
+        with remote(node.host) as machine:
             machine["rm"]["-rf", str(node.wd)](retcode=None)
-        finally:
-            if isinstance(machine, SshMachine):
-                machine.close()
 
     with _pool(nodes) as pool:
         for fut in as_completed([pool.submit(_rm, n) for n in nodes]):

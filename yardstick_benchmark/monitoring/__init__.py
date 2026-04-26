@@ -1,7 +1,7 @@
 from yardstick_benchmark.model import Node
-from yardstick_benchmark.util import is_localhost, random_string
+from yardstick_benchmark.util import random_string, remote
 import os
-from plumbum import local, SshMachine
+from plumbum import local
 from typing import Dict, List, Optional
 from jinja2 import Template
 import tempfile
@@ -28,21 +28,14 @@ class InfluxDB(object):
 
     def deploy(self) -> None:
         for node in self.nodes:
-            host = node.host
-            machine = SshMachine(host) if not is_localhost(host) else local
-            try:
+            with remote(node.host):
                 pass
                 # machine["apptainer"]["pull", "/dev/null", self.image_url]()
                 # TODO save local storage of database in some local file that we can pull before cleanup.
-            finally:
-                if isinstance(machine, SshMachine):
-                    machine.close()
 
     def start(self) -> None:
         for node in self.nodes:
-            host = node.host
-            machine = SshMachine(host) if not is_localhost(host) else local
-            try:
+            with remote(node.host) as machine:
                 machine["apptainer"][
                     "instance",
                     "run",
@@ -62,19 +55,11 @@ class InfluxDB(object):
                     self.image_url,
                     "influxdb",
                 ]()
-            finally:
-                if isinstance(machine, SshMachine):
-                    machine.close()
 
     def stop(self) -> None:
         for node in self.nodes:
-            host = node.host
-            machine = SshMachine(host) if not is_localhost(host) else local
-            try:
+            with remote(node.host) as machine:
                 machine["apptainer"]["instance", "stop", "influxdb"]()
-            finally:
-                if isinstance(machine, SshMachine):
-                    machine.close()
 
     def cleanup(self) -> None:
         pass
@@ -189,9 +174,7 @@ class Telegraf(object):
     def deploy(self) -> None:
         mc_ticks_binary = Path(__file__).parent / "jolokia_get_minecraft_tick"
         for node in self.nodes:
-            host = node.host
-            machine = SshMachine(host) if not is_localhost(host) else local
-            try:
+            with remote(node.host) as machine:
                 with open(self.config_template) as f:
                     template = Template(f.read())
                 fd, name = tempfile.mkstemp()
@@ -221,15 +204,10 @@ class Telegraf(object):
                     dst = f"{self.wds[node]}/jolokia_get_minecraft_tick"
                     local.path(mc_ticks_binary).copy(machine.path(dst))
                     machine["chmod"]["+x", dst]()
-            finally:
-                if isinstance(machine, SshMachine):
-                    machine.close()
 
     def start(self) -> None:
         for node in self.nodes:
-            host = node.host
-            machine = SshMachine(host) if not is_localhost(host) else local
-            try:
+            with remote(node.host) as machine:
                 wd = self.wds[node]
                 binds = [f"{wd}/telegraf.conf:/etc/telegraf/telegraf.conf"]
                 if node in self.config_nodes_jolokia_mc_ticks_enabled:
@@ -246,27 +224,16 @@ class Telegraf(object):
                     + [self.image_url, "telegraf"]
                 )
                 machine["apptainer"][args]()
-            finally:
-                if isinstance(machine, SshMachine):
-                    machine.close()
 
     def stop(self) -> None:
         for node in self.nodes:
-            host = node.host
-            machine = SshMachine(host) if not is_localhost(host) else local
-            try:
+            with remote(node.host) as machine:
                 machine["apptainer"]["instance", "stop", "telegraf"]()
-            finally:
-                if isinstance(machine, SshMachine):
-                    machine.close()
 
     def cleanup(self) -> None:
         for node in self.nodes:
-            host = node.host
-            machine = SshMachine(host) if not is_localhost(host) else local
-            try:
-                wd = self.wds[node]
-                machine.path(wd[node]).delete()
-            finally:
-                if isinstance(machine, SshMachine):
-                    machine.close()
+            with remote(node.host) as machine:
+                # Note: pre-refactor this had a typo (wd[node] instead of just
+                # wd), so this branch never actually ran successfully. Fixed
+                # while converting the surrounding boilerplate.
+                machine["rm"]["-rf", self.wds[node]](retcode=None)

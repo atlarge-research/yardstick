@@ -15,10 +15,10 @@ from datetime import timedelta
 from pathlib import Path
 from typing import List
 
-from plumbum import SshMachine, local
+from plumbum import local
 
 from yardstick_benchmark.model import Node
-from yardstick_benchmark.util import is_localhost, random_string
+from yardstick_benchmark.util import random_string, remote
 
 
 # Root of the workload tree as it lives on the headnode (this Python
@@ -35,10 +35,6 @@ WORKLOAD_FILES = (
     "walkaround/worker.js",
     "walkaround/set_spawn.js",
 )
-
-
-def _remote(host: str):
-    return local if is_localhost(host) else SshMachine(host)
 
 
 class WalkAround:
@@ -105,16 +101,12 @@ class WalkAround:
 
     def deploy(self) -> None:
         def _stage(node: Node, _i: int) -> None:
-            machine = _remote(node.host)
-            try:
+            with remote(node.host) as machine:
                 wd = self.wds[node]
                 for relpath in WORKLOAD_FILES:
                     src = WORKLOAD_ROOT / relpath
                     dst = f"{wd}/{relpath}"
                     local.path(src).copy(machine.path(dst))
-            finally:
-                if isinstance(machine, SshMachine):
-                    machine.close()
 
         self._per_node(_stage)
 
@@ -123,8 +115,7 @@ class WalkAround:
             self._set_world_spawn()
 
         def _run(node: Node, bot_index: int) -> None:
-            machine = _remote(node.host)
-            try:
+            with remote(node.host) as machine:
                 args = (
                     [
                         "instance", "run",
@@ -138,9 +129,6 @@ class WalkAround:
                     + [self.image_url, self.INSTANCE_NAME, self.ENTRY_SCRIPT]
                 )
                 machine["apptainer"][args]()
-            finally:
-                if isinstance(machine, SshMachine):
-                    machine.close()
 
         self._per_node(_run)
 
@@ -149,8 +137,7 @@ class WalkAround:
         # RCON port. Requires the MC server to have RCON enabled with the
         # password 'password' (or override RCON_PASSWORD via env).
         node = self.nodes[0]
-        machine = _remote(node.host)
-        try:
+        with remote(node.host) as machine:
             args = (
                 [
                     "exec",
@@ -164,30 +151,19 @@ class WalkAround:
                 + [self.image_url, "node", self.SET_SPAWN_SCRIPT]
             )
             machine["apptainer"][args]()
-        finally:
-            if isinstance(machine, SshMachine):
-                machine.close()
 
     def stop(self) -> None:
         def _stop(node: Node, _i: int) -> None:
-            machine = _remote(node.host)
-            try:
+            with remote(node.host) as machine:
                 machine["apptainer"][
                     "instance", "stop", self.INSTANCE_NAME
                 ].run(retcode=None)
-            finally:
-                if isinstance(machine, SshMachine):
-                    machine.close()
 
         self._per_node(_stop)
 
     def cleanup(self) -> None:
         def _rm(node: Node, _i: int) -> None:
-            machine = _remote(node.host)
-            try:
+            with remote(node.host) as machine:
                 machine["rm"]["-rf", self.wds[node]](retcode=None)
-            finally:
-                if isinstance(machine, SshMachine):
-                    machine.close()
 
         self._per_node(_rm)
