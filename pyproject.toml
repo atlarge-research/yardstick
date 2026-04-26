@@ -11,6 +11,15 @@ dependencies = [
     "plumbum>=1.8.2,<2",
 ]
 
+[project.optional-dependencies]
+# Install with: `uv sync --extra notebooks` (or `uv pip install
+# yardstick-benchmark[notebooks]` from PyPI). Required to run the
+# experiment notebooks under experiments/.
+notebooks = [
+    "matplotlib>=3.7",
+    "pandas>=2",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
