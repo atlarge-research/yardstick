@@ -1,9 +1,37 @@
-FROM node:25.6.1
+# Yardstick Mineflayer workload runner.
+#
+# A thin Node.js base image with mineflayer and supporting libraries
+# preinstalled. Workload .js files are bind-mounted into
+# /opt/workload/scripts at runtime -- nothing is baked into the image -- so
+# the image only needs to be republished when the npm dependencies change,
+# not when the workload itself does. Any workload that requires only the
+# bundled npm packages can be run from this image.
+#
+# Build and publish (replace YOURNS with your Docker Hub namespace, e.g.
+# atlarge-research):
+#
+#   docker build -t YOURNS/yardstick-mineflayer:1.0 \
+#       yardstick_benchmark/games/minecraft/workload
+#   docker push YOURNS/yardstick-mineflayer:1.0
+#
+# At runtime, point the container at the entry script via apptainer's
+# CMD-override: e.g. `apptainer instance run ... <image> <instance>` will
+# default to the CMD set below; override per-workload by passing a
+# different script path.
 
-WORKDIR /mineflayer
+FROM node:22-alpine
 
-COPY main.js /mineflayer/
+WORKDIR /opt/workload
 
-RUN npm install mineflayer
+RUN npm install --omit=dev --omit=optional \
+      mineflayer@^4.30.0 \
+      mineflayer-pathfinder@^2.4.5 \
+      rcon-client@^4.2.4
 
-CMD [ "node", "/mineflayer/main.js" ]
+# /opt/workload/scripts is created by the bind-mount at runtime; the
+# image just needs node_modules at /opt/workload/node_modules so that
+# Node's module resolution walks up from /opt/workload/scripts/*.js and
+# finds them.
+WORKDIR /opt/workload/scripts
+
+ENTRYPOINT ["node"]
