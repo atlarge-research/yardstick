@@ -124,3 +124,29 @@ def test_minecraft_tick_ingests_into_influxdb(tmp_path, apptainer_cleanup):
                 stop_fn()
             except Exception:
                 pass
+
+
+def test_minecraft_set_world_spawn(apptainer_cleanup):
+    """Exercise MinecraftServer.rcon() (via set_world_spawn): verifies the
+    `apptainer exec instance://...` path works against a running MC server.
+    """
+    mc_instance = "yardstick-test-mc-rcon"
+    apptainer_cleanup.append(mc_instance)
+
+    minecraft = MinecraftServer(name=mc_instance)
+    try:
+        minecraft.start()
+        # The MC server binds the game port (25565) several seconds before it
+        # binds the RCON port (25575); wait for the RCON port directly so we
+        # don't race the listener.
+        wait_for_tcp("localhost", 25575, timeout_s=180)
+        # rcon-cli exits non-zero if the command fails or RCON refuses; a
+        # successful setworldspawn returns "Set the world spawn point to ...".
+        # plumbum raises ProcessExecutionError on non-zero, so passing here
+        # means the round-trip worked.
+        minecraft.set_world_spawn(7, 8)
+    finally:
+        try:
+            minecraft.stop()
+        except Exception:
+            pass

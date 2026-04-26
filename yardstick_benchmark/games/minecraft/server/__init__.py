@@ -85,22 +85,21 @@ class MinecraftServer:
     def rcon(self, *commands: str) -> None:
         """Send one or more commands to the running server via RCON.
 
-        Uses the rcon-cli binary that itzg/minecraft-server bundles, so no
-        external client is needed. The server must already be started and
-        accepting connections (use a TCP-readiness check on the game port
-        before calling this).
+        Uses the rcon-cli binary that itzg/minecraft-server bundles by
+        execing straight into the running instance, so no extra container
+        is launched. The server must already be started and accepting
+        connections (use a TCP-readiness check on the game port before
+        calling this).
         """
         if not commands:
             return
         local["apptainer"].run(
             (
                 "exec",
-                "--no-https",
-                "--compat",
                 "--env", "RCON_HOST=localhost",
                 "--env", f"RCON_PORT={RCON_PORT}",
                 "--env", f"RCON_PASSWORD={self.rcon_password}",
-                self.image_url,
+                f"instance://{self.instance_name}",
                 "rcon-cli",
                 *commands,
             )
