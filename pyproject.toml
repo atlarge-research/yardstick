@@ -21,6 +21,7 @@ notebooks = [
     "ipykernel>=6",
     "matplotlib>=3.7",
     "pandas>=2",
+    "seaborn>=0.13",
 ]
 
 [build-system]
