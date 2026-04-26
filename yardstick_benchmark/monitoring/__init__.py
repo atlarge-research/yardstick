@@ -116,131 +116,100 @@ from(bucket: "{info.bucket}")
 
 
 class Telegraf(object):
-    """Runs the Telegraf metric collection tool
-    (https://www.influxdata.com/time-series-platform/telegraf/) on remote nodes.
+    """Runs the Telegraf metric collection tool on a single node.
+
+    To run Telegraf across multiple nodes, construct one instance per node
+    (and fan out via util.fan_out). Per-node toggles like the Jolokia and
+    execd inputs are constructor flags rather than runtime add_input calls.
     """
 
     DEFAULT_IMAGE_URL = "docker://telegraf:1.37-alpine"
 
     def __init__(
         self,
-        nodes: List[Node],
+        node: Node,
         image_url: str = DEFAULT_IMAGE_URL,
+        jolokia: bool = False,
+        execd_minecraft_ticks: bool = False,
     ):
-        """Create a new instance to run Telegraf on the given nodes.
+        """Configure a Telegraf agent for one node.
 
         Args:
-            nodes (list[Node]): The nodes on which to run Telegraf
+            node: The node on which to run Telegraf.
             image_url: Container image to run. Defaults to the upstream
-                Telegraf image on Docker Hub. Override with e.g.
-                ``"docker://localhost:5000/telegraf:1.37"`` to pull from a
-                private registry instead.
+                Telegraf image on Docker Hub.
+            jolokia: If True, render a `jolokia2_agent` input pointing at
+                `localhost:8778` (matches MinecraftServer's default Jolokia
+                port).
+            execd_minecraft_ticks: If True, ship the
+                jolokia_get_minecraft_tick Go binary to the node's wd and
+                bind-mount it into the Telegraf container at
+                /opt/jolokia_get_minecraft_tick, where the rendered execd
+                input plugin will run it.
         """
-        self.nodes = nodes
+        self.node = node
         self.image_url = image_url
+        self.jolokia = jolokia
+        self.execd_minecraft_ticks = execd_minecraft_ticks
         self.config_template = os.path.join(
             os.path.dirname(__file__), "telegraf.conf.j2"
         )
-
-        self.jolokia_to_mcticks_script_path = os.path.join(
-            os.path.dirname(__file__), "jolokia_get_minecraft_tick.py"
-        )
-
-        self.wds = {}
-        for node in nodes:
-            self.wds[node] = f"{node.wd}/telegraf-{random_string(8)}"
-
-        # TODO we do nothing with these settings at the moment
-        self.config_nodes_jolokia_enabled = set()
-        self.config_nodes_jolokia_mc_ticks_enabled = set()
-
-    def add_input_jolokia_agent(self, node: Node):
-        """Configure Telegraf to run the Jolokia agent input on the given node.
-        The node should be present in the list of nodes given when constructing
-        this Telegraf object.
-
-        Args:
-            node (Node): The node on which to run the Jolokia agent input
-        """
-        assert node in self.nodes
-        self.config_nodes_jolokia_enabled.add(node)
-
-    def add_input_execd_minecraft_ticks(self, node: Node):
-        """Configure Telegraf to run an execd input on the given node to collect
-        the tick duration metric from a Minecraft server.
-
-        Args:
-            node (Node): The node on which to run the execd input
-        """
-        assert node in self.nodes
-        self.config_nodes_jolokia_mc_ticks_enabled.add(node)
+        self.wd = f"{node.wd}/telegraf-{random_string(8)}"
 
     def set_output_influxdb2(self, info: InfluxDBInfo) -> None:
         self.influxdb_info = info
 
     def deploy(self) -> None:
         mc_ticks_binary = Path(__file__).parent / "jolokia_get_minecraft_tick"
-        for node in self.nodes:
-            with remote(node.host) as machine:
-                with open(self.config_template) as f:
-                    template = Template(f.read())
-                fd, name = tempfile.mkstemp()
+        with remote(self.node.host) as machine:
+            with open(self.config_template) as f:
+                template = Template(f.read())
+            fd, name = tempfile.mkstemp()
 
-                jolokia = node in self.config_nodes_jolokia_enabled
-                jolokia_to_mc_ticks_script = (
-                    node in self.config_nodes_jolokia_mc_ticks_enabled
-                )
-                with os.fdopen(fd, mode="w+t") as out:
-                    out.write(
-                        template.render(
-                            outputs_influxdb_v2=True,
-                            outputs_influxdb_v2_urls=self.influxdb_info.urls,
-                            outputs_influxdb_v2_token=self.influxdb_info.token,
-                            outputs_influxdb_v2_organization=self.influxdb_info.organization,
-                            outputs_influxdb_v2_bucket=self.influxdb_info.bucket,
-                            jolokia=jolokia,
-                            jolokia_to_mc_ticks_script=jolokia_to_mc_ticks_script,
-                        )
+            with os.fdopen(fd, mode="w+t") as out:
+                out.write(
+                    template.render(
+                        outputs_influxdb_v2=True,
+                        outputs_influxdb_v2_urls=self.influxdb_info.urls,
+                        outputs_influxdb_v2_token=self.influxdb_info.token,
+                        outputs_influxdb_v2_organization=self.influxdb_info.organization,
+                        outputs_influxdb_v2_bucket=self.influxdb_info.bucket,
+                        jolokia=self.jolokia,
+                        jolokia_to_mc_ticks_script=self.execd_minecraft_ticks,
                     )
+                )
 
-                dst = f"{self.wds[node]}/telegraf.conf"
-                local.path(name).copy(machine.path(dst))
-                os.remove(name)
+            dst = f"{self.wd}/telegraf.conf"
+            local.path(name).copy(machine.path(dst))
+            os.remove(name)
 
-                if jolokia_to_mc_ticks_script:
-                    dst = f"{self.wds[node]}/jolokia_get_minecraft_tick"
-                    local.path(mc_ticks_binary).copy(machine.path(dst))
-                    machine["chmod"]["+x", dst]()
+            if self.execd_minecraft_ticks:
+                dst = f"{self.wd}/jolokia_get_minecraft_tick"
+                local.path(mc_ticks_binary).copy(machine.path(dst))
+                machine["chmod"]["+x", dst]()
 
     def start(self) -> None:
-        for node in self.nodes:
-            with remote(node.host) as machine:
-                wd = self.wds[node]
-                binds = [f"{wd}/telegraf.conf:/etc/telegraf/telegraf.conf"]
-                if node in self.config_nodes_jolokia_mc_ticks_enabled:
-                    binds.append(
-                        f"{wd}/jolokia_get_minecraft_tick:/opt/jolokia_get_minecraft_tick"
-                    )
-                bind_args: List[str] = []
-                for bind in binds:
-                    bind_args += ["--bind", bind]
-
-                args = (
-                    ["instance", "run", "--no-https", "--compat"]
-                    + bind_args
-                    + [self.image_url, "telegraf"]
+        with remote(self.node.host) as machine:
+            binds = [f"{self.wd}/telegraf.conf:/etc/telegraf/telegraf.conf"]
+            if self.execd_minecraft_ticks:
+                binds.append(
+                    f"{self.wd}/jolokia_get_minecraft_tick:/opt/jolokia_get_minecraft_tick"
                 )
-                machine["apptainer"][args]()
+            bind_args: List[str] = []
+            for bind in binds:
+                bind_args += ["--bind", bind]
+
+            args = (
+                ["instance", "run", "--no-https", "--compat"]
+                + bind_args
+                + [self.image_url, "telegraf"]
+            )
+            machine["apptainer"][args]()
 
     def stop(self) -> None:
-        for node in self.nodes:
-            with remote(node.host) as machine:
-                machine["apptainer"]["instance", "stop", "telegraf"]()
+        with remote(self.node.host) as machine:
+            machine["apptainer"]["instance", "stop", "telegraf"]()
 
     def cleanup(self) -> None:
-        for node in self.nodes:
-            with remote(node.host) as machine:
-                # Note: pre-refactor this had a typo (wd[node] instead of just
-                # wd), so this branch never actually ran successfully. Fixed
-                # while converting the surrounding boilerplate.
-                machine["rm"]["-rf", self.wds[node]](retcode=None)
+        with remote(self.node.host) as machine:
+            machine["rm"]["-rf", self.wd](retcode=None)

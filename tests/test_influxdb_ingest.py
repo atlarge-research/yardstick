@@ -82,10 +82,9 @@ def apptainer_cleanup():
 
 def test_telegraf_ingests_into_influxdb(tmp_path, apptainer_cleanup):
     node = Node("localhost", tmp_path)
-    nodes = [node]
 
     influxdb = InfluxDB(node)
-    telegraf = Telegraf(nodes)
+    telegraf = Telegraf(node)
     telegraf.set_output_influxdb2(influxdb.get_info())
 
     try:
@@ -121,16 +120,13 @@ def test_minecraft_tick_ingests_into_influxdb(tmp_path, apptainer_cleanup):
     via Telegraf's execd input + /opt/jolokia_get_minecraft_tick.
     """
     node = Node("localhost", tmp_path)
-    nodes = [node]
 
     mc_instance = "yardstick-test-mc"
     apptainer_cleanup.append(mc_instance)
 
     influxdb = InfluxDB(node)
-    telegraf = Telegraf(nodes)
+    telegraf = Telegraf(node, jolokia=True, execd_minecraft_ticks=True)
     telegraf.set_output_influxdb2(influxdb.get_info())
-    telegraf.add_input_jolokia_agent(node)
-    telegraf.add_input_execd_minecraft_ticks(node)
 
     minecraft = MinecraftServer(name=mc_instance)
 
