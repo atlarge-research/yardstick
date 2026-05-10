@@ -1,6 +1,6 @@
 import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react';
 import { Box, Flex, Grid, Text, Heading, Button, Badge, Icon, Spinner } from '@chakra-ui/react';
-import { LuMonitor, LuGlobe, LuHash } from 'react-icons/lu';
+import { LuMonitor, LuGlobe, LuHash, LuServer, LuCloud } from 'react-icons/lu';
 import type { IconType } from 'react-icons';
 import type { SshConnectOptions, StepStatus } from '../hooks/useYardstick';
 import { c, fonts, radii, cardProps, inputProps, labelProps, StyledInput, StyledTextarea } from '../theme';
@@ -12,12 +12,17 @@ interface ModePreset {
   description: string;
   defaultJump: boolean;
   jumpHost?: string;
+  preferredAuthMethod?: AuthMethod;
+  hostPlaceholder?: string;
+  usernamePlaceholder?: string;
 }
 
 const MODE_ICONS: Record<string, IconType> = {
   local: LuMonitor,
   das5: LuHash,
   das6: LuHash,
+  aws: LuServer,
+  azure: LuCloud,
   custom: LuGlobe,
 };
 
@@ -25,6 +30,26 @@ const MODE_PRESETS: Record<string, ModePreset> = {
   local: { host: '', port: '', label: 'Local Machine', description: 'Run everything on this machine - no SSH needed.', defaultJump: false },
   das5: { host: 'fs0.das5.cs.vu.nl', port: '22', label: 'DAS-5', description: 'Connect to DAS-5 via SSH. Enable ProxyJump if off-campus.', defaultJump: false, jumpHost: 'ssh.data.vu.nl' },
   das6: { host: 'fs0.das6.cs.vu.nl', port: '22', label: 'DAS-6', description: 'Connect to DAS-6 via SSH. Enable ProxyJump if off-campus.', defaultJump: false, jumpHost: 'ssh.data.vu.nl' },
+  aws: {
+    host: '',
+    port: '22',
+    label: 'AWS EC2',
+    description: 'Connect to an AWS EC2 instance over SSH using the instance public DNS or Elastic IP.',
+    defaultJump: false,
+    preferredAuthMethod: 'key',
+    hostPlaceholder: 'ec2-203-0-113-10.compute-1.amazonaws.com',
+    usernamePlaceholder: 'ec2-user',
+  },
+  azure: {
+    host: '',
+    port: '22',
+    label: 'Azure VM',
+    description: 'Connect to an Azure virtual machine over SSH using the public IP or DNS name from the portal.',
+    defaultJump: false,
+    preferredAuthMethod: 'key',
+    hostPlaceholder: 'your-vm.westus.cloudapp.azure.com',
+    usernamePlaceholder: 'azureuser',
+  },
   custom: { host: '', port: '22', label: 'Custom SSH', description: 'Connect to any remote host via SSH.', defaultJump: false },
 };
 
@@ -91,6 +116,9 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange }: C
       setUseJumpHost(preset.defaultJump || false);
       setJumpHost(preset.jumpHost || '');
       setJumpPort('22');
+      if (preset.preferredAuthMethod) {
+        setAuthMethod(preset.preferredAuthMethod);
+      }
     }
   }, [mode]);
 
@@ -99,6 +127,27 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange }: C
   const isLocal = mode === 'local';
   const isSSH = !isLocal;
   const preset = MODE_PRESETS[mode] || MODE_PRESETS.das5;
+  const hostPlaceholder = preset.hostPlaceholder || 'hostname';
+  const usernamePlaceholder = preset.usernamePlaceholder || `Your ${preset.label} username`;
+  const cloudHint = mode === 'aws'
+    ? {
+        title: 'AWS EC2 quick setup',
+        lines: [
+          'Use the instance public DNS or Elastic IP as the hostname.',
+          'Make sure port 22 is allowed in the security group.',
+          'SSH key authentication is recommended for EC2 images.',
+        ],
+      }
+    : mode === 'azure'
+      ? {
+          title: 'Azure VM quick setup',
+          lines: [
+            'Use the VM public IP or DNS name from the Azure portal.',
+            'Allow inbound SSH on port 22 in the network security group.',
+            'Key-based SSH login is the safest option for Azure VMs.',
+          ],
+        }
+      : null;
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -142,8 +191,19 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange }: C
       <Heading fontSize="1.15rem" fontWeight={600} mb={1.5}>Connection</Heading>
       <Text color={c.textDim} fontSize="0.9rem" mb={5}>{preset.description}</Text>
 
+      {cloudHint && (
+        <Box mb={5} p={3.5} bg={c.bg} border="1px solid" borderColor={c.border} borderRadius={radii.md}>
+          <Heading fontSize="0.92rem" fontWeight={700} mb={2}>{cloudHint.title}</Heading>
+          <Flex direction="column" gap={1.5} color={c.textDim} fontSize="0.85rem" lineHeight={1.5}>
+            {cloudHint.lines.map((line) => (
+              <Text key={line}>• {line}</Text>
+            ))}
+          </Flex>
+        </Box>
+      )}
+
       {!isConnected && (
-        <Grid templateColumns="repeat(4, 1fr)" gap={2.5} mb={5}>
+        <Grid templateColumns={{ base: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }} gap={2.5} mb={5}>
           {Object.entries(MODE_PRESETS).map(([key, val]) => (
             <Button
               key={key}
@@ -185,7 +245,7 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange }: C
               <Grid templateColumns="1fr 1fr" gap={4}>
                 <Box mb={4}>
                   <Text {...labelProps}>Hostname</Text>
-                  <StyledInput {...inputProps} value={host} onChange={(e) => setHost(e.target.value)} placeholder={preset.host || 'hostname'} required />
+                  <StyledInput {...inputProps} value={host} onChange={(e) => setHost(e.target.value)} placeholder={hostPlaceholder} required />
                 </Box>
                 <Box mb={4}>
                   <Text {...labelProps}>Port</Text>
@@ -195,7 +255,7 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange }: C
 
               <Box mb={4}>
                 <Text {...labelProps}>Username</Text>
-                <StyledInput {...inputProps} value={username} onChange={(e) => setUsername(e.target.value)} placeholder={`Your ${preset.label} username`} required />
+                <StyledInput {...inputProps} value={username} onChange={(e) => setUsername(e.target.value)} placeholder={usernamePlaceholder} required />
               </Box>
 
               <AuthToggle value={authMethod} onChange={setAuthMethod} />

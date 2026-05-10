@@ -73,7 +73,7 @@ export default function App() {
     }
   };
 
-  const modeLabel = ({ local: 'Local', das5: 'DAS-5', das6: 'DAS-6', custom: 'Custom SSH' } as Record<string, string>)[mode] || mode;
+  const modeLabel = ({ local: 'Local', das5: 'DAS-5', das6: 'DAS-6', aws: 'AWS', azure: 'Azure', custom: 'Custom SSH' } as Record<string, string>)[mode] || mode;
 
   if (!connected) {
     return (

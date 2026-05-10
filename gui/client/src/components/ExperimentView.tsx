@@ -21,7 +21,7 @@ export default function ExperimentView({
   connected, onRunExperiment, terminalOutput, username,
   mode = 'das5', experimentRunning, experimentError, experimentDone, onSwitchTab,
 }: ExperimentViewProps) {
-  const modeLabel = ({ local: 'locally', das5: 'on DAS-5', das6: 'on DAS-6', custom: 'on the remote host' } as Record<string, string>)[mode] || 'remotely';
+  const modeLabel = ({ local: 'locally', das5: 'on DAS-5', das6: 'on DAS-6', aws: 'on AWS', azure: 'on Azure', custom: 'on the remote host' } as Record<string, string>)[mode] || 'remotely';
   const [runName, setRunName] = useState('');
   const [numNodes, setNumNodes] = useState(2);
   const [botsPerNode, setBotsPerNode] = useState(10);
