@@ -1,6 +1,6 @@
 {
   "name": "yardstick-gui",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "description": "GUI for automating Yardstick benchmark setup and installation",
   "homepage": "https://github.com/atlarge-research/yardstick",
