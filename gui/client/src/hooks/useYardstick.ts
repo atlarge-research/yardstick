@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import socket from '../socket';
+import type { CloudInstanceHandoff } from '../lib/cloud/types';
 
 export interface Step {
   id: string;
@@ -215,6 +216,7 @@ export default function useYardstick() {
   const [experimentRunning, setExperimentRunning] = useState(false);
   const [experimentError, setExperimentError] = useState<string | null>(null);
   const [experimentDone, setExperimentDone] = useState(false);
+  const [awsEvents, setAwsEvents] = useState<any[]>([]);
 
   useEffect(() => {
     const onComplete = () => {
@@ -241,6 +243,9 @@ export default function useYardstick() {
       socket.off('experiment:complete', onComplete);
       socket.off('experiment:error', onError);
       socket.off('experiment:preflight-failed', onPreflightFailed);
+      socket.off('aws:launched');
+      socket.off('aws:terminated');
+      socket.off('aws:error');
     };
   }, []);
 
@@ -273,6 +278,56 @@ export default function useYardstick() {
     [sessionId]
   );
 
+  // AWS automation helpers
+  useEffect(() => {
+    const onLaunched = ({ instances }: { instances: string }) => {
+      addLog({ message: `AWS launched: ${instances}`, level: 'info' });
+      setAwsEvents((prev) => [...prev, { type: 'launched', data: instances }]);
+    };
+    const onTerminated = ({ instances }: { instances: string[] }) => {
+      addLog({ message: `AWS terminated: ${instances.join(', ')}`, level: 'info' });
+      setAwsEvents((prev) => [...prev, { type: 'terminated', data: instances }]);
+    };
+    const onError = ({ message }: { message: string }) => {
+      addLog({ message: `AWS error: ${message}`, level: 'error' });
+      setAwsEvents((prev) => [...prev, { type: 'error', data: message }]);
+    };
+
+    socket.on('aws:launched', onLaunched);
+    socket.on('aws:terminated', onTerminated);
+    socket.on('aws:error', onError);
+    return () => {
+      socket.off('aws:launched', onLaunched);
+      socket.off('aws:terminated', onTerminated);
+      socket.off('aws:error', onError);
+    };
+  }, [addLog]);
+
+  const awsLaunch = useCallback((opts: Record<string, any>) => {
+    socket.emit('aws:launch-instances', opts);
+  }, []);
+
+  const awsTerminate = useCallback((opts: Record<string, any>) => {
+    socket.emit('aws:terminate-instances', opts);
+  }, []);
+
+  const connectToCloudInstance = useCallback((h: CloudInstanceHandoff) => {
+    if (!h.host) {
+      setError('This instance has no public IP yet.');
+      return;
+    }
+    setError(null);
+    setMode(h.provider);
+    setStepStatuses((prev) => ({ ...prev, connect: 'running' }));
+    socket.emit('ssh:connect', {
+      mode: h.provider,
+      host: h.host,
+      port: '22',
+      username: h.username,
+      privateKey: h.privateKey || undefined,
+    });
+  }, []);
+
   return {
     STEPS,
     connected,
@@ -302,5 +357,9 @@ export default function useYardstick() {
     runPipeline,
     runExperiment,
     runSingleCommand,
+    awsLaunch,
+    awsTerminate,
+    awsEvents: awsEvents,
+    connectToCloudInstance,
   };
 }

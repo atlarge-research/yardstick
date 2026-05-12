@@ -334,7 +334,7 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
           <Text color={c.textDim} mt={2} fontSize="0.8rem">Results directory: {scratchDir}</Text>
         )}
         {runs.length === 0 && !listing && (
-          <Text color={c.textDim} mt={3}>No experiment runs found. Run an experiment first, then come back here.</Text>
+          <Text color={c.textDim} mt={3}>No runs found in results directory.</Text>
         )}
       </Box>
 
@@ -351,7 +351,7 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
       {loading && (
         <Box {...cardProps} mt={4} textAlign="center" p={10}>
           <Spinner size="lg" color={c.accent} />
-          <Text mt={3} color={c.textDim}>Parsing CSV data and generating charts...</Text>
+          <Text mt={3} color={c.textDim}>Parsing metrics...</Text>
         </Box>
       )}
 
@@ -548,7 +548,7 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
 
           {!hasCpu && !hasTick && !hasMem && (
             <Box {...cardProps} textAlign="center" p={10}>
-              <Text color={c.textDim}>No chart data found for this run. The experiment may not have collected metrics.</Text>
+              <Text color={c.textDim}>No metrics found for this run.</Text>
             </Box>
           )}
         </Flex>

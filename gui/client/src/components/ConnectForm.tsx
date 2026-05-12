@@ -26,6 +26,54 @@ const MODE_ICONS: Record<string, IconType> = {
   custom: LuGlobe,
 };
 
+type Group = 'cloud' | 'das' | 'ssh' | 'local';
+
+interface GroupDef {
+  id: Group;
+  label: string;
+  icon: IconType;
+}
+
+interface SubProviderDef {
+  mode: string;
+  label: string;
+  shortLabel?: string;
+  disabled?: boolean;
+  hint?: string;
+}
+
+const GROUPS: GroupDef[] = [
+  { id: 'cloud', label: 'Cloud', icon: LuCloud },
+  { id: 'das',   label: 'DAS',   icon: LuHash },
+  { id: 'ssh',   label: 'SSH',   icon: LuGlobe },
+  { id: 'local', label: 'Local', icon: LuMonitor },
+];
+
+const SUB_PROVIDERS: Partial<Record<Group, SubProviderDef[]>> = {
+  cloud: [
+    { mode: 'aws',   label: 'AWS', shortLabel: 'AWS' },
+    { mode: 'azure', label: 'Azure', shortLabel: 'Azure', disabled: true, hint: 'Coming soon' },
+  ],
+  das: [
+    { mode: 'das5', label: 'DAS-5', shortLabel: '5' },
+    { mode: 'das6', label: 'DAS-6', shortLabel: '6' },
+  ],
+};
+
+function groupForMode(mode: string): Group {
+  if (mode === 'aws' || mode === 'azure') return 'cloud';
+  if (mode === 'das5' || mode === 'das6') return 'das';
+  if (mode === 'local') return 'local';
+  return 'ssh';
+}
+
+function defaultModeForGroup(g: Group): string {
+  if (g === 'cloud') return 'aws';
+  if (g === 'das') return 'das5';
+  if (g === 'ssh') return 'custom';
+  return 'local';
+}
+
 const MODE_PRESETS: Record<string, ModePreset> = {
   local: { host: '', port: '', label: 'Local Machine', description: 'Run everything on this machine - no SSH needed.', defaultJump: false },
   das5: { host: 'fs0.das5.cs.vu.nl', port: '22', label: 'DAS-5', description: 'Connect to DAS-5 via SSH. Enable ProxyJump if off-campus.', defaultJump: false, jumpHost: 'ssh.data.vu.nl' },
@@ -91,9 +139,11 @@ interface ConnectFormProps {
   status: StepStatus;
   mode: string;
   onModeChange: (mode: string) => void;
+  prefill?: Partial<SshConnectOptions> | null;
+  onPrefillConsumed?: () => void;
 }
 
-export default function ConnectForm({ onConnect, status, mode, onModeChange }: ConnectFormProps) {
+export default function ConnectForm({ onConnect, status, mode, onModeChange, prefill, onPrefillConsumed }: ConnectFormProps) {
   const [host, setHost] = useState(MODE_PRESETS[mode]?.host || '');
   const [port, setPort] = useState(MODE_PRESETS[mode]?.port || '22');
   const [username, setUsername] = useState('');
@@ -122,10 +172,28 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange }: C
     }
   }, [mode]);
 
+  useEffect(() => {
+    if (!prefill) return;
+    if (prefill.host !== undefined) setHost(prefill.host || '');
+    if (prefill.port !== undefined) setPort(prefill.port || '22');
+    if (prefill.username !== undefined) setUsername(prefill.username || '');
+    if (prefill.privateKey !== undefined) {
+      setPrivateKey(prefill.privateKey || '');
+      setAuthMethod('key');
+    } else if (prefill.password !== undefined) {
+      setPassword(prefill.password || '');
+      setAuthMethod('password');
+    }
+    onPrefillConsumed?.();
+  }, [prefill, onPrefillConsumed]);
+
   const isRunning = status === 'running';
   const isConnected = status === 'completed';
   const isLocal = mode === 'local';
-  const isSSH = !isLocal;
+  const isAzure = mode === 'azure';
+  const isSSH = !isLocal && !isAzure;
+  const group = groupForMode(mode);
+  const subProviders = SUB_PROVIDERS[group];
   const preset = MODE_PRESETS[mode] || MODE_PRESETS.das5;
   const hostPlaceholder = preset.hostPlaceholder || 'hostname';
   const usernamePlaceholder = preset.usernamePlaceholder || `Your ${preset.label} username`;
@@ -134,20 +202,16 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange }: C
         title: 'AWS EC2 quick setup',
         lines: [
           'Use the instance public DNS or Elastic IP as the hostname.',
-          'Make sure port 22 is allowed in the security group.',
-          'SSH key authentication is recommended for EC2 images.',
+          'Port 22 must be open in the instance security group.',
+          'EC2 AMIs disable password auth by default — use SSH key.',
         ],
       }
-    : mode === 'azure'
-      ? {
-          title: 'Azure VM quick setup',
-          lines: [
-            'Use the VM public IP or DNS name from the Azure portal.',
-            'Allow inbound SSH on port 22 in the network security group.',
-            'Key-based SSH login is the safest option for Azure VMs.',
-          ],
-        }
-      : null;
+    : null;
+
+  const selectGroup = (g: Group) => {
+    if (g === group) return;
+    onModeChange(defaultModeForGroup(g));
+  };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -203,41 +267,90 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange }: C
       )}
 
       {!isConnected && (
-        <Grid templateColumns={{ base: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }} gap={2.5} mb={5}>
-          {Object.entries(MODE_PRESETS).map(([key, val]) => (
-            <Button
-              key={key}
-              variant="plain"
-              display="flex"
-              flexDirection="column"
-              alignItems="center"
-              gap={1.5}
-              py={3.5}
-              px={2.5}
-              h="auto"
-              bg={mode === key ? 'rgba(108, 92, 231, 0.12)' : c.bg}
-              border="2px solid"
-              borderColor={mode === key ? c.accent : c.border}
-              borderRadius={radii.md}
-              color={mode === key ? c.accentLight : c.textDim}
-              fontSize="0.82rem"
-              fontWeight={600}
-              _hover={{ bg: c.surface2, borderColor: c.textDim }}
-              onClick={() => onModeChange(key)}
-            >
-              <Flex align="center" justify="center" fontSize="1.1rem" fontWeight={700}>
-                {key === 'das5' ? '5' : key === 'das6' ? '6' : (() => { const Ic = MODE_ICONS[key]; return Ic ? <Icon as={Ic} boxSize="16px" /> : null; })()}
-              </Flex>
-              <Text fontSize="0.8rem">{val.label}</Text>
-            </Button>
-          ))}
-        </Grid>
+        <>
+          <Grid templateColumns="repeat(4, 1fr)" gap={2.5} mb={subProviders ? 3 : 5}>
+            {GROUPS.map((g) => (
+              <Button
+                key={g.id}
+                variant="plain"
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                gap={1.5}
+                py={3.5}
+                px={2.5}
+                h="auto"
+                bg={group === g.id ? 'rgba(108, 92, 231, 0.12)' : c.bg}
+                border="2px solid"
+                borderColor={group === g.id ? c.accent : c.border}
+                borderRadius={radii.md}
+                color={group === g.id ? c.accentLight : c.textDim}
+                fontSize="0.82rem"
+                fontWeight={600}
+                _hover={{ bg: c.surface2, borderColor: c.textDim }}
+                onClick={() => selectGroup(g.id)}
+              >
+                <Icon as={g.icon} boxSize="18px" />
+                <Text fontSize="0.85rem">{g.label}</Text>
+              </Button>
+            ))}
+          </Grid>
+
+          {subProviders && (
+            <Grid templateColumns={`repeat(${subProviders.length}, 1fr)`} gap={2} mb={5}>
+              {subProviders.map((sp) => {
+                const active = mode === sp.mode;
+                const Ic = MODE_ICONS[sp.mode];
+                return (
+                  <Button
+                    key={sp.mode}
+                    variant="plain"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    gap={2}
+                    py={2.5}
+                    px={3}
+                    h="auto"
+                    bg={active ? 'rgba(108, 92, 231, 0.08)' : 'transparent'}
+                    border="1px solid"
+                    borderColor={active ? c.accent : c.border}
+                    borderRadius={radii.sm}
+                    color={sp.disabled ? c.textDim : (active ? c.accentLight : c.text)}
+                    fontSize="0.85rem"
+                    fontWeight={600}
+                    opacity={sp.disabled ? 0.6 : 1}
+                    cursor={sp.disabled ? 'not-allowed' : 'pointer'}
+                    _hover={sp.disabled ? {} : { bg: c.surface2, borderColor: c.textDim }}
+                    onClick={() => { if (!sp.disabled) onModeChange(sp.mode); }}
+                    title={sp.hint}
+                  >
+                    {Ic && <Icon as={Ic} boxSize="14px" />}
+                    <Text fontSize="0.85rem">{sp.label}</Text>
+                    {sp.hint && (
+                      <Text as="span" fontSize="0.7rem" color={c.textDim} fontWeight={500} ml={1}>
+                        ({sp.hint})
+                      </Text>
+                    )}
+                  </Button>
+                );
+              })}
+            </Grid>
+          )}
+        </>
       )}
 
       {isConnected ? (
         <Badge bg="rgba(0, 184, 148, 0.15)" color={c.success} px={2.5} py={1} borderRadius="full" fontSize="0.75rem" fontWeight={600}>
           {isLocal ? 'Local session active' : `Connected to ${host}`}
         </Badge>
+      ) : isAzure ? (
+        <Box p={4} bg={c.bg} border="1px dashed" borderColor={c.border} borderRadius={radii.md}>
+          <Heading fontSize="0.95rem" fontWeight={700} mb={1.5}>Azure — not implemented</Heading>
+          <Text color={c.textDim} fontSize="0.85rem" lineHeight={1.55}>
+            Azure VM support is not available yet. To connect to an existing Azure VM, use <Text as="strong" color={c.text}>SSH</Text> and enter the public IP, username, and key.
+          </Text>
+        </Box>
       ) : (
         <Box as="form" onSubmit={handleSubmit}>
           {isSSH && (
@@ -277,7 +390,7 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange }: C
             </>
           )}
 
-          {isSSH && (
+          {group === 'das' && (
             <Box my={4} p={3.5} bg={c.bg} border="1px solid" borderColor={c.border} borderRadius={radii.md}>
               <Flex as="label" align="center" flexWrap="wrap" gap={2} cursor="pointer" fontSize="0.9rem" fontWeight={600} color={c.text}>
                 <input
@@ -345,7 +458,7 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange }: C
               h="auto"
               _hover={{ bg: c.accentLight }}
               _disabled={{ opacity: 0.5, cursor: 'not-allowed' }}
-              disabled={isRunning || (isSSH && !username) || (isSSH && useJumpHost && !jumpUsername)}
+              disabled={isRunning || (isSSH && !username) || (isSSH && useJumpHost && !jumpUsername) || (mode === 'aws' && !host)}
             >
               {isRunning ? (
                 <>
@@ -354,7 +467,7 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange }: C
               ) : isLocal ? (
                 'Start Local Session'
               ) : (
-                `Connect to ${preset.label}`
+                mode === 'aws' ? `Connect to AWS instance` : `Connect to ${preset.label}`
               )}
             </Button>
           </Flex>

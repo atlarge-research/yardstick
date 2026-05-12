@@ -32,7 +32,7 @@ export default function LogPanel({ logs }: LogPanelProps) {
         <Text fontSize="0.8rem">Activity Log</Text>
       </Flex>
       <Box p={4} fontFamily={fonts.mono} fontSize="0.82rem" lineHeight={1.7} maxH="220px" overflowY="auto">
-        {logs.length === 0 && <Text color={c.textDim}>No activity yet...</Text>}
+        {logs.length === 0 && <Text color={c.textDim}>No events.</Text>}
         {logs.map((entry, i) => (
           <Box key={i} color={colorFor(entry.level)}>
             <Text as="span" color={c.textDim} mr={2} fontSize="0.75rem">

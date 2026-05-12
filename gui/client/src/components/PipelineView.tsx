@@ -61,6 +61,8 @@ interface PipelineViewProps {
   envReady: boolean;
   detecting: boolean;
   detectingItem: string | null;
+  onAwsLaunch?: (opts: Record<string, any>) => void;
+  onAwsTerminate?: (opts: Record<string, any>) => void;
 }
 
 export default function PipelineView({
@@ -128,8 +130,8 @@ export default function PipelineView({
           </Flex>
           <Text color={c.textDim} fontSize="0.9rem" mb={5}>
             {envReady
-              ? `Everything is already set up ${modeLabel}. You can jump straight to running an experiment.`
-              : `Some components are missing ${modeLabel}. Run the installer to set them up.`}
+              ? `All components installed ${modeLabel}.`
+              : `Some components are missing ${modeLabel}.`}
           </Text>
 
           <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={2.5}>
@@ -194,7 +196,7 @@ export default function PipelineView({
             <Heading fontSize="1.15rem" fontWeight={600}>Installing...</Heading>
           </Flex>
           <Text color={c.textDim} fontSize="0.9rem">
-            Setting up the environment {modeLabel}. Already-installed components will be skipped automatically.
+            Installing {modeLabel}. Installed components will be skipped.
           </Text>
         </Box>
       )}
@@ -211,7 +213,7 @@ export default function PipelineView({
         <Box {...cardProps} borderColor={c.success}>
           <Heading fontSize="1rem" fontWeight={600} color={c.success} mb={2}>Setup Complete</Heading>
           <Text color={c.textDim}>
-            Yardstick is ready. You can proceed to the <Text as="strong">Experiment</Text> tab.
+            Ready. Go to the <Text as="strong">Experiment</Text> tab.
           </Text>
         </Box>
       )}

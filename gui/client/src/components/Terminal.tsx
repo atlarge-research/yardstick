@@ -26,7 +26,7 @@ export default function Terminal({ lines = '', title = 'Terminal' }: TerminalPro
       </Flex>
       <Box ref={bodyRef} p={4} fontFamily={fonts.mono} fontSize="0.82rem" lineHeight={1.7} maxH="400px" overflowY="auto" whiteSpace="pre-wrap" wordBreak="break-all">
         {parsed.length === 0 ? (
-          <Text color={c.textDim}>Waiting for output...</Text>
+          <Text color={c.textDim}>No output.</Text>
         ) : (
           parsed.split('\n').map((line, i) => {
             const color = line.startsWith('$')

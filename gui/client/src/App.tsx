@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Box, Flex, Text, Heading, Button, Icon } from '@chakra-ui/react';
-import { LuPackage, LuFlaskConical, LuSquareTerminal, LuChartBar } from 'react-icons/lu';
+import { LuPackage, LuFlaskConical, LuSquareTerminal, LuChartBar, LuCloud } from 'react-icons/lu';
 import type { IconType } from 'react-icons';
 import useYardstick from './hooks/useYardstick';
 import type { SshConnectOptions, StepStatus } from './hooks/useYardstick';
@@ -10,9 +10,11 @@ import ExperimentView from './components/ExperimentView';
 import ResultsView from './components/ResultsView';
 import ManualCommand from './components/ManualCommand';
 import LogPanel from './components/LogPanel';
+import CloudPanel from './components/cloud/CloudPanel';
+import type { CloudInstanceHandoff } from './lib/cloud/types';
 import { c, radii, cardProps } from './theme';
 
-type TabId = 'setup' | 'experiment' | 'results' | 'terminal';
+type TabId = 'setup' | 'experiment' | 'results' | 'terminal' | 'cloud';
 
 interface TabDef {
   id: TabId;
@@ -25,6 +27,7 @@ const TABS: TabDef[] = [
   { id: 'setup', label: 'Setup', icon: LuPackage, statusKey: 'setup' },
   { id: 'experiment', label: 'Experiment', icon: LuFlaskConical, statusKey: 'experiment' },
   { id: 'results', label: 'Results', icon: LuChartBar, statusKey: null },
+  { id: 'cloud', label: 'Cloud', icon: LuCloud, statusKey: null },
   { id: 'terminal', label: 'Terminal', icon: LuSquareTerminal, statusKey: null },
 ];
 
@@ -57,11 +60,33 @@ export default function App() {
     envChecks, envReady, detecting, detectingItem,
     experimentRunning, experimentError, experimentDone,
     sshConnect, localConnect, sshDisconnect, detectEnv,
-    runPipeline, runExperiment, runSingleCommand,
+    runPipeline, runExperiment, runSingleCommand, awsLaunch, awsTerminate,
+    connectToCloudInstance,
   } = useYardstick();
 
   const [tab, setTab] = useState<TabId>('setup');
   const [sshUsername, setSshUsername] = useState('');
+  const [showLogs, setShowLogs] = useState(true);
+  const [connectPrefill, setConnectPrefill] = useState<Partial<SshConnectOptions> | null>(null);
+
+  const handleUseInstance = (h: CloudInstanceHandoff) => {
+    if (connected) {
+      setError('Disconnect from the current session before connecting to a cloud instance.');
+      return;
+    }
+    setConnectPrefill({
+      mode: h.provider,
+      host: h.host,
+      port: '22',
+      username: h.username,
+      privateKey: h.privateKey || undefined,
+    });
+    setMode(h.provider);
+    if (h.privateKey) {
+      setSshUsername(h.username);
+      connectToCloudInstance(h);
+    }
+  };
 
   const handleConnect = (opts: SshConnectOptions) => {
     if (opts.mode === 'local') {
@@ -78,8 +103,8 @@ export default function App() {
   if (!connected) {
     return (
       <Flex direction="column" minH="100vh" bg={c.bg}>
-        <Flex flex={1} align="center" justify="center" p={8}>
-          <Box w="100%" maxW="560px">
+        <Flex flex={1} justify="center" p={8}>
+          <Box w="100%" maxW="720px">
             <Box textAlign="center" mb={8}>
               <Heading fontSize="2.4rem" fontWeight={800} color={c.accentLight} letterSpacing="-0.02em" mb={1.5}>
                 Yardstick
@@ -99,7 +124,12 @@ export default function App() {
               status={stepStatuses.connect}
               mode={mode}
               onModeChange={setMode}
+              prefill={connectPrefill}
+              onPrefillConsumed={() => setConnectPrefill(null)}
             />
+            {mode === 'aws' && (
+              <CloudPanel onUseInstance={handleUseInstance} initialProvider="aws" />
+            )}
           </Box>
         </Flex>
       </Flex>
@@ -151,7 +181,7 @@ export default function App() {
       </Flex>
 
       <Flex flex={1} direction="column" overflow="hidden">
-        <Box flex={1} p={8} maxW="960px" mx="auto" w="100%" overflowY="auto">
+        <Box flex={1} p={8} maxW="960px" mx="auto" w="100%" overflowY="auto" pb={showLogs ? "400px" : "0"}>
           {error && (
             <Flex {...cardProps} borderColor={c.error} justify="space-between" align="center">
               <Text color={c.error}>{error}</Text>
@@ -167,6 +197,8 @@ export default function App() {
               pipelineDone={pipelineDone}
               onRunPipeline={runPipeline}
               onDetectEnv={detectEnv}
+              onAwsLaunch={awsLaunch}
+              onAwsTerminate={awsTerminate}
               connected={connected}
               username={sshUsername}
               mode={mode}
@@ -200,6 +232,10 @@ export default function App() {
             />
           )}
 
+          {tab === 'cloud' && (
+            <CloudPanel onUseInstance={handleUseInstance} initialProvider={(mode === 'azure' ? 'azure' : 'aws')} />
+          )}
+
           {tab === 'terminal' && (
             <ManualCommand
               connected={connected}
@@ -207,9 +243,21 @@ export default function App() {
               terminalOutput={terminalOutput}
             />
           )}
-
-          <LogPanel logs={logs} />
         </Box>
+
+        {showLogs && (
+          <Box
+            position="relative"
+            borderTop="1px solid"
+            borderColor={c.border}
+            bg={c.surface}
+            h="380px"
+            overflowY="auto"
+            w="100%"
+          >
+            <LogPanel logs={logs} />
+          </Box>
+        )}
       </Flex>
 
       <Flex as="footer" align="center" justify="space-between" px={8} py={2} bg={c.surface} borderTop="1px solid" borderColor={c.border} fontSize="0.78rem" color={c.textDim}>
@@ -217,21 +265,26 @@ export default function App() {
           <Box w="8px" h="8px" borderRadius="full" bg={c.success} boxShadow={`0 0 6px ${c.success}`} />
           <Text fontSize="0.78rem">{modeLabel} - {mode === 'local' ? 'Local session' : sshUsername}</Text>
         </Flex>
-        <Button
-          variant="plain"
-          bg={c.error}
-          color="white"
-          px={3}
-          py={1}
-          borderRadius={radii.sm}
-          fontSize="0.75rem"
-          fontWeight={600}
-          h="auto"
-          _hover={{ filter: 'brightness(1.1)' }}
-          onClick={sshDisconnect}
-        >
-          Disconnect
-        </Button>
+        <Flex align="center" gap={3}>
+          <OutlineBtn onClick={() => setShowLogs(!showLogs)} fontSize="0.75rem">
+            {showLogs ? 'Hide' : 'Show'} Logs
+          </OutlineBtn>
+          <Button
+            variant="plain"
+            bg={c.error}
+            color="white"
+            px={3}
+            py={1}
+            borderRadius={radii.sm}
+            fontSize="0.75rem"
+            fontWeight={600}
+            h="auto"
+            _hover={{ filter: 'brightness(1.1)' }}
+            onClick={sshDisconnect}
+          >
+            Disconnect
+          </Button>
+        </Flex>
       </Flex>
     </Flex>
   );

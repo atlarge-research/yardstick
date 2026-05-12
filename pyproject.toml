@@ -10,6 +10,7 @@ dependencies = [
     "ansible>=8.0.0,<9",
     "plumbum>=1.8.2,<2",
     "pyyaml>=6.0,<7",
+    "boto3>=1.26,<2",
 ]
 
 [build-system]

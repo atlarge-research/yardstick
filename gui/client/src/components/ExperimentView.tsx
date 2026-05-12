@@ -84,7 +84,7 @@ export default function ExperimentView({
             <Icon as={LuCircleCheck} boxSize="18px" flexShrink={0} mt="2px" />
             <Box>
               <Text fontWeight={600} mb={1}>Experiment completed</Text>
-              <Text fontSize="0.85rem" color={c.textDim}>Results have been saved. Check the terminal output below for the path.</Text>
+              <Text fontSize="0.85rem" color={c.textDim}>Results saved. See terminal output for path.</Text>
             </Box>
           </Flex>
         )}
