@@ -25,7 +25,8 @@ export default function LaunchInstanceDialog({ adapter, region, onRegionChange, 
   const [securityGroups, setSecurityGroups] = useState<CloudSecurityGroup[]>([]);
 
   const [imageId, setImageId] = useState('');
-  const [instanceType, setInstanceType] = useState('t3.micro');
+  const [instanceType, setInstanceType] = useState('t3.small');
+  const [diskSizeGb, setDiskSizeGb] = useState(20);
   const [keyName, setKeyName] = useState('');
   const [sgIds, setSgIds] = useState<string[]>([]);
   const [name, setName] = useState('yardstick-benchmark');
@@ -94,6 +95,7 @@ export default function LaunchInstanceDialog({ adapter, region, onRegionChange, 
         securityGroupIds: sgIds,
         count: 1,
         name: name || undefined,
+        diskSizeGb,
       });
       onClose?.();
     } catch (e: any) {
@@ -131,7 +133,7 @@ export default function LaunchInstanceDialog({ adapter, region, onRegionChange, 
         </Box>
       </Grid>
 
-      <Grid templateColumns="1fr 1fr" gap={4} mt={3}>
+      <Grid templateColumns="1fr 1fr 1fr" gap={4} mt={3}>
         <Box>
           <Text {...labelProps}>Image search</Text>
           <StyledInput {...inputProps} value={imageSearch} onChange={(e) => setImageSearch(e.target.value)} placeholder="ubuntu / al2023-ami / ..." />
@@ -144,6 +146,11 @@ export default function LaunchInstanceDialog({ adapter, region, onRegionChange, 
               <option key={t} value={t} style={{ backgroundColor: c.bg }}>{t}</option>
             ))}
           </StyledSelect>
+        </Box>
+        <Box>
+          <Text {...labelProps}>Disk size (GB)</Text>
+          <StyledInput {...inputProps} type="number" min={8} max={1000} value={diskSizeGb}
+            onChange={(e) => setDiskSizeGb(Math.max(8, parseInt(e.target.value) || 20))} />
         </Box>
       </Grid>
 

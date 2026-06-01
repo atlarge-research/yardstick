@@ -126,8 +126,12 @@ export default function useYardstick() {
       }
     });
 
-    socket.on('step:start', (_data: { stepId: string }) => {
-      setStepStatuses((prev) => ({ ...prev, setup: 'running' }));
+    const PIPELINE_STEP_IDS = new Set(['install-miniconda', 'create-env', 'install-deps', 'setup-workspace', 'verify-install']);
+
+    socket.on('step:start', ({ stepId }: { stepId: string }) => {
+      if (PIPELINE_STEP_IDS.has(stepId)) {
+        setStepStatuses((prev) => ({ ...prev, setup: 'running' }));
+      }
     });
 
     socket.on('step:complete', (_data: { stepId: string }) => {
@@ -135,8 +139,10 @@ export default function useYardstick() {
     });
 
     socket.on('step:error', ({ stepId, code }: { stepId: string; stderr: string; code: number }) => {
-      setStepStatuses((prev) => ({ ...prev, setup: 'error' }));
-      setError(`Setup step "${stepId}" failed (exit ${code})`);
+      if (PIPELINE_STEP_IDS.has(stepId)) {
+        setStepStatuses((prev) => ({ ...prev, setup: 'error' }));
+        setError(`Setup step "${stepId}" failed (exit ${code})`);
+      }
     });
 
     socket.on('terminal:data', ({ stepId, data }: { stepId: string; data: string; isStderr: boolean }) => {

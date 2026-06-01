@@ -220,7 +220,7 @@ class AwsProvider {
     });
   }
 
-  async launch({ region, imageId, instanceType, keyName, securityGroupIds = [], count = 1, name }) {
+  async launch({ region, imageId, instanceType, keyName, securityGroupIds = [], count = 1, name, diskSizeGb = 20 }) {
     const client = this._client(region);
     const tagSpec = name
       ? [{ ResourceType: 'instance', Tags: [{ Key: 'Name', Value: name }, { Key: 'yardstick', Value: 'true' }] }]
@@ -233,6 +233,7 @@ class AwsProvider {
       KeyName: keyName || undefined,
       SecurityGroupIds: securityGroupIds.length ? securityGroupIds : undefined,
       TagSpecifications: tagSpec,
+      BlockDeviceMappings: [{ DeviceName: '/dev/sda1', Ebs: { VolumeSize: diskSizeGb, VolumeType: 'gp3', DeleteOnTermination: true } }],
     }));
     const ids = (res.Instances || []).map((i) => i.InstanceId);
     return ids;

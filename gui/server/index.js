@@ -165,6 +165,12 @@ function buildPipelineCommands(mode, user) {
   return {
     installMiniconda: [
       `set -e`,
+      `free_gb=$(df -BG "$HOME" | awk 'NR==2{gsub(/G/,""); print $4+0}')`,
+      `echo "Disk space available: \${free_gb}GB"`,
+      `if [ "\${free_gb:-0}" -lt 8 ]; then`,
+      `  echo "[FAIL] Only \${free_gb}GB free disk space. At least 8GB required (recommend 20GB). Resize the root volume in the AWS console and try again." >&2`,
+      `  exit 1`,
+      `fi`,
       `target_dir=${condaDir}`,
       `if [ -f "$target_dir/bin/conda" ]; then`,
       `  echo "[OK] Miniconda already installed at $target_dir -- skipping."`,
@@ -228,17 +234,30 @@ function buildPipelineCommands(mode, user) {
       `  python -m pip install yardstick-benchmark 2>&1`,
       `  echo "[OK] Packages installed."`,
       `fi`,
-      `if ! command -v ansible-playbook >/dev/null 2>&1; then`,
+      `if ! test -f "$CONDA_PREFIX/bin/ansible-playbook"; then`,
       `  echo "Installing Ansible CLI..."`,
       `  python -m pip install "ansible>=8,<9" 2>&1`,
       `fi`,
-      // PaperMC requires Java. On DAS, compute nodes load java via 'module load',
-      // so this conda java is unused there. On cloud/local hosts we run PaperMC
-      // through ansible_connection=local against this same env, so java must be
-      // resolvable from PATH at experiment time.
-      `if ! "${condaDir}/envs/yardstick/bin/java" -version >/dev/null 2>&1; then`,
-      `  echo "Installing OpenJDK 17 into yardstick env..."`,
-      `  conda install -n yardstick -c conda-forge -y openjdk=17 2>&1`,
+      // PaperMC requires Java. On DAS, compute nodes load java via 'module load'.
+      // On cloud/local hosts install Java via the system package manager so we get
+      // a plain OpenJDK — conda-forge's openjdk brings in GraalVM which injects its
+      // own GraalPy site-packages into sys.path and breaks ansible_runner's fcntl.
+      `if conda list -n yardstick openjdk 2>/dev/null | grep -q '^openjdk'; then`,
+      `  echo "Removing conda-forge openjdk (GraalVM) from yardstick env..."`,
+      `  conda remove -n yardstick -y openjdk 2>&1 || true`,
+      `fi`,
+      `if ! command -v java >/dev/null 2>&1; then`,
+      `  echo "Installing Java..."`,
+      `  if command -v apt-get >/dev/null 2>&1; then`,
+      `    sudo -n apt-get update -q 2>&1 || true`,
+      `    sudo -n DEBIAN_FRONTEND=noninteractive apt-get install -y default-jdk-headless 2>&1`,
+      `  elif command -v dnf >/dev/null 2>&1; then`,
+      `    sudo -n dnf install -y java-latest-openjdk-headless 2>&1`,
+      `  elif command -v yum >/dev/null 2>&1; then`,
+      `    sudo -n yum install -y java-latest-openjdk-headless 2>&1`,
+      `  else`,
+      `    echo "[WARN] No supported package manager found to install Java. PaperMC will fail." >&2`,
+      `  fi`,
       `fi`,
       // Cloud/local hosts also need system tools the WalkAround Ansible playbook
       // assumes are already there: rsync (for fetch/synchronize), wget (for the
@@ -303,7 +322,7 @@ function buildPipelineCommands(mode, user) {
       `eval "$(conda shell.bash hook)"`,
       `conda activate yardstick`,
       `python -c "import yardstick_benchmark; print('[OK] yardstick-benchmark imported successfully')" 2>&1`,
-      `command -v ansible-playbook >/dev/null 2>&1 || { echo '[FAIL] ansible-playbook is not available in the yardstick env.' >&2; exit 1; }`,
+      `test -f "$CONDA_PREFIX/bin/ansible-playbook" || { echo '[FAIL] ansible-playbook is not in the yardstick env.' >&2; exit 1; }`,
       `if java -version >/dev/null 2>&1; then`,
       `  echo "[OK] java: $(java -version 2>&1 | head -1)"`,
       `else`,
@@ -385,7 +404,7 @@ async function runEnvChecks(session, condaDir, socket) {
 
     emitProgress('ansible');
     if (checks.packages) {
-      checks.ansible = await probe('Ansible', `"${condaDir}/bin/conda" run -n yardstick ansible-playbook --version >/dev/null 2>&1`, 15000);
+      checks.ansible = await probe('Ansible', `test -f "${condaDir}/envs/yardstick/bin/ansible-playbook"`);
     }
     emitProgress(null);
 

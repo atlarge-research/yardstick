@@ -21,6 +21,7 @@ const CHECK_ITEMS: CheckItem[] = [
   { key: 'miniconda', label: 'Miniconda' },
   { key: 'condaEnv', label: 'Conda environment' },
   { key: 'packages', label: 'Python packages' },
+  { key: 'ansible', label: 'Ansible CLI' },
   { key: 'workspace', label: 'Experiments workspace' },
 ];
 
