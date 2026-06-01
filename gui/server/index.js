@@ -196,14 +196,25 @@ function buildPipelineCommands(mode, user) {
       `if conda env list | grep -q "^yardstick "; then`,
       `  echo "[OK] Conda env 'yardstick' already exists -- skipping creation."`,
       `else`,
-      `  echo "Creating conda env 'yardstick' with Python 3.9..."`,
-      `  conda create -n yardstick python=3.9 -y 2>&1`,
+      `  echo "Creating conda env 'yardstick' with Python 3.10..."`,
+      `  conda create -n yardstick python=3.10 -y 2>&1`,
       `  echo "[OK] Env created."`,
       `fi`,
     ].join('\n'),
 
     installDeps: [
       `set -e`,
+      // Ensure at least 2 GB of swap so conda metadata + solve doesn't OOM on
+      // small instances (t3.micro = 1 GB RAM). Safe to run repeatedly.
+      `swap_mb=$(free -m | awk '/^Swap:/{print $2}')`,
+      `if [ "\${swap_mb:-0}" -lt 2048 ]; then`,
+      `  echo "Swap is \${swap_mb}MB — creating 2GB swapfile..."`,
+      `  sudo fallocate -l 2G /swapfile 2>/dev/null || sudo dd if=/dev/zero of=/swapfile bs=1M count=2048 2>/dev/null`,
+      `  sudo chmod 600 /swapfile`,
+      `  sudo mkswap /swapfile`,
+      `  sudo swapon /swapfile`,
+      `  echo "[OK] Swap enabled: $(free -m | awk '/^Swap:/{print $2}')MB"`,
+      `fi`,
       `export PATH="${condaDir}/bin:$PATH"`,
       `eval "$(conda shell.bash hook)"`,
       `conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main 2>/dev/null || true`,
@@ -238,16 +249,29 @@ function buildPipelineCommands(mode, user) {
       // available and compute nodes provide these via 'module load'.
       ...(useHome ? [
         `echo "Checking system tools required by the workload..."`,
-        `need=""`,
-        `command -v rsync >/dev/null 2>&1 || need="$need rsync"`,
-        `command -v wget  >/dev/null 2>&1 || need="$need wget"`,
-        `command -v git   >/dev/null 2>&1 || need="$need git"`,
-        `command -v npm   >/dev/null 2>&1 || need="$need npm"`,
+        // Install node/npm via NodeSource FIRST so we get node 20 + bundled npm
+        // in one shot, avoiding distro nodejs 12 which drags in libnode-dev and
+        // then conflicts when NodeSource tries to upgrade.
         `node_major=0`,
         `if command -v node >/dev/null 2>&1; then`,
         `  node_major=$(node -e 'process.stdout.write(process.versions.node.split(".")[0])' 2>/dev/null || echo 0)`,
         `fi`,
-        `if [ "\${node_major:-0}" -lt 18 ]; then need="$need nodejs"; fi`,
+        `if [ "\${node_major:-0}" -lt 18 ]; then`,
+        `  echo "Node.js is $node_major (<18); installing Node 20 from NodeSource..."`,
+        `  if command -v dnf >/dev/null 2>&1; then`,
+        `    curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo -n bash - && sudo -n dnf install -y nodejs`,
+        `  elif command -v apt-get >/dev/null 2>&1; then`,
+        `    sudo -n DEBIAN_FRONTEND=noninteractive apt-get remove -y libnode-dev nodejs npm 2>/dev/null || true`,
+        `    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -nE bash - && sudo -n DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs`,
+        `  else`,
+        `    echo "[WARN] Cannot upgrade Node.js automatically. Install Node >=18 manually." >&2`,
+        `  fi`,
+        `fi`,
+        // Now install remaining tools (rsync, wget, git). npm/nodejs handled above.
+        `need=""`,
+        `command -v rsync >/dev/null 2>&1 || need="$need rsync"`,
+        `command -v wget  >/dev/null 2>&1 || need="$need wget"`,
+        `command -v git   >/dev/null 2>&1 || need="$need git"`,
         `if [ -n "$need" ]; then`,
         `  echo "Installing system packages:$need"`,
         `  if command -v dnf >/dev/null 2>&1; then`,
@@ -262,22 +286,6 @@ function buildPipelineCommands(mode, user) {
         `  fi`,
         `else`,
         `  echo "[OK] System tools already present."`,
-        `fi`,
-        // Some distros ship an old default node (e.g., Ubuntu 22.04 → node 12).
-        // If we still don't have node >=18, fall back to NodeSource's setup_20.x.
-        `node_major=0`,
-        `if command -v node >/dev/null 2>&1; then`,
-        `  node_major=$(node -e 'process.stdout.write(process.versions.node.split(".")[0])' 2>/dev/null || echo 0)`,
-        `fi`,
-        `if [ "\${node_major:-0}" -lt 18 ]; then`,
-        `  echo "Distro Node.js is $node_major (<18); installing Node 20 from NodeSource..."`,
-        `  if command -v dnf >/dev/null 2>&1; then`,
-        `    curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo -n bash - && sudo -n dnf install -y nodejs`,
-        `  elif command -v apt-get >/dev/null 2>&1; then`,
-        `    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -nE bash - && sudo -n DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs`,
-        `  else`,
-        `    echo "[WARN] Cannot upgrade Node.js automatically. Install Node >=18 manually." >&2`,
-        `  fi`,
         `fi`,
       ] : []),
     ].join('\n'),
@@ -319,6 +327,83 @@ function buildPipelineCommands(mode, user) {
     condaDir,
     scratchDir,
   };
+}
+
+async function runEnvChecks(session, condaDir, socket) {
+  const checks = { miniconda: false, condaEnv: false, packages: false, ansible: false, workspace: false };
+
+  function probe(label, cmd, timeoutMs = 15000) {
+    return new Promise((resolve) => {
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (!settled) { settled = true; socket.emit('log', { message: `  [TIMEOUT] ${label}: timed out after ${timeoutMs / 1000}s`, level: 'warn' }); resolve(false); }
+      }, timeoutMs);
+      function done(ok, detail) {
+        if (!settled) {
+          settled = true; clearTimeout(timer);
+          socket.emit('log', { message: `  ${ok ? '[OK]' : '[MISS]'} ${label}${detail ? ': ' + detail : ''}` });
+          resolve(ok);
+        }
+      }
+      if (session.type === 'local') {
+        const proc = spawn('bash', ['-lc', cmd], { env: { ...process.env, HOME: os.homedir() } });
+        proc.on('close', (code) => done(code === 0, `exit ${code}`));
+        proc.on('error', (e) => done(false, e.message));
+      } else {
+        const wrappedCmd = `bash -l <<'__YS_PROBE__'\n${cmd}\n__YS_PROBE__`;
+        session.conn.exec(wrappedCmd, { pty: false }, (err, stream) => {
+          if (err) return done(false, `exec error: ${err.message}`);
+          let stderrBuf = '';
+          stream.stderr.on('data', (d) => { stderrBuf += d.toString(); });
+          stream.on('exit', (code) => { done(code === 0, `exit ${code}${stderrBuf ? ', stderr: ' + stderrBuf.trim().slice(0, 100) : ''}`); });
+          stream.on('close', () => { if (!settled) done(false, 'stream closed without exit code'); });
+        });
+      }
+    });
+  }
+
+  function emitProgress(key) {
+    socket.emit('env:check-progress', { checks: { ...checks }, checking: key });
+  }
+
+  try {
+    emitProgress('miniconda');
+    checks.miniconda = await probe('Miniconda', `test -f "${condaDir}/bin/conda"`);
+    emitProgress(null);
+
+    emitProgress('condaEnv');
+    if (checks.miniconda) {
+      checks.condaEnv = await probe('Conda env', `"${condaDir}/bin/conda" env list 2>/dev/null | grep -q "^yardstick "`);
+    }
+    emitProgress(null);
+
+    emitProgress('packages');
+    if (checks.condaEnv) {
+      checks.packages = await probe('Packages', `"${condaDir}/bin/conda" run -n yardstick python -c "import yardstick_benchmark" 2>/dev/null`, 30000);
+    }
+    emitProgress(null);
+
+    emitProgress('ansible');
+    if (checks.packages) {
+      checks.ansible = await probe('Ansible', `"${condaDir}/bin/conda" run -n yardstick ansible-playbook --version >/dev/null 2>&1`, 15000);
+    }
+    emitProgress(null);
+
+    emitProgress('workspace');
+    checks.workspace = await probe('Workspace', 'test -d ~/experiments');
+    emitProgress(null);
+  } catch (e) {
+    // defaults are fine
+  }
+
+  const allReady = checks.miniconda && checks.condaEnv && checks.packages && checks.ansible && checks.workspace;
+  socket.emit('env:detected', { checks, allReady });
+  socket.emit('log', {
+    message: allReady
+      ? 'Environment fully set up -- ready to run experiments.'
+      : `Environment check: miniconda=${checks.miniconda ? 'OK' : 'MISS'} env=${checks.condaEnv ? 'OK' : 'MISS'} packages=${checks.packages ? 'OK' : 'MISS'} ansible=${checks.ansible ? 'OK' : 'MISS'} workspace=${checks.workspace ? 'OK' : 'MISS'}`,
+  });
+  return { checks, allReady };
 }
 
 io.on('connection', (socket) => {
@@ -478,119 +563,12 @@ io.on('connection', (socket) => {
 
   socket.on('ssh:detect-env', async ({ sessionId, username: dasUsername, mode: clientMode }) => {
     const session = sessions.get(sessionId);
-    if (!session) {
-      socket.emit('ssh:error', { message: 'No active session.' });
-      return;
-    }
-
+    if (!session) { socket.emit('ssh:error', { message: 'No active session.' }); return; }
     const mode = clientMode || session.mode || 'das5';
     const user = dasUsername || session.username;
-    const useHome = isHomeMode(mode);
-    const condaDir = useHome ? '$HOME/miniconda3' : `/var/scratch/${user}/miniconda3`;
-
+    const condaDir = isHomeMode(mode) ? '$HOME/miniconda3' : `/var/scratch/${user}/miniconda3`;
     socket.emit('log', { message: 'Detecting existing environment...' });
-
-    const checks = {
-      miniconda: false,
-      condaEnv: false,
-      packages: false,
-      workspace: false,
-    };
-
-    function probe(label, cmd, timeoutMs = 15000) {
-      return new Promise((resolve) => {
-        let settled = false;
-        const timer = setTimeout(() => {
-          if (!settled) {
-            settled = true;
-            socket.emit('log', { message: `  [TIMEOUT] ${label}: timed out after ${timeoutMs / 1000}s`, level: 'warn' });
-            resolve(false);
-          }
-        }, timeoutMs);
-        function done(ok, detail) {
-          if (!settled) {
-            settled = true;
-            clearTimeout(timer);
-            socket.emit('log', { message: `  ${ok ? '[OK]' : '[MISS]'} ${label}${detail ? ': ' + detail : ''}` });
-            resolve(ok);
-          }
-        }
-        if (session.type === 'local') {
-          const proc = spawn('bash', ['-lc', cmd], { env: { ...process.env, HOME: os.homedir() } });
-          proc.on('close', (code) => done(code === 0, `exit ${code}`));
-          proc.on('error', (e) => done(false, e.message));
-        } else {
-          const wrappedCmd = `bash -l <<'__YS_PROBE__'
-${cmd}
-__YS_PROBE__`;
-          session.conn.exec(wrappedCmd, { pty: false }, (err, stream) => {
-            if (err) return done(false, `exec error: ${err.message}`);
-            let stdoutBuf = '';
-            let stderrBuf = '';
-            stream.on('data', (d) => { stdoutBuf += d.toString(); });
-            stream.stderr.on('data', (d) => { stderrBuf += d.toString(); });
-            stream.on('exit', (code, signal) => {
-              done(code === 0, `exit ${code}${stderrBuf ? ', stderr: ' + stderrBuf.trim().slice(0, 100) : ''}`);
-            });
-            stream.on('close', () => {
-              // fallback if 'exit' never fired
-              if (!settled) done(false, 'stream closed without exit code');
-            });
-          });
-        }
-      });
-    }
-
-    function emitProgress(currentKey) {
-      socket.emit('env:check-progress', { checks: { ...checks }, checking: currentKey });
-    }
-
-    try {
-      emitProgress('miniconda');
-      checks.miniconda = await probe('Miniconda', `test -f "${condaDir}/bin/conda"`);
-      emitProgress(null);
-
-      emitProgress('condaEnv');
-      if (checks.miniconda) {
-        checks.condaEnv = await probe('Conda env', `"${condaDir}/bin/conda" env list 2>/dev/null | grep -q "^yardstick "`);
-      }
-      emitProgress(null);
-
-      emitProgress('packages');
-      if (checks.condaEnv) {
-        checks.packages = await probe(
-          'Packages',
-          `"${condaDir}/envs/yardstick/bin/python" -c "import yardstick_benchmark" 2>/dev/null`,
-          20000
-        );
-      }
-      emitProgress(null);
-
-      emitProgress('ansible');
-      if (checks.packages) {
-        checks.ansible = await probe(
-          'Ansible CLI',
-          `export PATH="${condaDir}/envs/yardstick/bin:$PATH"; command -v ansible-playbook >/dev/null 2>&1`,
-          10000
-        );
-      }
-      emitProgress(null);
-
-      emitProgress('workspace');
-      checks.workspace = await probe('Workspace', 'test -d ~/experiments');
-      emitProgress(null);
-    } catch (e) {
-      // defaults are fine
-    }
-
-    const allReady = checks.miniconda && checks.condaEnv && checks.packages && checks.ansible && checks.workspace;
-
-    socket.emit('env:detected', { checks, allReady });
-    socket.emit('log', {
-      message: allReady
-        ? 'Environment fully set up -- ready to run experiments.'
-        : `Environment check: miniconda=${checks.miniconda ? 'OK' : 'MISS'} env=${checks.condaEnv ? 'OK' : 'MISS'} packages=${checks.packages ? 'OK' : 'MISS'} ansible=${checks.ansible ? 'OK' : 'MISS'} workspace=${checks.workspace ? 'OK' : 'MISS'}`,
-    });
+    await runEnvChecks(session, condaDir, socket);
   });
 
   socket.on('ssh:run-pipeline', async ({ sessionId, username: dasUsername, mode: clientMode }) => {
@@ -611,6 +589,8 @@ __YS_PROBE__`;
       await runCmd(session, cmds.setupWorkspace, socket, 'setup-workspace');
       await runCmd(session, cmds.verifyInstall, socket, 'verify-install');
 
+      const allChecks = { miniconda: true, condaEnv: true, packages: true, ansible: true, workspace: true };
+      socket.emit('env:detected', { checks: allChecks, allReady: true });
       socket.emit('pipeline:complete', { message: 'All steps completed successfully!' });
       socket.emit('log', { message: 'Full installation pipeline complete.' });
     } catch (err) {
@@ -678,52 +658,17 @@ __YS_PROBE__`;
     const useHome = isHomeMode(mode);
     const condaDir = useHome ? '$HOME/miniconda3' : `/var/scratch/${user}/miniconda3`;
 
-    function quickProbe(cmd) {
-      return new Promise((resolve) => {
-        let settled = false;
-        const timer = setTimeout(() => { if (!settled) { settled = true; resolve(false); } }, 8000);
-        function done(ok) { if (!settled) { settled = true; clearTimeout(timer); resolve(ok); } }
-        if (session.type === 'local') {
-          const proc = spawn('bash', ['-lc', cmd], { env: { ...process.env, HOME: os.homedir() } });
-          proc.on('close', (code) => done(code === 0));
-          proc.on('error', () => done(false));
-        } else {
-          const wrappedCmd = `bash -l <<'__YS_PROBE__'
-${cmd}
-__YS_PROBE__`;
-          session.conn.exec(wrappedCmd, { pty: false }, (err, stream) => {
-            if (err) return done(false);
-            stream.on('exit', (code) => done(code === 0));
-            stream.on('close', () => { if (!settled) done(false); });
-          });
-        }
-      });
-    }
-
     try {
       socket.emit('log', { message: 'Running pre-flight checks...' });
-      const pf = {
-        miniconda:  await quickProbe(`test -f "${condaDir}/bin/conda"`),
-        condaEnv:   false,
-        packages:   false,
-        workspace:  await quickProbe('test -d ~/experiments'),
-      };
-      if (pf.miniconda) {
-        pf.condaEnv = await quickProbe(`"${condaDir}/bin/conda" env list 2>/dev/null | grep -q "^yardstick "`);
-      }
-      if (pf.condaEnv) {
-        pf.packages = await quickProbe(`"${condaDir}/envs/yardstick/bin/python" -c "import yardstick_benchmark" 2>/dev/null`);
-      }
-
-      const missing = [];
-      if (!pf.miniconda)  missing.push('Miniconda');
-      if (!pf.condaEnv)   missing.push('Conda environment (yardstick)');
-      if (!pf.packages)   missing.push('Python packages (yardstick-benchmark)');
-      if (!pf.workspace)  missing.push('Experiments workspace (~/experiments)');
-
-      if (missing.length > 0) {
+      const { checks, allReady } = await runEnvChecks(session, condaDir, socket);
+      if (!allReady) {
+        const missing = [];
+        if (!checks.miniconda) missing.push('Miniconda');
+        if (!checks.condaEnv)  missing.push('Conda environment (yardstick)');
+        if (!checks.packages)  missing.push('Python packages (yardstick-benchmark)');
+        if (!checks.ansible)   missing.push('Ansible CLI');
+        if (!checks.workspace) missing.push('Experiments workspace (~/experiments)');
         socket.emit('experiment:preflight-failed', { missing });
-        socket.emit('log', { message: `Pre-flight failed - missing: ${missing.join(', ')}`, level: 'error' });
         return;
       }
       socket.emit('log', { message: '[OK] Pre-flight checks passed.' });

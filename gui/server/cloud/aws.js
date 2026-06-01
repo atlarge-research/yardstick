@@ -148,30 +148,46 @@ class AwsProvider {
     }));
   }
 
+  async _imageNameMap(region, imageIds) {
+    const unique = [...new Set(imageIds.filter(Boolean))];
+    if (unique.length === 0) return {};
+    try {
+      const client = this._client(region);
+      const res = await client.send(new DescribeImagesCommand({ ImageIds: unique }));
+      const map = {};
+      (res.Images || []).forEach((img) => { map[img.ImageId] = img.Name || ''; });
+      return map;
+    } catch {
+      return {};
+    }
+  }
+
   async listInstances(region) {
     const client = this._client(region);
     const res = await client.send(new DescribeInstancesCommand({
       Filters: [{ Name: 'instance-state-name', Values: ['pending', 'running', 'stopping', 'stopped'] }],
     }));
-    const items = [];
+    const raw = [];
     (res.Reservations || []).forEach((r) => {
-      (r.Instances || []).forEach((i) => {
-        const nameTag = (i.Tags || []).find((t) => t.Key === 'Name');
-        items.push({
-          id: i.InstanceId,
-          provider: 'aws',
-          region,
-          name: nameTag?.Value || null,
-          state: stateName(i.State),
-          publicIp: i.PublicIpAddress || null,
-          privateIp: i.PrivateIpAddress || null,
-          instanceType: i.InstanceType,
-          keyName: i.KeyName || null,
-          imageId: i.ImageId,
-          launchedAt: i.LaunchTime ? new Date(i.LaunchTime).toISOString() : null,
-          defaultUsername: defaultUserForImage(i.ImageId),
-        });
-      });
+      (r.Instances || []).forEach((i) => raw.push(i));
+    });
+    const imageNames = await this._imageNameMap(region, raw.map((i) => i.ImageId));
+    const items = raw.map((i) => {
+      const nameTag = (i.Tags || []).find((t) => t.Key === 'Name');
+      return {
+        id: i.InstanceId,
+        provider: 'aws',
+        region,
+        name: nameTag?.Value || null,
+        state: stateName(i.State),
+        publicIp: i.PublicIpAddress || null,
+        privateIp: i.PrivateIpAddress || null,
+        instanceType: i.InstanceType,
+        keyName: i.KeyName || null,
+        imageId: i.ImageId,
+        launchedAt: i.LaunchTime ? new Date(i.LaunchTime).toISOString() : null,
+        defaultUsername: defaultUserForImage(imageNames[i.ImageId] || ''),
+      };
     });
     return items.sort((a, b) => (b.launchedAt || '').localeCompare(a.launchedAt || ''));
   }
@@ -180,27 +196,28 @@ class AwsProvider {
     if (!ids || ids.length === 0) return [];
     const client = this._client(region);
     const res = await client.send(new DescribeInstancesCommand({ InstanceIds: ids }));
-    const items = [];
+    const raw = [];
     (res.Reservations || []).forEach((r) => {
-      (r.Instances || []).forEach((i) => {
-        const nameTag = (i.Tags || []).find((t) => t.Key === 'Name');
-        items.push({
-          id: i.InstanceId,
-          provider: 'aws',
-          region,
-          name: nameTag?.Value || null,
-          state: stateName(i.State),
-          publicIp: i.PublicIpAddress || null,
-          privateIp: i.PrivateIpAddress || null,
-          instanceType: i.InstanceType,
-          keyName: i.KeyName || null,
-          imageId: i.ImageId,
-          launchedAt: i.LaunchTime ? new Date(i.LaunchTime).toISOString() : null,
-          defaultUsername: defaultUserForImage(i.ImageId),
-        });
-      });
+      (r.Instances || []).forEach((i) => raw.push(i));
     });
-    return items;
+    const imageNames = await this._imageNameMap(region, raw.map((i) => i.ImageId));
+    return raw.map((i) => {
+      const nameTag = (i.Tags || []).find((t) => t.Key === 'Name');
+      return {
+        id: i.InstanceId,
+        provider: 'aws',
+        region,
+        name: nameTag?.Value || null,
+        state: stateName(i.State),
+        publicIp: i.PublicIpAddress || null,
+        privateIp: i.PrivateIpAddress || null,
+        instanceType: i.InstanceType,
+        keyName: i.KeyName || null,
+        imageId: i.ImageId,
+        launchedAt: i.LaunchTime ? new Date(i.LaunchTime).toISOString() : null,
+        defaultUsername: defaultUserForImage(imageNames[i.ImageId] || ''),
+      };
+    });
   }
 
   async launch({ region, imageId, instanceType, keyName, securityGroupIds = [], count = 1, name }) {
