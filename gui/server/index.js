@@ -775,6 +775,7 @@ def _patched_gen_inv(name, nodes):
     for host, hvars in inv['all']['hosts'].items():
         if host in ('localhost', '127.0.0.1'):
             hvars['ansible_connection'] = 'local'
+            hvars['ansible_shell_executable'] = '/bin/bash'
     return inv
 _ym._gen_inv = _patched_gen_inv
 
@@ -928,6 +929,7 @@ def _patched_gen_inv(name, nodes):
     for host, hvars in inv['all']['hosts'].items():
         if host in ('localhost', '127.0.0.1'):
             hvars['ansible_connection'] = 'local'
+            hvars['ansible_shell_executable'] = '/bin/bash'
     return inv
 _ym._gen_inv = _patched_gen_inv
 
