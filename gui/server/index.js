@@ -250,7 +250,7 @@ function buildPipelineCommands(mode, user) {
       `  echo "Installing Java..."`,
       `  if command -v apt-get >/dev/null 2>&1; then`,
       `    sudo -n apt-get update -q 2>&1 || true`,
-      `    sudo -n DEBIAN_FRONTEND=noninteractive apt-get install -y default-jdk-headless 2>&1`,
+      `    sudo -n DEBIAN_FRONTEND=noninteractive apt-get install -y openjdk-17-jdk-headless 2>&1`,
       `  elif command -v dnf >/dev/null 2>&1; then`,
       `    sudo -n dnf install -y java-latest-openjdk-headless 2>&1`,
       `  elif command -v yum >/dev/null 2>&1; then`,
