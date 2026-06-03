@@ -436,11 +436,20 @@ io.on('connection', (socket) => {
     const sessionId = uuidv4();
     const useJump = !!(jumpHost && jumpUsername);
 
-    function emitError(err) {
-      let hint = '';
+    function emitError(err, context) {
       const msg = err.message || String(err);
-      if (msg.includes('EHOSTUNREACH') || msg.includes('ETIMEDOUT') || msg.includes('ECONNREFUSED') || msg.includes('Timed out')) {
-        hint = ' - The host is unreachable. Make sure you are on the VU campus network or connected to eduVPN, and that the jump host is correct.';
+      let hint = '';
+      const unreachable = msg.includes('EHOSTUNREACH') || msg.includes('ETIMEDOUT') || msg.includes('ECONNREFUSED') || msg.includes('Timed out');
+      if (unreachable) {
+        if (context === 'jump') {
+          hint = ` - Cannot reach jump host ${jumpHost}. Make sure you are on the VU campus network or connected to eduVPN.`;
+        } else if (context === 'target-via-jump') {
+          hint = ` - Reached the jump host but cannot tunnel to ${host}:${port}. Check that the target host is correct.`;
+        } else {
+          hint = ` - Cannot reach ${host}:${port}. Check the host address, port, and that the server is running.`;
+        }
+      } else if (msg.includes('All configured authentication methods failed') || msg.includes('No supported authentication methods')) {
+        hint = ' - Authentication failed. Check your username and SSH key or password.';
       }
       socket.emit('ssh:error', { message: msg + hint });
       socket.emit('log', { message: `[FAIL] SSH error: ${msg}${hint}`, level: 'error' });
@@ -472,7 +481,7 @@ io.on('connection', (socket) => {
 
           jumpConn.forwardOut('127.0.0.1', 0, host, parseInt(port, 10), (err, stream) => {
             if (err) {
-              emitError(err);
+              emitError(err, 'target-via-jump');
               jumpConn.end();
               return;
             }
@@ -480,7 +489,7 @@ io.on('connection', (socket) => {
             const targetConn = new Client();
 
             targetConn.on('ready', () => onTargetReady(targetConn, jumpConn));
-            targetConn.on('error', (err) => { emitError(err); jumpConn.end(); });
+            targetConn.on('error', (err) => { emitError(err, 'target-via-jump'); jumpConn.end(); });
             targetConn.on('close', () => {
               sessions.delete(sessionId);
               jumpConn.end();
@@ -492,7 +501,7 @@ io.on('connection', (socket) => {
           });
         });
 
-        jumpConn.on('error', (err) => emitError(err));
+        jumpConn.on('error', (err) => emitError(err, 'jump'));
         jumpConn.on('close', () => {
           if (sessions.has(sessionId)) {
             sessions.delete(sessionId);
@@ -517,7 +526,7 @@ io.on('connection', (socket) => {
         const conn = new Client();
 
         conn.on('ready', () => onTargetReady(conn, null));
-        conn.on('error', (err) => emitError(err));
+        conn.on('error', (err) => emitError(err, 'direct'));
         conn.on('close', () => {
           sessions.delete(sessionId);
           socket.emit('ssh:disconnected', { sessionId });
