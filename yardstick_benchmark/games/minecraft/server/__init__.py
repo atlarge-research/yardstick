@@ -25,16 +25,26 @@ class MinecraftServer:
 
     DEFAULT_IMAGE_URL = "docker://itzg/minecraft-server:java25"
 
+    # Newest Minecraft version the bundled Mineflayer (and its
+    # minecraft-data) in the workload image understands. itzg's default
+    # VERSION=LATEST tracks the newest release, which routinely outpaces
+    # minecraft-data -- and a server the bots can't speak the protocol of is
+    # useless for a benchmark -- so we pin to a known-supported version by
+    # default. Bump this when the workload image's Mineflayer is upgraded.
+    DEFAULT_VERSION = "1.21.11"
+
     def __init__(
         self,
         name: str = "",
         image_url: str = DEFAULT_IMAGE_URL,
         rcon_password: str = "",
+        version: str = DEFAULT_VERSION,
     ) -> None:
         self.image_url = image_url
         self.data_dir = tempfile.mkdtemp(dir="/tmp", prefix="mc-data-")
         self.instance_name = name if name else f"mc-{uuid.uuid4()}"
         self.rcon_password = rcon_password or random_string(16)
+        self.version = version
         self.running = False
 
     def start(self):
@@ -53,6 +63,8 @@ class MinecraftServer:
                 f"{JOLOKIA_JAR}:/opt/jolokia.jar",
                 "--env",
                 "EULA=TRUE",
+                "--env",
+                f"VERSION={self.version}",
                 "--env",
                 "ONLINE_MODE=false",
                 "--env",
