@@ -1,7 +1,6 @@
 from yardstick_benchmark.model import Node
-from yardstick_benchmark.util import random_string, remote
+from yardstick_benchmark.util import random_string, remote, upload
 import os
-from plumbum import local
 from typing import Dict, List, Optional
 from jinja2 import Template
 import tempfile
@@ -37,6 +36,11 @@ class InfluxDB(object):
         self.image_url = "docker://influxdb:2.8"
         self.admin_password = admin_password
         self.admin_token = admin_token or random_string(16)
+        # Persist InfluxDB's data to a host dir bind-mounted into the container
+        # (at /var/lib/influxdb2), so it survives container stop/start and
+        # kernel restarts instead of vanishing with the container's tmpfs.
+        # Lives under the node's working dir; remove it with cleanup().
+        self.data_dir = f"{node.wd}/influxdb-data"
 
     @property
     def url(self) -> str:
@@ -50,10 +54,16 @@ class InfluxDB(object):
 
     def start(self) -> None:
         with remote(self.node.host) as machine:
+            # Stage the persistent data dir on the node; the influxdb image
+            # skips first-time setup when this already holds an initialised DB,
+            # so restarts reuse prior data.
+            machine["mkdir"]["-p", self.data_dir]()
             machine["apptainer"][
                 "instance",
                 "run",
                 "--compat",
+                "--bind",
+                f"{self.data_dir}:/var/lib/influxdb2",
                 "--env",
                 "DOCKER_INFLUXDB_INIT_MODE=setup",
                 "--env",
@@ -75,7 +85,9 @@ class InfluxDB(object):
             machine["apptainer"]["instance", "stop", "influxdb"]()
 
     def cleanup(self) -> None:
-        pass
+        """Delete the persistent data dir (call after stop() to wipe the DB)."""
+        with remote(self.node.host) as machine:
+            machine["rm"]["-rf", self.data_dir](retcode=None)
 
     def get_info(self) -> InfluxDBInfo:
         return InfluxDBInfo([self.url], self.admin_token)
@@ -179,13 +191,16 @@ class Telegraf(object):
                     )
                 )
 
+            # scp (the remote upload path) won't create the wd, so make it
+            # first; upload() scp's the file when the node is remote.
+            machine["mkdir"]["-p", self.wd]()
             dst = f"{self.wd}/telegraf.conf"
-            local.path(name).copy(machine.path(dst))
+            upload(machine, name, dst)
             os.remove(name)
 
             if self.execd_minecraft_ticks:
                 dst = f"{self.wd}/jolokia_get_minecraft_tick"
-                local.path(mc_ticks_binary).copy(machine.path(dst))
+                upload(machine, mc_ticks_binary, dst)
                 machine["chmod"]["+x", dst]()
 
     def start(self) -> None:
