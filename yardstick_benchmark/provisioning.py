@@ -1,8 +1,8 @@
+import getpass
 import time
 from plumbum import local
 from yardstick_benchmark.model import Node
 from pathlib import Path
-import os
 
 
 class Das(object):
@@ -16,6 +16,8 @@ class Das(object):
             llist = preserve["-llist"]()
             for line in llist.split("\n")[3:]:
                 parts = line.split()
+                if not parts:
+                    continue
                 r = int(parts[0])
                 if reservation_number == r:
                     ready = parts[6] == "R"
@@ -28,6 +30,8 @@ class Das(object):
         llist = preserve["-llist"]()
         for line in llist.split("\n")[3:]:
             parts = line.split()
+            if not parts:
+                continue
             r = int(parts[0])
             if reservation_number == r:
                 return parts[8:]
@@ -38,8 +42,11 @@ class Das(object):
         reservation = int(preserve["-np", num, "-t", time_s]().split()[2][:-1])
         self._wait_for_ready(reservation)
         machines = self._get_machines(reservation)
+        # getpass.getuser() (unlike os.getlogin()) doesn't need a controlling
+        # terminal, so it works from a Jupyter kernel / non-interactive run.
+        user = getpass.getuser()
         res = [
-            Node(host=host, wd=Path(f"/local/{os.getlogin()}/yardstick/{host}"))
+            Node(host=host, wd=Path(f"/local/{user}/yardstick/{host}"))
             for host in machines
         ]
         self._reservation_map[reservation] = set(res)
