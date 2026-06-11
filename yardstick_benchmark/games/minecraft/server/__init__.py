@@ -1,7 +1,9 @@
 from pathlib import Path
 from plumbum import local
 import tempfile
+import threading
 import uuid
+from typing import Optional
 
 from yardstick_benchmark.util import random_string, wait_for_tcp
 
@@ -12,12 +14,16 @@ GAME_PORT = 25565
 RCON_PORT = 25575
 
 # Substrings in the server console log that indicate a crash / forced
-# shutdown. The crash-report header covers any crash (OOM, unhandled error,
-# Watchdog); the Watchdog line is kept as a belt-and-braces signal in case the
-# Watchdog is re-enabled.
+# shutdown. The crash-report header covers crashes that produce a report; the
+# Watchdog only logs at ERROR level when it's force-crashing the server, so any
+# "Watchdog/ERROR" line is a crash (caught even if the message wording changes,
+# and only relevant if the Watchdog is re-enabled -- it's off by default); and
+# the JVM OutOfMemoryError is matched directly because an OOM can kill the
+# server (or leave it wedged) without always emitting a Minecraft crash report.
 _CRASH_LOG_MARKERS = (
     "---- Minecraft Crash Report ----",
-    "Considering it to be crashed",
+    "Watchdog/ERROR",
+    "java.lang.OutOfMemoryError",
 )
 
 
@@ -68,6 +74,10 @@ class MinecraftServer:
         self.version = version
         self.max_tick_time = max_tick_time
         self.running = False
+        # Background health monitor state (see start_health_monitor()).
+        self._crash: Optional[MinecraftServerCrashed] = None
+        self._monitor_stop: Optional[threading.Event] = None
+        self._monitor_thread: Optional[threading.Thread] = None
 
     def start(self):
         jvm_opts = (
@@ -187,3 +197,46 @@ class MinecraftServer:
                         f"Minecraft server '{self.instance_name}' crash "
                         f"detected in log (marker: {marker!r})"
                     )
+
+    def start_health_monitor(self, interval_s: float = 5.0) -> None:
+        """Begin polling the server's health in the background.
+
+        Spawns a daemon thread that calls raise_if_crashed() every
+        `interval_s` while the server runs as a background service; the first
+        detected crash is recorded and the thread stops. The orchestrator
+        surfaces it cheaply on its own thread via assert_healthy() (e.g. as the
+        `health_check` passed to a workload's wait()). Idempotent-ish: call
+        stop_health_monitor() before re-starting.
+        """
+        self.stop_health_monitor()
+        self._crash = None
+        stop = threading.Event()
+        self._monitor_stop = stop
+
+        def _loop() -> None:
+            while not stop.wait(interval_s):
+                try:
+                    self.raise_if_crashed()
+                except MinecraftServerCrashed as exc:
+                    self._crash = exc
+                    return
+
+        self._monitor_thread = threading.Thread(
+            target=_loop, name=f"mc-health-{self.instance_name}", daemon=True
+        )
+        self._monitor_thread.start()
+
+    def stop_health_monitor(self) -> None:
+        """Stop the background health monitor (if running)."""
+        if self._monitor_stop is not None:
+            self._monitor_stop.set()
+        if self._monitor_thread is not None:
+            self._monitor_thread.join(timeout=5)
+        self._monitor_stop = None
+        self._monitor_thread = None
+
+    def assert_healthy(self) -> None:
+        """Raise the crash the background monitor caught, if any. Cheap to call
+        repeatedly -- it only checks a flag, doing no log I/O itself."""
+        if self._crash is not None:
+            raise self._crash
