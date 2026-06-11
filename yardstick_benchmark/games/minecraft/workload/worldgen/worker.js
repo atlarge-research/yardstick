@@ -66,6 +66,7 @@ function waitForChunk(bot, target, timeoutMs) {
             if (done) return;
             done = true;
             bot.removeListener('chunkColumnLoad', onLoad);
+            bot.removeListener('end', onEnd);
             clearInterval(poll);
             clearTimeout(timer);
             resolve(loaded);
@@ -80,7 +81,11 @@ function waitForChunk(bot, target, timeoutMs) {
                 finish(true);
             }
         };
+        // If the bot disconnects mid-wait, chunks will never arrive -- resolve
+        // immediately (as not-loaded) instead of burning the whole timeout.
+        const onEnd = () => finish(false);
         bot.on('chunkColumnLoad', onLoad);
+        bot.once('end', onEnd);
         const poll = setInterval(() => {
             try {
                 if (bot.world.getColumnAt(target)) {
@@ -175,6 +180,17 @@ async function run() {
         const latencies = [];
         let completed = 0;
         let runStart = Date.now();
+        let alive = true;
+        let finishing = false;
+        // If the bot gets kicked/disconnected mid-run, chunks stop arriving;
+        // stop teleporting instead of grinding every remaining teleport into a
+        // full chunk-load timeout (RCON `tp` of an absent player is a no-op).
+        bot.once('end', (reason) => {
+            alive = false;
+            if (!finishing) {
+                console.log(`${username}: bot disconnected mid-run (${reason})`);
+            }
+        });
 
         try {
             // Spectator keeps the player loading chunks while immune to fall
@@ -194,6 +210,13 @@ async function run() {
 
             runStart = Date.now();
             for (let k = 0; k < teleports; k++) {
+                if (!alive) {
+                    console.log(
+                        `${username}: aborting after ${completed}/${teleports} ` +
+                        `teleports -- bot disconnected`
+                    );
+                    break;
+                }
                 const target = targetFor(k);
                 const t0 = Date.now();
                 // Reliably issue the teleport first (retrying through RCON
@@ -246,6 +269,7 @@ async function run() {
             }
             await commitMetrics(lines);
             await rcon.end().catch(() => {});
+            finishing = true;
             try {
                 bot.quit('worldgen: done');
             } catch (e) { /* bot already disconnected */ }
