@@ -137,10 +137,24 @@ async function run() {
         // damage/suffocation, so the teleport sequence can't be broken by
         // death/respawn.
         await rcon.send(`gamemode spectator ${username}`);
-        // Let the client settle after spawn + gamemode change before the
-        // first teleport. Without this the very first `tp` can race the
-        // server still registering the freshly-joined player, so its target
-        // chunks never stream in and that teleport eats the whole timeout.
+
+        // Readiness guard: don't start teleporting until the bot is fully
+        // settled in the world. The first `tp` issued while the post-login
+        // position/teleport-confirm handshake is still in flight never gets
+        // its destination chunks streamed, so teleport #1 would otherwise eat
+        // the whole timeout. Waiting for the spawn-area chunks to load (this
+        // is mineflayer's own readiness check; safe to use here because the
+        // bot's real position is its actual spawn, not a lagging post-`tp`
+        // position) puts the first teleport in the same settled state as
+        // every later one. Wrapped so a slow/at-cap spawn load degrades to
+        // the fixed settle below rather than aborting the run.
+        try {
+            await bot.waitForChunksToLoad();
+        } catch (e) {
+            console.log(`${username}: waitForChunksToLoad guard: ${e.message}`);
+        }
+        // Conservative extra buffer on top of the guard (waitForChunksToLoad
+        // can return immediately if spawn chunks were already present).
         await sleep(2000);
 
         const tags = `player=${username},bots=${total_bots},node_index=${global_index}`;
