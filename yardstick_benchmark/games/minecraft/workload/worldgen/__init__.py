@@ -28,10 +28,12 @@ The published image lives at docker://jdonkervliet/yardstick-mineflayer:1.0;
 override via the image_url constructor kwarg if you publish your own.
 """
 
+import sys
+import threading
 import time
 from datetime import timedelta
 from pathlib import Path
-from typing import List, Optional
+from typing import IO, List, Optional
 
 from plumbum import local
 
@@ -43,6 +45,24 @@ from yardstick_benchmark.games.minecraft.server import (
 from yardstick_benchmark.model import Node
 from yardstick_benchmark.monitoring import InfluxDBInfo
 from yardstick_benchmark.util import random_string, remote
+
+
+def _pump(src: Optional[IO], dst: IO) -> None:
+    """Stream lines from a subprocess pipe `src` to `dst` (e.g. sys.stdout),
+    decoding bytes if needed. Used to forward a foreground workload's output
+    so it's visible for debugging instead of being buffered and discarded."""
+    if src is None:
+        return
+    try:
+        for line in iter(src.readline, b""):
+            if not line:
+                break
+            if isinstance(line, (bytes, bytearray)):
+                line = line.decode(errors="replace")
+            dst.write(line)
+            dst.flush()
+    except Exception:
+        pass
 
 
 # Root of the workload tree as it lives on the headnode (this Python
@@ -207,7 +227,13 @@ class WorldGeneration:
         the entry script exits. The caller simply blocks here until the run is
         done; deploy() it first and cleanup() it after.
 
+        The container's stdout/stderr are streamed through to this process's
+        stdout/stderr (so e.g. a notebook cell shows the per-bot logs live and
+        surfaces workload errors instead of swallowing them), and a non-zero
+        exit is raised rather than ignored.
+
         Raises:
+            RuntimeError: if the workload process exits non-zero.
             TimeoutError: if the workload doesn't exit within ``timeout`` plus
                 a small margin (the entry script self-limits to ``timeout``, so
                 this only trips if that safety net itself wedges). The
@@ -232,6 +258,15 @@ class WorldGeneration:
             grace_s = self.timeout.total_seconds() + 60
             deadline = time.monotonic() + grace_s
             proc = machine["apptainer"][args].popen()
+            # Drain stdout/stderr in background threads: this both surfaces the
+            # workload's output for debugging and prevents a full pipe buffer
+            # from blocking a chatty (e.g. 8-bot) run.
+            pumps = [
+                threading.Thread(target=_pump, args=(proc.stdout, sys.stdout), daemon=True),
+                threading.Thread(target=_pump, args=(proc.stderr, sys.stderr), daemon=True),
+            ]
+            for t in pumps:
+                t.start()
             try:
                 while proc.poll() is None:
                     if time.monotonic() > deadline:
@@ -240,6 +275,10 @@ class WorldGeneration:
                             f"{grace_s:.0f}s"
                         )
                     time.sleep(2)
+                if proc.returncode != 0:
+                    raise RuntimeError(
+                        f"worldgen workload exited with code {proc.returncode}"
+                    )
             finally:
                 # Force-kill the foreground container on timeout / interrupt /
                 # any error so nothing is left running.
@@ -249,6 +288,9 @@ class WorldGeneration:
                         proc.wait(timeout=15)
                     except Exception:
                         proc.kill()
+                # Let the pumps drain any remaining buffered output.
+                for t in pumps:
+                    t.join(timeout=5)
 
     def stop(self) -> None:
         with remote(self.node.host) as machine:
