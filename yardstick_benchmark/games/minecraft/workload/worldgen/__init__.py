@@ -330,25 +330,3 @@ class WorldGeneration:
     def cleanup(self) -> None:
         with remote(self.node.host) as machine:
             machine["rm"]["-rf", self.wd](retcode=None)
-
-
-class WorldGeneration1User(WorldGeneration):
-    """WorldGeneration with a single emulated player."""
-
-    INSTANCE_NAME = "yardstick-worldgen-1user"
-
-    def __init__(self, node: Node, server_host: str, influxdb_info: InfluxDBInfo,
-                 rcon_password: str, **kwargs):
-        kwargs["bots_per_node"] = 1
-        super().__init__(node, server_host, influxdb_info, rcon_password, **kwargs)
-
-
-class WorldGeneration8Users(WorldGeneration):
-    """WorldGeneration with eight emulated players."""
-
-    INSTANCE_NAME = "yardstick-worldgen-8users"
-
-    def __init__(self, node: Node, server_host: str, influxdb_info: InfluxDBInfo,
-                 rcon_password: str, **kwargs):
-        kwargs["bots_per_node"] = 8
-        super().__init__(node, server_host, influxdb_info, rcon_password, **kwargs)
