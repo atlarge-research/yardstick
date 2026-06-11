@@ -99,6 +99,38 @@ function waitForChunk(bot, target, timeoutMs) {
     });
 }
 
+// Set Player Position movement flags (u8 bitfield) for the 1.21.x protocol.
+const MOVE_FLAGS = { onGround: false, hasHorizontalCollision: false };
+
+// After an RCON `/tp` the (spectator) bot sits frozen and never reports a
+// position, so the server doesn't recenter this player's chunk loading and the
+// destination chunks never stream -- worst on the very first teleport, which
+// would otherwise eat the whole timeout. Send a short burst of position
+// packets that actually *move* the bot so the server recenters and generates
+// the area. Returns the interval id; the caller clears it once chunks load.
+function startNudging(bot, target) {
+    let n = 0;
+    let y = target.y;
+    const id = setInterval(() => {
+        // Cap the burst (~2s) so a slow load doesn't drift the bot far down;
+        // by then the recenter has been triggered and the chunk wait covers
+        // the rest.
+        if (n++ >= 20) {
+            clearInterval(id);
+            return;
+        }
+        try {
+            y -= 0.08;
+            bot._client.write('position', {
+                x: target.x, y, z: target.z, flags: MOVE_FLAGS,
+            });
+        } catch (e) {
+            clearInterval(id); // protocol mismatch -- stop trying
+        }
+    }, 100);
+    return id;
+}
+
 // Write line-protocol points to InfluxDB v2's HTTP write API. No-op if no
 // InfluxDB URL was configured.
 async function commitMetrics(lines) {
@@ -197,10 +229,10 @@ async function run() {
             // damage/suffocation, so the sequence can't be broken by death.
             await rconSend(`gamemode spectator ${username}`);
 
-            // Readiness guard: wait for the bot to settle in the world before
-            // teleporting. (NOTE: this does NOT currently fix the first-
-            // teleport timeout -- teleport #1 still eats the timeout -- so the
-            // root cause is still open; kept as a cheap best-effort settle.)
+            // Settle: let the bot finish loading its spawn area before the
+            // first teleport. (The first-teleport stall itself is fixed by the
+            // post-teleport position nudge -- see startNudging; this just gives
+            // the bot a clean starting state.)
             try {
                 await bot.waitForChunksToLoad();
             } catch (e) {
@@ -225,7 +257,12 @@ async function run() {
                 // retries; waitForChunk's getColumnAt poll covers the tiny
                 // window between the tp landing and the listener attaching.
                 await rconSend(`tp ${username} ${target.x} ${target.y} ${target.z}`);
-                const loaded = await waitForChunk(bot, target, chunk_load_timeout_ms);
+                const loadedP = waitForChunk(bot, target, chunk_load_timeout_ms);
+                // Nudge the bot so the server recenters chunk loading (see
+                // startNudging); stop once the chunks have loaded.
+                const nudge = startNudging(bot, target);
+                const loaded = await loadedP;
+                clearInterval(nudge);
                 const load_ms = Date.now() - t0;
                 latencies.push(load_ms);
                 completed++;
