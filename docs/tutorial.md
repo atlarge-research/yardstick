@@ -73,7 +73,7 @@ You will need to close (`ctrl+D`) and reopen (`ctrl+~`) your shell before change
 Create a new conda environment named yardstick by running:
 
 ```
-conda create -n yardstick python=3.9
+conda create -n yardstick python=3.12
 conda activate yardstick
 ```
 

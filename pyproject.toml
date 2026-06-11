@@ -3,7 +3,7 @@ name = "yardstick-benchmark"
 version = "0.1.1"
 description = ""
 authors = [{ name = "Jesse Donkervliet", email = "j.donkervliet@gmail.com" }]
-requires-python = ">=3.9,<4"
+requires-python = ">=3.12,<4"
 readme = "README.md"
 dependencies = [
     "influxdb-client>=1.50.0",
