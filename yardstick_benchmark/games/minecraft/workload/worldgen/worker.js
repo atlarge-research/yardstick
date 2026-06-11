@@ -204,6 +204,11 @@ async function run() {
         }
     }
 
+    // The server's own keepalive drops a client after ~30s of main-thread
+    // stall (heavy generation), and that limit isn't configurable -- so the
+    // bot's keepalive watchdog is left at the library default 30s too, and a
+    // teleport whose generation exceeds that is treated as the ceiling rather
+    // than something to wait out. See chunk_load_timeout (also 30s).
     const bot = lib.createBot({ host, username, port, version });
 
     bot.once('spawn', async () => {

@@ -35,8 +35,6 @@ from datetime import timedelta
 from pathlib import Path
 from typing import IO, Callable, List, Optional
 
-from plumbum import local
-
 from yardstick_benchmark.games.minecraft.server import (
     GAME_PORT,
     RCON_PORT,
@@ -44,7 +42,7 @@ from yardstick_benchmark.games.minecraft.server import (
 )
 from yardstick_benchmark.model import Node
 from yardstick_benchmark.monitoring import InfluxDBInfo
-from yardstick_benchmark.util import random_string, remote
+from yardstick_benchmark.util import random_string, remote, upload
 
 
 def _pump(src: Optional[IO], dst: IO) -> None:
@@ -140,7 +138,7 @@ class WorldGeneration:
         start_distance: int = 2000,
         step_distance: int = 1500,
         teleport_y: int = 200,
-        chunk_load_timeout: timedelta = timedelta(seconds=60),
+        chunk_load_timeout: timedelta = timedelta(seconds=30),
         bots_join_delay: timedelta = timedelta(seconds=5),
         bot_index: int = 0,
         timeout: timedelta = timedelta(minutes=60),
@@ -198,7 +196,11 @@ class WorldGeneration:
             for relpath in WORKLOAD_FILES:
                 src = WORKLOAD_ROOT / relpath
                 dst = f"{self.wd}/{relpath}"
-                local.path(src).copy(machine.path(dst))
+                # upload() scp's the file to a remote node; scp won't create
+                # missing parent dirs (e.g. the worldgen/ subdir), so make the
+                # destination's directory first.
+                machine["mkdir"]["-p", machine.path(dst).dirname]()
+                upload(machine, src, dst)
 
     def start(self) -> None:
         with remote(self.node.host) as machine:
