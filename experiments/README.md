@@ -73,3 +73,21 @@ For a comparison (`_vs_X`) experiment the run cell becomes a loop over
 the sweep values; tag the InfluxDB writes with the sweep value (e.g. via
 a Telegraf `[global_tags]` entry rendered into the config) so a single
 Flux query returns all runs grouped by the sweep variable.
+
+## Keeping notebook outputs out of git
+
+Committed notebooks are stored **without** cell outputs (outputs bloat the
+repo and churn diffs). This is automated with
+[nbstripout](https://github.com/kynan/nbstripout) as a git filter: outputs are
+stripped from the *staged* copy on commit while your working copy keeps them.
+
+It's in the `notebooks` extra, so after `uv sync --extra notebooks` enable the
+filter once per clone:
+
+```sh
+uv run nbstripout --install --attributes .gitattributes
+```
+
+`.gitattributes` (committed) maps `*.ipynb` to the filter; the filter command
+itself lives in your local `.git/config`, so each clone runs the install once.
+To strip an already-committed notebook, just re-save/`git add` it.
