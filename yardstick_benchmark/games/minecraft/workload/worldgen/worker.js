@@ -123,92 +123,134 @@ async function commitMetrics(lines) {
     }
 }
 
-async function run() {
-    const rcon = await Rcon.connect({
+// Per-command RCON deadline. Under heavy world-gen load the server's main
+// thread is busy and slow to answer RCON; the rcon-client default (~5s) trips
+// constantly. Generous here, and rconSend() retries anyway.
+const RCON_TIMEOUT_MS = 30000;
+
+function connectRcon() {
+    return Rcon.connect({
         host: rcon_host,
         port: rcon_port,
         password: rcon_password,
+        timeout: RCON_TIMEOUT_MS,
     });
+}
+
+async function run() {
+    let rcon = await connectRcon();
+
+    // Send an RCON command, retrying forever (reconnecting on failure, with
+    // capped backoff) until it succeeds. A benchmark must run to the end no
+    // matter how slow the server is: under load the server can miss the RCON
+    // response deadline ("Timeout for packet id N"), and we must never drop a
+    // teleport or lose a bot over it -- the slowness instead shows up as a
+    // larger total time. Ultimately bounded by the entry script's overall
+    // safety timeout.
+    async function rconSend(cmd) {
+        for (let attempt = 1; ; attempt++) {
+            try {
+                return await rcon.send(cmd);
+            } catch (e) {
+                console.log(
+                    `${username}: rcon '${cmd}' attempt ${attempt} failed ` +
+                    `(${e.message}); reconnecting and retrying`
+                );
+                await sleep(Math.min(500 * attempt, 5000));
+                try { await rcon.end(); } catch (_) { /* already closed */ }
+                try {
+                    rcon = await connectRcon();
+                } catch (ce) {
+                    console.log(`${username}: rcon reconnect failed (${ce.message})`);
+                }
+            }
+        }
+    }
 
     const bot = lib.createBot({ host, username, port, version });
 
     bot.once('spawn', async () => {
-        // Spectator keeps the player loading chunks while immune to fall
-        // damage/suffocation, so the teleport sequence can't be broken by
-        // death/respawn.
-        await rcon.send(`gamemode spectator ${username}`);
-
-        // Readiness guard: don't start teleporting until the bot is fully
-        // settled in the world. The first `tp` issued while the post-login
-        // position/teleport-confirm handshake is still in flight never gets
-        // its destination chunks streamed, so teleport #1 would otherwise eat
-        // the whole timeout. Waiting for the spawn-area chunks to load (this
-        // is mineflayer's own readiness check; safe to use here because the
-        // bot's real position is its actual spawn, not a lagging post-`tp`
-        // position) puts the first teleport in the same settled state as
-        // every later one. Wrapped so a slow/at-cap spawn load degrades to
-        // the fixed settle below rather than aborting the run.
-        try {
-            await bot.waitForChunksToLoad();
-        } catch (e) {
-            console.log(`${username}: waitForChunksToLoad guard: ${e.message}`);
-        }
-        // Conservative extra buffer on top of the guard (waitForChunksToLoad
-        // can return immediately if spawn chunks were already present).
-        await sleep(2000);
-
         const tags = `player=${username},bots=${total_bots},node_index=${global_index}`;
         const lines = [];
         const latencies = [];
-        const runStart = Date.now();
+        let completed = 0;
+        let runStart = Date.now();
 
-        for (let k = 0; k < teleports; k++) {
-            const target = targetFor(k);
-            const t0 = Date.now();
-            // Attach the chunk waiter *before* teleporting so we can't miss
-            // the load event.
-            const loadedP = waitForChunk(bot, target, chunk_load_timeout_ms);
-            await rcon.send(`tp ${username} ${target.x} ${target.y} ${target.z}`);
-            const loaded = await loadedP;
-            const load_ms = Date.now() - t0;
-            latencies.push(load_ms);
+        try {
+            // Spectator keeps the player loading chunks while immune to fall
+            // damage/suffocation, so the sequence can't be broken by death.
+            await rconSend(`gamemode spectator ${username}`);
 
-            const dist = start_distance + k * step_distance;
+            // Readiness guard: wait for the bot to settle in the world before
+            // teleporting. (NOTE: this does NOT currently fix the first-
+            // teleport timeout -- teleport #1 still eats the timeout -- so the
+            // root cause is still open; kept as a cheap best-effort settle.)
+            try {
+                await bot.waitForChunksToLoad();
+            } catch (e) {
+                console.log(`${username}: waitForChunksToLoad guard: ${e.message}`);
+            }
+            await sleep(2000);
+
+            runStart = Date.now();
+            for (let k = 0; k < teleports; k++) {
+                const target = targetFor(k);
+                const t0 = Date.now();
+                // Reliably issue the teleport first (retrying through RCON
+                // timeouts), *then* wait for the destination chunks. Waiting
+                // first would let the chunk-load timer be eaten by RCON
+                // retries; waitForChunk's getColumnAt poll covers the tiny
+                // window between the tp landing and the listener attaching.
+                await rconSend(`tp ${username} ${target.x} ${target.y} ${target.z}`);
+                const loaded = await waitForChunk(bot, target, chunk_load_timeout_ms);
+                const load_ms = Date.now() - t0;
+                latencies.push(load_ms);
+                completed++;
+
+                const dist = start_distance + k * step_distance;
+                console.log(
+                    `${username}: teleport ${k + 1}/${teleports} to ` +
+                    `(${target.x}, ${target.y}, ${target.z}) [dist ${dist}] ` +
+                    `loaded in ${load_ms}ms${loaded ? '' : ' (TIMEOUT)'}`
+                );
+                lines.push(
+                    `minecraft_worldgen_teleport,${tags},teleport=${k} ` +
+                    `load_ms=${load_ms},distance=${dist}i,timed_out=${loaded ? 0 : 1}i ${Date.now()}`
+                );
+            }
+        } catch (e) {
+            // Log and fall through to finally so partial metrics are still
+            // committed -- a bot that dies mid-run (e.g. an RCON/connection
+            // drop under load) must not silently vanish.
             console.log(
-                `${username}: teleport ${k + 1}/${teleports} to ` +
-                `(${target.x}, ${target.y}, ${target.z}) [dist ${dist}] ` +
-                `loaded in ${load_ms}ms${loaded ? '' : ' (TIMEOUT)'}`
+                `${username}: ERROR after ${completed}/${teleports} teleports: ` +
+                `${e && e.stack ? e.stack : e}`
             );
-            const ts_ms = Date.now();
-            lines.push(
-                `minecraft_worldgen_teleport,${tags},teleport=${k} ` +
-                `load_ms=${load_ms},distance=${dist}i,timed_out=${loaded ? 0 : 1}i ${ts_ms}`
-            );
+        } finally {
+            if (latencies.length) {
+                const total_ms = Date.now() - runStart;
+                const mean_ms =
+                    latencies.reduce((a, b) => a + b, 0) / latencies.length;
+                const max_ms = Math.max(...latencies);
+                console.log(
+                    `${username}: done. ${completed}/${teleports} teleports in ` +
+                    `${total_ms}ms (mean ${mean_ms.toFixed(0)}ms, max ${max_ms}ms).`
+                );
+                lines.push(
+                    `minecraft_worldgen,${tags} ` +
+                    `total_duration_ms=${total_ms},teleports=${completed}i,` +
+                    `mean_load_ms=${mean_ms},max_load_ms=${max_ms} ${Date.now()}`
+                );
+            } else {
+                console.log(`${username}: no teleports completed; nothing to commit.`);
+            }
+            await commitMetrics(lines);
+            await rcon.end().catch(() => {});
+            try {
+                bot.quit('worldgen: done');
+            } catch (e) { /* bot already disconnected */ }
+            parentPort.postMessage({ username, completed });
         }
-
-        const total_ms = Date.now() - runStart;
-        const mean_ms = latencies.reduce((a, b) => a + b, 0) / latencies.length;
-        const max_ms = Math.max(...latencies);
-        console.log(
-            `${username}: done. ${teleports} teleports in ${total_ms}ms ` +
-            `(mean ${mean_ms.toFixed(0)}ms, max ${max_ms}ms).`
-        );
-        lines.push(
-            `minecraft_worldgen,${tags} ` +
-            `total_duration_ms=${total_ms},teleports=${teleports}i,` +
-            `mean_load_ms=${mean_ms},max_load_ms=${max_ms} ${Date.now()}`
-        );
-
-        await commitMetrics(lines);
-        await rcon.end().catch(() => {});
-        bot.quit('worldgen: teleports complete');
-        parentPort.postMessage({
-            username,
-            total_ms,
-            teleports,
-            mean_ms,
-            max_ms,
-        });
     });
 }
 
