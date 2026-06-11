@@ -59,6 +59,12 @@ class MinecraftServer:
     # For a benchmark we want load to make the server *slow*, not kill it.
     DEFAULT_MAX_TICK_TIME = -1
 
+    # JVM heap (itzg MEMORY env -> -Xms/-Xmx). itzg defaults to 1G, which a
+    # world-gen workload (many players streaming fresh chunks) exhausts ->
+    # java.lang.OutOfMemoryError. Default to a roomier heap so memory isn't
+    # the bottleneck; bump it via the `memory` kwarg for heavier runs.
+    DEFAULT_MEMORY = "4G"
+
     def __init__(
         self,
         name: str = "",
@@ -66,6 +72,7 @@ class MinecraftServer:
         rcon_password: str = "",
         version: str = DEFAULT_VERSION,
         max_tick_time: int = DEFAULT_MAX_TICK_TIME,
+        memory: str = DEFAULT_MEMORY,
     ) -> None:
         self.image_url = image_url
         self.data_dir = tempfile.mkdtemp(dir="/tmp", prefix="mc-data-")
@@ -73,6 +80,7 @@ class MinecraftServer:
         self.rcon_password = rcon_password or random_string(16)
         self.version = version
         self.max_tick_time = max_tick_time
+        self.memory = memory
         self.running = False
         # Background health monitor state (see start_health_monitor()).
         self._crash: Optional[MinecraftServerCrashed] = None
@@ -95,6 +103,8 @@ class MinecraftServer:
                 f"{JOLOKIA_JAR}:/opt/jolokia.jar",
                 "--env",
                 "EULA=TRUE",
+                "--env",
+                f"MEMORY={self.memory}",
                 "--env",
                 f"VERSION={self.version}",
                 "--env",
