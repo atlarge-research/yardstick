@@ -7,6 +7,7 @@
 // worker has finished its teleports -- this workload is completion-based,
 // not duration-based. TIMEOUT is only a safety net for a stuck run.
 
+const fs = require('fs');
 const path = require('path');
 const { Worker } = require('worker_threads');
 
@@ -36,8 +37,23 @@ const influx = {
 
 const WORKER_SCRIPT = path.join(__dirname, 'worker.js');
 
+// Per-run completion sentinel. Written to the bind-mounted scripts root
+// (= the workload's working dir on the node) so the headnode can poll it over
+// remote()/SSH to learn when this detached instance has finished -- an
+// `apptainer instance run` instance does not terminate on its own when the
+// entry script exits.
+const STATUS_FILE = path.join(__dirname, '..', 'worldgen.status');
+
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function writeStatus(obj) {
+    try {
+        fs.writeFileSync(STATUS_FILE, JSON.stringify(obj) + '\n');
+    } catch (e) {
+        console.log(`worldgen: failed to write status file: ${e}`);
+    }
 }
 
 function start_worker(username, global_index) {
@@ -95,12 +111,29 @@ async function run() {
         return 'timeout';
     });
 
-    const result = await Promise.race([
-        Promise.allSettled(done).then(() => 'complete'),
-        safety,
-    ]);
-
-    console.log(`worldgen: finished (${result}).`);
+    let result = 'error';
+    let settled = [];
+    try {
+        result = await Promise.race([
+            Promise.allSettled(done).then((s) => {
+                settled = s;
+                return 'complete';
+            }),
+            safety,
+        ]);
+    } catch (e) {
+        console.log(`worldgen: run error: ${e && e.stack ? e.stack : e}`);
+    } finally {
+        // Always drop the sentinel so the headnode's wait() stops polling.
+        const players_done = settled.filter((s) => s.status === 'fulfilled').length;
+        writeStatus({
+            status: result,
+            players: num_bots,
+            players_done,
+            ts: Date.now(),
+        });
+        console.log(`worldgen: finished (${result}).`);
+    }
     process.exit(0);
 }
 

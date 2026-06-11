@@ -28,12 +28,11 @@ The published image lives at docker://jdonkervliet/yardstick-mineflayer:1.0;
 override via the image_url constructor kwarg if you publish your own.
 """
 
-import sys
-import threading
+import json
 import time
 from datetime import timedelta
 from pathlib import Path
-from typing import IO, List, Optional
+from typing import Callable, List, Optional
 
 from plumbum import local
 
@@ -45,24 +44,6 @@ from yardstick_benchmark.games.minecraft.server import (
 from yardstick_benchmark.model import Node
 from yardstick_benchmark.monitoring import InfluxDBInfo
 from yardstick_benchmark.util import random_string, remote
-
-
-def _pump(src: Optional[IO], dst: IO) -> None:
-    """Stream lines from a subprocess pipe `src` to `dst` (e.g. sys.stdout),
-    decoding bytes if needed. Used to forward a foreground workload's output
-    so it's visible for debugging instead of being buffered and discarded."""
-    if src is None:
-        return
-    try:
-        for line in iter(src.readline, b""):
-            if not line:
-                break
-            if isinstance(line, (bytes, bytearray)):
-                line = line.decode(errors="replace")
-            dst.write(line)
-            dst.flush()
-    except Exception:
-        pass
 
 
 # Root of the workload tree as it lives on the headnode (this Python
@@ -126,6 +107,10 @@ class WorldGeneration:
     INSTANCE_NAME = "yardstick-worldgen"
     CONTAINER_SCRIPTS_ROOT = "/opt/workload/scripts"
     ENTRY_SCRIPT = f"{CONTAINER_SCRIPTS_ROOT}/worldgen/main.js"
+    # Completion sentinel the entry script drops in its working dir (== the
+    # bind-mounted scripts root) when the run finishes; poll_status()/wait()
+    # read it. Kept in sync with main.js's STATUS_FILE.
+    STATUS_FILE = "worldgen.status"
 
     def __init__(
         self,
@@ -166,6 +151,9 @@ class WorldGeneration:
 
     def _env_args(self) -> List[str]:
         return [
+            # Quiet Node's punycode deprecation warning so it doesn't flood
+            # the instance's stderr and bury the workload's own logs().
+            "--env", "NODE_OPTIONS=--no-deprecation",
             "--env", f"MC_HOST={self.server_host}",
             "--env", f"MC_PORT={GAME_PORT}",
             "--env", f"MC_VERSION={self.minecraft_version}",
@@ -215,82 +203,95 @@ class WorldGeneration:
             )
             machine["apptainer"][args]()
 
-    def run(self) -> None:
-        """Run the workload in the foreground, blocking until every player has
-        finished its teleports (the entry script then exits) or the safety
-        ``timeout`` elapses.
+    def poll_status(self) -> Optional[dict]:
+        """Return the workload's completion status as a dict, or None if it
+        hasn't finished yet.
 
-        This is the natural lifecycle for a completion-based workload and the
-        preferred alternative to start()/stop() + external polling. It uses
-        ``apptainer run`` rather than ``instance run``, so -- unlike start() --
-        it leaves no detached instance behind: the container is gone the moment
-        the entry script exits. The caller simply blocks here until the run is
-        done; deploy() it first and cleanup() it after.
-
-        The container's stdout/stderr are streamed through to this process's
-        stdout/stderr (so e.g. a notebook cell shows the per-bot logs live and
-        surfaces workload errors instead of swallowing them), and a non-zero
-        exit is raised rather than ignored.
-
-        Raises:
-            RuntimeError: if the workload process exits non-zero.
-            TimeoutError: if the workload doesn't exit within ``timeout`` plus
-                a small margin (the entry script self-limits to ``timeout``, so
-                this only trips if that safety net itself wedges). The
-                foreground container is killed before the error propagates, and
-                a KeyboardInterrupt is handled the same way -- nothing is left
-                running.
+        The entry script (start()ed as a detached instance) drops a status
+        sentinel in its working dir when the run finishes/aborts; this reads it
+        over remote(), so it works whether the workload runs on this host or
+        another. The dict carries at least ``status`` ('complete'/'timeout'/
+        'error') plus ``players``/``players_done``.
         """
         with remote(self.node.host) as machine:
-            args = (
-                [
-                    "run",
-                    "--no-https",
-                    "--compat",
-                    "--bind",
-                    f"{self.wd}:{self.CONTAINER_SCRIPTS_ROOT}",
-                ]
-                + self._env_args()
-                + [self.image_url, self.ENTRY_SCRIPT]
-            )
-            # The entry script self-limits to `timeout`; give apptainer a small
-            # margin on top before we force-kill a wedged run.
-            grace_s = self.timeout.total_seconds() + 60
-            deadline = time.monotonic() + grace_s
-            proc = machine["apptainer"][args].popen()
-            # Drain stdout/stderr in background threads: this both surfaces the
-            # workload's output for debugging and prevents a full pipe buffer
-            # from blocking a chatty (e.g. 8-bot) run.
-            pumps = [
-                threading.Thread(target=_pump, args=(proc.stdout, sys.stdout), daemon=True),
-                threading.Thread(target=_pump, args=(proc.stderr, sys.stderr), daemon=True),
-            ]
-            for t in pumps:
-                t.start()
+            status_path = machine.path(f"{self.wd}/{self.STATUS_FILE}")
+            if not status_path.exists():
+                return None
             try:
-                while proc.poll() is None:
-                    if time.monotonic() > deadline:
-                        raise TimeoutError(
-                            f"worldgen workload did not finish within "
-                            f"{grace_s:.0f}s"
-                        )
-                    time.sleep(2)
-                if proc.returncode != 0:
-                    raise RuntimeError(
-                        f"worldgen workload exited with code {proc.returncode}"
-                    )
-            finally:
-                # Force-kill the foreground container on timeout / interrupt /
-                # any error so nothing is left running.
-                if proc.poll() is None:
-                    proc.terminate()
+                return json.loads(status_path.read())
+            except (ValueError, OSError):
+                return {"status": "unknown"}
+
+    def wait(
+        self,
+        health_check: Optional[Callable[[], None]] = None,
+        poll_s: float = 5.0,
+        timeout: Optional[timedelta] = None,
+    ) -> dict:
+        """Block (on the headnode) until the started workload finishes, then
+        return its status dict.
+
+        This is the detached-instance completion mechanism: deploy() and
+        start() the workload, then wait() for it. Nothing runs in the
+        foreground -- the workload is an `apptainer instance run` on its node
+        and this only polls a sentinel over remote()/SSH, so it works when the
+        headnode itself can't run containers.
+
+        Args:
+            health_check: optional zero-arg callable invoked each poll; if it
+                raises (e.g. MinecraftServer.raise_if_crashed), that exception
+                propagates out of wait() so a dependency failure aborts the
+                run promptly. The caller still stop()s/cleanup()s the workload
+                in a finally.
+            poll_s: seconds between polls.
+            timeout: max wall-clock to wait; defaults to the workload's own
+                safety ``timeout`` plus a margin. Raises TimeoutError if
+                exceeded.
+        """
+        grace_s = (timeout or self.timeout).total_seconds() + 60
+        deadline = time.monotonic() + grace_s
+        with remote(self.node.host) as machine:
+            status_path = machine.path(f"{self.wd}/{self.STATUS_FILE}")
+            while True:
+                if health_check is not None:
+                    health_check()
+                if status_path.exists():
                     try:
-                        proc.wait(timeout=15)
-                    except Exception:
-                        proc.kill()
-                # Let the pumps drain any remaining buffered output.
-                for t in pumps:
-                    t.join(timeout=5)
+                        return json.loads(status_path.read())
+                    except (ValueError, OSError):
+                        return {"status": "unknown"}
+                if time.monotonic() > deadline:
+                    raise TimeoutError(
+                        f"worldgen workload did not finish within {grace_s:.0f}s"
+                    )
+                time.sleep(poll_s)
+
+    def logs(self) -> str:
+        """Return the workload instance's captured stdout+stderr (best effort).
+
+        `apptainer instance run` writes instance logs under
+        ~/.apptainer/instances/logs/<host>/<user>/<instance>.{out,err} on the
+        node that runs it; fetch them over remote() for debugging (the
+        detached-model replacement for the old foreground stdout streaming).
+        Returns "" if they can't be located.
+        """
+        with remote(self.node.host) as machine:
+            try:
+                home = machine.env["HOME"]
+                host = machine["hostname"]().strip()
+                user = machine["whoami"]().strip()
+            except Exception:
+                return ""
+            base = (
+                f"{home}/.apptainer/instances/logs/{host}/{user}/"
+                f"{self.INSTANCE_NAME}"
+            )
+            out = ""
+            for ext in ("out", "err"):
+                p = machine.path(f"{base}.{ext}")
+                if p.exists():
+                    out += f"--- {self.INSTANCE_NAME}.{ext} ---\n{p.read()}\n"
+            return out
 
     def stop(self) -> None:
         with remote(self.node.host) as machine:
