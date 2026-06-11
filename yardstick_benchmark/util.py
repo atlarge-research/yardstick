@@ -90,16 +90,26 @@ def wait_for_url(url: str, timeout_s: float, poll_s: float = 1.0) -> None:
     )
 
 
-# Keep long-lived SSH sessions (e.g. a foreground workload run that streams
-# output for minutes) from being dropped during quiet/laggy periods: send a
-# keepalive every 15s and only give up after ~8 missed (~2min), and enable
+# SSH options for every remote() connection.
+#
+# Keepalives keep long-lived sessions (e.g. a foreground workload run that
+# streams output for minutes) from being dropped during quiet/laggy periods:
+# send a keepalive every 15s and only give up after ~8 missed (~2min), plus
 # TCP-level keepalive. BatchMode avoids a dead host hanging on a password
 # prompt.
-_SSH_KEEPALIVE_OPTS = [
+#
+# StrictHostKeyChecking=accept-new auto-adds a *new* node's host key to
+# known_hosts instead of prompting -- which BatchMode would otherwise turn
+# into a "Host key verification failed" error on a node's first connection
+# (freshly provisioned compute nodes are new every reservation). A *changed*
+# key for a known host is still rejected, so this isn't blanket-disabling the
+# check.
+_SSH_OPTS = [
     "-o", "ServerAliveInterval=15",
     "-o", "ServerAliveCountMax=8",
     "-o", "TCPKeepAlive=yes",
     "-o", "BatchMode=yes",
+    "-o", "StrictHostKeyChecking=accept-new",
 ]
 
 
@@ -115,8 +125,25 @@ def remote(host: str):
     if is_localhost(host):
         yield local
         return
-    machine = SshMachine(host, ssh_opts=_SSH_KEEPALIVE_OPTS)
+    machine = SshMachine(host, ssh_opts=_SSH_OPTS)
     try:
         yield machine
     finally:
         machine.close()
+
+
+def upload(machine, src, dst) -> None:
+    """Copy local file `src` onto `machine` at path `dst`.
+
+    Dispatches to the machine's SSH ``upload`` (scp) when `machine` is a
+    remote node, or a plain local copy when it's the local machine that
+    ``remote()`` yields for localhost (LocalMachine has no upload()).
+
+    Parent directories are NOT created (scp won't make them) -- ``mkdir`` the
+    destination's directory on the node first if it may not exist.
+    """
+    src = local.path(src)
+    if isinstance(machine, SshMachine):
+        machine.upload(src, dst)
+    else:
+        src.copy(machine.path(dst))
