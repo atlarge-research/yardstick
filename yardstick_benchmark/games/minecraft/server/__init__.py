@@ -11,6 +11,19 @@ JOLOKIA_PORT = 8778
 GAME_PORT = 25565
 RCON_PORT = 25575
 
+# Substrings in the server console log that indicate a crash / forced
+# shutdown. The crash-report header covers any crash (OOM, unhandled error,
+# Watchdog); the Watchdog line is kept as a belt-and-braces signal in case the
+# Watchdog is re-enabled.
+_CRASH_LOG_MARKERS = (
+    "---- Minecraft Crash Report ----",
+    "Considering it to be crashed",
+)
+
+
+class MinecraftServerCrashed(RuntimeError):
+    """Raised when the Minecraft server's log/crash-reports show it crashed."""
+
 
 # https://gist.github.com/tensoralex/a278b39a965d7c509dbd06b57797c6c1
 class MinecraftServer:
@@ -33,18 +46,27 @@ class MinecraftServer:
     # default. Bump this when the workload image's Mineflayer is upgraded.
     DEFAULT_VERSION = "1.21.11"
 
+    # Disable Minecraft's Watchdog by default (max-tick-time = -1). The
+    # Watchdog force-crashes the server if a single tick exceeds ~60s, which a
+    # heavy world-generation workload (many players loading fresh chunks at
+    # once) trivially trips -- self-crashing the very server we're measuring.
+    # For a benchmark we want load to make the server *slow*, not kill it.
+    DEFAULT_MAX_TICK_TIME = -1
+
     def __init__(
         self,
         name: str = "",
         image_url: str = DEFAULT_IMAGE_URL,
         rcon_password: str = "",
         version: str = DEFAULT_VERSION,
+        max_tick_time: int = DEFAULT_MAX_TICK_TIME,
     ) -> None:
         self.image_url = image_url
         self.data_dir = tempfile.mkdtemp(dir="/tmp", prefix="mc-data-")
         self.instance_name = name if name else f"mc-{uuid.uuid4()}"
         self.rcon_password = rcon_password or random_string(16)
         self.version = version
+        self.max_tick_time = max_tick_time
         self.running = False
 
     def start(self):
@@ -73,6 +95,8 @@ class MinecraftServer:
                 "ENABLE_RCON=true",
                 "--env",
                 f"RCON_PASSWORD={self.rcon_password}",
+                "--env",
+                f"MAX_TICK_TIME={self.max_tick_time}",
                 "--env",
                 f"JVM_OPTS={jvm_opts}",
                 self.image_url,
@@ -132,3 +156,34 @@ class MinecraftServer:
     def set_world_spawn(self, x: int, z: int, y: int = 4) -> None:
         """Move the world spawn to (x, y, z) via RCON."""
         self.rcon(f"setworldspawn {x} {y} {z}")
+
+    def raise_if_crashed(self) -> None:
+        """Raise MinecraftServerCrashed if the server's log/crash-reports show
+        a crash (a Watchdog forced shutdown, an OOM, or any unhandled error).
+
+        Cheap and idempotent -- meant to be polled by the orchestrator (e.g.
+        each iteration of the loop that waits for a workload to finish) so a
+        server crash aborts the run promptly instead of letting clients spin
+        against a dead server. Reads the server's own log under its data dir;
+        for an off-headnode server this read will move behind `remote()`.
+        """
+        # A crash-report file is the unambiguous signal: vanilla writes here
+        # only when the server actually crashes. Prefer it for the message.
+        crash_dir = Path(self.data_dir) / "crash-reports"
+        reports = sorted(crash_dir.glob("*.txt")) if crash_dir.is_dir() else []
+        if reports:
+            detail = reports[-1].read_text(errors="replace")[:2000]
+            raise MinecraftServerCrashed(
+                f"Minecraft server '{self.instance_name}' crashed "
+                f"(see {reports[-1]}):\n{detail}"
+            )
+        # Fall back to scanning the console log for crash markers.
+        log = Path(self.data_dir) / "logs" / "latest.log"
+        if log.is_file():
+            text = log.read_text(errors="replace")
+            for marker in _CRASH_LOG_MARKERS:
+                if marker in text:
+                    raise MinecraftServerCrashed(
+                        f"Minecraft server '{self.instance_name}' crash "
+                        f"detected in log (marker: {marker!r})"
+                    )
