@@ -90,16 +90,32 @@ def wait_for_url(url: str, timeout_s: float, poll_s: float = 1.0) -> None:
     )
 
 
+# Keep long-lived SSH sessions (e.g. a foreground workload run that streams
+# output for minutes) from being dropped during quiet/laggy periods: send a
+# keepalive every 15s and only give up after ~8 missed (~2min), and enable
+# TCP-level keepalive. BatchMode avoids a dead host hanging on a password
+# prompt.
+_SSH_KEEPALIVE_OPTS = [
+    "-o", "ServerAliveInterval=15",
+    "-o", "ServerAliveCountMax=8",
+    "-o", "TCPKeepAlive=yes",
+    "-o", "BatchMode=yes",
+]
+
+
 @contextmanager
 def remote(host: str):
     """Yield a plumbum machine for `host`, closing it on exit if it's an SSH
     connection. For localhost, yields the global `local` machine which has
     no per-use lifecycle.
+
+    Remote machines are opened with SSH keepalives so a long foreground
+    command (e.g. a workload's run()) doesn't get its connection torn down.
     """
     if is_localhost(host):
         yield local
         return
-    machine = SshMachine(host)
+    machine = SshMachine(host, ssh_opts=_SSH_KEEPALIVE_OPTS)
     try:
         yield machine
     finally:
