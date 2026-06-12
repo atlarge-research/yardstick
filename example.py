@@ -10,6 +10,7 @@ For a multi-node setup on a DAS-style cluster, provision Nodes via
 Telegraf / WalkAround per node, fanning out via `util.fan_out`.
 """
 
+import getpass
 from pathlib import Path
 from time import sleep
 
@@ -21,7 +22,10 @@ from yardstick_benchmark.util import wait_for_url
 
 
 def main() -> None:
-    node = Node("localhost", Path("/tmp/ysat"))
+    # Working dir lives on the shared /tmp; prefix with the username so two
+    # users on the same headnode don't collide on one dir (whoever creates it
+    # first owns it, locking the other out).
+    node = Node("localhost", Path(f"/tmp/{getpass.getuser()}-ysat"))
 
     # Wipe any leftover state from a previous run.
     yardstick_benchmark.clean([node])
