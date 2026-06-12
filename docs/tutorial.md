@@ -15,7 +15,7 @@ This is orders of magnitudes lower than today's most scalable worlds, such as EV
 The only way MLG operators can support their high player numbers and sustain their high popularity is by
 splitting players across a large number of small instances, preventing players from playing together in large groups.
 
-In this tutorial, you make your first steps into exploring the performance of MLGs by running performance evaluation experiments with Yardstick,<sup id="a3">[3](#fn3)</sup><sup>,</sup><sup id="a4">[4](#fn4)</sup> our MLG benchmark.
+In this tutorial, you take your first steps in exploring the performance of MLGs by running performance evaluation experiments with Yardstick,<sup id="a3">[3](#fn3)</sup><sup>,</sup><sup id="a4">[4](#fn4)</sup> our MLG benchmark.
 
 ## Setting Up
 
@@ -37,12 +37,12 @@ SSH will first request your VUnet password, and then your DAS-5 password.
 > If you connect to the DAS-5 regularly, it is worth switching to public-key authentication using `ssh-keygen` and `ssh-copy-id`. This is left as an exercise for the reader.
 
 > [!TIP]
-> Connecting from outside of the university network? You can either use [eduVPN](https://www.eduvpn.org/client-apps/) to connet to the DAS-5 when you're not directly connected to the VU campus network, or use `ssh das5-remote` after adding this to your `~/.ssh/config`:
+> Connecting from outside of the university network? You can either use [eduVPN](https://www.eduvpn.org/client-apps/) to connect to the DAS-5 when you're not directly connected to the VU campus network, or use `ssh das5-remote` after adding this to your `~/.ssh/config`:
 >
 > ```
 > Host das5-remote
 > 	HostName fs0.das5.cs.vu.nl
-> 	User jdonkerv
+> 	User DAS_5_USERNAME
 > 	ProxyJump vu-data
 > ```
 
@@ -80,10 +80,12 @@ which will make you increasingly adept at using Yardstick specifically, and perf
 ### Jupyter Notebook Example
 
 We recommend reading the file line by line to develop a sufficiently good understanding of what is going on.
-Afterwards, run your first experiment by running all cells in the notebook.
-The cell that runs the experiment can take a long time (~10 minutes) to complete.
-This is expected.
-While the experiment is running, you can run type `preserve -llist` in the terminal to get an overview of node reservations on the DAS-5. You'll likely see a line similar to the one below, with your username:
+The notebook compares world generation across three Minecraft versions. Run the cells from the top: first **Setup**, then **Start InfluxDB** (this brings up the metrics database on the headnode and leaves it running), then the **Experiment runner**. Each of the three **Run** cells leases its own two compute nodes, runs one version, and releases them, so a single version takes roughly 10-15 minutes and all three take ~30-45 minutes. You can run just one version cell to start, or all three for the full comparison. The plot cells below read the captured results, so you can re-run them at any time.
+
+> [!IMPORTANT]
+> Leave the **Cleanup** cell (at the very bottom) for last -- it stops and deletes InfluxDB. Run it only when you are finished with all the exercises, otherwise the later exercises and the metric-exploration cells will have no database to query.
+
+While an experiment is running, you can run `preserve -llist` in the terminal to get an overview of node reservations on the DAS-5. You'll likely see a line similar to the one below, with your username:
 
 ```
 id      user            start           stop            state   nhosts  hosts
@@ -95,16 +97,14 @@ This shows that user `core2435` has reserved 2 nodes: `node001` and `node015` fr
 > **Question 1**  
 > Which nodes did you reserve? How many nodes are in use by others? How many nodes do they use?
 
-When the experiment has completed, it is time to review the resulting plots.
+Once your runs have completed, it is time to review the resulting plots.
 
 > **Question 2**  
 > Are the results surprising? Why (not)?
 
 ### Visualizing Results
 
-Initially, only the CPU utilization is plotted.
-However, there is a table containing the server's tick duration.
-Add a plot that visualizes the server's tick duration over time.
+Study the tick duration over time for the different configurations.
 
 > **Question 3**  
 > Do the tick durations match your expectations?
@@ -115,7 +115,7 @@ Add a plot that visualizes the server's tick duration over time.
 Edit the notebook to run the experiments with a different number of players.
 
 > **Question 4**  
-Does changing the number of players have an impact on the game's performance?
+> Does changing the number of players have an impact on the game's performance?
 
 ### Compare by Changing the Game's Configuration
 
@@ -126,10 +126,10 @@ Edit the notebook to evaluate the impact of changing the view range.
 
 ### Visualize Network Bandwidth Usage
 
-The data used for the previous plots is obtained by querying a InfluxDB database instance containing the experiment measurements.
+The data used for the previous plots is obtained by querying an InfluxDB database instance containing the experiment measurements.
 This database contains several other metrics and measurements.
 
-Use the InfluxDB database and a Flux query to visualize the network bandwidth usage of the server node.
+Visualize the network bandwidth usage of the server node. The **Exploring all metrics** cell near the bottom of the notebook lists every available measurement and field (look at the `net` measurement) and shows how to plot any of them in pandas, without writing Flux -- though you can write a Flux query directly if you prefer. Note that the `net` byte counters are cumulative, so take their per-interval difference to turn them into a bandwidth (rate).
 
 > **Question 6**  
 > What does the network usage look like?
@@ -140,7 +140,7 @@ Use the InfluxDB database and a Flux query to visualize the network bandwidth us
 The example uses a player workload called `WorldGeneration`,
 in which a variable number of players connect to the server and teleport to new areas to trigger terrain generation.
 
-We suspect that the behavior of players can have a significant impact of the game's performance.
+We suspect that the behavior of players can have a significant impact on the game's performance.
 
 Edit Yardstick's internals and add a new player workload with different player behavior.
 
@@ -149,7 +149,7 @@ Edit Yardstick's internals and add a new player workload with different player b
 
 ### Done Before Time Runs Out?
 
-Explore Yardstick's features freely, or ask the lecture to come up with an ad-hoc exercise to complete.
+Explore Yardstick's features freely, or ask the lecturer to come up with an ad-hoc exercise to complete.
 
 ## BONUS: Connect to the Game Server during Your Experiment
 
@@ -157,14 +157,19 @@ While debugging your experiments, it can be useful to see what the game and its 
 However, you can easily work around this by creating an SSH tunnel.
 
 Start by running your experiment or by launching the game server manually on a worker node.
-Next, use `preserve -llist` to identify which machine (e.g., node0XY) is running the game server.<sup id="a4">[4](#fn4)</sup> Now create two SSH tunnels from your local machine to the worker node that is running the game server, replacing `node0XY` with the correct hostname:
+Next, use `preserve -llist` to identify which machine (e.g., node0XY) is running the game server.<sup id="a4b">[4](#fn4)</sup> Now create an SSH tunnel from your local machine to the worker node that is running the game server, replacing `node0XY` with the correct hostname:
 
 ```
 ssh -L 25565:node0XY:25565 das5
 ```
 *Working out how this command works exactly is left as an exercise for the reader.*
 
-Finally, start your Minecraft 1.12.2 client on your local machine and connect to the server at `localhost:25565`. You should now be connected to the game server running on the DAS-5.
+Finally, start a Minecraft Java client **matching the server version you ran** (e.g. `1.21.11`) on your local machine and connect to the server at `localhost:25565`. You should now be connected to the game server running on the DAS-5.
+
+> [!TIP]
+> [Prism Launcher](https://prismlauncher.org/) lets you install and switch between Minecraft versions easily, so you can match whichever version your experiment ran. Because the experiment servers run with authentication disabled (`online-mode=false`), an *offline* account (any username, no Mojang login) is enough to connect.
+>
+> Launching the Java client does still require owning Minecraft Java Edition. If you don't have a license you can't join with a graphical client -- but the emulated players' behaviour is fully captured by the metrics and plots, which is what the benchmark is really about.
 
 ---
 
