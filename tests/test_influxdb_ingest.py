@@ -57,7 +57,7 @@ def test_telegraf_ingests_into_influxdb(tmp_path, apptainer_cleanup):
     try:
         influxdb.deploy()
         influxdb.start()
-        wait_for_url(f"http://{node.host}:8086/health", timeout_s=60)
+        wait_for_url(f"{influxdb.url}/health", timeout_s=60)
 
         telegraf.deploy()
         telegraf.start()
@@ -100,7 +100,7 @@ def test_minecraft_tick_ingests_into_influxdb(tmp_path, apptainer_cleanup):
     try:
         influxdb.deploy()
         influxdb.start()
-        wait_for_url(f"http://{node.host}:8086/health", timeout_s=60)
+        wait_for_url(f"{influxdb.url}/health", timeout_s=60)
 
         minecraft.start()
         # Wait for the server to be fully ready (RCON port up, "Done!"

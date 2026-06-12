@@ -31,11 +31,20 @@ class InfluxDB(object):
         node: Node,
         admin_password: str = "password",
         admin_token: Optional[str] = None,
+        port: Optional[int] = None,
     ):
         self.node = node
         self.image_url = "docker://influxdb:2.8"
         self.admin_password = admin_password
         self.admin_token = admin_token or random_string(16)
+        # apptainer runs the container on the host network namespace, so
+        # InfluxDB binds a *host* port on `node`. The default 8086 means
+        # concurrent users on a shared headnode all collide on one port: only
+        # the first to bind wins, and everyone else's client silently reaches
+        # that instance -- which rejects their (different) admin token. Derive
+        # a per-user default port from the OS uid (unique per user) so each
+        # user's instance gets its own port. Callers can override explicitly.
+        self.port = port if port is not None else 8086 + (os.getuid() % 1000)
         # Persist InfluxDB's data to a host dir bind-mounted into the container
         # (at /var/lib/influxdb2), so it survives container stop/start and
         # kernel restarts instead of vanishing with the container's tmpfs.
@@ -44,7 +53,7 @@ class InfluxDB(object):
 
     @property
     def url(self) -> str:
-        return f"http://{self.node.host}:8086"
+        return f"http://{self.node.host}:{self.port}"
 
     def deploy(self) -> None:
         with remote(self.node.host):
@@ -64,6 +73,8 @@ class InfluxDB(object):
                 "--compat",
                 "--bind",
                 f"{self.data_dir}:/var/lib/influxdb2",
+                "--env",
+                f"INFLUXD_HTTP_BIND_ADDRESS=:{self.port}",
                 "--env",
                 "DOCKER_INFLUXDB_INIT_MODE=setup",
                 "--env",
