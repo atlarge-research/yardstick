@@ -58,7 +58,7 @@ Now that your VSCode is connected to DAS-5, open a terminal (shortcut: `ctrl+~`)
 
 ```
 curl -LsSf https://astral.sh/uv/install.sh | sh
-git clone git@github.com:atlarge-research/yardstick.git
+git clone https://github.com/atlarge-research/yardstick.git
 cd yardstick
 uv sync --extra notebooks
 ```
