@@ -62,8 +62,6 @@ interface PipelineViewProps {
   envReady: boolean;
   detecting: boolean;
   detectingItem: string | null;
-  onAwsLaunch?: (opts: Record<string, any>) => void;
-  onAwsTerminate?: (opts: Record<string, any>) => void;
 }
 
 export default function PipelineView({

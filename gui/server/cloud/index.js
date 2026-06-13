@@ -66,8 +66,6 @@ function registerAws(socket) {
   socket.on('aws:list-keypairs', ({ region }, cb) => ack(cb, () => getAws(socket).listKeyPairs(region)));
   socket.on('aws:list-security-groups', ({ region }, cb) => ack(cb, () => getAws(socket).listSecurityGroups(region)));
   socket.on('aws:list-instances', ({ region }, cb) => ack(cb, () => getAws(socket).listInstances(region)));
-  socket.on('aws:describe-instances', ({ region, instanceIds }, cb) => ack(cb, () => getAws(socket).describeInstances(region, instanceIds)));
-
   socket.on('aws:launch', (req, cb) => ack(cb, async () => {
     const provider = getAws(socket);
     const ids = await provider.launch(req);
@@ -76,22 +74,6 @@ function registerAws(socket) {
   socket.on('aws:start', ({ region, instanceIds }, cb) => ack(cb, () => getAws(socket).start(region, instanceIds)));
   socket.on('aws:stop', ({ region, instanceIds }, cb) => ack(cb, () => getAws(socket).stop(region, instanceIds)));
   socket.on('aws:terminate', ({ region, instanceIds }, cb) => ack(cb, () => getAws(socket).terminate(region, instanceIds)));
-
-  socket.on('aws:create-keypair', ({ region, keyName }, cb) => ack(cb, async () => {
-    const provider = getAws(socket);
-    const { profileId } = providers.get(socket.id) || {};
-    const result = await provider.createKeyPair(region, keyName);
-    if (profileId) {
-      store.saveKeyMaterial('aws', profileId, keyName, result.privateKey);
-    }
-    return { keyName: result.keyName, fingerprint: result.fingerprint, saved: !!profileId };
-  }));
-
-  socket.on('aws:list-saved-keys', (_data, cb) => ack(cb, () => {
-    const { profileId } = providers.get(socket.id) || {};
-    if (!profileId) return [];
-    return store.listKeyMaterial('aws', profileId);
-  }));
 
   socket.on('aws:get-key-material', ({ keyName }, cb) => ack(cb, () => {
     const { profileId } = providers.get(socket.id) || {};

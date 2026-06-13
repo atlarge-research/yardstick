@@ -82,10 +82,20 @@ export default function ExperimentView({
             lineHeight={1.5}
           >
             <Icon as={LuCircleCheck} boxSize="18px" flexShrink={0} mt="2px" />
-            <Box>
+            <Box flex={1}>
               <Text fontWeight={600} mb={1}>Experiment completed</Text>
               <Text fontSize="0.85rem" color={c.textDim}>Results saved. See terminal output for path.</Text>
             </Box>
+            {onSwitchTab && (
+              <Button
+                variant="plain" bg={c.success} color="white" borderRadius={radii.sm}
+                px={4} py="8px" h="auto" fontSize="0.85rem" fontWeight={600}
+                _hover={{ opacity: 0.85 }} flexShrink={0}
+                onClick={() => onSwitchTab('results')}
+              >
+                View Results
+              </Button>
+            )}
           </Flex>
         )}
 

@@ -1000,6 +1000,7 @@ __YS_EXPERIMENT__`;
       await runCmd(session, experimentCmd, socket, 'run-experiment');
 
       socket.emit('experiment:complete', { message: 'Experiment finished!' });
+      socket.emit('results:changed');
       socket.emit('log', { message: 'Experiment completed successfully.' });
     } catch (err) {
       socket.emit('experiment:error', { message: err.message });
@@ -1015,15 +1016,19 @@ __YS_EXPERIMENT__`;
     const user = dasUsername || session.username;
     const useHome = isHomeMode(m);
     const scratchDir = useHome ? '$HOME/yardstick' : `/var/scratch/${user}/yardstick`;
-    const cmd = `
-set -e
-base=${scratchDir}
-if [ ! -d "$base" ]; then
-  exit 0
-fi
-
-find "$base" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort
-`;
+    // Use python3 to list directories reliably (no shell variable expansion issues,
+    // follows symlinks, portable across distros)
+    const basePath = useHome ? 'str(Path.home() / "yardstick")' : JSON.stringify(`/var/scratch/${user}/yardstick`);
+    const cmd = `python3 - <<'__YS_PY__'
+import os, sys, json
+from pathlib import Path
+base = Path(${basePath})
+if not base.is_dir():
+    print(json.dumps([]))
+    sys.exit(0)
+runs = sorted([d.name for d in base.iterdir() if d.is_dir() or d.is_symlink()], reverse=True)
+print(json.dumps(runs))
+__YS_PY__`;
 
     function execOnce(command) {
       return new Promise((resolve, reject) => {
@@ -1043,7 +1048,7 @@ __YS_EXEC__`;
             let out = '';
             stream.on('data', (d) => { out += d.toString(); });
             stream.stderr.on('data', () => {});
-            stream.on('exit', () => resolve(out.trim()));
+            // only resolve on 'close' — data events may still be in flight at 'exit'
             stream.on('close', () => resolve(out.trim()));
           });
         }
@@ -1052,7 +1057,12 @@ __YS_EXEC__`;
 
     try {
       const raw = await execOnce(cmd);
-      const runs = raw ? raw.split('\n').filter(Boolean).reverse() : [];
+      // output is JSON array from python3
+      let runs = [];
+      const jsonStart = raw.indexOf('[');
+      if (jsonStart !== -1) {
+        try { runs = JSON.parse(raw.slice(jsonStart)); } catch { runs = []; }
+      }
       socket.emit('results:list-ok', { runs, scratchDir });
     } catch (err) {
       socket.emit('results:error', { message: err.message });
@@ -1089,7 +1099,6 @@ __YS_EXEC__`;
             let errOut = '';
             stream.on('data', (d) => { out += d.toString(); });
             stream.stderr.on('data', (d) => { errOut += d.toString(); });
-            stream.on('exit', () => resolve({ stdout: out, stderr: errOut }));
             stream.on('close', () => resolve({ stdout: out, stderr: errOut }));
           });
         }

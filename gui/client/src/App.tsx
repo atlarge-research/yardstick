@@ -197,8 +197,7 @@ export default function App() {
               pipelineDone={pipelineDone}
               onRunPipeline={runPipeline}
               onDetectEnv={detectEnv}
-              onAwsLaunch={awsLaunch}
-              onAwsTerminate={awsTerminate}
+
               connected={connected}
               username={sshUsername}
               mode={mode}

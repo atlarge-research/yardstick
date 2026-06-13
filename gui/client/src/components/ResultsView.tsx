@@ -198,19 +198,22 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
     const onData = ({ data }: { data: ChartData }) => { setChartData(data); setLoading(false); };
     const onLoading = () => setLoading(true);
     const onError = ({ message }: { message: string }) => { setError(message); setLoading(false); setListing(false); };
+    const onChanged = () => { if (connected && sessionId) listRuns(); };
 
     socket.on('results:list-ok', onList);
     socket.on('results:data', onData);
     socket.on('results:loading', onLoading);
     socket.on('results:error', onError);
+    socket.on('results:changed', onChanged);
 
     return () => {
       socket.off('results:list-ok', onList);
       socket.off('results:data', onData);
       socket.off('results:loading', onLoading);
       socket.off('results:error', onError);
+      socket.off('results:changed', onChanged);
     };
-  }, [selectedRun]);
+  }, [selectedRun, connected, sessionId, listRuns]);
 
   useEffect(() => {
     if (connected && sessionId) listRuns();

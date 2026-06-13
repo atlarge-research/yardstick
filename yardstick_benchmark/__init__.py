@@ -1,5 +1,5 @@
 from yardstick_benchmark.model import Node, RemoteAction
-from yardstick_benchmark.provisioning import Das, SingleHost, AwsEc2
+from yardstick_benchmark.provisioning import Das
 from pathlib import Path
 
 
