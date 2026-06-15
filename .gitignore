@@ -465,5 +465,5 @@ scratch
 pamuk_ssh_key
 ansible-test
 
-gui/package-lock.json
 gui/client/package-lock.json
+gui/package-lock.json
