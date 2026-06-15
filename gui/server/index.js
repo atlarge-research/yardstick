@@ -863,9 +863,9 @@ from yardstick_benchmark.model import Node
 home = os.path.expanduser('~')
 wd_base = Path(home) / 'yardstick' / 'run'
 
-papermc_node = Node(host=_main_ip, wd=wd_base / 'node000')
+papermc_node = Node(host=_main_ip, wd=wd_base / 'server')
 worker_nodes = [
-    Node(host=ip, wd=Path(f'/home/{_worker_user}/yardstick/run/node{i+1:03d}'))
+    Node(host=ip, wd=Path(f'/home/{_worker_user}/yardstick/run/client{i+1}'))
     for i, ip in enumerate(_worker_ips)
 ]
 nodes = [papermc_node] + worker_nodes
@@ -1100,9 +1100,9 @@ _ym._gen_inv = _patched_gen_inv
 home = os.path.expanduser('~')
 wd_base = Path(home) / 'yardstick' / 'run'
 
-nodes = [
-    Node(host='localhost', wd=wd_base / f'node{i:03d}')
-    for i in range(${numNodes})
+nodes = [Node(host='localhost', wd=wd_base / 'server')] + [
+    Node(host='localhost', wd=wd_base / f'client{i}')
+    for i in range(1, ${numNodes})
 ]
 
 try:
