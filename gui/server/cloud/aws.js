@@ -12,6 +12,7 @@ const {
   TerminateInstancesCommand,
   ImportKeyPairCommand,
   CreateKeyPairCommand,
+  AuthorizeSecurityGroupIngressCommand,
 } = require('@aws-sdk/client-ec2');
 
 const DEFAULT_USERNAME_BY_AMI_NAME_PREFIX = [
@@ -187,6 +188,7 @@ class AwsProvider {
         imageId: i.ImageId,
         launchedAt: i.LaunchTime ? new Date(i.LaunchTime).toISOString() : null,
         defaultUsername: defaultUserForImage(imageNames[i.ImageId] || ''),
+        securityGroupIds: (i.SecurityGroups || []).map((sg) => sg.GroupId),
       };
     });
     return items.sort((a, b) => (b.launchedAt || '').localeCompare(a.launchedAt || ''));
@@ -216,6 +218,7 @@ class AwsProvider {
         imageId: i.ImageId,
         launchedAt: i.LaunchTime ? new Date(i.LaunchTime).toISOString() : null,
         defaultUsername: defaultUserForImage(imageNames[i.ImageId] || ''),
+        securityGroupIds: (i.SecurityGroups || []).map((sg) => sg.GroupId),
       };
     });
   }
@@ -247,6 +250,25 @@ class AwsProvider {
   async stop(region, ids) {
     const client = this._client(region);
     await client.send(new StopInstancesCommand({ InstanceIds: ids }));
+  }
+
+  async ensureSelfIngressSSH(region, securityGroupIds) {
+    const client = this._client(region);
+    for (const sgId of (securityGroupIds || [])) {
+      try {
+        await client.send(new AuthorizeSecurityGroupIngressCommand({
+          GroupId: sgId,
+          IpPermissions: [{
+            IpProtocol: 'tcp', FromPort: 22, ToPort: 22,
+            UserIdGroupPairs: [{ GroupId: sgId }],
+          }],
+        }));
+      } catch (e) {
+        if (e.name !== 'InvalidPermission.Duplicate') {
+          // best-effort — ignore other errors
+        }
+      }
+    }
   }
 
   async terminate(region, ids) {

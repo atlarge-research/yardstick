@@ -331,6 +331,11 @@ export default function useYardstick() {
       port: '22',
       username: h.username,
       privateKey: h.privateKey || undefined,
+      region: h.region,
+      imageId: h.imageId,
+      instanceType: h.instanceType,
+      keyName: h.keyName,
+      securityGroupIds: h.securityGroupIds,
     });
   }, []);
 

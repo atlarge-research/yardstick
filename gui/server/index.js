@@ -7,7 +7,7 @@ const { spawn } = require('child_process');
 const { v4: uuidv4 } = require('uuid');
 const os = require('os');
 const path = require('path');
-const cloud = require('./cloud');
+const { register: registerCloud, getSocketAws } = require('./cloud');
 
 const app = express();
 app.use(cors());
@@ -21,7 +21,7 @@ const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] },
 });
 
-cloud.register(io);
+registerCloud(io);
 
 const sessions = new Map();
 
@@ -148,6 +148,43 @@ function runCmd(session, command, socket, stepId) {
     return runLocal(command, socket, stepId);
   }
   return runSSH(session, command, socket, stepId);
+}
+
+// Query EC2 instance metadata service (IMDS) over SSH to auto-detect AMI/region
+// when the user connected via plain SSH instead of the Cloud panel "Use" flow.
+// Supports both IMDSv1 and IMDSv2 (token-required) transparently.
+function queryImds(session) {
+  if (session.type !== 'ssh') return Promise.resolve({});
+  const cmd = `python3 -c "
+import urllib.request, json
+def _get(path):
+    try:
+        try:
+            treq = urllib.request.Request('http://169.254.169.254/latest/api/token', headers={'X-aws-ec2-metadata-token-ttl-seconds':'21600'}, method='PUT')
+            tok = urllib.request.urlopen(treq, timeout=3).read().decode().strip()
+            req = urllib.request.Request('http://169.254.169.254/latest/meta-data/'+path, headers={'X-aws-ec2-metadata-token':tok})
+        except:
+            req = 'http://169.254.169.254/latest/meta-data/'+path
+        return urllib.request.urlopen(req, timeout=3).read().decode().strip()
+    except:
+        return None
+mac = (_get('network/interfaces/macs/') or '').strip().strip('/')
+sg_ids = [s.strip() for s in (_get(f'network/interfaces/macs/{mac}/security-group-ids') or '').splitlines() if s.strip()]
+key_raw = _get('public-keys/') or ''
+key_name = key_raw.split('=',1)[1].strip() if '=' in key_raw else None
+print(json.dumps({'imageId':_get('ami-id'),'region':_get('placement/region'),'instanceType':_get('instance-type'),'securityGroupIds':sg_ids,'keyName':key_name}))
+"`;
+  return new Promise((resolve) => {
+    session.conn.exec(cmd, (err, stream) => {
+      if (err) return resolve({});
+      let out = '';
+      stream.on('data', (d) => { out += d.toString(); });
+      stream.stderr.on('data', () => {});
+      stream.on('close', () => {
+        try { resolve(JSON.parse(out.trim())); } catch { resolve({}); }
+      });
+    });
+  });
 }
 
 // Path layout: DAS uses /var/scratch/<user>/...; everything else (local, aws,
@@ -432,6 +469,7 @@ io.on('connection', (socket) => {
     const {
       host, port = 22, username, password, privateKey, mode = 'das5',
       jumpHost, jumpPort = 22, jumpUsername, jumpPassword, jumpPrivateKey,
+      region, imageId, instanceType, keyName: instKeyName, securityGroupIds,
     } = opts;
     const sessionId = uuidv4();
     const useJump = !!(jumpHost && jumpUsername);
@@ -466,7 +504,15 @@ io.on('connection', (socket) => {
     }
 
     function onTargetReady(conn, jumpConn) {
-      sessions.set(sessionId, { type: 'ssh', conn, jumpConn, host, username, mode, cwd: '~' });
+      sessions.set(sessionId, {
+        type: 'ssh', conn, jumpConn, host, username, mode, cwd: '~',
+        privateKey: privateKey || null,
+        region: region || null,
+        imageId: imageId || null,
+        instanceType: instanceType || null,
+        keyName: instKeyName || null,
+        securityGroupIds: securityGroupIds || [],
+      });
       socket.emit('ssh:connected', { sessionId, mode });
       socket.emit('log', { message: `[OK] Connected to ${host} as ${username}${useJump ? ` (via ${jumpHost})` : ''}` });
     }
@@ -757,33 +803,110 @@ finally:
     print('Done!')
 `;
 
-    const cloudExperimentScript = `
+    const buildCloudScript = (workerIps) => `
 from yardstick_benchmark.monitoring import Telegraf
 from yardstick_benchmark.games.minecraft.server import PaperMC
 from yardstick_benchmark.games.minecraft.workload import WalkAround
 import yardstick_benchmark
 import yardstick_benchmark.model as _ym
-from time import sleep
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
-import os, shutil, time as _time, urllib.request, shutil as _sh
+import os, shutil, socket as _socket, time as _time, subprocess as _sp, threading as _threading, urllib.request, shutil as _sh, glob as _glob
 
-# Patch Ansible to use local connection for localhost
+# Patch installed walkaround playbooks to load nvm via NVM_DIR instead of
+# 'source ~/.bashrc', which is a no-op in non-interactive shells (Ubuntu dash).
+try:
+    import yardstick_benchmark.games.minecraft.workload as _wl_mod
+    _wl_dir = os.path.dirname(_wl_mod.__file__)
+    for _yml in _glob.glob(f'{_wl_dir}/*.yml'):
+        _txt = open(_yml).read()
+        if 'source ~/.bashrc' in _txt:
+            _fixed = _txt.replace(
+                'source ~/.bashrc',
+                'export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"'
+            )
+            open(_yml, 'w').write(_fixed)
+            print(f'[patch] fixed nvm loading in {os.path.basename(_yml)}', flush=True)
+except Exception as _e:
+    print(f'[warn] could not patch walkaround playbooks: {_e}', flush=True)
+
+# Worker IPs injected by GUI server (empty list = single-instance mode)
+_worker_ips = ${JSON.stringify(workerIps)}
+_worker_user = ${JSON.stringify(session.username || 'ubuntu')}
+
+# Resolve this instance's private IP so Ansible shows a real host name and
+# WalkAround bots on worker instances can reach PaperMC via private VPC routing.
+try:
+    _main_ip = _socket.gethostbyname(_socket.gethostname())
+except Exception:
+    _main_ip = '127.0.0.1'
+_local_addrs = {'localhost', '127.0.0.1', _main_ip}
+
+# Patch Ansible inventory: main instance uses local connection, workers use SSH with injected key
 _orig_gen_inv = _ym._gen_inv
 def _patched_gen_inv(name, nodes):
     inv = _orig_gen_inv(name, nodes)
     for host, hvars in inv['all']['hosts'].items():
-        if host in ('localhost', '127.0.0.1'):
+        if host in _local_addrs:
+            hvars['ansible_host'] = 'localhost'
             hvars['ansible_connection'] = 'local'
+            hvars['ansible_shell_executable'] = '/bin/bash'
+        else:
+            hvars['ansible_user'] = _worker_user
+            hvars['ansible_ssh_private_key_file'] = os.path.expanduser('~/.ssh/yardstick_exp.pem')
+            hvars['ansible_ssh_common_args'] = '-o StrictHostKeyChecking=no'
             hvars['ansible_shell_executable'] = '/bin/bash'
     return inv
 _ym._gen_inv = _patched_gen_inv
 
-# Cloud mode: use single local Node (connected host itself)
 from yardstick_benchmark.model import Node
 home = os.path.expanduser('~')
 wd_base = Path(home) / 'yardstick' / 'run'
-nodes = [Node(host='localhost', wd=wd_base / 'node000')]
+
+papermc_node = Node(host=_main_ip, wd=wd_base / 'node000')
+worker_nodes = [
+    Node(host=ip, wd=Path(f'/home/{_worker_user}/yardstick/run/node{i+1:03d}'))
+    for i, ip in enumerate(_worker_ips)
+]
+nodes = [papermc_node] + worker_nodes
+wl_nodes = worker_nodes if worker_nodes else [papermc_node]
+
+# Wait for SSH to be reachable on each worker before Ansible tries to connect
+def _wait_ssh(host, timeout=300, interval=5):
+    print(f'[wait-ssh] waiting for {host}:22...', flush=True)
+    deadline = _time.time() + timeout
+    last_report = _time.time()
+    while _time.time() < deadline:
+        try:
+            s = _socket.create_connection((host, 22), timeout=interval)
+            s.close()
+            print(f'[wait-ssh] {host}:22 ready ({int(_time.time() - (deadline - timeout))}s)', flush=True)
+            return
+        except OSError:
+            _time.sleep(interval)
+            if _time.time() - last_report >= 10:
+                elapsed = int(_time.time() - (deadline - timeout))
+                print(f'[wait-ssh] still waiting for {host}:22 ({elapsed}s elapsed)...', flush=True)
+                last_report = _time.time()
+    raise RuntimeError(f'Timed out waiting {timeout}s for SSH on {host}:22')
+for _ip in _worker_ips:
+    _wait_ssh(_ip)
+
+# Fresh Ubuntu instances don't ship with rsync or git; install both before Ansible runs.
+_ssh_base = ['ssh', '-i', os.path.expanduser('~/.ssh/yardstick_exp.pem'),
+             '-o', 'StrictHostKeyChecking=no', '-o', 'ConnectTimeout=10']
+for _ip in _worker_ips:
+    print(f'[worker {_ip}] installing base tools (rsync, git)...', flush=True)
+    _r = _sp.run(_ssh_base + [f'{_worker_user}@{_ip}', r"""
+        # Wait up to 120s for cloud-init / unattended-upgrades to release apt locks
+        i=0; while sudo fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock >/dev/null 2>&1 && [ $i -lt 60 ]; do sleep 2; i=$((i+1)); done
+        # Repair any interrupted dpkg state
+        sudo dpkg --configure -a -q 2>/dev/null || true
+        sudo apt-get install -f -y -qq 2>/dev/null || true
+        # Install missing tools
+        (which rsync && which git) || (sudo apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y rsync git)
+    """], capture_output=True, text=True, timeout=180)
+    print(f'[worker {_ip}] base tools {"ready" if _r.returncode == 0 else "install failed: " + _r.stderr.strip()}', flush=True)
 
 # Ansible get_url defaults to a 10s timeout with no retries. PaperMC ~50MB and
 # Maven Central redirects are flaky on small instances, so pre-fetch into a
@@ -827,14 +950,29 @@ def _ensure_cached(fname, url, min_size, retries=5, timeout=60):
 for fname, url, sz in DOWNLOADS:
     _ensure_cached(fname, url, sz)
 
+def _run(label, fn):
+    print(f'[>>] {label}...', flush=True)
+    try:
+        result = fn()
+        print(f'[OK] {label}', flush=True)
+        return result
+    except Exception as e:
+        msg = str(e)
+        # ansible_runner errors include the full runner output in the message;
+        # extract just the last meaningful line to keep the summary readable.
+        lines = [l.strip() for l in msg.splitlines() if l.strip()]
+        summary = lines[-1] if lines else msg
+        print(f'[FAIL] {label}: {summary}', flush=True)
+        raise RuntimeError(f'{label} failed: {summary}') from e
+
 papermc = None
 try:
-    yardstick_benchmark.clean(nodes)
+    _run('Clean nodes', lambda: yardstick_benchmark.clean(nodes))
 
     telegraf = Telegraf(nodes)
     telegraf.add_input_jolokia_agent(nodes[0])
     telegraf.add_input_execd_minecraft_ticks(nodes[0])
-    telegraf.deploy()
+    _run('Deploy Telegraf', telegraf.deploy)
 
     papermc = PaperMC(nodes[:1])
 
@@ -853,19 +991,12 @@ try:
     except Exception as e:
         print(f'[warn] pre-stage failed; Ansible will download instead: {e}', flush=True)
 
-    try:
-        papermc.deploy()
-        print('[OK] PaperMC deploy complete.', flush=True)
-    except Exception as e:
-        print(f'[FAIL] PaperMC deploy failed: {e}', flush=True)
-        raise
+    _run('Deploy PaperMC', papermc.deploy)
 
     try:
-        papermc.start()
-        print('[OK] PaperMC start complete.', flush=True)
+        _run('Start PaperMC', papermc.start)
     except Exception as e:
-        print(f'[FAIL] PaperMC start failed: {e}', flush=True)
-        # Dump diagnostic so the GUI shows the actual cause
+        # Dump server log so the GUI shows the actual cause
         try:
             run_wd = Path(papermc.start_action.inv['all']['hosts'][host]['wd'])
             log_file = run_wd / 'logs' / 'latest.log'
@@ -875,39 +1006,72 @@ try:
                     print(line, flush=True)
                 print('--- end log ---', flush=True)
             else:
-                print(f'No log file at {log_file} -- the Java process likely never started.', flush=True)
                 java = _sh.which('java')
-                print(f'java executable on PATH: {java or "(not found)"}', flush=True)
+                print(f'No PaperMC log found. java on PATH: {java or "(not found)"}', flush=True)
                 if java:
-                    import subprocess as _sp
-                    try:
-                        out = _sp.run([java, '-version'], capture_output=True, text=True, timeout=10)
-                        print((out.stderr or out.stdout).strip(), flush=True)
-                    except Exception as ee:
-                        print(f'(java -version failed: {ee})', flush=True)
-        except Exception as ee:
-            print(f'(could not dump diagnostics: {ee})', flush=True)
+                    out = _sp.run([java, '-version'], capture_output=True, text=True, timeout=10)
+                    print((out.stderr or out.stdout).strip(), flush=True)
+        except Exception:
+            pass
         raise
 
-    telegraf.start()
+    _run('Start Telegraf', telegraf.start)
 
-    # For single-node, workload runs on same node (no separate load nodes)
-    wl = WalkAround(nodes[:1], nodes[0].host, bots_per_node=${botsPerNode})
-    wl.deploy()
-    wl.start()
-    print('Experiment running, sleeping for ${sleepTime}s...', flush=True)
-    sleep(${sleepTime})
+    wl = WalkAround(wl_nodes, papermc_node.host, bots_per_node=${botsPerNode}, duration=timedelta(seconds=${sleepTime}))
+    _run('Deploy WalkAround', wl.deploy)
 
-    papermc.stop()
-    telegraf.stop()
+    # Stream bot logs from each worker live while wl.start() blocks.
+    # The log file (bot-{hostname}.log) is created by Ansible once the bot starts,
+    # so the remote command polls for it before tailing.
+    _log_stop = _threading.Event()
+    def _tail_worker(ip, wd):
+        remote_cmd = (
+            f'for i in $(seq 0 120); do '
+            f'  f=$(ls {wd}/bot-*.log 2>/dev/null | head -1); '
+            f'  if [ -n "$f" ]; then exec tail -F "$f"; fi; '
+            f'  sleep 1; '
+            f'done'
+        )
+        cmd = ['ssh', '-i', os.path.expanduser('~/.ssh/yardstick_exp.pem'),
+               '-o', 'StrictHostKeyChecking=no', '-o', 'ConnectTimeout=10',
+               '-o', 'ServerAliveInterval=15',
+               f'{_worker_user}@{ip}', remote_cmd]
+        try:
+            proc = _sp.Popen(cmd, stdout=_sp.PIPE, stderr=_sp.DEVNULL, text=True, bufsize=1)
+            while not _log_stop.is_set():
+                line = proc.stdout.readline()
+                if not line:
+                    break
+                print(f'[worker {ip}] {line}', end='', flush=True)
+            proc.terminate()
+        except Exception as e:
+            print(f'[worker {ip}] log tail error: {e}', flush=True)
+    _log_threads = []
+    for _wip, _wnode in zip(_worker_ips, worker_nodes):
+        _t = _threading.Thread(target=_tail_worker, args=(_wip, str(_wnode.wd)), daemon=True)
+        _t.start()
+        _log_threads.append(_t)
+
+    try:
+        _run('Run WalkAround bots', wl.start)
+    finally:
+        _log_stop.set()
+        for _t in _log_threads:
+            _t.join(timeout=3)
+
+    _run('Stop PaperMC', papermc.stop)
+    _run('Stop Telegraf', telegraf.stop)
 
     timestamp = datetime.now().isoformat(timespec='minutes').replace('-','').replace(':','')
     run_label = '${safeName}_' + timestamp if '${safeName}' else timestamp
     dest = Path(os.path.expanduser('~')) / 'yardstick' / run_label
-    yardstick_benchmark.fetch(dest, nodes)
+    _run('Fetch results', lambda: yardstick_benchmark.fetch(dest, nodes))
     print(f'Results saved to {dest}')
 finally:
-    yardstick_benchmark.clean(nodes)
+    try:
+        yardstick_benchmark.clean(nodes)
+    except Exception as e:
+        print(f'[warn] cleanup failed: {e}', flush=True)
     print('Done!')
 `;
 
@@ -973,35 +1137,120 @@ finally:
     yardstick_benchmark.clean(nodes)
     print('Done!')
 `;
-      // Select appropriate provisioner based on connection mode
-      let experimentScript;
       const isCloudMode = ['aws', 'azure', 'custom-ssh'].includes(mode);
-      if (isLocalMode) {
-        experimentScript = localExperimentScript;
-      } else if (isCloudMode) {
-        if (numNodes > 1) {
-          socket.emit('log', { message: `Warning: Cloud mode only supports 1 node. Using 1 node instead of ${numNodes}.`, level: 'warn' });
-        }
-        experimentScript = cloudExperimentScript;
-      } else {
-        // DAS mode (das5, das6, etc.)
-        experimentScript = dasExperimentScript;
-      }
+      let experimentScript;
+      let workerInstanceIds = [];
 
-      const envBin = `${cmds.condaDir}/envs/yardstick/bin`;
-      // Put the yardstick env first on PATH so Ansible local-shell tasks (used
-      // in cloud mode for PaperMC/Telegraf) can resolve java and other env
-      // binaries. Harmless on DAS — ansible there runs over SSH to compute
-      // nodes whose PATH is set independently.
-      const experimentCmd = `export PATH="${envBin}:$PATH"; cd ~/experiments && "${envBin}/python" <<'__YS_EXPERIMENT__'
+      try {
+        if (isLocalMode) {
+          experimentScript = localExperimentScript;
+        } else if (isCloudMode) {
+          const workerIps = [];
+
+          let { imageId: imgId, region: reg, instanceType: instType } = session;
+          if ((!imgId || !reg) && numNodes > 1) {
+            socket.emit('log', { message: 'Querying instance metadata...' });
+            const meta = await queryImds(session);
+            imgId = imgId || meta.imageId || null;
+            reg = reg || meta.region || null;
+            instType = instType || meta.instanceType || null;
+            if (imgId) session.imageId = imgId;
+            if (reg) session.region = reg;
+            if (instType) session.instanceType = instType;
+            if (meta.securityGroupIds && meta.securityGroupIds.length > 0 && session.securityGroupIds.length === 0) {
+              session.securityGroupIds = meta.securityGroupIds;
+            }
+            if (meta.keyName && !session.keyName) {
+              session.keyName = meta.keyName;
+            }
+            socket.emit('log', { message: `Instance metadata: region=${reg} keyName=${session.keyName || 'none'} sgs=${session.securityGroupIds.join(',')}` });
+          }
+
+          if (numNodes > 1 && imgId && reg) {
+            const awsProv = getSocketAws(socket.id);
+            if (!awsProv) {
+              socket.emit('log', { message: 'Warning: Not authenticated to AWS — launching in single-instance mode.', level: 'warn' });
+            } else {
+              socket.emit('log', { message: `Launching ${numNodes - 1} worker instance(s)...` });
+              workerInstanceIds = await awsProv.launch({
+                region: reg,
+                imageId: imgId,
+                instanceType: instType || 't3.small',
+                keyName: session.keyName || undefined,
+                securityGroupIds: session.securityGroupIds || [],
+                count: numNodes - 1,
+                name: 'yardstick-worker',
+                diskSizeGb: 20,
+              });
+
+              // Allow SSH between instances in the same security group so the
+              // main instance can Ansible into workers without internet routing.
+              if (session.securityGroupIds && session.securityGroupIds.length > 0) {
+                socket.emit('log', { message: 'Ensuring security group allows intra-SG SSH...' });
+                await awsProv.ensureSelfIngressSSH(reg, session.securityGroupIds);
+              }
+
+              // Use private IPs — workers share a VPC so no internet routing needed.
+              socket.emit('log', { message: 'Waiting for worker private IPs...' });
+              const deadline = Date.now() + 300_000;
+              while (Date.now() < deadline) {
+                const workers = await awsProv.describeInstances(reg, workerInstanceIds);
+                const ips = workers.map((w) => w.privateIp).filter(Boolean);
+                if (ips.length === workerInstanceIds.length) {
+                  workerIps.push(...ips);
+                  break;
+                }
+                await new Promise((r) => setTimeout(r, 3000));
+              }
+              if (workerIps.length < workerInstanceIds.length) {
+                throw new Error('Timed out waiting for worker instances to get private IPs');
+              }
+              socket.emit('log', { message: `Workers ready (private IPs): ${workerIps.join(', ')}` });
+
+              if (session.privateKey) {
+                const keyB64 = Buffer.from(session.privateKey).toString('base64');
+                const writeKeyCmd = `python3 -c "import base64,os,stat; k=base64.b64decode('${keyB64}').decode(); p=os.path.expanduser('~/.ssh/yardstick_exp.pem'); os.makedirs(os.path.dirname(p),exist_ok=True); open(p,'w').write(k); os.chmod(p,0o600)"`;
+                await runCmd(session, writeKeyCmd, socket, 'setup-workers');
+              }
+            }
+          }
+
+          experimentScript = buildCloudScript(workerIps);
+        } else {
+          experimentScript = dasExperimentScript;
+        }
+
+        const envBin = `${cmds.condaDir}/envs/yardstick/bin`;
+        // Put the yardstick env first on PATH so Ansible local-shell tasks (used
+        // in cloud mode for PaperMC/Telegraf) can resolve java and other env
+        // binaries. Harmless on DAS — ansible there runs over SSH to compute
+        // nodes whose PATH is set independently.
+        const experimentCmd = `export PATH="${envBin}:$PATH"; cd ~/experiments && "${envBin}/python" <<'__YS_EXPERIMENT__'
 ${experimentScript}
 __YS_EXPERIMENT__`;
 
-      await runCmd(session, experimentCmd, socket, 'run-experiment');
+        await runCmd(session, experimentCmd, socket, 'run-experiment');
 
-      socket.emit('experiment:complete', { message: 'Experiment finished!' });
-      socket.emit('results:changed');
-      socket.emit('log', { message: 'Experiment completed successfully.' });
+        socket.emit('experiment:complete', { message: 'Experiment finished!' });
+        socket.emit('results:changed');
+        socket.emit('log', { message: 'Experiment completed successfully.' });
+      } catch (err) {
+        socket.emit('experiment:error', { message: err.message });
+        socket.emit('log', { message: `Experiment failed: ${err.message}`, level: 'error' });
+      } finally {
+        if (workerInstanceIds.length > 0) {
+          const awsProv = getSocketAws(socket.id);
+          if (awsProv) {
+            try {
+              await awsProv.terminate(session.region, workerInstanceIds);
+              socket.emit('log', { message: `Terminated ${workerInstanceIds.length} worker instance(s).` });
+            } catch (e) {
+              socket.emit('log', { message: `Warning: failed to terminate workers: ${e.message}`, level: 'warn' });
+            }
+          }
+          try { await runCmd(session, 'rm -f ~/.ssh/yardstick_exp.pem', socket, 'cleanup-workers'); } catch {}
+        }
+      }
     } catch (err) {
       socket.emit('experiment:error', { message: err.message });
       socket.emit('log', { message: `Experiment failed: ${err.message}`, level: 'error' });

@@ -15,16 +15,17 @@
     - name: Set game spawn location
       shell:
         cmd: |
-          source ~/.bashrc
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
           node set_spawn.js
         chdir: "{{wd}}"
       run_once: true # Only run on one machine
     - name: Run Minecraft bot
       shell:
         cmd: |
-          source ~/.bashrc
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
           nvm use 18
-          # nohup node walkaround_bot.js &> bot-{{ inventory_hostname }}.log &
           node walkaround_bot.js | tee bot-{{ inventory_hostname }}.log
           echo $! > bot-{{inventory_hostname}}.pid
         chdir: "{{wd}}"

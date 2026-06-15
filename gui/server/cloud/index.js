@@ -89,4 +89,8 @@ function register(io) {
   });
 }
 
-module.exports = { register };
+function getSocketAws(socketId) {
+  return providers.get(socketId)?.aws || null;
+}
+
+module.exports = { register, getSocketAws };

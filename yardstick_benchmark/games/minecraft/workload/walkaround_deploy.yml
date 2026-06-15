@@ -10,7 +10,8 @@
         state: directory
     - name: Check if nvm is available
       shell: |
-        source ~/.bashrc
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
         nvm --version
       register: nvm_version
       failed_when: nvm_version.rc != 0 and nvm_version.rc != 127
@@ -21,7 +22,8 @@
     - name: Install node 18 and Mineflayer
       shell:
         cmd: |
-          source ~/.bashrc
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
           nvm install 18
           npm install mineflayer
           npm install mineflayer-pathfinder

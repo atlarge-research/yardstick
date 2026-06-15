@@ -45,6 +45,9 @@ export default function CloudPanel({ onUseInstance, initialProvider = 'aws' }: P
       keyName: inst.keyName,
       privateKey,
       instanceId: inst.id,
+      imageId: inst.imageId,
+      instanceType: inst.instanceType,
+      securityGroupIds: inst.securityGroupIds || [],
     });
   };
 
