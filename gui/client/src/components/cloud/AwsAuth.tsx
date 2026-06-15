@@ -12,6 +12,8 @@ interface Props {
   onAuthenticate: (creds: AwsCredentials) => Promise<void>;
   onLogout: () => Promise<void>;
   onDeleteProfile: (id: string) => Promise<void>;
+  /** When true, renders content without a card wrapper (for embedding inside another card). */
+  bare?: boolean;
 }
 
 const REGIONS_FALLBACK = [
@@ -22,7 +24,7 @@ const REGIONS_FALLBACK = [
 
 export default function AwsAuth({
   profiles, activeProfileId, authenticated, authenticating,
-  defaultRegion, onAuthenticate, onLogout, onDeleteProfile,
+  defaultRegion, onAuthenticate, onLogout, onDeleteProfile, bare = false,
 }: Props) {
   const [mode, setMode] = useState<'new' | 'existing'>(profiles.length > 0 ? 'existing' : 'new');
   const [accessKeyId, setAccessKeyId] = useState('');
@@ -43,19 +45,20 @@ export default function AwsAuth({
 
   if (authenticated) {
     const active = profiles.find((p) => p.id === activeProfileId);
-    return (
-      <Box {...cardProps}>
-        <Flex justify="space-between" align="center" mb={2}>
-          <Heading fontSize="1rem" fontWeight={600}>AWS — Signed in</Heading>
-          <Button variant="plain" bg="transparent" border="1px solid" borderColor={c.border} color={c.text} borderRadius={radii.sm} px={3.5} py={2} h="auto" fontSize="0.82rem" _hover={{ bg: c.surface2 }} onClick={onLogout}>
-            Sign out
-          </Button>
-        </Flex>
-        <Text color={c.textDim} fontSize="0.88rem">
-          {active ? `${active.name} • ` : ''}Default region: <Text as="span" color={c.text}>{defaultRegion}</Text>
-        </Text>
-      </Box>
+    const signedInContent = (
+      <Flex justify="space-between" align="center" mb={bare ? 0 : 2}>
+        <Box>
+          {!bare && <Heading fontSize="1rem" fontWeight={600} mb={0.5}>AWS — Signed in</Heading>}
+          <Text color={c.textDim} fontSize="0.88rem">
+            {active ? `${active.name} • ` : ''}Region: <Text as="span" color={c.text}>{defaultRegion}</Text>
+          </Text>
+        </Box>
+        <Button variant="plain" bg="transparent" border="1px solid" borderColor={c.border} color={c.text} borderRadius={radii.sm} px={3.5} py={2} h="auto" fontSize="0.82rem" _hover={{ bg: c.surface2 }} onClick={onLogout}>
+          Sign out
+        </Button>
+      </Flex>
     );
+    return bare ? signedInContent : <Box {...cardProps}>{signedInContent}</Box>;
   }
 
   const submit = async (e: FormEvent) => {
@@ -81,13 +84,8 @@ export default function AwsAuth({
     }
   };
 
-  return (
-    <Box {...cardProps}>
-      <Heading fontSize="1.05rem" fontWeight={600} mb={1.5}>AWS — Sign in</Heading>
-      <Text color={c.textDim} fontSize="0.88rem" mb={4}>
-        Credentials are stored encrypted on this machine only and used to call the AWS SDK from the local server.
-      </Text>
-
+  const formBody = (
+    <>
       {profiles.length > 0 && (
         <Flex mb={4} border="1px solid" borderColor={c.border} borderRadius={radii.sm} overflow="hidden">
           {(['existing', 'new'] as const).map((m) => (
@@ -176,6 +174,17 @@ export default function AwsAuth({
           {authenticating ? (<><Spinner size="sm" /> Signing in…</>) : 'Sign in to AWS'}
         </Button>
       </Box>
+    </>
+  );
+
+  if (bare) return formBody;
+  return (
+    <Box {...cardProps}>
+      <Heading fontSize="1.05rem" fontWeight={600} mb={1.5}>AWS — Sign in</Heading>
+      <Text color={c.textDim} fontSize="0.88rem" mb={4}>
+        Credentials are stored encrypted on this machine only and used to call the AWS SDK from the local server.
+      </Text>
+      {formBody}
     </Box>
   );
 }

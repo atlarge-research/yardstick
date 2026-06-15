@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react';
+import { useState, useEffect, type FormEvent, type ChangeEvent, type ReactNode } from 'react';
 import { Box, Flex, Grid, Text, Heading, Button, Badge, Icon, Spinner } from '@chakra-ui/react';
 import { LuMonitor, LuGlobe, LuHash, LuServer, LuCloud } from 'react-icons/lu';
 import type { IconType } from 'react-icons';
@@ -22,7 +22,6 @@ const MODE_ICONS: Record<string, IconType> = {
   das5: LuHash,
   das6: LuHash,
   aws: LuServer,
-  azure: LuCloud,
   custom: LuGlobe,
 };
 
@@ -51,8 +50,7 @@ const GROUPS: GroupDef[] = [
 
 const SUB_PROVIDERS: Partial<Record<Group, SubProviderDef[]>> = {
   cloud: [
-    { mode: 'aws',   label: 'AWS', shortLabel: 'AWS' },
-    { mode: 'azure', label: 'Azure', shortLabel: 'Azure', disabled: true, hint: 'Coming soon' },
+    { mode: 'aws', label: 'AWS', shortLabel: 'AWS' },
   ],
   das: [
     { mode: 'das5', label: 'DAS-5', shortLabel: '5' },
@@ -61,7 +59,7 @@ const SUB_PROVIDERS: Partial<Record<Group, SubProviderDef[]>> = {
 };
 
 function groupForMode(mode: string): Group {
-  if (mode === 'aws' || mode === 'azure') return 'cloud';
+  if (mode === 'aws') return 'cloud';
   if (mode === 'das5' || mode === 'das6') return 'das';
   if (mode === 'local') return 'local';
   return 'ssh';
@@ -87,16 +85,6 @@ const MODE_PRESETS: Record<string, ModePreset> = {
     preferredAuthMethod: 'key',
     hostPlaceholder: 'ec2-203-0-113-10.compute-1.amazonaws.com',
     usernamePlaceholder: 'ec2-user',
-  },
-  azure: {
-    host: '',
-    port: '22',
-    label: 'Azure VM',
-    description: 'Connect to an Azure virtual machine over SSH using the public IP or DNS name from the portal.',
-    defaultJump: false,
-    preferredAuthMethod: 'key',
-    hostPlaceholder: 'your-vm.westus.cloudapp.azure.com',
-    usernamePlaceholder: 'azureuser',
   },
   custom: { host: '', port: '22', label: 'Custom SSH', description: 'Connect to any remote host via SSH.', defaultJump: false },
 };
@@ -141,9 +129,15 @@ interface ConnectFormProps {
   onModeChange: (mode: string) => void;
   prefill?: Partial<SshConnectOptions> | null;
   onPrefillConsumed?: () => void;
+  /**
+   * When provided and mode==='aws', this render prop is called with the SSH form
+   * as its argument. The result replaces the normal form, allowing custom cloud
+   * UI (tabs, instance list, etc.) to embed the form as a slot.
+   */
+  cloudContent?: (sshForm: ReactNode) => ReactNode;
 }
 
-export default function ConnectForm({ onConnect, status, mode, onModeChange, prefill, onPrefillConsumed }: ConnectFormProps) {
+export default function ConnectForm({ onConnect, status, mode, onModeChange, prefill, onPrefillConsumed, cloudContent }: ConnectFormProps) {
   const [host, setHost] = useState(MODE_PRESETS[mode]?.host || '');
   const [port, setPort] = useState(MODE_PRESETS[mode]?.port || '22');
   const [username, setUsername] = useState('');
@@ -190,23 +184,20 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange, pre
   const isRunning = status === 'running';
   const isConnected = status === 'completed';
   const isLocal = mode === 'local';
-  const isAzure = mode === 'azure';
-  const isSSH = !isLocal && !isAzure;
+  const isSSH = !isLocal;
   const group = groupForMode(mode);
   const subProviders = SUB_PROVIDERS[group];
   const preset = MODE_PRESETS[mode] || MODE_PRESETS.das5;
   const hostPlaceholder = preset.hostPlaceholder || 'hostname';
   const usernamePlaceholder = preset.usernamePlaceholder || `Your ${preset.label} username`;
-  const cloudHint = mode === 'aws'
-    ? {
-        title: 'AWS EC2 quick setup',
-        lines: [
-          'Use the instance public DNS or Elastic IP as the hostname.',
-          'Port 22 must be open in the instance security group.',
-          'EC2 AMIs disable password auth by default — use SSH key.',
-        ],
-      }
-    : null;
+  const cloudHint = mode === 'aws' ? {
+    title: 'AWS EC2 quick setup',
+    lines: [
+      'Use the instance public DNS or Elastic IP as the hostname.',
+      'Port 22 must be open in the instance security group.',
+      'EC2 AMIs disable password auth by default — use SSH key.',
+    ],
+  } : null;
 
   const selectGroup = (g: Group) => {
     if (g === group) return;
@@ -250,12 +241,135 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange, pre
     reader.readAsText(file);
   };
 
+  const sshForm = (
+    <Box as="form" onSubmit={handleSubmit}>
+      {isSSH && (
+        <>
+          <Grid templateColumns="1fr 1fr" gap={4}>
+            <Box mb={4}>
+              <Text {...labelProps}>Hostname</Text>
+              <StyledInput {...inputProps} value={host} onChange={(e) => setHost(e.target.value)} placeholder={hostPlaceholder} required />
+            </Box>
+            <Box mb={4}>
+              <Text {...labelProps}>Port</Text>
+              <StyledInput {...inputProps} value={port} onChange={(e) => setPort(e.target.value)} placeholder="22" />
+            </Box>
+          </Grid>
+
+          <Box mb={4}>
+            <Text {...labelProps}>Username</Text>
+            <StyledInput {...inputProps} value={username} onChange={(e) => setUsername(e.target.value)} placeholder={usernamePlaceholder} required />
+          </Box>
+
+          <AuthToggle value={authMethod} onChange={setAuthMethod} />
+
+          {authMethod === 'password' ? (
+            <Box mb={4}>
+              <Text {...labelProps}>Password</Text>
+              <StyledInput {...inputProps} type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Your password" />
+            </Box>
+          ) : (
+            <Box mb={4}>
+              <Text {...labelProps}>Private Key</Text>
+              <Flex direction="column" gap={2.5}>
+                <input type="file" onChange={handleFileUpload} accept=".pem,.key,*" />
+                <StyledTextarea {...inputProps} fontFamily={fonts.mono} fontSize="0.82rem" resize="vertical" minH="120px" value={privateKey} onChange={(e) => setPrivateKey(e.target.value)} placeholder="Or paste your private key here..." rows={5} />
+              </Flex>
+            </Box>
+          )}
+        </>
+      )}
+
+      {group === 'das' && (
+        <Box my={4} p={3.5} bg={c.bg} border="1px solid" borderColor={c.border} borderRadius={radii.md}>
+          <Flex as="label" align="center" flexWrap="wrap" gap={2} cursor="pointer" fontSize="0.9rem" fontWeight={600} color={c.text}>
+            <input
+              type="checkbox"
+              checked={useJumpHost}
+              onChange={(e) => setUseJumpHost(e.target.checked)}
+              style={{ width: 18, height: 18, accentColor: c.accent, cursor: 'pointer' }}
+            />
+            <Text fontWeight={600}>Use Jump Host (ProxyJump)</Text>
+            <Text fontSize="0.75rem" fontWeight={400} color={c.textDim} w="100%" ml="26px">
+              Required when not on VU campus - tunnels via a gateway
+            </Text>
+          </Flex>
+
+          {useJumpHost && (
+            <Box mt={3.5} pt={3.5} borderTop="1px solid" borderColor={c.border}>
+              <Grid templateColumns="1fr 1fr" gap={4}>
+                <Box mb={4}>
+                  <Text {...labelProps}>Jump Hostname</Text>
+                  <StyledInput {...inputProps} value={jumpHost} onChange={(e) => setJumpHost(e.target.value)} placeholder="ssh.data.vu.nl" required />
+                </Box>
+                <Box mb={4}>
+                  <Text {...labelProps}>Jump Port</Text>
+                  <StyledInput {...inputProps} value={jumpPort} onChange={(e) => setJumpPort(e.target.value)} placeholder="22" />
+                </Box>
+              </Grid>
+
+              <Box mb={4}>
+                <Text {...labelProps}>Jump Username</Text>
+                <StyledInput {...inputProps} value={jumpUsername} onChange={(e) => setJumpUsername(e.target.value)} placeholder="Your VUnet ID (e.g. abc123)" required />
+              </Box>
+
+              <AuthToggle value={jumpAuthMethod} onChange={setJumpAuthMethod} />
+
+              {jumpAuthMethod === 'password' ? (
+                <Box mb={4}>
+                  <Text {...labelProps}>Jump Password</Text>
+                  <StyledInput {...inputProps} type="password" value={jumpPassword} onChange={(e) => setJumpPassword(e.target.value)} placeholder="VUnet password" />
+                </Box>
+              ) : (
+                <Box mb={4}>
+                  <Text {...labelProps}>Jump Private Key</Text>
+                  <Flex direction="column" gap={2.5}>
+                    <input type="file" onChange={handleJumpFileUpload} accept=".pem,.key,*" />
+                    <StyledTextarea {...inputProps} fontFamily={fonts.mono} fontSize="0.82rem" resize="vertical" minH="100px" value={jumpPrivateKey} onChange={(e) => setJumpPrivateKey(e.target.value)} placeholder="Or paste your private key here..." rows={4} />
+                  </Flex>
+                </Box>
+              )}
+            </Box>
+          )}
+        </Box>
+      )}
+
+      <Flex gap={2.5} mt={isLocal ? 0 : 5}>
+        <Button
+          type="submit"
+          variant="plain"
+          bg={c.accent}
+          color="white"
+          borderRadius={radii.sm}
+          fontSize="0.9rem"
+          fontWeight={600}
+          px={5}
+          py="10px"
+          h="auto"
+          _hover={{ bg: c.accentLight }}
+          _disabled={{ opacity: 0.5, cursor: 'not-allowed' }}
+          disabled={isRunning || (isSSH && !username) || (isSSH && useJumpHost && !jumpUsername) || (mode === 'aws' && !host)}
+        >
+          {isRunning ? (
+            <>
+              <Spinner size="sm" /> {useJumpHost ? 'Connecting via jump host...' : 'Connecting...'}
+            </>
+          ) : isLocal ? (
+            'Start Local Session'
+          ) : (
+            mode === 'aws' ? `Connect to AWS instance` : `Connect to ${preset.label}`
+          )}
+        </Button>
+      </Flex>
+    </Box>
+  );
+
   return (
     <Box {...cardProps}>
       <Heading fontSize="1.15rem" fontWeight={600} mb={1.5}>Connection</Heading>
       <Text color={c.textDim} fontSize="0.9rem" mb={5}>{preset.description}</Text>
 
-      {cloudHint && (
+      {cloudHint && !cloudContent && (
         <Box mb={5} p={3.5} bg={c.bg} border="1px solid" borderColor={c.border} borderRadius={radii.md}>
           <Heading fontSize="0.92rem" fontWeight={700} mb={2}>{cloudHint.title}</Heading>
           <Flex direction="column" gap={1.5} color={c.textDim} fontSize="0.85rem" lineHeight={1.5}>
@@ -296,7 +410,7 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange, pre
             ))}
           </Grid>
 
-          {subProviders && (
+          {subProviders && subProviders.length > 1 && (
             <Grid templateColumns={`repeat(${subProviders.length}, 1fr)`} gap={2} mb={5}>
               {subProviders.map((sp) => {
                 const active = mode === sp.mode;
@@ -344,134 +458,10 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange, pre
         <Badge bg="rgba(0, 184, 148, 0.15)" color={c.success} px={2.5} py={1} borderRadius="full" fontSize="0.75rem" fontWeight={600}>
           {isLocal ? 'Local session active' : `Connected to ${host}`}
         </Badge>
-      ) : isAzure ? (
-        <Box p={4} bg={c.bg} border="1px dashed" borderColor={c.border} borderRadius={radii.md}>
-          <Heading fontSize="0.95rem" fontWeight={700} mb={1.5}>Azure — not implemented</Heading>
-          <Text color={c.textDim} fontSize="0.85rem" lineHeight={1.55}>
-            Azure VM support is not available yet. To connect to an existing Azure VM, use <Text as="strong" color={c.text}>SSH</Text> and enter the public IP, username, and key.
-          </Text>
-        </Box>
+      ) : mode === 'aws' && cloudContent ? (
+        cloudContent(sshForm)
       ) : (
-        <Box as="form" onSubmit={handleSubmit}>
-          {isSSH && (
-            <>
-              <Grid templateColumns="1fr 1fr" gap={4}>
-                <Box mb={4}>
-                  <Text {...labelProps}>Hostname</Text>
-                  <StyledInput {...inputProps} value={host} onChange={(e) => setHost(e.target.value)} placeholder={hostPlaceholder} required />
-                </Box>
-                <Box mb={4}>
-                  <Text {...labelProps}>Port</Text>
-                  <StyledInput {...inputProps} value={port} onChange={(e) => setPort(e.target.value)} placeholder="22" />
-                </Box>
-              </Grid>
-
-              <Box mb={4}>
-                <Text {...labelProps}>Username</Text>
-                <StyledInput {...inputProps} value={username} onChange={(e) => setUsername(e.target.value)} placeholder={usernamePlaceholder} required />
-              </Box>
-
-              <AuthToggle value={authMethod} onChange={setAuthMethod} />
-
-              {authMethod === 'password' ? (
-                <Box mb={4}>
-                  <Text {...labelProps}>Password</Text>
-                  <StyledInput {...inputProps} type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Your password" />
-                </Box>
-              ) : (
-                <Box mb={4}>
-                  <Text {...labelProps}>Private Key</Text>
-                  <Flex direction="column" gap={2.5}>
-                    <input type="file" onChange={handleFileUpload} accept=".pem,.key,*" />
-                    <StyledTextarea {...inputProps} fontFamily={fonts.mono} fontSize="0.82rem" resize="vertical" minH="120px" value={privateKey} onChange={(e) => setPrivateKey(e.target.value)} placeholder="Or paste your private key here..." rows={5} />
-                  </Flex>
-                </Box>
-              )}
-            </>
-          )}
-
-          {group === 'das' && (
-            <Box my={4} p={3.5} bg={c.bg} border="1px solid" borderColor={c.border} borderRadius={radii.md}>
-              <Flex as="label" align="center" flexWrap="wrap" gap={2} cursor="pointer" fontSize="0.9rem" fontWeight={600} color={c.text}>
-                <input
-                  type="checkbox"
-                  checked={useJumpHost}
-                  onChange={(e) => setUseJumpHost(e.target.checked)}
-                  style={{ width: 18, height: 18, accentColor: c.accent, cursor: 'pointer' }}
-                />
-                <Text fontWeight={600}>Use Jump Host (ProxyJump)</Text>
-                <Text fontSize="0.75rem" fontWeight={400} color={c.textDim} w="100%" ml="26px">
-                  Required when not on VU campus - tunnels via a gateway
-                </Text>
-              </Flex>
-
-              {useJumpHost && (
-                <Box mt={3.5} pt={3.5} borderTop="1px solid" borderColor={c.border}>
-                  <Grid templateColumns="1fr 1fr" gap={4}>
-                    <Box mb={4}>
-                      <Text {...labelProps}>Jump Hostname</Text>
-                      <StyledInput {...inputProps} value={jumpHost} onChange={(e) => setJumpHost(e.target.value)} placeholder="ssh.data.vu.nl" required />
-                    </Box>
-                    <Box mb={4}>
-                      <Text {...labelProps}>Jump Port</Text>
-                      <StyledInput {...inputProps} value={jumpPort} onChange={(e) => setJumpPort(e.target.value)} placeholder="22" />
-                    </Box>
-                  </Grid>
-
-                  <Box mb={4}>
-                    <Text {...labelProps}>Jump Username</Text>
-                    <StyledInput {...inputProps} value={jumpUsername} onChange={(e) => setJumpUsername(e.target.value)} placeholder="Your VUnet ID (e.g. abc123)" required />
-                  </Box>
-
-                  <AuthToggle value={jumpAuthMethod} onChange={setJumpAuthMethod} />
-
-                  {jumpAuthMethod === 'password' ? (
-                    <Box mb={4}>
-                      <Text {...labelProps}>Jump Password</Text>
-                      <StyledInput {...inputProps} type="password" value={jumpPassword} onChange={(e) => setJumpPassword(e.target.value)} placeholder="VUnet password" />
-                    </Box>
-                  ) : (
-                    <Box mb={4}>
-                      <Text {...labelProps}>Jump Private Key</Text>
-                      <Flex direction="column" gap={2.5}>
-                        <input type="file" onChange={handleJumpFileUpload} accept=".pem,.key,*" />
-                        <StyledTextarea {...inputProps} fontFamily={fonts.mono} fontSize="0.82rem" resize="vertical" minH="100px" value={jumpPrivateKey} onChange={(e) => setJumpPrivateKey(e.target.value)} placeholder="Or paste your private key here..." rows={4} />
-                      </Flex>
-                    </Box>
-                  )}
-                </Box>
-              )}
-            </Box>
-          )}
-
-          <Flex gap={2.5} mt={5}>
-            <Button
-              type="submit"
-              variant="plain"
-              bg={c.accent}
-              color="white"
-              borderRadius={radii.sm}
-              fontSize="0.9rem"
-              fontWeight={600}
-              px={5}
-              py="10px"
-              h="auto"
-              _hover={{ bg: c.accentLight }}
-              _disabled={{ opacity: 0.5, cursor: 'not-allowed' }}
-              disabled={isRunning || (isSSH && !username) || (isSSH && useJumpHost && !jumpUsername) || (mode === 'aws' && !host)}
-            >
-              {isRunning ? (
-                <>
-                  <Spinner size="sm" /> {useJumpHost ? 'Connecting via jump host...' : 'Connecting...'}
-                </>
-              ) : isLocal ? (
-                'Start Local Session'
-              ) : (
-                mode === 'aws' ? `Connect to AWS instance` : `Connect to ${preset.label}`
-              )}
-            </Button>
-          </Flex>
-        </Box>
+        sshForm
       )}
     </Box>
   );

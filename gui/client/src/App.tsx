@@ -11,6 +11,7 @@ import ResultsView from './components/ResultsView';
 import ManualCommand from './components/ManualCommand';
 import LogPanel from './components/LogPanel';
 import CloudPanel from './components/cloud/CloudPanel';
+import AwsCloudContent from './components/cloud/AwsCloudContent';
 import type { CloudInstanceHandoff } from './lib/cloud/types';
 import { c, radii, cardProps } from './theme';
 
@@ -98,7 +99,7 @@ export default function App() {
     }
   };
 
-  const modeLabel = ({ local: 'Local', das5: 'DAS-5', das6: 'DAS-6', aws: 'AWS', azure: 'Azure', custom: 'Custom SSH' } as Record<string, string>)[mode] || mode;
+  const modeLabel = ({ local: 'Local', das5: 'DAS-5', das6: 'DAS-6', aws: 'AWS', custom: 'Custom SSH' } as Record<string, string>)[mode] || mode;
 
   if (!connected) {
     return (
@@ -126,10 +127,13 @@ export default function App() {
               onModeChange={setMode}
               prefill={connectPrefill}
               onPrefillConsumed={() => setConnectPrefill(null)}
+              cloudContent={(sshForm) => (
+                <AwsCloudContent
+                  onUseInstance={handleUseInstance}
+                  connectSlot={sshForm}
+                />
+              )}
             />
-            {mode === 'aws' && (
-              <CloudPanel onUseInstance={handleUseInstance} initialProvider="aws" />
-            )}
           </Box>
         </Flex>
       </Flex>
@@ -232,7 +236,7 @@ export default function App() {
           )}
 
           {tab === 'cloud' && (
-            <CloudPanel onUseInstance={handleUseInstance} initialProvider={(mode === 'azure' ? 'azure' : 'aws')} />
+            <CloudPanel onUseInstance={handleUseInstance} />
           )}
 
           {tab === 'terminal' && (

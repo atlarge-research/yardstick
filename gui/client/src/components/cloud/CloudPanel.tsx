@@ -2,25 +2,27 @@ import { useEffect, useState } from 'react';
 import { Box, Button, Flex, Heading, Icon, Text } from '@chakra-ui/react';
 import { LuCloud, LuPlus } from 'react-icons/lu';
 import useCloudProvider from '../../hooks/useCloudProvider';
-import type { CloudInstance, CloudInstanceHandoff, ProviderId } from '../../lib/cloud/types';
+import type { CloudInstance, CloudInstanceHandoff } from '../../lib/cloud/types';
 import { awsAdapter } from '../../lib/cloud/awsAdapter';
 import { c, cardProps, radii } from '../../theme';
 import AwsAuth from './AwsAuth';
 import LaunchInstanceDialog from './LaunchInstanceDialog';
 import InstanceList from './InstanceList';
 
+type Tab = 'signin' | 'instances';
+
 interface Props {
   onUseInstance: (handoff: CloudInstanceHandoff) => void;
-  initialProvider?: ProviderId;
 }
 
-export default function CloudPanel({ onUseInstance, initialProvider = 'aws' }: Props) {
-  const [provider, setProvider] = useState<ProviderId>(initialProvider);
-  const cp = useCloudProvider(provider);
+export default function CloudPanel({ onUseInstance }: Props) {
+  const cp = useCloudProvider('aws');
+  const [tab, setTab] = useState<Tab>('signin');
   const [showLaunch, setShowLaunch] = useState(false);
 
   useEffect(() => {
     if (cp.authenticated) {
+      setTab('instances');
       cp.refreshInstances();
       cp.startPolling();
       return () => cp.stopPolling();
@@ -51,25 +53,27 @@ export default function CloudPanel({ onUseInstance, initialProvider = 'aws' }: P
     });
   };
 
+  const tabs: { id: Tab; label: string }[] = [
+    { id: 'signin', label: 'Sign In' },
+    { id: 'instances', label: 'Instances' },
+  ];
+
   return (
     <Box>
       <Box {...cardProps}>
         <Flex align="center" gap={2} mb={3}>
           <Icon as={LuCloud} boxSize="18px" color={c.accentLight} />
-          <Heading fontSize="1.15rem" fontWeight={600}>Cloud Providers</Heading>
+          <Heading fontSize="1.15rem" fontWeight={600}>AWS Cloud</Heading>
         </Flex>
-        <Flex gap={2} mb={1}>
-          {(['aws', 'azure'] as const).map((p) => (
-            <Button key={p} variant="plain"
-              bg={provider === p ? c.accent : 'transparent'}
-              color={provider === p ? 'white' : c.textDim}
-              border="1px solid" borderColor={provider === p ? c.accent : c.border}
-              borderRadius={radii.sm} px={4} py={2} h="auto" fontSize="0.85rem" fontWeight={600}
-              _hover={provider !== p ? { bg: c.surface2, color: c.text } : {}}
-              onClick={() => setProvider(p)}
-              disabled={p === 'azure'}
-              title={p === 'azure' ? 'Azure support coming next' : undefined}>
-              {p.toUpperCase()}{p === 'azure' ? ' (soon)' : ''}
+        <Flex border="1px solid" borderColor={c.border} borderRadius={radii.sm} overflow="hidden">
+          {tabs.map((t) => (
+            <Button key={t.id} variant="plain" flex={1} h="auto" py={2}
+              bg={tab === t.id ? c.accent : 'transparent'}
+              color={tab === t.id ? 'white' : c.textDim}
+              borderRadius={0} fontSize="0.85rem" fontWeight={500}
+              _hover={tab !== t.id ? { bg: c.surface2, color: c.text } : {}}
+              onClick={() => setTab(t.id)}>
+              {t.label}
             </Button>
           ))}
         </Flex>
@@ -86,65 +90,60 @@ export default function CloudPanel({ onUseInstance, initialProvider = 'aws' }: P
         </Box>
       )}
 
-      {provider === 'aws' && cp.adapter && (
-        <>
-          <AwsAuth
-            profiles={cp.profiles}
-            activeProfileId={cp.activeProfileId}
-            authenticated={cp.authenticated}
-            authenticating={cp.authenticating}
-            defaultRegion={cp.region}
-            onAuthenticate={cp.authenticate}
-            onLogout={cp.logout}
-            onDeleteProfile={async (id) => { await cp.adapter!.deleteProfile(id); await cp.refreshProfiles(); }}
-          />
-
-          {cp.authenticated && (
-            <>
-              <Box {...cardProps}>
-                <Flex justify="space-between" align="center">
-                  <Box>
-                    <Heading fontSize="1rem" fontWeight={600} mb={1}>Region</Heading>
-                    <Text color={c.textDim} fontSize="0.85rem">All actions below run against this region.</Text>
-                  </Box>
-                  <Flex gap={2.5} align="center">
-                    <RegionPicker region={cp.region} onChange={cp.setRegion} adapter={cp.adapter} />
-                    <Button variant="plain" bg={c.accent} color="white" borderRadius={radii.sm} px={4} py={2} h="auto" fontSize="0.85rem" fontWeight={600} _hover={{ bg: c.accentLight }} onClick={() => setShowLaunch((v) => !v)}>
-                      <Icon as={LuPlus} boxSize="14px" /> <Box as="span" ml={1.5}>{showLaunch ? 'Hide' : 'New instance'}</Box>
-                    </Button>
-                  </Flex>
-                </Flex>
-              </Box>
-
-              {showLaunch && (
-                <LaunchInstanceDialog
-                  adapter={cp.adapter}
-                  region={cp.region}
-                  onRegionChange={cp.setRegion}
-                  onLaunch={cp.launch}
-                  onClose={() => setShowLaunch(false)}
-                />
-              )}
-
-              <InstanceList
-                instances={cp.instances}
-                loading={cp.loadingInstances}
-                onRefresh={cp.refreshInstances}
-                onStart={cp.start}
-                onStop={cp.stop}
-                onTerminate={cp.terminate}
-                onUse={handleUse}
-              />
-            </>
-          )}
-        </>
+      {tab === 'signin' && cp.adapter && (
+        <AwsAuth
+          profiles={cp.profiles}
+          activeProfileId={cp.activeProfileId}
+          authenticated={cp.authenticated}
+          authenticating={cp.authenticating}
+          defaultRegion={cp.region}
+          onAuthenticate={cp.authenticate}
+          onLogout={cp.logout}
+          onDeleteProfile={async (id) => { await cp.adapter!.deleteProfile(id); await cp.refreshProfiles(); }}
+        />
       )}
 
-      {provider === 'azure' && (
-        <Box {...cardProps}>
-          <Heading fontSize="1rem" fontWeight={600} mb={1}>Azure</Heading>
-          <Text color={c.textDim} fontSize="0.88rem">Not implemented.</Text>
-        </Box>
+      {tab === 'instances' && cp.adapter && (
+        cp.authenticated ? (
+          <>
+            <Box {...cardProps}>
+              <Flex justify="space-between" align="center">
+                <Box>
+                  <Heading fontSize="1rem" fontWeight={600} mb={1}>Region</Heading>
+                  <Text color={c.textDim} fontSize="0.85rem">All actions below run against this region.</Text>
+                </Box>
+                <Flex gap={2.5} align="center">
+                  <RegionPicker region={cp.region} onChange={cp.setRegion} adapter={cp.adapter} />
+                  <Button variant="plain" bg={c.accent} color="white" borderRadius={radii.sm} px={4} py={2} h="auto" fontSize="0.85rem" fontWeight={600} _hover={{ bg: c.accentLight }} onClick={() => setShowLaunch((v) => !v)}>
+                    <Icon as={LuPlus} boxSize="14px" /><Box as="span" ml={1.5}>{showLaunch ? 'Hide' : 'New instance'}</Box>
+                  </Button>
+                </Flex>
+              </Flex>
+            </Box>
+            {showLaunch && (
+              <LaunchInstanceDialog
+                adapter={cp.adapter}
+                region={cp.region}
+                onRegionChange={cp.setRegion}
+                onLaunch={cp.launch}
+                onClose={() => setShowLaunch(false)}
+              />
+            )}
+            <InstanceList
+              instances={cp.instances}
+              loading={cp.loadingInstances}
+              onRefresh={cp.refreshInstances}
+              onStart={cp.start}
+              onStop={cp.stop}
+              onTerminate={cp.terminate}
+              onUse={handleUse}
+            />
+          </>
+        ) : (
+          <Box {...cardProps}>
+            <Text color={c.textDim} fontSize="0.88rem">Sign in first to manage instances.</Text>
+          </Box>
+        )
       )}
     </Box>
   );

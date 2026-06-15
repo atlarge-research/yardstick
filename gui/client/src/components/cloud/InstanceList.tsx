@@ -12,6 +12,8 @@ interface Props {
   onStop: (ids: string[]) => Promise<void>;
   onTerminate: (ids: string[]) => Promise<void>;
   onUse: (inst: CloudInstance) => void;
+  /** When true, renders without a card wrapper (for embedding inside another card). */
+  bare?: boolean;
 }
 
 function stateColor(s: string): string {
@@ -22,7 +24,7 @@ function stateColor(s: string): string {
   return c.textDim;
 }
 
-export default function InstanceList({ instances, loading, onRefresh, onStart, onStop, onTerminate, onUse }: Props) {
+export default function InstanceList({ instances, loading, onRefresh, onStart, onStop, onTerminate, onUse, bare = false }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
 
   const wrap = async (id: string, fn: () => Promise<void>) => {
@@ -30,8 +32,8 @@ export default function InstanceList({ instances, loading, onRefresh, onStart, o
     try { await fn(); } finally { setBusy(null); }
   };
 
-  return (
-    <Box {...cardProps}>
+  const content = (
+    <>
       <Flex justify="space-between" align="center" mb={3}>
         <Heading fontSize="1.05rem" fontWeight={600}>Instances</Heading>
         <Button variant="plain" bg="transparent" border="1px solid" borderColor={c.border} color={c.text} borderRadius={radii.sm} px={3.5} py={2} h="auto" fontSize="0.82rem" _hover={{ bg: c.surface2 }} onClick={onRefresh} disabled={loading}>
@@ -96,6 +98,8 @@ export default function InstanceList({ instances, loading, onRefresh, onStart, o
           );
         })}
       </Box>
-    </Box>
+    </>
   );
+
+  return bare ? content : <Box {...cardProps}>{content}</Box>;
 }
