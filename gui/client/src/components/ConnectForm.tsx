@@ -42,8 +42,8 @@ interface SubProviderDef {
 }
 
 const GROUPS: GroupDef[] = [
-  { id: 'cloud', label: 'Cloud', icon: LuCloud },
   { id: 'das',   label: 'DAS',   icon: LuHash },
+  { id: 'cloud', label: 'Cloud', icon: LuCloud },
   { id: 'ssh',   label: 'SSH',   icon: LuGlobe },
   { id: 'local', label: 'Local', icon: LuMonitor },
 ];
