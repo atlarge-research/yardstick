@@ -39,7 +39,7 @@ export interface SshConnectOptions {
 }
 
 export interface ExperimentConfig {
-  dasUsername: string;
+  username: string;
   numNodes: number;
   botsPerNode: number;
   sleepTime: number;
@@ -256,7 +256,7 @@ export default function useYardstick() {
   }, []);
 
   const runExperiment = useCallback(
-    ({ dasUsername, numNodes, botsPerNode, sleepTime, runName }: ExperimentConfig) => {
+    ({ username, numNodes, botsPerNode, sleepTime, runName }: ExperimentConfig) => {
       if (!sessionId) return;
       setExperimentError(null);
       setExperimentDone(false);
@@ -265,7 +265,7 @@ export default function useYardstick() {
       setTerminalOutput((prev) => ({ ...prev, 'run-experiment': '' }));
       socket.emit('ssh:run-experiment', {
         sessionId,
-        username: dasUsername,
+        username,
         numNodes,
         botsPerNode,
         sleepTime,

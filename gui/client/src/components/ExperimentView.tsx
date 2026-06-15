@@ -28,7 +28,7 @@ export default function ExperimentView({
   const [sleepTime, setSleepTime] = useState(60);
 
   const handleRun = () => {
-    onRunExperiment({ dasUsername: username, numNodes, botsPerNode, sleepTime, runName: runName.trim() });
+    onRunExperiment({ username, numNodes, botsPerNode, sleepTime, runName: runName.trim() });
   };
 
   return (
