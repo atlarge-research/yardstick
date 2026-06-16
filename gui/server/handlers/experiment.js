@@ -38,7 +38,7 @@ function registerExperimentHandlers(socket) {
     }
 
     const isLocalMode = mode === 'local';
-    const isCloudMode = ['aws', 'azure', 'custom-ssh'].includes(mode);
+    const isCloudMode = ['aws', 'custom-ssh'].includes(mode);
     let workerInstanceIds = [];
 
     try {

@@ -43,15 +43,14 @@ function decrypt(payload) {
 
 function readConfig() {
   ensureBaseDir();
-  if (!fs.existsSync(CONFIG_PATH)) return { aws: { profiles: {} }, azure: { profiles: {} } };
+  if (!fs.existsSync(CONFIG_PATH)) return { aws: { profiles: {} } };
   try {
     const raw = fs.readFileSync(CONFIG_PATH, 'utf8');
     const obj = JSON.parse(raw);
     obj.aws ||= { profiles: {} };
-    obj.azure ||= { profiles: {} };
     return obj;
   } catch {
-    return { aws: { profiles: {} }, azure: { profiles: {} } };
+    return { aws: { profiles: {} } };
   }
 }
 

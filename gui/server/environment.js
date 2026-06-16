@@ -2,7 +2,7 @@ const { spawn } = require('child_process');
 const os = require('os');
 
 function isHomeMode(mode) {
-  return mode === 'local' || mode === 'aws' || mode === 'azure' || mode === 'custom-ssh';
+  return mode === 'local' || mode === 'aws' || mode === 'custom-ssh';
 }
 
 function buildPipelineCommands(mode, user) {
