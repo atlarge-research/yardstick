@@ -41,8 +41,11 @@ app.get('*', (_req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
-  console.log(`Yardstick GUI server running on http://localhost:${PORT}`);
+const serverReady = new Promise((resolve) => {
+  server.listen(PORT, () => {
+    console.log(`Yardstick GUI server running on http://localhost:${PORT}`);
+    resolve(Number(PORT));
+  });
 });
 
-module.exports = server;
+module.exports = { server, serverReady };

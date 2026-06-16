@@ -1,13 +1,35 @@
 const { app, BrowserWindow } = require('electron');
+const net = require('net');
 
 let mainWindow;
+let serverPort;
 
-function startBackend() {
-  process.env.PORT = '3001';
-  require('../server/index.js');
+function findFreePort(startPort) {
+  return new Promise((resolve, reject) => {
+    const probe = net.createServer();
+    probe.listen(startPort, '127.0.0.1', () => {
+      const { port } = probe.address();
+      probe.close(() => resolve(port));
+    });
+    probe.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        resolve(findFreePort(startPort + 1));
+      } else {
+        reject(err);
+      }
+    });
+  });
 }
 
-function createWindow() {
+async function startBackend() {
+  const port = await findFreePort(3001);
+  process.env.PORT = String(port);
+  const { serverReady } = require('../server/index.js');
+  await serverReady;
+  return port;
+}
+
+function createWindow(port) {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 860,
@@ -22,20 +44,20 @@ function createWindow() {
     autoHideMenuBar: true,
   });
 
-  mainWindow.loadURL('http://localhost:3001');
+  mainWindow.loadURL(`http://localhost:${port}`);
 
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
 }
 
-app.whenReady().then(() => {
-  startBackend();
-  createWindow();
+app.whenReady().then(async () => {
+  serverPort = await startBackend();
+  createWindow(serverPort);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      createWindow(serverPort);
     }
   });
 });
