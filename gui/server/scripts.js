@@ -417,16 +417,21 @@ for fname, url, sz in DOWNLOADS:
 _dockerfile = (
     b"FROM ubuntu:22.04\\n"
     b"ENV DEBIAN_FRONTEND=noninteractive\\n"
+    b"ENV HOME=/opt/nvm_home\\n"
     b"RUN apt-get update && apt-get install -y --no-install-recommends"
-    b" openjdk-17-jre-headless python3 rsync wget curl git"
+    b" openjdk-17-jre-headless python3 rsync wget curl git ca-certificates"
     b" && rm -rf /var/lib/apt/lists/*\\n"
+    b"RUN mkdir -p /opt/nvm_home\\n"
+    b"RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.2/install.sh | bash"
+    b" && . /opt/nvm_home/.nvm/nvm.sh && nvm install 18\\n"
+    b"RUN chmod -R 777 /opt/nvm_home\\n"
     b"RUN ln -sf /usr/bin/python3 /usr/bin/python\\n"
     b'CMD ["tail", "-f", "/dev/null"]\\n'
 )
-_img = 'yardstick-node:latest'
+_img = 'yardstick-node:v3'
 try:
     if _sp.run(['docker', 'image', 'inspect', _img], capture_output=True).returncode != 0:
-        print('[docker] Building yardstick-node image (first run, ~1 min)...', flush=True)
+        print('[docker] Building yardstick-node image (first run, ~3 min for nvm + Node 18)...', flush=True)
         _b = _sp.run(['docker', 'build', '-t', _img, '-'], input=_dockerfile)
         if _b.returncode != 0:
             raise RuntimeError('docker build failed')
@@ -474,6 +479,7 @@ try:
             '--name', _cname,
             '--network', 'host',
             '--user', f'{os.getuid()}:{os.getgid()}',
+            '-e', 'HOME=/opt/nvm_home',
             '-v', f'{node.wd}:{node.wd}',
             '-v', f'{CACHE}:{CACHE}:ro',
             _img,

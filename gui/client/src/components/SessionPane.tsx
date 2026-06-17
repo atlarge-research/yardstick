@@ -77,7 +77,7 @@ export default function SessionPane({ onStatusChange, onLabelChange }: SessionPa
 
   const [tab, setTab] = useState<TabId>('setup');
   const [sshUsername, setSshUsername] = useState('');
-  const [showLogs, setShowLogs] = useState(true);
+  const [showLogs, setShowLogs] = useState(false);
   const [connectPrefill, setConnectPrefill] = useState<Partial<SshConnectOptions> | null>(null);
 
   // Report status to parent
