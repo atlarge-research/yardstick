@@ -559,7 +559,12 @@ try:
     import random as _rnd; timestamp = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + str(_rnd.randint(1000,9999))
     run_label = '${safeName}_' + timestamp if '${safeName}' else timestamp
     dest = Path(home) / 'yardstick' / run_label
-    yardstick_benchmark.fetch(dest, nodes)
+    dest.mkdir(parents=True, exist_ok=True)
+    # With Docker bind-mounts the node wds are already on the host filesystem,
+    # so copy directly instead of going through rsync-based fetch.
+    for node in nodes:
+        if node.wd.exists():
+            _shutil.copytree(str(node.wd), str(dest / node.wd.name), dirs_exist_ok=True)
     print(f'Results saved to {dest}')
 finally:
     for _c in _started:
