@@ -315,7 +315,35 @@ try:
     import random as _rnd; timestamp = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + str(_rnd.randint(1000,9999))
     run_label = '${safeName}_' + timestamp if '${safeName}' else timestamp
     dest = Path(os.path.expanduser('~')) / 'yardstick' / run_label
-    _run('Fetch results', lambda: yardstick_benchmark.fetch(dest, nodes))
+    dest.mkdir(parents=True, exist_ok=True)
+
+    # Fetch server data with a local copy (synchronize pull mode doesn't work
+    # for local→local; also avoids the ansible.posix dependency for this step).
+    _server_dest = dest / 'server'
+    if papermc_node.wd.exists():
+        shutil.copytree(str(papermc_node.wd), str(_server_dest), dirs_exist_ok=True)
+        print('[fetch] server data collected', flush=True)
+    else:
+        print(f'[warn] server wd missing: {papermc_node.wd}', flush=True)
+
+    # Fetch each worker's data via direct rsync over SSH.
+    # ansible.posix.synchronize pull mode requires rsync FROM the worker
+    # back to this host, which needs reverse SSH that isn't set up.
+    _key = os.path.expanduser('~/.ssh/yardstick_exp.pem')
+    _ssh_e = f'ssh -i {_key} -o StrictHostKeyChecking=no -o ConnectTimeout=10'
+    for i, (ip, wnode) in enumerate(zip(_worker_ips, worker_nodes)):
+        _label = f'client{i + 1}'
+        _wdest = dest / _label
+        _wdest.mkdir(parents=True, exist_ok=True)
+        _r = _sp.run(
+            ['rsync', '-az', '-e', _ssh_e, f'{_worker_user}@{ip}:{wnode.wd}/', str(_wdest) + '/'],
+            capture_output=True, text=True, timeout=120,
+        )
+        if _r.returncode == 0:
+            print(f'[fetch] worker {ip} ({_label}) data collected', flush=True)
+        else:
+            print(f'[warn] worker {ip} fetch failed: {_r.stderr.strip()[:300]}', flush=True)
+
     print(f'Results saved to {dest}')
 finally:
     try:
