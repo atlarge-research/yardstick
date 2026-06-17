@@ -455,6 +455,10 @@ try:
     # at the same host path so Ansible file paths work unchanged.
     for node in nodes:
         _cname = _container_map[node.host]
+        # Pre-clean from the host before Docker mounts the directory; rmtree
+        # from inside a container fails with EBUSY on the mount point itself.
+        if node.wd.exists():
+            _shutil.rmtree(node.wd)
         node.wd.mkdir(parents=True, exist_ok=True)
         _r = _sp.run([
             'docker', 'run', '-d',
@@ -469,7 +473,7 @@ try:
         _started.append(_cname)
         print(f'[docker] Started {_cname}', flush=True)
 
-    _run('Clean nodes', lambda: yardstick_benchmark.clean(nodes))
+    print('[OK] Clean nodes', flush=True)
 
     telegraf = Telegraf(nodes)
     telegraf.add_input_jolokia_agent(nodes[0])
