@@ -35,7 +35,7 @@ try:
     papermc.stop()
     telegraf.stop()
 
-    timestamp = datetime.now().isoformat(timespec='minutes').replace('-','').replace(':','')
+    import random as _rnd; timestamp = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + str(_rnd.randint(1000,9999))
     run_label = '${safeName}_' + timestamp if '${safeName}' else timestamp
     dest = Path('${scratchDir}/' + run_label)
     yardstick_benchmark.fetch(dest, nodes)
@@ -286,7 +286,7 @@ try:
     _run('Stop PaperMC', papermc.stop)
     _run('Stop Telegraf', telegraf.stop)
 
-    timestamp = datetime.now().isoformat(timespec='minutes').replace('-','').replace(':','')
+    import random as _rnd; timestamp = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + str(_rnd.randint(1000,9999))
     run_label = '${safeName}_' + timestamp if '${safeName}' else timestamp
     dest = Path(os.path.expanduser('~')) / 'yardstick' / run_label
     _run('Fetch results', lambda: yardstick_benchmark.fetch(dest, nodes))
@@ -311,56 +311,265 @@ import yardstick_benchmark.model as _ym
 from time import sleep
 from datetime import datetime
 from pathlib import Path
-import os
+import os, shutil as _shutil, subprocess as _sp, urllib.request, time as _time, glob as _glob
 
-_orig_gen_inv = _ym._gen_inv
-def _patched_gen_inv(name, nodes):
-    inv = _orig_gen_inv(name, nodes)
-    for host, hvars in inv['all']['hosts'].items():
-        if host in ('localhost', '127.0.0.1'):
-            hvars['ansible_connection'] = 'local'
-            hvars['ansible_shell_executable'] = '/bin/bash'
-    return inv
-_ym._gen_inv = _patched_gen_inv
+# Fix nvm loading in walkaround playbooks (non-interactive shells ignore ~/.bashrc)
+try:
+    import yardstick_benchmark.games.minecraft.workload as _wl_mod
+    _wl_dir = os.path.dirname(_wl_mod.__file__)
+    for _yml in _glob.glob(f'{_wl_dir}/*.yml'):
+        _txt = open(_yml).read()
+        if 'source ~/.bashrc' in _txt:
+            open(_yml, 'w').write(_txt.replace(
+                'source ~/.bashrc',
+                'export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"'
+            ))
+except Exception as _e:
+    print(f'[warn] walkaround patch: {_e}', flush=True)
+
+# Patch PaperMC start playbook: increase wait_for timeout and add JVM heap flags
+try:
+    import yardstick_benchmark.games.minecraft.server as _pmc_mod
+    _pmc_dir = os.path.dirname(_pmc_mod.__file__)
+    _start_yml = os.path.join(_pmc_dir, 'papermc_start.yml')
+    _txt = open(_start_yml).read()
+    _changed = False
+    if 'timeout:' not in _txt:
+        _txt = _txt.rstrip() + chr(10) + '        timeout: 900' + chr(10)
+        _changed = True
+    if '-Xms' not in _txt:
+        _txt = _txt.replace(
+            'nohup java -javaagent:',
+            'nohup java -Xms512m -Xmx1g -javaagent:'
+        )
+        _changed = True
+    if _changed:
+        open(_start_yml, 'w').write(_txt)
+        print('[patch] PaperMC start: timeout=900s, JVM heap 512m-1g', flush=True)
+except Exception as _e:
+    print(f'[warn] PaperMC patch: {_e}', flush=True)
 
 home = os.path.expanduser('~')
 wd_base = Path(home) / 'yardstick' / 'run'
 
-nodes = [Node(host='localhost', wd=wd_base / 'server')] + [
-    Node(host='localhost', wd=wd_base / f'client{i}')
+# One node per Docker container; host names just need to be unique for yardstick inventory.
+server_node = Node(host='localhost', wd=wd_base / 'server')
+client_nodes = [
+    Node(host=f'127.0.0.{i + 1}', wd=wd_base / f'client{i}')
     for i in range(1, ${numNodes})
 ]
+nodes = [server_node] + client_nodes
 
+# Map each node host -> Docker container name
+_container_map = {node.host: f'ys-local-{i}' for i, node in enumerate(nodes)}
+
+# Route all Ansible plays through 'docker exec' into the matching container.
+# community.docker is bundled with ansible>=8.
+_orig_gen_inv = _ym._gen_inv
+def _patched_gen_inv(name, nodes_arg):
+    inv = _orig_gen_inv(name, nodes_arg)
+    for host, hvars in inv['all']['hosts'].items():
+        hvars['ansible_connection'] = 'community.docker.docker'
+        hvars['ansible_host'] = _container_map.get(host, host)
+        hvars['ansible_python_interpreter'] = '/usr/bin/python3'
+    return inv
+_ym._gen_inv = _patched_gen_inv
+
+# Cache JARs locally to avoid re-downloading on every run
+CACHE = Path(home) / '.yardstick-cache'
+CACHE.mkdir(parents=True, exist_ok=True)
+DOWNLOADS = [
+    ('paper-1.20.1-58.jar',
+     'https://api.papermc.io/v2/projects/paper/versions/1.20.1/builds/58/downloads/paper-1.20.1-58.jar',
+     1_000_000),
+    ('jolokia-agent-jvm-2.0.3-javaagent.jar',
+     'https://search.maven.org/remotecontent?filepath=org/jolokia/jolokia-agent-jvm/2.0.3/jolokia-agent-jvm-2.0.3-javaagent.jar',
+     100_000),
+]
+
+def _ensure_cached(fname, url, min_size, retries=3, timeout=60):
+    dest = CACHE / fname
+    if dest.exists() and dest.stat().st_size >= min_size:
+        print(f'[cache] {fname}', flush=True)
+        return dest
+    for attempt in range(1, retries + 1):
+        try:
+            print(f'[fetch] {fname} (attempt {attempt}/{retries})', flush=True)
+            tmp = dest.with_suffix(dest.suffix + '.part')
+            with urllib.request.urlopen(url, timeout=timeout) as resp, open(tmp, 'wb') as f:
+                _shutil.copyfileobj(resp, f, length=64 * 1024)
+            if tmp.stat().st_size < min_size:
+                raise IOError(f'file too small ({tmp.stat().st_size} bytes)')
+            tmp.replace(dest)
+            return dest
+        except Exception as e:
+            print(f'[retry] {e}', flush=True)
+            if attempt < retries:
+                _time.sleep(min(2 ** attempt, 10))
+    raise RuntimeError(f'failed to fetch {url}')
+
+for fname, url, sz in DOWNLOADS:
+    _ensure_cached(fname, url, sz)
+
+# Build the node image on first run; cached by Docker layer cache afterwards.
+# Embedded inline so no external Dockerfile is needed at runtime.
+_dockerfile = (
+    b"FROM ubuntu:22.04\\n"
+    b"ENV DEBIAN_FRONTEND=noninteractive\\n"
+    b"RUN apt-get update && apt-get install -y --no-install-recommends"
+    b" openjdk-17-jre-headless python3 rsync wget curl git"
+    b" && rm -rf /var/lib/apt/lists/*\\n"
+    b"RUN ln -sf /usr/bin/python3 /usr/bin/python\\n"
+    b'CMD ["tail", "-f", "/dev/null"]\\n'
+)
+_img = 'yardstick-node:latest'
 try:
-    yardstick_benchmark.clean(nodes)
+    if _sp.run(['docker', 'image', 'inspect', _img], capture_output=True).returncode != 0:
+        print('[docker] Building yardstick-node image (first run, ~1 min)...', flush=True)
+        _b = _sp.run(['docker', 'build', '-t', _img, '-'], input=_dockerfile)
+        if _b.returncode != 0:
+            raise RuntimeError('docker build failed')
+        print('[docker] Image ready.', flush=True)
+except FileNotFoundError:
+    raise RuntimeError('Docker is not installed or not on PATH. Install Docker then reconnect.')
+
+def _run(label, fn):
+    print(f'[>>] {label}...', flush=True)
+    try:
+        result = fn()
+        print(f'[OK] {label}', flush=True)
+        return result
+    except Exception as e:
+        msg = str(e)
+        lines = [l.strip() for l in msg.splitlines() if l.strip()]
+        summary = lines[-1] if lines else msg
+        print(f'[FAIL] {label}: {summary}', flush=True)
+        raise RuntimeError(f'{label} failed: {summary}') from e
+
+papermc = None
+_started = []
+try:
+    # Start one Docker container per node with --network host so all processes
+    # share the host network stack (PaperMC binds to 0.0.0.0 and bots on other
+    # containers reach it via localhost). The working directory is bind-mounted
+    # at the same host path so Ansible file paths work unchanged.
+    for node in nodes:
+        _cname = _container_map[node.host]
+        node.wd.mkdir(parents=True, exist_ok=True)
+        _r = _sp.run([
+            'docker', 'run', '-d',
+            '--name', _cname,
+            '--network', 'host',
+            '-v', f'{node.wd}:{node.wd}',
+            '-v', f'{CACHE}:{CACHE}:ro',
+            _img,
+        ], capture_output=True, text=True)
+        if _r.returncode != 0:
+            raise RuntimeError(f'docker run {_cname}: {_r.stderr.strip()}')
+        _started.append(_cname)
+        print(f'[docker] Started {_cname}', flush=True)
+
+    _run('Clean nodes', lambda: yardstick_benchmark.clean(nodes))
 
     telegraf = Telegraf(nodes)
     telegraf.add_input_jolokia_agent(nodes[0])
     telegraf.add_input_execd_minecraft_ticks(nodes[0])
-    telegraf.deploy()
+    _run('Deploy Telegraf', telegraf.deploy)
 
     papermc = PaperMC(nodes[:1])
-    papermc.deploy()
-    papermc.start()
 
-    telegraf.start()
+    # Pre-stage cached JARs into the server working directory so Ansible skips download
+    try:
+        _inv_hosts = papermc.deploy_action.inv['all']['hosts']
+        run_wd = Path(_inv_hosts[next(iter(_inv_hosts))]['wd'])
+        run_wd.mkdir(parents=True, exist_ok=True)
+        for fname, _u, _s in DOWNLOADS:
+            src = CACHE / fname
+            dst = run_wd / fname
+            if not dst.exists() and src.exists():
+                _shutil.copy2(src, dst)
+                print(f'[stage] {fname}', flush=True)
+    except Exception as e:
+        print(f'[warn] pre-stage: {e}', flush=True)
 
-    wl = WalkAround(nodes[1:], nodes[0].host, bots_per_node=${botsPerNode})
-    wl.deploy()
-    wl.start()
+    _run('Deploy PaperMC', papermc.deploy)
+
+    # Stream PaperMC log lines every 15 s while Ansible waits for startup.
+    # The actual wd has a random suffix (papermc-XXXXXX) so use a glob.
+    import threading as _threading_pmc
+    _pmc_stop = _threading_pmc.Event()
+    _pmc_pos = [0]
+    def _pmc_log_tail():
+        while not _pmc_stop.wait(15):
+            try:
+                _matches = _glob.glob(str(wd_base / 'server' / 'papermc-*' / 'logs' / 'latest.log'))
+                if _matches:
+                    with open(_matches[0], errors='replace') as _f:
+                        _f.seek(_pmc_pos[0])
+                        _new = _f.read()
+                        _pmc_pos[0] = _f.tell()
+                    for _l in _new.splitlines():
+                        if _l.strip():
+                            print(f'[server] {_l}', flush=True)
+                else:
+                    print('[server] waiting for logs/latest.log to appear...', flush=True)
+            except Exception:
+                pass
+    _pmc_tail = _threading_pmc.Thread(target=_pmc_log_tail, daemon=True)
+    _pmc_tail.start()
+    try:
+        _run('Start PaperMC', papermc.start)
+    except Exception as e:
+        try:
+            _log_matches = _glob.glob(str(wd_base / 'server' / 'papermc-*' / 'logs' / 'latest.log'))
+            log_file = Path(_log_matches[0]) if _log_matches else None
+            if log_file and log_file.exists():
+                print('--- PaperMC logs/latest.log (last 60 lines) ---', flush=True)
+                for line in log_file.read_text(errors='replace').splitlines()[-60:]:
+                    print(line, flush=True)
+                print('--- end log ---', flush=True)
+            else:
+                print('No PaperMC log found — Java may have crashed before writing logs.', flush=True)
+        except Exception:
+            pass
+        raise
+    finally:
+        _pmc_stop.set()
+        _pmc_tail.join(timeout=5)
+
+    _run('Start Telegraf', telegraf.start)
+
+    wl_nodes = client_nodes if client_nodes else [server_node]
+    wl = WalkAround(wl_nodes, server_node.host, bots_per_node=${botsPerNode})
+    _run('Deploy WalkAround', wl.deploy)
+    _run('Run WalkAround bots', wl.start)
+
     print('Experiment running, sleeping for ${sleepTime}s...')
     sleep(${sleepTime})
 
-    papermc.stop()
-    telegraf.stop()
+    try:
+        _run('Stop PaperMC', papermc.stop)
+    except Exception as e:
+        print(f'[warn] stop PaperMC: {e}', flush=True)
+    try:
+        _run('Stop Telegraf', telegraf.stop)
+    except Exception as e:
+        print(f'[warn] stop Telegraf: {e}', flush=True)
 
-    timestamp = datetime.now().isoformat(timespec='minutes').replace('-','').replace(':','')
+    import random as _rnd; timestamp = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + str(_rnd.randint(1000,9999))
     run_label = '${safeName}_' + timestamp if '${safeName}' else timestamp
     dest = Path(home) / 'yardstick' / run_label
     yardstick_benchmark.fetch(dest, nodes)
     print(f'Results saved to {dest}')
 finally:
-    yardstick_benchmark.clean(nodes)
+    for _c in _started:
+        _sp.run(['docker', 'rm', '-f', _c], capture_output=True)
+        print(f'[docker] Removed {_c}', flush=True)
+    try:
+        for node in nodes:
+            _shutil.rmtree(node.wd, ignore_errors=True)
+    except Exception as _e:
+        print(f'[warn] host cleanup: {_e}', flush=True)
     print('Done!')
 `;
 }

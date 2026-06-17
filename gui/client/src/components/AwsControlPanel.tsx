@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Box, Flex, Text, Heading, Input, Button, Icon } from '@chakra-ui/react';
 import { LuCloud } from 'react-icons/lu';
 import { c, cardProps, radii, inputProps, labelProps } from '../theme';
-import socket from '../socket';
+import { useSocket } from '../context/SocketContext';
 
 interface Props {
   onLaunch: (opts: Record<string, any>) => void;
@@ -10,6 +10,7 @@ interface Props {
 }
 
 export default function AwsControlPanel({ onLaunch, onTerminate }: Props) {
+  const socket = useSocket();
   const [region, setRegion] = useState('eu-west-2');
   const [count, setCount] = useState(1);
   const [instanceType, setInstanceType] = useState('t3.micro');

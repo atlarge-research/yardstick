@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { awsAdapter } from '../lib/cloud/awsAdapter';
+import { createAwsAdapter } from '../lib/cloud/awsAdapter';
+import { useSocket } from '../context/SocketContext';
 import type { CloudAdapter } from '../lib/cloud/adapter';
 import { loadPrefs, patchProviderPrefs } from '../lib/cloud/store';
 import type {
@@ -38,13 +39,12 @@ interface UseCloudProvider {
 
 const POLL_INTERVAL_MS = 6000;
 
-function adapterFor(provider: ProviderId): CloudAdapter<AwsCredentials> | null {
-  if (provider === 'aws') return awsAdapter;
-  return null;
-}
-
 export default function useCloudProvider(provider: ProviderId): UseCloudProvider {
-  const adapter = useMemo(() => adapterFor(provider), [provider]);
+  const socket = useSocket();
+  const adapter = useMemo<CloudAdapter<AwsCredentials> | null>(
+    () => (provider === 'aws' ? createAwsAdapter(socket) : null),
+    [provider, socket]
+  );
   const prefs = loadPrefs()[provider] || {};
 
   const [authenticated, setAuthenticated] = useState(false);

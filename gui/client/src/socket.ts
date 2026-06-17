@@ -1,5 +1,6 @@
 import { io } from 'socket.io-client';
+import type { Socket } from 'socket.io-client';
 
-const socket = io('http://localhost:3001', { autoConnect: false });
-
-export default socket;
+export function createSocket(): Socket {
+  return io(window.location.origin, { autoConnect: false });
+}

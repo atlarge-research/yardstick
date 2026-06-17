@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import socket from '../socket';
+import type { Socket } from 'socket.io-client';
 import type { CloudInstanceHandoff } from '../lib/cloud/types';
 
 export interface Step {
@@ -54,7 +54,7 @@ const STEPS: Step[] = [
   { id: 'experiment', label: 'Experiment', description: 'Run a benchmark experiment' },
 ];
 
-export default function useYardstick() {
+export default function useYardstick(socket: Socket) {
   const [connected, setConnected] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [mode, setMode] = useState('das5');

@@ -2,7 +2,6 @@ import { type ReactNode, useEffect, useState } from 'react';
 import { Box, Button, Flex, Text } from '@chakra-ui/react';
 import useCloudProvider from '../../hooks/useCloudProvider';
 import type { CloudInstance, CloudInstanceHandoff } from '../../lib/cloud/types';
-import { awsAdapter } from '../../lib/cloud/awsAdapter';
 import { c, radii } from '../../theme';
 import AwsAuth from './AwsAuth';
 import InstanceList from './InstanceList';
@@ -34,7 +33,7 @@ export default function AwsCloudContent({ onUseInstance, connectSlot }: Props) {
     let privateKey: string | null = null;
     if (inst.keyName) {
       try {
-        privateKey = await awsAdapter.getKeyMaterial(inst.keyName);
+        privateKey = await cp.adapter?.getKeyMaterial(inst.keyName) ?? null;
       } catch {
         privateKey = null;
       }

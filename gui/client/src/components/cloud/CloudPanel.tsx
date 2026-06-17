@@ -3,7 +3,6 @@ import { Box, Button, Flex, Heading, Icon, Text } from '@chakra-ui/react';
 import { LuCloud, LuPlus } from 'react-icons/lu';
 import useCloudProvider from '../../hooks/useCloudProvider';
 import type { CloudInstance, CloudInstanceHandoff } from '../../lib/cloud/types';
-import { awsAdapter } from '../../lib/cloud/awsAdapter';
 import { c, cardProps, radii } from '../../theme';
 import AwsAuth from './AwsAuth';
 import LaunchInstanceDialog from './LaunchInstanceDialog';
@@ -34,7 +33,7 @@ export default function CloudPanel({ onUseInstance }: Props) {
     let privateKey: string | null = null;
     if (inst.keyName) {
       try {
-        privateKey = await awsAdapter.getKeyMaterial(inst.keyName);
+        privateKey = await cp.adapter?.getKeyMaterial(inst.keyName) ?? null;
       } catch {
         privateKey = null;
       }

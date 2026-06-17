@@ -1,12 +1,15 @@
 const { spawn } = require('child_process');
 const os = require('os');
 
+const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]/g;
+function stripAnsi(s) { return s.replace(ANSI_RE, ''); }
+
 function runLocal(command, socket, stepId) {
   return new Promise((resolve, reject) => {
     if (stepId) socket.emit('step:start', { stepId });
 
     const proc = spawn('bash', ['-lc', command], {
-      env: { ...process.env, HOME: os.homedir() },
+      env: { ...process.env, HOME: os.homedir(), ANSIBLE_NOCOLOR: '1', NO_COLOR: '1' },
     });
 
     let stdout = '';
@@ -15,13 +18,13 @@ function runLocal(command, socket, stepId) {
     proc.stdout.on('data', (data) => {
       const text = data.toString();
       stdout += text;
-      socket.emit('terminal:data', { stepId, data: text });
+      socket.emit('terminal:data', { stepId, data: stripAnsi(text) });
     });
 
     proc.stderr.on('data', (data) => {
       const text = data.toString();
       stderr += text;
-      socket.emit('terminal:data', { stepId, data: text, isStderr: true });
+      socket.emit('terminal:data', { stepId, data: stripAnsi(text), isStderr: true });
     });
 
     proc.on('close', (code) => {
@@ -81,13 +84,13 @@ __YARDSTICK_SCRIPT__`;
       stream.on('data', (data) => {
         const text = data.toString();
         stdout += text;
-        socket.emit('terminal:data', { stepId, data: text });
+        socket.emit('terminal:data', { stepId, data: stripAnsi(text) });
       });
 
       stream.stderr.on('data', (data) => {
         const text = data.toString();
         stderr += text;
-        socket.emit('terminal:data', { stepId, data: text, isStderr: true });
+        socket.emit('terminal:data', { stepId, data: stripAnsi(text), isStderr: true });
       });
 
       stream.on('close', (code) => {

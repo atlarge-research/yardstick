@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import { Box, Flex, Text, Heading, Button, Icon, Spinner, Grid } from '@chakra-ui/react';
 import { LuRefreshCw, LuDownload, LuTriangleAlert, LuLoader } from 'react-icons/lu';
-import socket from '../socket';
+import { useSocket } from '../context/SocketContext';
 import { c, radii, cardProps, inputProps, StyledSelect } from '../theme';
 
 interface MetricRecord {
@@ -164,6 +164,7 @@ const tooltipStyle = { background: c.surface2, border: `1px solid ${c.border}`, 
 const axisProps = { tick: { fill: c.textDim, fontSize: 11 }, stroke: c.border };
 
 export default function ResultsView({ connected, sessionId, mode, username }: ResultsViewProps) {
+  const socket = useSocket();
   const [runs, setRuns] = useState<string[]>([]);
   const [scratchDir, setScratchDir] = useState('');
   const [selectedRun, setSelectedRun] = useState('');

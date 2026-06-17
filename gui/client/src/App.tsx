@@ -1,293 +1,162 @@
-import { useState } from 'react';
-import { Box, Flex, Text, Heading, Button, Icon } from '@chakra-ui/react';
-import { LuPackage, LuFlaskConical, LuSquareTerminal, LuChartBar, LuCloud } from 'react-icons/lu';
-import type { IconType } from 'react-icons';
-import useYardstick from './hooks/useYardstick';
-import type { SshConnectOptions, StepStatus } from './hooks/useYardstick';
-import ConnectForm from './components/ConnectForm';
-import PipelineView from './components/PipelineView';
-import ExperimentView from './components/ExperimentView';
-import ResultsView from './components/ResultsView';
-import ManualCommand from './components/ManualCommand';
-import LogPanel from './components/LogPanel';
-import CloudPanel from './components/cloud/CloudPanel';
-import AwsCloudContent from './components/cloud/AwsCloudContent';
-import type { CloudInstanceHandoff } from './lib/cloud/types';
-import { c, radii, cardProps } from './theme';
+import { useState, useCallback } from 'react';
+import { Box, Flex, Text, Button } from '@chakra-ui/react';
+import { LuPlus, LuX } from 'react-icons/lu';
+import SessionPane from './components/SessionPane';
+import type { SessionStatus } from './components/SessionPane';
+import { c, radii } from './theme';
 
-type TabId = 'setup' | 'experiment' | 'results' | 'terminal' | 'cloud';
-
-interface TabDef {
-  id: TabId;
+interface SessionMeta {
+  id: string;
   label: string;
-  icon: IconType;
-  statusKey: string | null;
+  status: SessionStatus;
 }
 
-const TABS: TabDef[] = [
-  { id: 'setup', label: 'Setup', icon: LuPackage, statusKey: 'setup' },
-  { id: 'experiment', label: 'Experiment', icon: LuFlaskConical, statusKey: 'experiment' },
-  { id: 'results', label: 'Results', icon: LuChartBar, statusKey: null },
-  { id: 'cloud', label: 'Cloud', icon: LuCloud, statusKey: null },
-  { id: 'terminal', label: 'Terminal', icon: LuSquareTerminal, statusKey: null },
-];
+const STATUS_COLOR: Record<SessionStatus, string> = {
+  idle:       c.textDim,
+  connecting: c.warning,
+  connected:  c.success,
+  running:    c.accentLight,
+  done:       c.success,
+  error:      c.error,
+};
 
-function OutlineBtn({ children, ...props }: React.ComponentProps<typeof Button>) {
-  return (
-    <Button
-      variant="plain"
-      bg="transparent"
-      border="1px solid"
-      borderColor={c.border}
-      color={c.text}
-      borderRadius={radii.sm}
-      px={4}
-      py={2}
-      fontSize="0.9rem"
-      fontWeight={600}
-      h="auto"
-      _hover={{ bg: c.surface2 }}
-      {...props}
-    >
-      {children}
-    </Button>
-  );
+function newSession(n: number): SessionMeta {
+  return { id: crypto.randomUUID(), label: `Session ${n}`, status: 'idle' };
 }
 
 export default function App() {
-  const {
-    connected, sessionId, mode, setMode, stepStatuses, logs,
-    terminalOutput, pipelineRunning, pipelineDone, error, setError,
-    envChecks, envReady, detecting, detectingItem,
-    experimentRunning, experimentError, experimentDone,
-    sshConnect, localConnect, sshDisconnect, detectEnv,
-    runPipeline, runExperiment, runSingleCommand, awsLaunch, awsTerminate,
-    connectToCloudInstance,
-  } = useYardstick();
+  const [sessions, setSessions] = useState<SessionMeta[]>([newSession(1)]);
+  const [activeId, setActiveId] = useState<string>(sessions[0].id);
 
-  const [tab, setTab] = useState<TabId>('setup');
-  const [sshUsername, setSshUsername] = useState('');
-  const [showLogs, setShowLogs] = useState(true);
-  const [connectPrefill, setConnectPrefill] = useState<Partial<SshConnectOptions> | null>(null);
+  const addSession = () => {
+    if (sessions.length >= 8) return;
+    const s = newSession(sessions.length + 1);
+    setSessions((prev) => [...prev, s]);
+    setActiveId(s.id);
+  };
 
-  const handleUseInstance = (h: CloudInstanceHandoff) => {
-    if (connected) {
-      setError('Disconnect from the current session before connecting to a cloud instance.');
-      return;
-    }
-    setConnectPrefill({
-      mode: h.provider,
-      host: h.host,
-      port: '22',
-      username: h.username,
-      privateKey: h.privateKey || undefined,
+  const removeSession = (id: string) => {
+    setSessions((prev) => {
+      if (prev.length === 1) {
+        // Reset the last session instead of removing it
+        return [newSession(1)];
+      }
+      const next = prev.filter((s) => s.id !== id);
+      if (id === activeId) {
+        const idx = prev.findIndex((s) => s.id === id);
+        setActiveId(next[Math.max(0, idx - 1)].id);
+      }
+      return next;
     });
-    setMode(h.provider);
-    if (h.privateKey) {
-      setSshUsername(h.username);
-      connectToCloudInstance(h);
-    }
   };
 
-  const handleConnect = (opts: SshConnectOptions) => {
-    if (opts.mode === 'local') {
-      setSshUsername('');
-      localConnect();
-    } else {
-      setSshUsername(opts.username || '');
-      sshConnect(opts);
-    }
-  };
+  const updateStatus = useCallback((id: string, status: SessionStatus) => {
+    setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
+  }, []);
 
-  const modeLabel = ({ local: 'Local', das5: 'DAS-5', das6: 'DAS-6', aws: 'AWS', custom: 'Custom SSH' } as Record<string, string>)[mode] || mode;
-
-  if (!connected) {
-    return (
-      <Flex direction="column" minH="100vh" bg={c.bg}>
-        <Flex flex={1} justify="center" p={8}>
-          <Box w="100%" maxW="720px">
-            <Box textAlign="center" mb={8}>
-              <Heading fontSize="2.4rem" fontWeight={800} color={c.accentLight} letterSpacing="-0.02em" mb={1.5}>
-                Yardstick
-              </Heading>
-              <Text color={c.textDim} fontSize="1rem">Minecraft-like Game Benchmark</Text>
-            </Box>
-
-            {error && (
-              <Flex {...cardProps} borderColor={c.error} justify="space-between" align="center">
-                <Text color={c.error}>{error}</Text>
-                <OutlineBtn onClick={() => setError(null)}>Dismiss</OutlineBtn>
-              </Flex>
-            )}
-
-            <ConnectForm
-              onConnect={handleConnect}
-              status={stepStatuses.connect}
-              mode={mode}
-              onModeChange={setMode}
-              prefill={connectPrefill}
-              onPrefillConsumed={() => setConnectPrefill(null)}
-              cloudContent={(sshForm) => (
-                <AwsCloudContent
-                  onUseInstance={handleUseInstance}
-                  connectSlot={sshForm}
-                />
-              )}
-            />
-          </Box>
-        </Flex>
-      </Flex>
-    );
-  }
+  const updateLabel = useCallback((id: string, label: string) => {
+    setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, label } : s)));
+  }, []);
 
   return (
     <Flex direction="column" minH="100vh" bg={c.bg}>
-      <Flex as="header" align="center" gap={3.5} px={8} py="18px" borderBottom="1px solid" borderColor={c.border} bg={c.surface}>
-        <Heading fontSize="1.5rem" fontWeight={700} color={c.accentLight}>Yardstick</Heading>
-        <Text color={c.textDim} fontSize="0.9rem">Benchmark</Text>
-        <Flex as="nav" ml="auto" gap={1.5}>
-          {TABS.map((t) => {
-            const status: StepStatus | null = t.statusKey ? ((stepStatuses[t.statusKey] || 'idle') as StepStatus) : null;
-            const active = tab === t.id;
-            return (
+      {/* Session tab bar */}
+      <Flex
+        align="center"
+        gap={1}
+        px={3}
+        py="6px"
+        bg={c.surface}
+        borderBottom="1px solid"
+        borderColor={c.border}
+        flexWrap="nowrap"
+        overflowX="auto"
+      >
+        {sessions.map((s) => {
+          const isActive = s.id === activeId;
+          const dotColor = STATUS_COLOR[s.status];
+          const pulsing = s.status === 'connecting' || s.status === 'running';
+          return (
+            <Flex
+              key={s.id}
+              align="center"
+              gap={1.5}
+              px={3}
+              py="5px"
+              borderRadius={radii.sm}
+              border="1px solid"
+              borderColor={isActive ? c.accent : c.border}
+              bg={isActive ? c.surface2 : 'transparent'}
+              cursor="pointer"
+              flexShrink={0}
+              onClick={() => setActiveId(s.id)}
+              _hover={!isActive ? { bg: c.surface2, borderColor: c.textDim } : {}}
+            >
+              <Box
+                w="7px"
+                h="7px"
+                borderRadius="full"
+                flexShrink={0}
+                bg={dotColor}
+                style={pulsing ? { animation: 'pulse 1.5s infinite' } : undefined}
+              />
+              <Text fontSize="0.78rem" fontWeight={isActive ? 600 : 400} color={isActive ? c.text : c.textDim} userSelect="none">
+                {s.label}
+              </Text>
               <Button
-                key={t.id}
                 variant="plain"
-                display="flex"
-                alignItems="center"
-                gap={1.5}
-                px={4}
-                py="7px"
+                p={0}
                 h="auto"
-                bg={active ? c.accent : 'transparent'}
-                border="1px solid"
-                borderColor={active ? c.accent : c.border}
-                borderRadius={radii.sm}
-                color={active ? 'white' : c.textDim}
-                fontSize="0.82rem"
-                fontWeight={500}
-                _hover={!active ? { bg: c.surface2, color: c.text, borderColor: c.textDim } : {}}
-                onClick={() => setTab(t.id)}
+                minW="auto"
+                color={c.textDim}
+                fontSize="0.7rem"
+                _hover={{ color: c.error }}
+                onClick={(e) => { e.stopPropagation(); removeSession(s.id); }}
+                aria-label="Close session"
               >
-                {status && status !== 'idle' && (
-                  <Box
-                    w="7px" h="7px" borderRadius="full" flexShrink={0}
-                    bg={status === 'completed' ? c.success : status === 'running' ? c.accentLight : c.error}
-                    style={status === 'running' ? { animation: 'pulse 1.5s infinite' } : undefined}
-                  />
-                )}
-                <Icon as={t.icon} boxSize="15px" />
-                {t.label}
+                <LuX size={11} />
               </Button>
-            );
-          })}
-        </Flex>
-      </Flex>
-
-      <Flex flex={1} direction="column" overflow="hidden">
-        <Box flex={1} p={8} maxW="960px" mx="auto" w="100%" overflowY="auto" pb={showLogs ? "400px" : "0"}>
-          {error && (
-            <Flex {...cardProps} borderColor={c.error} justify="space-between" align="center">
-              <Text color={c.error}>{error}</Text>
-              <OutlineBtn onClick={() => setError(null)}>Dismiss</OutlineBtn>
             </Flex>
-          )}
+          );
+        })}
 
-          {tab === 'setup' && (
-            <PipelineView
-              stepStatuses={stepStatuses}
-              terminalOutput={terminalOutput}
-              pipelineRunning={pipelineRunning}
-              pipelineDone={pipelineDone}
-              onRunPipeline={runPipeline}
-              onDetectEnv={detectEnv}
-
-              connected={connected}
-              username={sshUsername}
-              mode={mode}
-              envChecks={envChecks}
-              envReady={envReady}
-              detecting={detecting}
-              detectingItem={detectingItem}
-            />
-          )}
-
-          {tab === 'experiment' && (
-            <ExperimentView
-              connected={connected}
-              onRunExperiment={runExperiment}
-              terminalOutput={terminalOutput}
-              username={sshUsername}
-              mode={mode}
-              experimentRunning={experimentRunning}
-              experimentError={experimentError}
-              experimentDone={experimentDone}
-              onSwitchTab={setTab}
-            />
-          )}
-
-          {tab === 'results' && (
-            <ResultsView
-              connected={connected}
-              sessionId={sessionId}
-              mode={mode}
-              username={sshUsername}
-            />
-          )}
-
-          {tab === 'cloud' && (
-            <CloudPanel onUseInstance={handleUseInstance} />
-          )}
-
-          {tab === 'terminal' && (
-            <ManualCommand
-              connected={connected}
-              onRunCommand={runSingleCommand}
-              terminalOutput={terminalOutput}
-            />
-          )}
-        </Box>
-
-        {showLogs && (
-          <Box
-            position="relative"
-            borderTop="1px solid"
+        {sessions.length < 8 && (
+          <Button
+            variant="plain"
+            p={0}
+            h="28px"
+            w="28px"
+            minW="28px"
+            borderRadius={radii.sm}
+            border="1px solid"
             borderColor={c.border}
-            bg={c.surface}
-            h="380px"
-            overflowY="auto"
-            w="100%"
+            color={c.textDim}
+            _hover={{ bg: c.surface2, color: c.text, borderColor: c.textDim }}
+            onClick={addSession}
+            aria-label="New session"
+            flexShrink={0}
           >
-            <LogPanel logs={logs} />
-          </Box>
+            <LuPlus size={13} />
+          </Button>
         )}
       </Flex>
 
-      <Flex as="footer" align="center" justify="space-between" px={8} py={2} bg={c.surface} borderTop="1px solid" borderColor={c.border} fontSize="0.78rem" color={c.textDim}>
-        <Flex align="center" gap={2}>
-          <Box w="8px" h="8px" borderRadius="full" bg={c.success} boxShadow={`0 0 6px ${c.success}`} />
-          <Text fontSize="0.78rem">{modeLabel} - {mode === 'local' ? 'Local session' : sshUsername}</Text>
-        </Flex>
-        <Flex align="center" gap={3}>
-          <OutlineBtn onClick={() => setShowLogs(!showLogs)} fontSize="0.75rem">
-            {showLogs ? 'Hide' : 'Show'} Logs
-          </OutlineBtn>
-          <Button
-            variant="plain"
-            bg={c.error}
-            color="white"
-            px={3}
-            py={1}
-            borderRadius={radii.sm}
-            fontSize="0.75rem"
-            fontWeight={600}
-            h="auto"
-            _hover={{ filter: 'brightness(1.1)' }}
-            onClick={sshDisconnect}
+      {/* Session panes — all mounted, only active one visible */}
+      <Flex flex={1} direction="column" overflow="hidden" position="relative">
+        {sessions.map((s) => (
+          <Box
+            key={s.id}
+            display={s.id === activeId ? 'flex' : 'none'}
+            flexDirection="column"
+            flex="1"
+            overflow="hidden"
           >
-            Disconnect
-          </Button>
-        </Flex>
+            <SessionPane
+              onStatusChange={(status) => updateStatus(s.id, status)}
+              onLabelChange={(label) => updateLabel(s.id, label)}
+            />
+          </Box>
+        ))}
       </Flex>
     </Flex>
   );
