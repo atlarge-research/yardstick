@@ -349,6 +349,26 @@ try:
 except Exception as _e:
     print(f'[warn] PaperMC patch: {_e}', flush=True)
 
+# Patch stop playbooks to use SIGKILL directly so wait_for never times out.
+# In Docker local mode processes don't respond to SIGTERM quickly; data is
+# already on the host via bind-mounts so graceful shutdown isn't needed.
+try:
+    import yardstick_benchmark.games.minecraft.server as _pmc_mod
+    _stop_yml = os.path.join(os.path.dirname(_pmc_mod.__file__), 'papermc_stop.yml')
+    _txt = open(_stop_yml).read()
+    if 'kill -9' not in _txt.split('Stop PaperMC')[1].split('rescue')[0]:
+        open(_stop_yml, 'w').write(_txt.replace('kill {{papermc_pid}}', 'kill -9 {{papermc_pid}}'))
+except Exception as _e:
+    print(f'[warn] PaperMC stop patch: {_e}', flush=True)
+try:
+    import yardstick_benchmark.monitoring as _mon_mod
+    _stop_yml = os.path.join(os.path.dirname(_mon_mod.__file__), 'telegraf_stop.yml')
+    _txt = open(_stop_yml).read()
+    if 'kill -9' not in _txt.split('Stop Telegraf')[1].split('rescue')[0]:
+        open(_stop_yml, 'w').write(_txt.replace('kill {{ telegraf_pid }}', 'kill -9 {{ telegraf_pid }}'))
+except Exception as _e:
+    print(f'[warn] Telegraf stop patch: {_e}', flush=True)
+
 home = os.path.expanduser('~')
 wd_base = Path(home) / 'yardstick' / 'run'
 
