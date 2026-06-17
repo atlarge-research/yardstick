@@ -444,7 +444,7 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
                   <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => `${v} min`} />
                   <Legend />
                   {nodes.map((node, i) => (
-                    <Line key={node} type="monotone" dataKey={node} stroke={NODE_COLORS[i % NODE_COLORS.length]} dot={false} strokeWidth={1.5} />
+                    <Line key={node} type="monotone" dataKey={node} stroke={NODE_COLORS[i % NODE_COLORS.length]} dot={false} strokeWidth={1.5} isAnimationActive={false} />
                   ))}
                 </LineChart>
               </ResponsiveContainer>
@@ -461,7 +461,7 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
                   <XAxis dataKey="t" label={{ value: 'Time (min)', position: 'insideBottom', offset: -5, fill: c.textDim }} {...axisProps} />
                   <YAxis label={{ value: 'Tick (ms)', angle: -90, position: 'insideLeft', fill: c.textDim }} {...axisProps} />
                   <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => `${v} min`} />
-                  <Line type="monotone" dataKey="dur" name="Tick Duration" stroke="#e17055" dot={false} strokeWidth={1.5} />
+                  <Line type="monotone" dataKey="dur" name="Tick Duration" stroke="#e17055" dot={false} strokeWidth={1.5} isAnimationActive={false} />
                   <ReferenceLine y={50} stroke="#fdcb6e" strokeDasharray="5 5" ifOverflow="extendDomain" label={{ value: '50 ms', position: 'insideTopRight', fill: c.warning }} />
                 </LineChart>
               </ResponsiveContainer>
@@ -480,7 +480,7 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
                   <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => `${v} min`} />
                   <Legend />
                   {nodes.map((node, i) => (
-                    <Line key={node} type="monotone" dataKey={node} stroke={NODE_COLORS[i % NODE_COLORS.length]} dot={false} strokeWidth={1.5} />
+                    <Line key={node} type="monotone" dataKey={node} stroke={NODE_COLORS[i % NODE_COLORS.length]} dot={false} strokeWidth={1.5} isAnimationActive={false} />
                   ))}
                 </LineChart>
               </ResponsiveContainer>
@@ -521,7 +521,7 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
                     formatter={(value) => [`${toNumber(Number(value ?? 0))}%`, 'CDF']}
                     labelFormatter={(v) => `${v} ms`}
                   />
-                  <Line type="monotone" dataKey="cdf" stroke="#fdcb6e" dot={false} strokeWidth={1.6} name="Tick CDF" />
+                  <Line type="monotone" dataKey="cdf" stroke="#fdcb6e" dot={false} strokeWidth={1.6} name="Tick CDF" isAnimationActive={false} />
                   {tickCdf.length > 0 && tickCdf[tickCdf.length - 1].value >= 50 && (
                     <ReferenceLine x={50} stroke="#e17055" strokeDasharray="5 5" label={{ value: '50 ms threshold', position: 'top', fill: c.error }} />
                   )}
