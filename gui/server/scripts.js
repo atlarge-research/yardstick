@@ -61,8 +61,14 @@ try:
     yardstick_benchmark.fetch(dest, nodes)
     print(f'Results saved to {dest}')
 finally:
-    yardstick_benchmark.clean(nodes)
-    das.release(nodes)
+    try:
+        yardstick_benchmark.clean(nodes)
+    except Exception as _e:
+        print(f'[warn] cleanup failed: {_e}', flush=True)
+    try:
+        das.release(nodes)
+    except Exception as _e:
+        print(f'[warn] release failed: {_e}', flush=True)
     print('Done!')
 `;
 }
