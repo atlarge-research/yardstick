@@ -372,6 +372,7 @@ def _patched_gen_inv(name, nodes_arg):
         hvars['ansible_connection'] = 'community.docker.docker'
         hvars['ansible_host'] = _container_map.get(host, host)
         hvars['ansible_python_interpreter'] = '/usr/bin/python3'
+        hvars['ansible_remote_tmp'] = '/tmp/.ansible/tmp'
     return inv
 _ym._gen_inv = _patched_gen_inv
 
@@ -467,6 +468,7 @@ try:
                          _img, 'sh', '-c', f'rm -rf {node.wd}'],
                         capture_output=True)
         node.wd.mkdir(parents=True, exist_ok=True)
+        _sp.run(['docker', 'rm', '-f', _cname], capture_output=True)  # remove stale container if any
         _r = _sp.run([
             'docker', 'run', '-d',
             '--name', _cname,
