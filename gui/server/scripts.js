@@ -457,13 +457,21 @@ try:
         _cname = _container_map[node.host]
         # Pre-clean from the host before Docker mounts the directory; rmtree
         # from inside a container fails with EBUSY on the mount point itself.
+        # Fall back to a Docker-based rm when files are root-owned from a prior run.
         if node.wd.exists():
-            _shutil.rmtree(node.wd)
+            try:
+                _shutil.rmtree(node.wd)
+            except PermissionError:
+                _sp.run(['docker', 'run', '--rm',
+                         '-v', f'{node.wd.parent}:{node.wd.parent}',
+                         _img, 'sh', '-c', f'rm -rf {node.wd}'],
+                        capture_output=True)
         node.wd.mkdir(parents=True, exist_ok=True)
         _r = _sp.run([
             'docker', 'run', '-d',
             '--name', _cname,
             '--network', 'host',
+            '--user', f'{os.getuid()}:{os.getgid()}',
             '-v', f'{node.wd}:{node.wd}',
             '-v', f'{CACHE}:{CACHE}:ro',
             _img,
