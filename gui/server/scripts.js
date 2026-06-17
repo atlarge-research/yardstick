@@ -8,7 +8,27 @@ import yardstick_benchmark
 from time import sleep
 from datetime import datetime
 from pathlib import Path
-import os
+import os, glob as _glob
+
+# On DAS-5 all nodes share the same NFS home, so parallel NVM installs
+# race on the same .git repo. Patch the playbook to run serially.
+try:
+    import yardstick_benchmark.games.minecraft.workload as _wl_mod
+    _wl_dir = os.path.dirname(_wl_mod.__file__)
+    for _yml in _glob.glob(f'{_wl_dir}/*.yml'):
+        _txt = open(_yml).read()
+        if 'Install nvm' in _txt and 'serial: 1' not in _txt:
+            _txt = _txt.replace('  hosts: all\\n', '  hosts: all\\n  serial: 1\\n', 1)
+            open(_yml, 'w').write(_txt)
+            print('[patch] serialized NVM install for shared NFS home', flush=True)
+except Exception as _e:
+    print(f'[warn] NVM serial patch: {_e}', flush=True)
+
+# Remove stale NVM lock left by a previous failed parallel install.
+_nvm_lock = os.path.expanduser('~/.nvm/.git/index.lock')
+if os.path.exists(_nvm_lock):
+    os.remove(_nvm_lock)
+    print('[patch] removed stale NVM lock file', flush=True)
 
 das = Das()
 nodes = das.provision(num=${numNodes})
