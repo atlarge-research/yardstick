@@ -1,6 +1,6 @@
 ---
 - hosts: all
-  gather_facts: True
+  gather_facts: False
   environment:
     DURATION: "{{duration}}"
     MC_HOST: "{{mc_host}}"
@@ -13,23 +13,11 @@
     BOTS_PER_NODE: "{{bots_per_node}}"
     WORKER_BOT: "{{ worker_bot | default('walkaround_worker_bot.js') }}"
   tasks:
-    - name: Set game spawn location
-      shell:
-        cmd: |
-          export NVM_DIR="$HOME/.nvm"
-          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-          node set_spawn.js
-        chdir: "{{wd}}"
-      run_once: true # Only run on one machine
-      ignore_errors: yes
     - name: Run Minecraft bot
       shell:
         cmd: |
-          export NVM_DIR="$HOME/.nvm"
-          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-          nvm use 18
-          node workload_bot.js | tee bot-{{ inventory_hostname }}.log
-          echo $! > bot-{{inventory_hostname}}.pid
+          NODE=$(cat {{wd}}/.node_path 2>/dev/null || ls $HOME/.nvm/versions/node/v18*/bin/node 2>/dev/null | head -1 || echo node)
+          $NODE workload_bot.js | tee bot-{{ inventory_hostname }}.log
         chdir: "{{wd}}"
       environment:
         BOT_INDEX: "{{ groups['all'].index(inventory_hostname) }}"

@@ -95,8 +95,15 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import os, glob as _glob
 
+# Remove stale NVM lock left by a previous failed parallel install.
+_nvm_lock = os.path.expanduser('~/.nvm/.git/index.lock')
+if os.path.exists(_nvm_lock):
+    os.remove(_nvm_lock)
+    print('[patch] removed stale NVM lock file', flush=True)
+${workloadSetup(workload)}
 # On DAS-5 all nodes share the same NFS home, so parallel NVM installs
-# race on the same .git repo. Patch the playbook to run serially.
+# race on the same .git repo. Patch the deploy playbook to run serially.
+# This must run AFTER workloadSetup() writes the YAML files.
 try:
     import yardstick_benchmark.games.minecraft.workload as _wl_mod
     _wl_dir = os.path.dirname(_wl_mod.__file__)
@@ -109,12 +116,24 @@ try:
 except Exception as _e:
     print(f'[warn] NVM serial patch: {_e}', flush=True)
 
-# Remove stale NVM lock left by a previous failed parallel install.
-_nvm_lock = os.path.expanduser('~/.nvm/.git/index.lock')
-if os.path.exists(_nvm_lock):
-    os.remove(_nvm_lock)
-    print('[patch] removed stale NVM lock file', flush=True)
-${workloadSetup(workload)}
+# Patch Telegraf start/stop playbooks to skip gather_facts — on DAS, fact
+# gathering over SSH/NFS takes 30-60s per node and extends the measurement window.
+try:
+    import yardstick_benchmark.monitoring as _mon_mod
+    _mon_dir = os.path.dirname(_mon_mod.__file__)
+    for _yml_name in ['telegraf_start.yml', 'telegraf_stop.yml']:
+        _yml_path = os.path.join(_mon_dir, _yml_name)
+        _txt = open(_yml_path).read()
+        if 'gather_facts: False' not in _txt and 'gather_facts: false' not in _txt:
+            if 'gather_facts:' in _txt:
+                _txt = _txt.replace('gather_facts: true', 'gather_facts: False').replace('gather_facts: True', 'gather_facts: False')
+            else:
+                _txt = _txt.replace('  hosts: all\\n', '  hosts: all\\n  gather_facts: False\\n', 1)
+            open(_yml_path, 'w').write(_txt)
+            print(f'[patch] disabled gather_facts in {_yml_name}', flush=True)
+except Exception as _e:
+    print(f'[warn] telegraf gather_facts patch: {_e}', flush=True)
+
 def _run(label, fn):
     print(f'[>>] {label}...', flush=True)
     try:
@@ -207,6 +226,20 @@ try:
 except Exception as _e:
     print(f'[warn] could not patch workload playbooks: {_e}', flush=True)
 ${workloadSetup(workload)}
+try:
+    import yardstick_benchmark.monitoring as _mon_mod
+    _mon_dir = os.path.dirname(_mon_mod.__file__)
+    for _yml_name in ['telegraf_start.yml', 'telegraf_stop.yml']:
+        _yml_path = os.path.join(_mon_dir, _yml_name)
+        _txt = open(_yml_path).read()
+        if 'gather_facts: False' not in _txt and 'gather_facts: false' not in _txt:
+            if 'gather_facts:' in _txt:
+                _txt = _txt.replace('gather_facts: true', 'gather_facts: False').replace('gather_facts: True', 'gather_facts: False')
+            else:
+                _txt = _txt.replace('  hosts: all\\n', '  hosts: all\\n  gather_facts: False\\n', 1)
+            open(_yml_path, 'w').write(_txt)
+except Exception as _e:
+    print(f'[warn] telegraf gather_facts patch: {_e}', flush=True)
 _worker_ips = ${JSON.stringify(workerIps)}
 _worker_user = ${JSON.stringify(workerUser)}
 
@@ -458,10 +491,12 @@ try:
         if _r.returncode == 0:
             print(f'[fetch] worker {ip} ({_label}) data collected', flush=True)
         elif 'rsync' in _r.stderr or 'command not found' in _r.stderr:
-            # rsync not installed on worker — fall back to scp
+            # rsync not installed on worker — fall back to scp.
+            # Copy the directory itself to the parent; since wnode.wd.name == _label
+            # scp creates dest/_label/ which is exactly _wdest.
             print(f'[fetch] rsync unavailable on {ip}, trying scp...', flush=True)
             _scp_r = _sp.run(
-                ['scp', '-r'] + _ssh_opts + [f'{_worker_user}@{ip}:{wnode.wd}/.', str(_wdest) + '/'],
+                ['scp', '-r'] + _ssh_opts + [f'{_worker_user}@{ip}:{wnode.wd}', str(_wdest.parent) + '/'],
                 capture_output=True, text=True, timeout=120,
             )
             if _scp_r.returncode == 0:
@@ -544,10 +579,18 @@ except Exception as _e:
     print(f'[warn] PaperMC stop patch: {_e}', flush=True)
 try:
     import yardstick_benchmark.monitoring as _mon_mod
-    _stop_yml = os.path.join(os.path.dirname(_mon_mod.__file__), 'telegraf_stop.yml')
-    _txt = open(_stop_yml).read()
-    if 'kill -9' not in _txt.split('Stop Telegraf')[1].split('rescue')[0]:
-        open(_stop_yml, 'w').write(_txt.replace('kill {{ telegraf_pid }}', 'kill -9 {{ telegraf_pid }}'))
+    _mon_dir = os.path.dirname(_mon_mod.__file__)
+    for _yml_name in ['telegraf_start.yml', 'telegraf_stop.yml']:
+        _yml_path = os.path.join(_mon_dir, _yml_name)
+        _txt = open(_yml_path).read()
+        if _yml_name == 'telegraf_stop.yml' and 'kill -9' not in _txt.split('Stop Telegraf')[1].split('rescue')[0]:
+            _txt = _txt.replace('kill {{ telegraf_pid }}', 'kill -9 {{ telegraf_pid }}')
+        if 'gather_facts: False' not in _txt and 'gather_facts: false' not in _txt:
+            if 'gather_facts:' in _txt:
+                _txt = _txt.replace('gather_facts: true', 'gather_facts: False').replace('gather_facts: True', 'gather_facts: False')
+            else:
+                _txt = _txt.replace('  hosts: all\\n', '  hosts: all\\n  gather_facts: False\\n', 1)
+        open(_yml_path, 'w').write(_txt)
 except Exception as _e:
     print(f'[warn] Telegraf stop patch: {_e}', flush=True)
 

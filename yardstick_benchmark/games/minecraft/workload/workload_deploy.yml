@@ -29,6 +29,7 @@
           npm install mineflayer-pathfinder
           npm install mineflayer-collectblock
           npm install mineflayer-tool
+          nvm which 18 > {{wd}}/.node_path
         chdir: "{{wd}}"
     - name: Copy scripts
       copy:
@@ -40,4 +41,17 @@
         mkdir -p {{wd}}/rcon
         wget -qO {{wd}}/rcon/RCON.js "https://raw.githubusercontent.com/tehbeard/node-rcon/master/RCON.js"
         wget -qO {{wd}}/rcon/Packet.js "https://raw.githubusercontent.com/tehbeard/node-rcon/master/Packet.js"
+      ignore_errors: yes
+    - name: Set game spawn location
+      shell:
+        cmd: |
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+          node set_spawn.js
+        chdir: "{{wd}}"
+      environment:
+        MC_HOST: "{{mc_host}}"
+        SPAWN_X: "{{spawn_x}}"
+        SPAWN_Y: "{{spawn_y}}"
+      run_once: true
       ignore_errors: yes
