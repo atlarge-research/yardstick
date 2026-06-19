@@ -59,7 +59,7 @@ try:
         open(_wl_init, 'a').write(${workloadClassSrc})
         _wl_il.reload(_wl_pkg)
         print('[patch] Workload class injected into installed package', flush=True)
-    # Write workload_*.yml playbooks to package dir if missing
+    # Write workload_*.yml playbooks to package dir (always overwrite to stay current)
     for _wl_yml_name, _wl_yml_src in [
         ('workload_deploy.yml',  ${deployYml}),
         ('workload_start.yml',   ${startYml}),
@@ -67,9 +67,7 @@ try:
         ('workload_cleanup.yml', ${cleanYml}),
     ]:
         _wl_yml_path = _wl_os.path.join(_wl_pkg_dir, _wl_yml_name)
-        if not _wl_os.path.exists(_wl_yml_path):
-            open(_wl_yml_path, 'w').write(_wl_yml_src)
-            print(f'[patch] {_wl_yml_name} written to installed package', flush=True)
+        open(_wl_yml_path, 'w').write(_wl_yml_src)
     # Write updated bot controller and worker bot to package dir if missing
     _wl_ctrl_path = _wl_os.path.join(_wl_pkg_dir, 'workload_bot.js')
     if not _wl_os.path.exists(_wl_ctrl_path):

@@ -1,9 +1,40 @@
-import { useState, useEffect, type FormEvent, type ChangeEvent, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, type FormEvent, type ChangeEvent, type ReactNode } from 'react';
 import { Box, Flex, Grid, Text, Heading, Button, Badge, Icon, Spinner } from '@chakra-ui/react';
-import { LuMonitor, LuGlobe, LuHash, LuServer, LuCloud } from 'react-icons/lu';
+import { LuMonitor, LuGlobe, LuHash, LuServer, LuCloud, LuBookmark, LuTrash2 } from 'react-icons/lu';
 import type { IconType } from 'react-icons';
 import type { SshConnectOptions, StepStatus } from '../hooks/useYardstick';
 import { c, fonts, radii, cardProps, inputProps, labelProps, StyledInput, StyledTextarea } from '../theme';
+
+type AuthMethod = 'password' | 'key';
+
+const DAS_PROFILES_KEY = 'yardstick_das_profiles';
+
+interface DasProfile {
+  name: string;
+  username: string;
+  authMethod: AuthMethod;
+  password: string;
+  privateKey: string;
+  useJumpHost: boolean;
+  jumpHost: string;
+  jumpPort: string;
+  jumpUsername: string;
+  jumpAuthMethod: AuthMethod;
+  jumpPassword: string;
+  jumpPrivateKey: string;
+}
+
+function loadDasProfiles(): DasProfile[] {
+  try {
+    return JSON.parse(localStorage.getItem(DAS_PROFILES_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function saveDasProfilesToStorage(profiles: DasProfile[]) {
+  localStorage.setItem(DAS_PROFILES_KEY, JSON.stringify(profiles));
+}
 
 interface ModePreset {
   host: string;
@@ -89,8 +120,6 @@ const MODE_PRESETS: Record<string, ModePreset> = {
   custom: { host: '', port: '22', label: 'Custom SSH', description: 'Connect to any remote host via SSH.', defaultJump: false },
 };
 
-type AuthMethod = 'password' | 'key';
-
 interface AuthToggleProps {
   value: AuthMethod;
   onChange: (m: AuthMethod) => void;
@@ -151,6 +180,51 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange, pre
   const [jumpAuthMethod, setJumpAuthMethod] = useState<AuthMethod>('password');
   const [jumpPassword, setJumpPassword] = useState('');
   const [jumpPrivateKey, setJumpPrivateKey] = useState('');
+
+  const [dasProfiles, setDasProfiles] = useState<DasProfile[]>(loadDasProfiles);
+  const [selectedProfile, setSelectedProfile] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileName, setProfileName] = useState('');
+
+  const loadProfile = useCallback((name: string) => {
+    const profile = dasProfiles.find((p) => p.name === name);
+    if (!profile) return;
+    setUsername(profile.username);
+    setAuthMethod(profile.authMethod);
+    setPassword(profile.password);
+    setPrivateKey(profile.privateKey);
+    setUseJumpHost(profile.useJumpHost);
+    setJumpHost(profile.jumpHost || MODE_PRESETS[mode]?.jumpHost || '');
+    setJumpPort(profile.jumpPort);
+    setJumpUsername(profile.jumpUsername);
+    setJumpAuthMethod(profile.jumpAuthMethod);
+    setJumpPassword(profile.jumpPassword);
+    setJumpPrivateKey(profile.jumpPrivateKey);
+    setSelectedProfile(name);
+  }, [dasProfiles, mode]);
+
+  const saveProfile = useCallback(() => {
+    const name = profileName.trim();
+    if (!name) return;
+    const profile: DasProfile = {
+      name, username, authMethod, password, privateKey,
+      useJumpHost, jumpHost, jumpPort, jumpUsername,
+      jumpAuthMethod, jumpPassword, jumpPrivateKey,
+    };
+    const updated = [...dasProfiles.filter((p) => p.name !== name), profile];
+    setDasProfiles(updated);
+    saveDasProfilesToStorage(updated);
+    setSelectedProfile(name);
+    setSavingProfile(false);
+    setProfileName('');
+  }, [profileName, username, authMethod, password, privateKey, useJumpHost, jumpHost, jumpPort, jumpUsername, jumpAuthMethod, jumpPassword, jumpPrivateKey, dasProfiles]);
+
+  const deleteProfile = useCallback((name: string) => {
+    const updated = dasProfiles.filter((p) => p.name !== name);
+    setDasProfiles(updated);
+    saveDasProfilesToStorage(updated);
+    if (selectedProfile === name) setSelectedProfile('');
+  }, [dasProfiles, selectedProfile]);
 
   useEffect(() => {
     const preset = MODE_PRESETS[mode];
@@ -280,6 +354,41 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange, pre
         </>
       )}
 
+      {group === 'das' && dasProfiles.length > 0 && (
+        <Box mb={4} p={3} bg={c.bg} border="1px solid" borderColor={c.border} borderRadius={radii.md}>
+          <Text {...labelProps} mb={2}>Saved profiles</Text>
+          <Flex gap={2} align="center" flexWrap="wrap">
+            <select
+              value={selectedProfile}
+              onChange={(e) => loadProfile(e.target.value)}
+              style={{
+                flex: 1, minWidth: 0, background: c.surface2, color: c.text,
+                border: `1px solid ${c.border}`, borderRadius: 6,
+                padding: '6px 10px', fontSize: '0.85rem',
+              }}
+            >
+              <option value="">— select a profile —</option>
+              {dasProfiles.map((p) => (
+                <option key={p.name} value={p.name} style={{ backgroundColor: c.bg }}>{p.name}</option>
+              ))}
+            </select>
+            {selectedProfile && (
+              <Button
+                variant="plain" h="auto" py="6px" px={2.5}
+                bg="transparent" color={c.error} borderRadius={radii.sm}
+                border="1px solid" borderColor={c.border}
+                fontSize="0.82rem" fontWeight={500}
+                _hover={{ bg: 'rgba(255,82,82,0.08)' }}
+                onClick={() => deleteProfile(selectedProfile)}
+                title="Delete this profile"
+              >
+                <Icon as={LuTrash2} boxSize="14px" />
+              </Button>
+            )}
+          </Flex>
+        </Box>
+      )}
+
       {group === 'das' && (
         <Box my={4} p={3.5} bg={c.bg} border="1px solid" borderColor={c.border} borderRadius={radii.md}>
           <Flex as="label" align="center" flexWrap="wrap" gap={2} cursor="pointer" fontSize="0.9rem" fontWeight={600} color={c.text}>
@@ -334,32 +443,88 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange, pre
         </Box>
       )}
 
-      <Flex gap={2.5} mt={isLocal ? 0 : 5}>
-        <Button
-          type="submit"
-          variant="plain"
-          bg={c.accent}
-          color="white"
-          borderRadius={radii.sm}
-          fontSize="0.9rem"
-          fontWeight={600}
-          px={5}
-          py="10px"
-          h="auto"
-          _hover={{ bg: c.accentLight }}
-          _disabled={{ opacity: 0.5, cursor: 'not-allowed' }}
-          disabled={isRunning || (isSSH && !username) || (isSSH && useJumpHost && !jumpUsername) || (mode === 'aws' && !host)}
-        >
-          {isRunning ? (
-            <>
-              <Spinner size="sm" /> {useJumpHost ? 'Connecting via jump host...' : 'Connecting...'}
-            </>
-          ) : isLocal ? (
-            'Start Local Session'
-          ) : (
-            mode === 'aws' ? `Connect to AWS instance` : `Connect to ${preset.label}`
+      <Flex gap={2.5} mt={isLocal ? 0 : 5} align="flex-start" direction="column">
+        <Flex gap={2.5} align="center" flexWrap="wrap">
+          <Button
+            type="submit"
+            variant="plain"
+            bg={c.accent}
+            color="white"
+            borderRadius={radii.sm}
+            fontSize="0.9rem"
+            fontWeight={600}
+            px={5}
+            py="10px"
+            h="auto"
+            _hover={{ bg: c.accentLight }}
+            _disabled={{ opacity: 0.5, cursor: 'not-allowed' }}
+            disabled={isRunning || (isSSH && !username) || (isSSH && useJumpHost && !jumpUsername) || (mode === 'aws' && !host)}
+          >
+            {isRunning ? (
+              <>
+                <Spinner size="sm" /> {useJumpHost ? 'Connecting via jump host...' : 'Connecting...'}
+              </>
+            ) : isLocal ? (
+              'Start Local Session'
+            ) : (
+              mode === 'aws' ? `Connect to AWS instance` : `Connect to ${preset.label}`
+            )}
+          </Button>
+
+          {group === 'das' && !savingProfile && (
+            <Button
+              type="button"
+              variant="plain"
+              bg="transparent"
+              color={c.textDim}
+              border="1px solid"
+              borderColor={c.border}
+              borderRadius={radii.sm}
+              fontSize="0.85rem"
+              fontWeight={500}
+              px={3.5}
+              py="9px"
+              h="auto"
+              _hover={{ bg: c.surface2, color: c.text }}
+              onClick={() => { setSavingProfile(true); setProfileName(''); }}
+            >
+              <Icon as={LuBookmark} boxSize="14px" mr={1.5} />
+              Save profile
+            </Button>
           )}
-        </Button>
+        </Flex>
+
+        {group === 'das' && savingProfile && (
+          <Flex gap={2} align="center" mt={1} flexWrap="wrap">
+            <StyledInput
+              {...inputProps}
+              value={profileName}
+              onChange={(e) => setProfileName(e.target.value)}
+              placeholder="Profile name (e.g. Campus DAS-5)"
+              w="240px"
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveProfile(); } if (e.key === 'Escape') setSavingProfile(false); }}
+              autoFocus
+            />
+            <Button
+              type="button" variant="plain" bg={c.accent} color="white"
+              borderRadius={radii.sm} fontSize="0.85rem" fontWeight={600}
+              px={3} py="7px" h="auto" _hover={{ bg: c.accentLight }}
+              disabled={!profileName.trim()}
+              onClick={saveProfile}
+            >
+              Save
+            </Button>
+            <Button
+              type="button" variant="plain" bg="transparent" color={c.textDim}
+              borderRadius={radii.sm} fontSize="0.85rem" fontWeight={500}
+              px={2.5} py="7px" h="auto" border="1px solid" borderColor={c.border}
+              _hover={{ bg: c.surface2 }}
+              onClick={() => setSavingProfile(false)}
+            >
+              Cancel
+            </Button>
+          </Flex>
+        )}
       </Flex>
     </Box>
   );

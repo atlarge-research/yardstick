@@ -39,4 +39,5 @@
       shell: |
         mkdir -p {{wd}}/rcon
         wget -qO {{wd}}/rcon/RCON.js "https://raw.githubusercontent.com/tehbeard/node-rcon/master/RCON.js"
+        wget -qO {{wd}}/rcon/Packet.js "https://raw.githubusercontent.com/tehbeard/node-rcon/master/Packet.js"
       ignore_errors: yes
