@@ -93,8 +93,7 @@ from yardstick_benchmark.provisioning import Das
 from yardstick_benchmark.monitoring import Telegraf
 from yardstick_benchmark.games.minecraft.server import PaperMC
 import yardstick_benchmark
-from time import sleep
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 import os, glob as _glob
 
@@ -132,12 +131,10 @@ try:
     papermc.deploy()
     papermc.start()
 
-    wl = Workload(nodes[1:], nodes[0].host, worker_bot_file='${WORKLOAD_BOT[workload] || 'walkaround_worker_bot.js'}', bots_per_node=${botsPerNode})
+    wl = Workload(nodes[1:], nodes[0].host, worker_bot_file='${WORKLOAD_BOT[workload] || 'walkaround_worker_bot.js'}', bots_per_node=${botsPerNode}, duration=timedelta(seconds=${sleepTime}))
     wl.deploy()
     telegraf.start()
     wl.start()
-    print('Experiment running, sleeping for ${sleepTime}s...')
-    sleep(${sleepTime})
     telegraf.stop()
 
     papermc.stop()
@@ -449,8 +446,7 @@ from yardstick_benchmark.monitoring import Telegraf
 from yardstick_benchmark.games.minecraft.server import PaperMC
 import yardstick_benchmark
 import yardstick_benchmark.model as _ym
-from time import sleep
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 import os, shutil as _shutil, subprocess as _sp, urllib.request, time as _time, glob as _glob
 
@@ -719,13 +715,10 @@ try:
         _pmc_tail.join(timeout=5)
 
     wl_nodes = client_nodes if client_nodes else [server_node]
-    wl = Workload(wl_nodes, server_node.host, worker_bot_file='${WORKLOAD_BOT[workload] || 'walkaround_worker_bot.js'}', bots_per_node=${botsPerNode})
+    wl = Workload(wl_nodes, server_node.host, worker_bot_file='${WORKLOAD_BOT[workload] || 'walkaround_worker_bot.js'}', bots_per_node=${botsPerNode}, duration=timedelta(seconds=${sleepTime}))
     _run('Deploy ${wlLabel}', wl.deploy)
     _run('Start Telegraf', telegraf.start)
     _run('Run ${wlLabel} bots', wl.start)
-
-    print('Experiment running, sleeping for ${sleepTime}s...')
-    sleep(${sleepTime})
 
     try:
         _run('Stop Telegraf', telegraf.stop)
