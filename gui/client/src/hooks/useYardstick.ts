@@ -44,6 +44,7 @@ export interface ExperimentConfig {
   botsPerNode: number;
   sleepTime: number;
   runName: string;
+  workload: string;
 }
 
 export type TerminalOutputMap = Record<string, string>;
@@ -256,7 +257,7 @@ export default function useYardstick(socket: Socket) {
   }, []);
 
   const runExperiment = useCallback(
-    ({ username, numNodes, botsPerNode, sleepTime, runName }: ExperimentConfig) => {
+    ({ username, numNodes, botsPerNode, sleepTime, runName, workload }: ExperimentConfig) => {
       if (!sessionId) return;
       setExperimentError(null);
       setExperimentDone(false);
@@ -270,6 +271,7 @@ export default function useYardstick(socket: Socket) {
         botsPerNode,
         sleepTime,
         runName,
+        workload,
         mode,
       });
     },

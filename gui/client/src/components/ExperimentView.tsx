@@ -3,7 +3,7 @@ import { Box, Flex, Grid, Text, Heading, Button, Icon, Spinner } from '@chakra-u
 import { LuTriangleAlert, LuCircleCheck } from 'react-icons/lu';
 import Terminal from './Terminal';
 import type { ExperimentConfig, TerminalOutputMap } from '../hooks/useYardstick';
-import { c, fonts, radii, cardProps, inputProps, labelProps, StyledInput } from '../theme';
+import { c, fonts, radii, cardProps, inputProps, labelProps, StyledInput, StyledSelect } from '../theme';
 
 interface ExperimentViewProps {
   connected: boolean;
@@ -26,9 +26,14 @@ export default function ExperimentView({
   const [numNodes, setNumNodes] = useState(2);
   const [botsPerNode, setBotsPerNode] = useState(10);
   const [sleepTime, setSleepTime] = useState(60);
+  const [workload, setWorkload] = useState('walkaround');
+
+  const WORKLOAD_LABELS: Record<string, string> = {
+    walkaround: 'WalkAround', chopwood: 'ChopWood', explore: 'Explore', mineore: 'MineOre',
+  };
 
   const handleRun = () => {
-    onRunExperiment({ username, numNodes, botsPerNode, sleepTime, runName: runName.trim() });
+    onRunExperiment({ username, numNodes, botsPerNode, sleepTime, runName: runName.trim(), workload });
   };
 
   return (
@@ -36,7 +41,7 @@ export default function ExperimentView({
       <Box {...cardProps}>
         <Heading fontSize="1.15rem" fontWeight={600} mb={1.5}>Run Experiment</Heading>
         <Text color={c.textDim} fontSize="0.9rem" mb={5}>
-          Provision nodes {modeLabel}, deploy PaperMC &amp; WalkAround bots, run the benchmark, and collect results.
+          Provision nodes {modeLabel}, deploy PaperMC &amp; {WORKLOAD_LABELS[workload] || workload} bots, run the benchmark, and collect results.
         </Text>
 
         {experimentError && (
@@ -106,6 +111,15 @@ export default function ExperimentView({
             <Text fontSize="0.75rem" color={c.textDim} mt={1}>
               Optional. Used as the results folder name. A timestamp is added automatically.
             </Text>
+          </Box>
+          <Box gridColumn={{ base: '1', md: '1 / -1' }}>
+            <Text {...labelProps}>Workload</Text>
+            <StyledSelect {...inputProps} value={workload} onChange={(e) => setWorkload(e.target.value)} disabled={experimentRunning}>
+              <option value="walkaround">WalkAround (default)</option>
+              <option value="chopwood">ChopWood</option>
+              <option value="explore">Explore</option>
+              <option value="mineore">MineOre</option>
+            </StyledSelect>
           </Box>
           <Box>
             <Text {...labelProps}>Number of Nodes</Text>

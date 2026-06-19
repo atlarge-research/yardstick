@@ -11,6 +11,7 @@
     BOX_Z: "{{box_z}}"
     BOTS_JOIN_DELAY: "{{bots_join_delay}}"
     BOTS_PER_NODE: "{{bots_per_node}}"
+    WORKER_BOT: "{{ worker_bot | default('walkaround_worker_bot.js') }}"
   tasks:
     - name: Set game spawn location
       shell:
@@ -26,7 +27,7 @@
           export NVM_DIR="$HOME/.nvm"
           [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
           nvm use 18
-          node walkaround_bot.js | tee bot-{{ inventory_hostname }}.log
+          node workload_bot.js | tee bot-{{ inventory_hostname }}.log
           echo $! > bot-{{inventory_hostname}}.pid
         chdir: "{{wd}}"
       environment:

@@ -5,7 +5,7 @@ const { buildDasScript, buildCloudScript, buildLocalScript, buildExperimentCmd }
 const { getSocketAws } = require('../cloud');
 
 function registerExperimentHandlers(socket) {
-  socket.on('ssh:run-experiment', async ({ sessionId, username: dasUsername, numNodes = 2, botsPerNode = 10, sleepTime = 10, runName = '', mode: clientMode }) => {
+  socket.on('ssh:run-experiment', async ({ sessionId, username: dasUsername, numNodes = 2, botsPerNode = 10, sleepTime = 10, runName = '', mode: clientMode, workload = 'walkaround' }) => {
     const session = sessions.get(sessionId);
     if (!session) { socket.emit('ssh:error', { message: 'No active session.' }); return; }
 
@@ -45,7 +45,7 @@ function registerExperimentHandlers(socket) {
       let experimentScript;
 
       if (isLocalMode) {
-        experimentScript = buildLocalScript({ numNodes, botsPerNode, sleepTime, safeName });
+        experimentScript = buildLocalScript({ numNodes, botsPerNode, sleepTime, safeName, workload });
       } else if (isCloudMode) {
         const workerIps = [];
         let { imageId: imgId, region: reg, instanceType: instType } = session;
@@ -115,6 +115,7 @@ function registerExperimentHandlers(socket) {
           safeName,
           workerIps,
           workerUser: session.username || 'ubuntu',
+          workload,
         });
       } else {
         experimentScript = buildDasScript({
@@ -123,6 +124,7 @@ function registerExperimentHandlers(socket) {
           sleepTime,
           safeName,
           scratchDir: cmds.scratchDir,
+          workload,
         });
       }
 

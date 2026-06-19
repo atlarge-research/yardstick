@@ -9,6 +9,7 @@ const num_bots = parseInt(process.env.BOTS_PER_NODE);
 const box_width = parseInt(process.env.BOX_WIDTH);
 const bot_join_delay = process.env.BOTS_JOIN_DELAY;
 const bot_index = process.env.BOT_INDEX;
+const workerScript = process.env.WORKER_BOT || 'walkaround_worker_bot.js';
 const box_x = process.env.BOX_X;
 const box_z = process.env.BOX_Z;
 
@@ -33,7 +34,7 @@ function start_worker(username) {
         box_width: box_width,
     }
     return new Promise((resolve, reject) => {
-        const worker = new Worker("./walkaround_worker_bot.js", { workerData });
+        const worker = new Worker(`./${workerScript}`, { workerData });
 
         worker.on("message", resolve);
         worker.on("error", reject);

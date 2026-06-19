@@ -27,6 +27,8 @@
           nvm install 18
           npm install mineflayer
           npm install mineflayer-pathfinder
+          npm install mineflayer-collectblock
+          npm install mineflayer-tool
         chdir: "{{wd}}"
     - name: Checkout RCON client
       git:

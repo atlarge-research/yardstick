@@ -1,9 +1,97 @@
-function buildDasScript({ numNodes, botsPerNode, sleepTime, safeName, scratchDir }) {
+const fs = require('fs');
+const path = require('path');
+
+const WORKLOAD_DIR = path.resolve(__dirname, '../../yardstick_benchmark/games/minecraft/workload');
+const WORKLOAD_BOT = { chopwood: 'chopwood_worker_bot.js', explore: 'explore_worker_bot.js', mineore: 'mineore_worker_bot.js' };
+const WORKLOAD_LABEL = { walkaround: 'WalkAround', chopwood: 'ChopWood', explore: 'Explore', mineore: 'MineOre' };
+
+function readWlFile(name) {
+  try { return fs.readFileSync(path.join(WORKLOAD_DIR, name), 'utf8'); } catch (e) { return ''; }
+}
+
+// Returns Python code that ensures the Workload class and worker bot JS files are
+// available on the target machine, injecting them into the installed package if needed.
+function workloadSetup(workload) {
+  const workerBotFile = WORKLOAD_BOT[workload] || 'walkaround_worker_bot.js';
+  const ctrlStr = JSON.stringify(readWlFile('workload_bot.js'));
+  const wrkrStr = JSON.stringify(readWlFile(workerBotFile));
+  const deployYml = JSON.stringify(readWlFile('workload_deploy.yml'));
+  const startYml  = JSON.stringify(readWlFile('workload_start.yml'));
+  const stopYml   = JSON.stringify(readWlFile('workload_stop.yml'));
+  const cleanYml  = JSON.stringify(readWlFile('workload_cleanup.yml'));
+  // Inline Workload class definition for injection into outdated installed packages
+  const workloadClassSrc = JSON.stringify(`
+from yardstick_benchmark.model import RemoteApplication
+from pathlib import Path as _Path
+from datetime import timedelta as _td
+
+class Workload(RemoteApplication):
+    def __init__(self, nodes, server_host, worker_bot_file='walkaround_worker_bot.js',
+                 duration=_td(seconds=60), spawn_x=0, spawn_y=0, box_width=32,
+                 box_x=-16, box_z=-16, bots_join_delay=_td(seconds=5), bots_per_node=1):
+        _d = _Path(__file__).parent
+        name = worker_bot_file.replace('_worker_bot.js', '').replace('_bot.js', '')
+        super().__init__(name, nodes,
+            _d / 'workload_deploy.yml', _d / 'workload_start.yml',
+            _d / 'workload_stop.yml',  _d / 'workload_cleanup.yml',
+            extravars={
+                'hostnames': [n.host for n in nodes],
+                'scripts': [str(_d/'set_spawn.js'), str(_d/'workload_bot.js'), str(_d/worker_bot_file)],
+                'worker_bot': worker_bot_file, 'duration': duration.total_seconds(),
+                'mc_host': server_host, 'spawn_x': spawn_x, 'spawn_y': spawn_y,
+                'box_width': box_width, 'box_x': box_x, 'box_z': box_z,
+                'bots_join_delay': bots_join_delay.total_seconds(), 'bots_per_node': bots_per_node,
+            })
+
+def WalkAround(nodes, server_host, **kwargs):
+    kwargs.setdefault('worker_bot_file', 'walkaround_worker_bot.js')
+    return Workload(nodes, server_host, **kwargs)
+`);
+  return `
+# Ensure Workload class, YAML playbooks, and worker bot JS files are present in the installed package
+try:
+    import yardstick_benchmark.games.minecraft.workload as _wl_pkg
+    import importlib as _wl_il, os as _wl_os
+    _wl_pkg_dir = _wl_os.path.dirname(_wl_pkg.__file__)
+    # Inject Workload class into installed package if missing
+    if not hasattr(_wl_pkg, 'Workload'):
+        _wl_init = _wl_pkg.__file__
+        open(_wl_init, 'a').write(${workloadClassSrc})
+        _wl_il.reload(_wl_pkg)
+        print('[patch] Workload class injected into installed package', flush=True)
+    # Write workload_*.yml playbooks to package dir if missing
+    for _wl_yml_name, _wl_yml_src in [
+        ('workload_deploy.yml',  ${deployYml}),
+        ('workload_start.yml',   ${startYml}),
+        ('workload_stop.yml',    ${stopYml}),
+        ('workload_cleanup.yml', ${cleanYml}),
+    ]:
+        _wl_yml_path = _wl_os.path.join(_wl_pkg_dir, _wl_yml_name)
+        if not _wl_os.path.exists(_wl_yml_path):
+            open(_wl_yml_path, 'w').write(_wl_yml_src)
+            print(f'[patch] {_wl_yml_name} written to installed package', flush=True)
+    # Write updated bot controller and worker bot to package dir if missing
+    _wl_ctrl_path = _wl_os.path.join(_wl_pkg_dir, 'workload_bot.js')
+    if not _wl_os.path.exists(_wl_ctrl_path):
+        open(_wl_ctrl_path, 'w').write(${ctrlStr})
+        print('[patch] workload_bot.js written to installed package', flush=True)
+    _wl_wrkr_path = _wl_os.path.join(_wl_pkg_dir, '${workerBotFile}')
+    if not _wl_os.path.exists(_wl_wrkr_path):
+        open(_wl_wrkr_path, 'w').write(${wrkrStr})
+        print('[patch] ${workerBotFile} written to installed package', flush=True)
+    from yardstick_benchmark.games.minecraft.workload import Workload
+except Exception as _wl_e:
+    print(f'[warn] workload setup: {_wl_e}', flush=True)
+    from yardstick_benchmark.games.minecraft.workload import WalkAround as Workload
+`;
+}
+
+function buildDasScript({ numNodes, botsPerNode, sleepTime, safeName, scratchDir, workload = 'walkaround' }) {
+  const wlLabel = WORKLOAD_LABEL[workload] || 'WalkAround';
   return `
 from yardstick_benchmark.provisioning import Das
 from yardstick_benchmark.monitoring import Telegraf
 from yardstick_benchmark.games.minecraft.server import PaperMC
-from yardstick_benchmark.games.minecraft.workload import WalkAround
 import yardstick_benchmark
 from time import sleep
 from datetime import datetime
@@ -29,7 +117,7 @@ _nvm_lock = os.path.expanduser('~/.nvm/.git/index.lock')
 if os.path.exists(_nvm_lock):
     os.remove(_nvm_lock)
     print('[patch] removed stale NVM lock file', flush=True)
-
+${workloadSetup(workload)}
 das = Das()
 nodes = das.provision(num=${numNodes})
 try:
@@ -46,7 +134,7 @@ try:
 
     telegraf.start()
 
-    wl = WalkAround(nodes[1:], nodes[0].host, bots_per_node=${botsPerNode})
+    wl = Workload(nodes[1:], nodes[0].host, worker_bot_file='${WORKLOAD_BOT[workload] || 'walkaround_worker_bot.js'}', bots_per_node=${botsPerNode})
     wl.deploy()
     wl.start()
     print('Experiment running, sleeping for ${sleepTime}s...')
@@ -73,18 +161,18 @@ finally:
 `;
 }
 
-function buildCloudScript({ botsPerNode, sleepTime, safeName, workerIps, workerUser }) {
+function buildCloudScript({ botsPerNode, sleepTime, safeName, workerIps, workerUser, workload = 'walkaround' }) {
+  const wlLabel = WORKLOAD_LABEL[workload] || 'WalkAround';
   return `
 from yardstick_benchmark.monitoring import Telegraf
 from yardstick_benchmark.games.minecraft.server import PaperMC
-from yardstick_benchmark.games.minecraft.workload import WalkAround
 import yardstick_benchmark
 import yardstick_benchmark.model as _ym
 from datetime import datetime, timedelta
 from pathlib import Path
 import os, shutil, socket as _socket, time as _time, subprocess as _sp, threading as _threading, urllib.request, shutil as _sh, glob as _glob
 
-# Patch installed walkaround playbooks to load nvm via NVM_DIR instead of
+# Patch installed workload playbooks to load nvm via NVM_DIR instead of
 # 'source ~/.bashrc', which is a no-op in non-interactive shells (Ubuntu dash).
 try:
     import yardstick_benchmark.games.minecraft.workload as _wl_mod
@@ -99,8 +187,8 @@ try:
             open(_yml, 'w').write(_fixed)
             print(f'[patch] fixed nvm loading in {os.path.basename(_yml)}', flush=True)
 except Exception as _e:
-    print(f'[warn] could not patch walkaround playbooks: {_e}', flush=True)
-
+    print(f'[warn] could not patch workload playbooks: {_e}', flush=True)
+${workloadSetup(workload)}
 _worker_ips = ${JSON.stringify(workerIps)}
 _worker_user = ${JSON.stringify(workerUser)}
 
@@ -270,8 +358,8 @@ try:
 
     _run('Start Telegraf', telegraf.start)
 
-    wl = WalkAround(wl_nodes, papermc_node.host, bots_per_node=${botsPerNode}, duration=timedelta(seconds=${sleepTime}))
-    _run('Deploy WalkAround', wl.deploy)
+    wl = Workload(wl_nodes, papermc_node.host, worker_bot_file='${WORKLOAD_BOT[workload] || 'walkaround_worker_bot.js'}', bots_per_node=${botsPerNode}, duration=timedelta(seconds=${sleepTime}))
+    _run('Deploy ${wlLabel}', wl.deploy)
 
     _log_stop = _threading.Event()
     def _tail_worker(ip, wd):
@@ -303,7 +391,7 @@ try:
         _log_threads.append(_t)
 
     try:
-        _run('Run WalkAround bots', wl.start)
+        _run('Run ${wlLabel} bots', wl.start)
     finally:
         _log_stop.set()
         for _t in _log_threads:
@@ -354,12 +442,12 @@ finally:
 `;
 }
 
-function buildLocalScript({ numNodes, botsPerNode, sleepTime, safeName }) {
+function buildLocalScript({ numNodes, botsPerNode, sleepTime, safeName, workload = 'walkaround' }) {
+  const wlLabel = WORKLOAD_LABEL[workload] || 'WalkAround';
   return `
 from yardstick_benchmark.model import Node
 from yardstick_benchmark.monitoring import Telegraf
 from yardstick_benchmark.games.minecraft.server import PaperMC
-from yardstick_benchmark.games.minecraft.workload import WalkAround
 import yardstick_benchmark
 import yardstick_benchmark.model as _ym
 from time import sleep
@@ -367,7 +455,7 @@ from datetime import datetime
 from pathlib import Path
 import os, shutil as _shutil, subprocess as _sp, urllib.request, time as _time, glob as _glob
 
-# Fix nvm loading in walkaround playbooks (non-interactive shells ignore ~/.bashrc)
+# Fix nvm loading in workload playbooks (non-interactive shells ignore ~/.bashrc)
 try:
     import yardstick_benchmark.games.minecraft.workload as _wl_mod
     _wl_dir = os.path.dirname(_wl_mod.__file__)
@@ -379,8 +467,8 @@ try:
                 'export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"'
             ))
 except Exception as _e:
-    print(f'[warn] walkaround patch: {_e}', flush=True)
-
+    print(f'[warn] workload patch: {_e}', flush=True)
+${workloadSetup(workload)}
 # Patch PaperMC start playbook: increase wait_for timeout and add JVM heap flags
 try:
     import yardstick_benchmark.games.minecraft.server as _pmc_mod
@@ -634,9 +722,9 @@ try:
     _run('Start Telegraf', telegraf.start)
 
     wl_nodes = client_nodes if client_nodes else [server_node]
-    wl = WalkAround(wl_nodes, server_node.host, bots_per_node=${botsPerNode})
-    _run('Deploy WalkAround', wl.deploy)
-    _run('Run WalkAround bots', wl.start)
+    wl = Workload(wl_nodes, server_node.host, worker_bot_file='${WORKLOAD_BOT[workload] || 'walkaround_worker_bot.js'}', bots_per_node=${botsPerNode})
+    _run('Deploy ${wlLabel}', wl.deploy)
+    _run('Run ${wlLabel} bots', wl.start)
 
     print('Experiment running, sleeping for ${sleepTime}s...')
     sleep(${sleepTime})
