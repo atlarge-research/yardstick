@@ -5,6 +5,7 @@ import type { CloudInstance, CloudInstanceHandoff } from '../../lib/cloud/types'
 import { c, radii } from '../../theme';
 import AwsAuth from './AwsAuth';
 import InstanceList from './InstanceList';
+import LaunchInstanceDialog from './LaunchInstanceDialog';
 import type { CloudAdapter } from '../../lib/cloud/adapter';
 
 type AwsTab = 'account' | 'instances';
@@ -18,6 +19,7 @@ interface Props {
 export default function AwsCloudContent({ onUseInstance, connectSlot }: Props) {
   const cp = useCloudProvider('aws');
   const [awsTab, setAwsTab] = useState<AwsTab>(() => (cp.authenticated ? 'instances' : 'account'));
+  const [showLaunch, setShowLaunch] = useState(false);
 
   useEffect(() => {
     if (cp.authenticated) {
@@ -94,6 +96,24 @@ export default function AwsCloudContent({ onUseInstance, connectSlot }: Props) {
                 <Text fontSize="0.85rem" fontWeight={600} color={c.textDim} flexShrink={0}>Region</Text>
                 <RegionPicker region={cp.region} onChange={cp.setRegion} adapter={cp.adapter} />
               </Flex>
+              <Flex justify="flex-end" mb={3}>
+                <Button variant="plain" bg={c.accent} color="white" borderRadius={radii.sm}
+                  px={4} py="7px" h="auto" fontSize="0.85rem" fontWeight={600}
+                  _hover={{ bg: c.accentLight }} onClick={() => setShowLaunch((v) => !v)}>
+                  {showLaunch ? 'Cancel' : '+ Create instance'}
+                </Button>
+              </Flex>
+              {showLaunch && cp.adapter && (
+                <Box mb={4}>
+                  <LaunchInstanceDialog
+                    adapter={cp.adapter}
+                    region={cp.region}
+                    onRegionChange={cp.setRegion}
+                    onLaunch={async (req) => { const ids = await cp.launch(req); await cp.refreshInstances(); return ids; }}
+                    onClose={() => setShowLaunch(false)}
+                  />
+                </Box>
+              )}
               <InstanceList
                 bare
                 instances={cp.instances}

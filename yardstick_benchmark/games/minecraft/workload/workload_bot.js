@@ -26,6 +26,7 @@ function sleep(ms) {
 }
 
 function start_worker(username) {
+    workers.add(username);
     let workerData = {
         host: host,
         username: username,
@@ -37,11 +38,13 @@ function start_worker(username) {
         const worker = new Worker(`./${workerScript}`, { workerData });
 
         worker.on("message", resolve);
-        worker.on("error", reject);
+        worker.on("error", (err) => { workers.delete(username); reject(err); });
         worker.on("exit", (code) => {
-            workers.delete(username)
+            workers.delete(username);
             if (code !== 0) {
                 reject(new Error(`stopped with exit code ${code}`));
+            } else {
+                resolve();
             }
         });
     });
@@ -74,7 +77,7 @@ async function run() {
                     console.log(`${ts} - bots: ${workers.size}`)
                     if (workers.size < num_bots) {
                         console.log(`target bots: ${num_bots}, current bots: ${workers.size} --> Adding new bot!`);
-                        workers.add(start_worker(`N${bot_index}B${b++}`))
+                        start_worker(`N${bot_index}B${b++}`).catch(err => console.log(`worker error: ${err.message}`))
                     } else {
                         console.log(`target bots: ${num_bots}, current bots: ${workers.size} --> Enough bots connected`);
                     }
