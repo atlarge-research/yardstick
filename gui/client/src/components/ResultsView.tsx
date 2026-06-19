@@ -501,7 +501,7 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
                     formatter={(value) => [value ?? 0, 'Samples']}
                     labelFormatter={(label) => `Tick range: ${label} ms`}
                   />
-                  <Bar dataKey="count" fill="#e17055" />
+                  <Bar dataKey="count" fill="#e17055" isAnimationActive={false} />
                 </BarChart>
               </ResponsiveContainer>
             </Box>
@@ -544,7 +544,7 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
                     formatter={(value) => [value ?? 0, 'Samples']}
                     labelFormatter={(label) => `CPU range: ${label}%`}
                   />
-                  <Bar dataKey="count" fill="#6c5ce7" />
+                  <Bar dataKey="count" fill="#6c5ce7" isAnimationActive={false} />
                 </BarChart>
               </ResponsiveContainer>
             </Box>
