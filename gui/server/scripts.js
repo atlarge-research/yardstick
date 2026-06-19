@@ -132,16 +132,15 @@ try:
     papermc.deploy()
     papermc.start()
 
-    telegraf.start()
-
     wl = Workload(nodes[1:], nodes[0].host, worker_bot_file='${WORKLOAD_BOT[workload] || 'walkaround_worker_bot.js'}', bots_per_node=${botsPerNode})
     wl.deploy()
+    telegraf.start()
     wl.start()
     print('Experiment running, sleeping for ${sleepTime}s...')
     sleep(${sleepTime})
+    telegraf.stop()
 
     papermc.stop()
-    telegraf.stop()
 
     import random as _rnd; timestamp = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + str(_rnd.randint(1000,9999))
     run_label = '${safeName}_' + timestamp if '${safeName}' else timestamp
@@ -356,10 +355,10 @@ try:
             pass
         raise
 
-    _run('Start Telegraf', telegraf.start)
-
     wl = Workload(wl_nodes, papermc_node.host, worker_bot_file='${WORKLOAD_BOT[workload] || 'walkaround_worker_bot.js'}', bots_per_node=${botsPerNode}, duration=timedelta(seconds=${sleepTime}))
     _run('Deploy ${wlLabel}', wl.deploy)
+
+    _run('Start Telegraf', telegraf.start)
 
     _log_stop = _threading.Event()
     def _tail_worker(ip, wd):
@@ -397,8 +396,8 @@ try:
         for _t in _log_threads:
             _t.join(timeout=3)
 
-    _run('Stop PaperMC', papermc.stop)
     _run('Stop Telegraf', telegraf.stop)
+    _run('Stop PaperMC', papermc.stop)
 
     import random as _rnd; timestamp = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + str(_rnd.randint(1000,9999))
     run_label = '${safeName}_' + timestamp if '${safeName}' else timestamp
@@ -719,24 +718,23 @@ try:
         _pmc_stop.set()
         _pmc_tail.join(timeout=5)
 
-    _run('Start Telegraf', telegraf.start)
-
     wl_nodes = client_nodes if client_nodes else [server_node]
     wl = Workload(wl_nodes, server_node.host, worker_bot_file='${WORKLOAD_BOT[workload] || 'walkaround_worker_bot.js'}', bots_per_node=${botsPerNode})
     _run('Deploy ${wlLabel}', wl.deploy)
+    _run('Start Telegraf', telegraf.start)
     _run('Run ${wlLabel} bots', wl.start)
 
     print('Experiment running, sleeping for ${sleepTime}s...')
     sleep(${sleepTime})
 
     try:
-        _run('Stop PaperMC', papermc.stop)
-    except Exception as e:
-        print(f'[warn] stop PaperMC: {e}', flush=True)
-    try:
         _run('Stop Telegraf', telegraf.stop)
     except Exception as e:
         print(f'[warn] stop Telegraf: {e}', flush=True)
+    try:
+        _run('Stop PaperMC', papermc.stop)
+    except Exception as e:
+        print(f'[warn] stop PaperMC: {e}', flush=True)
 
     import random as _rnd; timestamp = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + str(_rnd.randint(1000,9999))
     run_label = '${safeName}_' + timestamp if '${safeName}' else timestamp
