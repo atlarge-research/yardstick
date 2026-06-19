@@ -117,43 +117,67 @@ if os.path.exists(_nvm_lock):
     os.remove(_nvm_lock)
     print('[patch] removed stale NVM lock file', flush=True)
 ${workloadSetup(workload)}
+def _run(label, fn):
+    print(f'[>>] {label}...', flush=True)
+    try:
+        result = fn()
+        print(f'[OK] {label}', flush=True)
+        return result
+    except Exception as e:
+        msg = str(e)
+        lines = [l.strip() for l in msg.splitlines() if l.strip()]
+        summary = lines[-1] if lines else msg
+        print(f'[FAIL] {label}: {summary}', flush=True)
+        raise RuntimeError(f'{label} failed: {summary}') from e
+
+print('', flush=True)
+print('━' * 56, flush=True)
+print('  Yardstick Experiment', flush=True)
+print(f'  Workload  : ${wlLabel}', flush=True)
+print(f'  Duration  : ${sleepTime}s', flush=True)
+print(f'  Nodes     : ${numNodes} (1 server + ${numNodes - 1} worker(s))', flush=True)
+print(f'  Bots/node : ${botsPerNode}  |  Total bots : ${(numNodes - 1) * botsPerNode}', flush=True)
+${safeName ? `print('  Run name  : ${safeName}', flush=True)` : ''}print('━' * 56, flush=True)
+print('', flush=True)
+
 das = Das()
 nodes = das.provision(num=${numNodes})
 try:
-    yardstick_benchmark.clean(nodes)
+    _run('Clean nodes', lambda: yardstick_benchmark.clean(nodes))
 
     telegraf = Telegraf(nodes)
     telegraf.add_input_jolokia_agent(nodes[0])
     telegraf.add_input_execd_minecraft_ticks(nodes[0])
-    telegraf.deploy()
+    _run('Deploy Telegraf', telegraf.deploy)
 
     papermc = PaperMC(nodes[:1])
-    papermc.deploy()
-    papermc.start()
+    _run('Deploy PaperMC', papermc.deploy)
+    _run('Start PaperMC', papermc.start)
 
     wl = Workload(nodes[1:], nodes[0].host, worker_bot_file='${WORKLOAD_BOT[workload] || 'walkaround_worker_bot.js'}', bots_per_node=${botsPerNode}, duration=timedelta(seconds=${sleepTime}))
-    wl.deploy()
-    telegraf.start()
-    wl.start()
-    telegraf.stop()
-
-    papermc.stop()
+    _run('Deploy ${wlLabel}', wl.deploy)
+    _run('Start Telegraf', telegraf.start)
+    _run('Run ${wlLabel} bots', wl.start)
+    _run('Stop Telegraf', telegraf.stop)
+    _run('Stop PaperMC', papermc.stop)
 
     import random as _rnd; timestamp = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + str(_rnd.randint(1000,9999))
     run_label = '${safeName}_' + timestamp if '${safeName}' else timestamp
     dest = Path('${scratchDir}/' + run_label)
     yardstick_benchmark.fetch(dest, nodes)
-    print(f'Results saved to {dest}')
+    print('', flush=True)
+    print('━' * 56, flush=True)
+    print(f'  Results saved to {dest}', flush=True)
+    print('━' * 56, flush=True)
 finally:
     try:
         yardstick_benchmark.clean(nodes)
     except Exception as _e:
-        print(f'[warn] cleanup failed: {_e}', flush=True)
+        print(f'[warn] cleanup: {_e}', flush=True)
     try:
         das.release(nodes)
     except Exception as _e:
-        print(f'[warn] release failed: {_e}', flush=True)
-    print('Done!')
+        print(f'[warn] release: {_e}', flush=True)
 `;
 }
 
@@ -305,6 +329,15 @@ def _run(label, fn):
         print(f'[FAIL] {label}: {summary}', flush=True)
         raise RuntimeError(f'{label} failed: {summary}') from e
 
+print('', flush=True)
+print('━' * 56, flush=True)
+print('  Yardstick Experiment', flush=True)
+print(f'  Workload  : ${wlLabel}', flush=True)
+print(f'  Duration  : ${sleepTime}s', flush=True)
+print(f'  Workers   : ${workerIps.length}  |  Bots/node : ${botsPerNode}  |  Total bots : ${workerIps.length * botsPerNode}', flush=True)
+${safeName ? `print('  Run name  : ${safeName}', flush=True)` : ''}print('━' * 56, flush=True)
+print('', flush=True)
+
 papermc = None
 try:
     _run('Clean nodes', lambda: yardstick_benchmark.clean(nodes))
@@ -414,6 +447,7 @@ try:
     # ansible.posix.synchronize pull mode requires rsync FROM the worker
     # back to this host, which needs reverse SSH that isn't set up.
     _key = os.path.expanduser('~/.ssh/yardstick_exp.pem')
+    _ssh_opts = ['-i', _key, '-o', 'StrictHostKeyChecking=no', '-o', 'ConnectTimeout=10']
     _ssh_e = f'ssh -i {_key} -o StrictHostKeyChecking=no -o ConnectTimeout=10'
     for i, (ip, wnode) in enumerate(zip(_worker_ips, worker_nodes)):
         _label = f'client{i + 1}'
@@ -425,16 +459,29 @@ try:
         )
         if _r.returncode == 0:
             print(f'[fetch] worker {ip} ({_label}) data collected', flush=True)
+        elif 'rsync' in _r.stderr or 'command not found' in _r.stderr:
+            # rsync not installed on worker — fall back to scp
+            print(f'[fetch] rsync unavailable on {ip}, trying scp...', flush=True)
+            _scp_r = _sp.run(
+                ['scp', '-r'] + _ssh_opts + [f'{_worker_user}@{ip}:{wnode.wd}/.', str(_wdest) + '/'],
+                capture_output=True, text=True, timeout=120,
+            )
+            if _scp_r.returncode == 0:
+                print(f'[fetch] worker {ip} ({_label}) data collected via scp', flush=True)
+            else:
+                print(f'[warn] worker {ip} fetch failed (scp): {_scp_r.stderr.strip()[:300]}', flush=True)
         else:
             print(f'[warn] worker {ip} fetch failed: {_r.stderr.strip()[:300]}', flush=True)
 
-    print(f'Results saved to {dest}')
+    print('', flush=True)
+    print('━' * 56, flush=True)
+    print(f'  Results saved to {dest}', flush=True)
+    print('━' * 56, flush=True)
 finally:
     try:
         yardstick_benchmark.clean(nodes)
     except Exception as e:
-        print(f'[warn] cleanup failed: {e}', flush=True)
-    print('Done!')
+        print(f'[warn] cleanup: {e}', flush=True)
 `;
 }
 
@@ -609,6 +656,16 @@ def _run(label, fn):
         print(f'[FAIL] {label}: {summary}', flush=True)
         raise RuntimeError(f'{label} failed: {summary}') from e
 
+print('', flush=True)
+print('━' * 56, flush=True)
+print('  Yardstick Experiment', flush=True)
+print(f'  Workload  : ${wlLabel}', flush=True)
+print(f'  Duration  : ${sleepTime}s', flush=True)
+print(f'  Nodes     : ${numNodes} (1 server + ${numNodes - 1} worker(s))', flush=True)
+print(f'  Bots/node : ${botsPerNode}  |  Total bots : ${(numNodes - 1) * botsPerNode}', flush=True)
+${safeName ? `print('  Run name  : ${safeName}', flush=True)` : ''}print('━' * 56, flush=True)
+print('', flush=True)
+
 papermc = None
 _started = []
 try:
@@ -738,7 +795,10 @@ try:
     for node in nodes:
         if node.wd.exists():
             _shutil.copytree(str(node.wd), str(dest / node.wd.name), dirs_exist_ok=True)
-    print(f'Results saved to {dest}')
+    print('', flush=True)
+    print('━' * 56, flush=True)
+    print(f'  Results saved to {dest}', flush=True)
+    print('━' * 56, flush=True)
 finally:
     for _c in _started:
         _sp.run(['docker', 'rm', '-f', _c], capture_output=True)
@@ -748,7 +808,6 @@ finally:
             _shutil.rmtree(node.wd, ignore_errors=True)
     except Exception as _e:
         print(f'[warn] host cleanup: {_e}', flush=True)
-    print('Done!')
 `;
 }
 

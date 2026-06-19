@@ -30,12 +30,13 @@
           npm install mineflayer-collectblock
           npm install mineflayer-tool
         chdir: "{{wd}}"
-    - name: Checkout RCON client
-      git:
-        repo: https://github.com/tehbeard/node-rcon.git
-        dest: "{{wd}}/rcon"
     - name: Copy scripts
       copy:
         src: "{{item}}"
         dest: "{{wd}}"
       with_items: "{{scripts}}"
+    - name: Get RCON client
+      shell: |
+        mkdir -p {{wd}}/rcon
+        wget -qO {{wd}}/rcon/RCON.js "https://raw.githubusercontent.com/tehbeard/node-rcon/master/RCON.js"
+      ignore_errors: yes

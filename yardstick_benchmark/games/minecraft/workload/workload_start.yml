@@ -21,6 +21,7 @@
           node set_spawn.js
         chdir: "{{wd}}"
       run_once: true # Only run on one machine
+      ignore_errors: yes
     - name: Run Minecraft bot
       shell:
         cmd: |
