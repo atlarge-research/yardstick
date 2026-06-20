@@ -439,7 +439,7 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
               <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={cpuPivot}>
                   <CartesianGrid strokeDasharray="3 3" stroke={c.border} />
-                  <XAxis dataKey="t" label={{ value: 'Time (min)', position: 'insideBottom', offset: -5, fill: c.textDim }} {...axisProps} />
+                  <XAxis dataKey="t" type="number" domain={['dataMin', 'dataMax']} allowDecimals label={{ value: 'Time (min)', position: 'insideBottom', offset: -5, fill: c.textDim }} {...axisProps} />
                   <YAxis domain={[0, 100]} label={{ value: 'Utilization %', angle: -90, position: 'insideLeft', fill: c.textDim }} {...axisProps} />
                   <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => `${v} min`} />
                   <Legend />
@@ -458,7 +458,7 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
               <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={tickSorted}>
                   <CartesianGrid strokeDasharray="3 3" stroke={c.border} />
-                  <XAxis dataKey="t" label={{ value: 'Time (min)', position: 'insideBottom', offset: -5, fill: c.textDim }} {...axisProps} />
+                  <XAxis dataKey="t" type="number" domain={['dataMin', 'dataMax']} allowDecimals label={{ value: 'Time (min)', position: 'insideBottom', offset: -5, fill: c.textDim }} {...axisProps} />
                   <YAxis label={{ value: 'Tick (ms)', angle: -90, position: 'insideLeft', fill: c.textDim }} {...axisProps} />
                   <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => `${v} min`} />
                   <Line type="monotone" dataKey="dur" name="Tick Duration" stroke="#e17055" dot={false} strokeWidth={1.5} isAnimationActive={false} />
@@ -475,7 +475,7 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
               <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={memPivot}>
                   <CartesianGrid strokeDasharray="3 3" stroke={c.border} />
-                  <XAxis dataKey="t" label={{ value: 'Time (min)', position: 'insideBottom', offset: -5, fill: c.textDim }} {...axisProps} />
+                  <XAxis dataKey="t" type="number" domain={['dataMin', 'dataMax']} allowDecimals label={{ value: 'Time (min)', position: 'insideBottom', offset: -5, fill: c.textDim }} {...axisProps} />
                   <YAxis domain={[0, 100]} label={{ value: 'Used %', angle: -90, position: 'insideLeft', fill: c.textDim }} {...axisProps} />
                   <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => `${v} min`} />
                   <Legend />
@@ -514,7 +514,7 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
               <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={tickCdf}>
                   <CartesianGrid strokeDasharray="3 3" stroke={c.border} />
-                  <XAxis dataKey="value" label={{ value: 'Tick duration (ms)', position: 'insideBottom', offset: -5, fill: c.textDim }} {...axisProps} />
+                  <XAxis dataKey="value" type="number" domain={[0, 'dataMax']} allowDecimals tickFormatter={(v) => toNumber(Number(v))} label={{ value: 'Tick duration (ms)', position: 'insideBottom', offset: -5, fill: c.textDim }} {...axisProps} />
                   <YAxis domain={[0, 100]} label={{ value: 'CDF (%)', angle: -90, position: 'insideLeft', fill: c.textDim }} {...axisProps} />
                   <Tooltip
                     contentStyle={tooltipStyle}
