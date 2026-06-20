@@ -108,11 +108,17 @@ if os.path.exists(_nvm_lock):
 try:
     from yardstick_benchmark import model as _ys_model
     import ansible_runner as _ar
-    import tempfile as _tf, shutil as _sh, uuid as _uuid
+    import tempfile as _tf, shutil as _sh, uuid as _uuid, threading as _thr, time as _tm
     def _patched_run(self):
         assert self.script.is_file()
         _ctrl_uid = _uuid.uuid4().hex[:8]
         self.private_data_dir = _tf.mkdtemp(prefix='yardstick-')
+        _t0 = _tm.time()
+        _done = _thr.Event()
+        def _hb():
+            while not _done.wait(30):
+                print(f'[poll] {int(_tm.time() - _t0)}s elapsed', flush=True)
+        _thr.Thread(target=_hb, daemon=True).start()
         res = _ar.interface.run(
             private_data_dir=self.private_data_dir,
             playbook=str(self.script),
@@ -131,6 +137,7 @@ try:
                 ),
             },
         )
+        _done.set()
         _sh.rmtree(self.private_data_dir)
         return res
     _ys_model.RemoteAction.run = _patched_run
