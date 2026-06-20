@@ -19,6 +19,8 @@
       shell: |
         wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.2/install.sh | bash
       when: nvm_version.rc == 127
+      async: 7200
+      poll: 5
     - name: Install node 18 and Mineflayer
       shell:
         cmd: |
@@ -31,6 +33,8 @@
           npm install mineflayer-tool
           nvm which 18 > {{wd}}/.node_path
         chdir: "{{wd}}"
+      async: 7200
+      poll: 5
     - name: Copy scripts
       copy:
         src: "{{item}}"
@@ -42,6 +46,8 @@
         wget -qO {{wd}}/rcon/RCON.js "https://raw.githubusercontent.com/tehbeard/node-rcon/master/RCON.js"
         wget -qO {{wd}}/rcon/Packet.js "https://raw.githubusercontent.com/tehbeard/node-rcon/master/Packet.js"
       ignore_errors: yes
+      async: 7200
+      poll: 5
     - name: Set game spawn location
       shell:
         cmd: |

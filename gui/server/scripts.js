@@ -119,11 +119,13 @@ try:
             while not _done.wait(30):
                 print(f'[poll] {int(_tm.time() - _t0)}s elapsed', flush=True)
         _thr.Thread(target=_hb, daemon=True).start()
+        _ev = dict(self.envvars)
+        _ev['ANSIBLE_ASYNC_DIR'] = '/tmp/.ansible_async_ys'
         res = _ar.interface.run(
             private_data_dir=self.private_data_dir,
             playbook=str(self.script),
             inventory=self.inv,
-            envvars=self.envvars,
+            envvars=_ev,
             extravars=self.extravars,
             settings={
                 'pipelining': True,
@@ -141,7 +143,7 @@ try:
         _sh.rmtree(self.private_data_dir)
         return res
     _ys_model.RemoteAction.run = _patched_run
-    print('[patch] RemoteAction.run: unique ControlPath per play', flush=True)
+    print('[patch] RemoteAction.run: bots fire-and-forget + controller pause, ControlPath per play', flush=True)
 except Exception as _e:
     print(f'[warn] RemoteAction patch: {_e}', flush=True)
 ${workloadSetup(workload)}

@@ -13,13 +13,22 @@
     BOTS_PER_NODE: "{{bots_per_node}}"
     WORKER_BOT: "{{ worker_bot | default('walkaround_worker_bot.js') }}"
   tasks:
-    - name: Run Minecraft bot
+    - name: Start Minecraft bots
       shell:
         cmd: |
           NODE=$(cat {{wd}}/.node_path 2>/dev/null || ls $HOME/.nvm/versions/node/v18*/bin/node 2>/dev/null | head -1 || echo node)
-          timeout --kill-after=30 {{ duration | int }} $NODE workload_bot.js > bot-{{ inventory_hostname }}.log 2>&1 || true
+          $NODE workload_bot.js > bot-{{ inventory_hostname }}.log 2>&1 </dev/null &
+          echo $! > {{wd}}/bot.pid
         chdir: "{{wd}}"
       environment:
         BOT_INDEX: "{{ groups['all'].index(inventory_hostname) }}"
-      async: 7200
-      poll: 5
+
+    - name: Wait for experiment duration
+      pause:
+        seconds: "{{ duration | int }}"
+      run_once: true
+
+    - name: Kill Minecraft bots
+      shell:
+        cmd: kill -9 $(cat {{wd}}/bot.pid 2>/dev/null) 2>/dev/null || true
+        chdir: "{{wd}}"
