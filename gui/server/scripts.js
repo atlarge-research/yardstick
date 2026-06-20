@@ -222,7 +222,8 @@ ${safeName ? `print('  Run name  : ${safeName}', flush=True)\n` : ''}print('━'
 print('', flush=True)
 
 das = Das()
-nodes = das.provision(num=${numNodes})
+nodes = das.provision(num=${numNodes}, time_s=int(1800 + ${sleepTime}))
+print(f'[patch] DAS reservation: {int(1800 + ${sleepTime})}s (1800s overhead + ${sleepTime}s duration)', flush=True)
 try:
     _run('Clean nodes', lambda: yardstick_benchmark.clean(nodes))
 
