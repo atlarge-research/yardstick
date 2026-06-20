@@ -17,7 +17,9 @@
       shell:
         cmd: |
           NODE=$(cat {{wd}}/.node_path 2>/dev/null || ls $HOME/.nvm/versions/node/v18*/bin/node 2>/dev/null | head -1 || echo node)
-          $NODE workload_bot.js | tee bot-{{ inventory_hostname }}.log
+          $NODE workload_bot.js > bot-{{ inventory_hostname }}.log 2>&1
         chdir: "{{wd}}"
       environment:
         BOT_INDEX: "{{ groups['all'].index(inventory_hostname) }}"
+      async: 7200
+      poll: 5

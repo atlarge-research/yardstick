@@ -100,10 +100,47 @@ _nvm_lock = os.path.expanduser('~/.nvm/.git/index.lock')
 if os.path.exists(_nvm_lock):
     os.remove(_nvm_lock)
     print('[patch] removed stale NVM lock file', flush=True)
+
+# Patch RemoteAction.run: unique ControlPath per call in /tmp (local disk, not NFS).
+# Each play gets a fresh master — no stale sockets from prior plays cause "Shared
+# connection closed". Socket survives shutil.rmtree(private_data_dir) because it's
+# outside private_data_dir.
+try:
+    from yardstick_benchmark import model as _ys_model
+    import ansible_runner as _ar
+    import tempfile as _tf, shutil as _sh, uuid as _uuid
+    def _patched_run(self):
+        assert self.script.is_file()
+        _ctrl_uid = _uuid.uuid4().hex[:8]
+        self.private_data_dir = _tf.mkdtemp(prefix='yardstick-')
+        res = _ar.interface.run(
+            private_data_dir=self.private_data_dir,
+            playbook=str(self.script),
+            inventory=self.inv,
+            envvars=self.envvars,
+            extravars=self.extravars,
+            settings={
+                'pipelining': True,
+                'deprecation_warnings': False,
+                'ssh_args': (
+                    '-o ControlMaster=auto'
+                    ' -o ControlPersist=7200'
+                    ' -o ControlPath=/tmp/ys-' + _ctrl_uid + '-%r@%h:%p'
+                    ' -o ServerAliveInterval=30'
+                    ' -o ServerAliveCountMax=10'
+                ),
+            },
+        )
+        _sh.rmtree(self.private_data_dir)
+        return res
+    _ys_model.RemoteAction.run = _patched_run
+    print('[patch] RemoteAction.run: unique ControlPath per play', flush=True)
+except Exception as _e:
+    print(f'[warn] RemoteAction patch: {_e}', flush=True)
 ${workloadSetup(workload)}
 # On DAS-5 all nodes share the same NFS home, so parallel NVM installs
 # race on the same .git repo. Patch the deploy playbook to run serially.
-# This must run AFTER workloadSetup() writes the YAML files.
+# Must run AFTER workloadSetup() writes the YAML files.
 try:
     import yardstick_benchmark.games.minecraft.workload as _wl_mod
     _wl_dir = os.path.dirname(_wl_mod.__file__)
@@ -116,23 +153,41 @@ try:
 except Exception as _e:
     print(f'[warn] NVM serial patch: {_e}', flush=True)
 
-# Patch Telegraf start/stop playbooks to skip gather_facts — on DAS, fact
-# gathering over SSH/NFS takes 30-60s per node and extends the measurement window.
+# Patch Telegraf playbooks: disable gather_facts (NFS fact-gathering takes
+# 30-60s per node) and tolerate Telegraf already having exited on stop.
 try:
-    import yardstick_benchmark.monitoring as _mon_mod
-    _mon_dir = os.path.dirname(_mon_mod.__file__)
+    import yardstick_benchmark.monitoring as _mon
+    _mon_dir = os.path.dirname(_mon.__file__)
     for _yml_name in ['telegraf_start.yml', 'telegraf_stop.yml']:
         _yml_path = os.path.join(_mon_dir, _yml_name)
         _txt = open(_yml_path).read()
+        _changed = False
         if 'gather_facts: False' not in _txt and 'gather_facts: false' not in _txt:
             if 'gather_facts:' in _txt:
                 _txt = _txt.replace('gather_facts: true', 'gather_facts: False').replace('gather_facts: True', 'gather_facts: False')
             else:
                 _txt = _txt.replace('  hosts: all\\n', '  hosts: all\\n  gather_facts: False\\n', 1)
+            _changed = True
+        if _yml_name == 'telegraf_stop.yml' and '|| true' not in _txt:
+            _txt = _txt.replace('kill -9 {{ telegraf_pid }}', 'kill -9 {{ telegraf_pid }} || true', 1)
+            _changed = True
+        if _changed:
             open(_yml_path, 'w').write(_txt)
-            print(f'[patch] disabled gather_facts in {_yml_name}', flush=True)
+            print(f'[patch] {_yml_name} patched', flush=True)
 except Exception as _e:
-    print(f'[warn] telegraf gather_facts patch: {_e}', flush=True)
+    print(f'[warn] telegraf patch: {_e}', flush=True)
+
+# Patch papermc_stop.yml to tolerate PaperMC already having exited.
+try:
+    import yardstick_benchmark.games.minecraft.server as _mc_srv
+    _stop_yml = os.path.join(os.path.dirname(_mc_srv.__file__), 'papermc_stop.yml')
+    _txt = open(_stop_yml).read()
+    if '|| true' not in _txt:
+        _txt = _txt.replace('kill -9 {{papermc_pid}}', 'kill -9 {{papermc_pid}} || true', 1)
+        open(_stop_yml, 'w').write(_txt)
+        print('[patch] papermc_stop patched', flush=True)
+except Exception as _e:
+    print(f'[warn] papermc_stop patch: {_e}', flush=True)
 
 def _run(label, fn):
     print(f'[>>] {label}...', flush=True)
@@ -154,7 +209,7 @@ print(f'  Workload  : ${wlLabel}', flush=True)
 print(f'  Duration  : ${sleepTime}s', flush=True)
 print(f'  Nodes     : ${numNodes} (1 server + ${numNodes - 1} worker(s))', flush=True)
 print(f'  Bots/node : ${botsPerNode}  |  Total bots : ${(numNodes - 1) * botsPerNode}', flush=True)
-${safeName ? `print('  Run name  : ${safeName}', flush=True)` : ''}print('━' * 56, flush=True)
+${safeName ? `print('  Run name  : ${safeName}', flush=True)\n` : ''}print('━' * 56, flush=True)
 print('', flush=True)
 
 das = Das()
@@ -366,7 +421,7 @@ print('  Yardstick Experiment', flush=True)
 print(f'  Workload  : ${wlLabel}', flush=True)
 print(f'  Duration  : ${sleepTime}s', flush=True)
 print(f'  Workers   : ${workerIps.length}  |  Bots/node : ${botsPerNode}  |  Total bots : ${workerIps.length * botsPerNode}', flush=True)
-${safeName ? `print('  Run name  : ${safeName}', flush=True)` : ''}print('━' * 56, flush=True)
+${safeName ? `print('  Run name  : ${safeName}', flush=True)\n` : ''}print('━' * 56, flush=True)
 print('', flush=True)
 
 papermc = None
@@ -704,7 +759,7 @@ print(f'  Workload  : ${wlLabel}', flush=True)
 print(f'  Duration  : ${sleepTime}s', flush=True)
 print(f'  Nodes     : ${numNodes} (1 server + ${numNodes - 1} worker(s))', flush=True)
 print(f'  Bots/node : ${botsPerNode}  |  Total bots : ${(numNodes - 1) * botsPerNode}', flush=True)
-${safeName ? `print('  Run name  : ${safeName}', flush=True)` : ''}print('━' * 56, flush=True)
+${safeName ? `print('  Run name  : ${safeName}', flush=True)\n` : ''}print('━' * 56, flush=True)
 print('', flush=True)
 
 papermc = None
