@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 
 const WORKLOAD_DIR = path.resolve(__dirname, '../../yardstick_benchmark/games/minecraft/workload');
+const SERVER_DIR = path.resolve(__dirname, '../../yardstick_benchmark/games/minecraft/server');
+function readSrvFile(name) { try { return fs.readFileSync(path.join(SERVER_DIR, name), 'utf8'); } catch (e) { return ''; } }
 const WORKLOAD_BOT = { chopwood: 'chopwood_worker_bot.js', explore: 'explore_worker_bot.js', mineore: 'mineore_worker_bot.js' };
 const WORKLOAD_LABEL = { walkaround: 'WalkAround', chopwood: 'ChopWood', explore: 'Explore', mineore: 'MineOre' };
 
@@ -11,7 +13,7 @@ function readWlFile(name) {
 
 // Returns Python code that ensures the Workload class and worker bot JS files are
 // available on the target machine, injecting them into the installed package if needed.
-function workloadSetup(workload) {
+function workloadSetup(workload, opts = {}) {
   const workerBotFile = WORKLOAD_BOT[workload] || 'walkaround_worker_bot.js';
   const ctrlStr = JSON.stringify(readWlFile('workload_bot.js'));
   const wrkrStr = JSON.stringify(readWlFile(workerBotFile));
@@ -19,6 +21,21 @@ function workloadSetup(workload) {
   const startYml  = JSON.stringify(readWlFile('workload_start.yml'));
   const stopYml   = JSON.stringify(readWlFile('workload_stop.yml'));
   const cleanYml  = JSON.stringify(readWlFile('workload_cleanup.yml'));
+  const setSpawnStr = JSON.stringify(readWlFile('set_spawn.js'));
+  // Apply GUI-configured world settings to server.properties.j2 so seed and
+  // world type are reproducible without editing files. Defaults (when not
+  // provided) leave whatever the on-disk template already has.
+  let serverProps = readSrvFile('server.properties.j2');
+  if (opts.worldType) {
+    const wt = String(opts.worldType).replace(/[^a-z_]/gi, '');
+    if (wt) serverProps = serverProps.replace(/^level-type=.*$/m, `level-type=minecraft\\:${wt}`);
+  }
+  if (opts.seed !== undefined && opts.seed !== null) {
+    const sd = String(opts.seed).replace(/[\r\n]/g, '').trim();
+    serverProps = serverProps.replace(/^level-seed=.*$/m, `level-seed=${sd}`);
+  }
+  const serverPropsStr = JSON.stringify(serverProps);
+  const papermcDeployStr = JSON.stringify(readSrvFile('papermc_deploy.yml'));
   // Inline Workload class definition for injection into outdated installed packages
   const workloadClassSrc = JSON.stringify(`
 from yardstick_benchmark.model import RemoteApplication
@@ -48,6 +65,7 @@ def WalkAround(nodes, server_host, **kwargs):
     return Workload(nodes, server_host, **kwargs)
 `);
   return `
+print('[patch] ===== patch script build ${new Date().toISOString()} (world-wipe + nohup launch + worker diagnostics) =====', flush=True)
 # Ensure Workload class, YAML playbooks, and worker bot JS files are present in the installed package
 try:
     import yardstick_benchmark.games.minecraft.workload as _wl_pkg
@@ -68,15 +86,29 @@ try:
     ]:
         _wl_yml_path = _wl_os.path.join(_wl_pkg_dir, _wl_yml_name)
         open(_wl_yml_path, 'w').write(_wl_yml_src)
-    # Write updated bot controller and worker bot to package dir if missing
-    _wl_ctrl_path = _wl_os.path.join(_wl_pkg_dir, 'workload_bot.js')
-    if not _wl_os.path.exists(_wl_ctrl_path):
-        open(_wl_ctrl_path, 'w').write(${ctrlStr})
-        print('[patch] workload_bot.js written to installed package', flush=True)
-    _wl_wrkr_path = _wl_os.path.join(_wl_pkg_dir, '${workerBotFile}')
-    if not _wl_os.path.exists(_wl_wrkr_path):
-        open(_wl_wrkr_path, 'w').write(${wrkrStr})
-        print('[patch] ${workerBotFile} written to installed package', flush=True)
+    # Overwrite bot controller, worker bot, and set_spawn to reflect local edits
+    for _wl_name, _wl_src in [
+        ('workload_bot.js', ${ctrlStr}),
+        ('${workerBotFile}', ${wrkrStr}),
+        ('set_spawn.js', ${setSpawnStr}),
+    ]:
+        if _wl_src:
+            open(_wl_os.path.join(_wl_pkg_dir, _wl_name), 'w').write(_wl_src)
+    print('[patch] bot scripts + set_spawn.js overwritten in installed package', flush=True)
+    # Push edited server.properties.j2 (normal world + fixed seed) to the installed server package
+    try:
+        import yardstick_benchmark.games.minecraft.server as _srv_pkg
+        _srv_dir = _wl_os.path.dirname(_srv_pkg.__file__)
+        _srv_props = ${serverPropsStr}
+        if _srv_props:
+            open(_wl_os.path.join(_srv_dir, 'server.properties.j2'), 'w').write(_srv_props)
+            print('[patch] server.properties.j2 overwritten in installed package (world: ${String(opts.worldType || 'normal').replace(/[^a-z_]/gi, '')}, seed: ${(opts.seed !== undefined && opts.seed !== null && String(opts.seed).trim() !== '') ? String(opts.seed).trim().replace(/[^A-Za-z0-9_-]/g, '') : 'random'})', flush=True)
+        _pmc_deploy = ${papermcDeployStr}
+        if _pmc_deploy:
+            open(_wl_os.path.join(_srv_dir, 'papermc_deploy.yml'), 'w').write(_pmc_deploy)
+            print('[patch] papermc_deploy.yml (world wipe) overwritten in installed package', flush=True)
+    except Exception as _srv_e:
+        print(f'[warn] server props setup: {_srv_e}', flush=True)
     from yardstick_benchmark.games.minecraft.workload import Workload
 except Exception as _wl_e:
     print(f'[warn] workload setup: {_wl_e}', flush=True)
@@ -84,7 +116,7 @@ except Exception as _wl_e:
 `;
 }
 
-function buildDasScript({ numNodes, botsPerNode, sleepTime, safeName, scratchDir, workload = 'walkaround' }) {
+function buildDasScript({ numNodes, botsPerNode, sleepTime, safeName, scratchDir, workload = 'walkaround', seed, worldType }) {
   const wlLabel = WORKLOAD_LABEL[workload] || 'WalkAround';
   return `
 from yardstick_benchmark.provisioning import Das
@@ -146,7 +178,7 @@ try:
     print('[patch] RemoteAction.run: bots fire-and-forget + controller pause, ControlPath per play', flush=True)
 except Exception as _e:
     print(f'[warn] RemoteAction patch: {_e}', flush=True)
-${workloadSetup(workload)}
+${workloadSetup(workload, { seed, worldType })}
 # On DAS-5 all nodes share the same NFS home, so parallel NVM installs
 # race on the same .git repo. Patch the deploy playbook to run serially.
 # Must run AFTER workloadSetup() writes the YAML files.
@@ -263,7 +295,7 @@ finally:
 `;
 }
 
-function buildCloudScript({ botsPerNode, sleepTime, safeName, workerIps, workerUser, workload = 'walkaround' }) {
+function buildCloudScript({ botsPerNode, sleepTime, safeName, workerIps, workerUser, workload = 'walkaround', seed, worldType }) {
   const wlLabel = WORKLOAD_LABEL[workload] || 'WalkAround';
   return `
 from yardstick_benchmark.monitoring import Telegraf
@@ -290,7 +322,7 @@ try:
             print(f'[patch] fixed nvm loading in {os.path.basename(_yml)}', flush=True)
 except Exception as _e:
     print(f'[warn] could not patch workload playbooks: {_e}', flush=True)
-${workloadSetup(workload)}
+${workloadSetup(workload, { seed, worldType })}
 try:
     import yardstick_benchmark.monitoring as _mon_mod
     _mon_dir = os.path.dirname(_mon_mod.__file__)
@@ -583,7 +615,7 @@ finally:
 `;
 }
 
-function buildLocalScript({ numNodes, botsPerNode, sleepTime, safeName, workload = 'walkaround' }) {
+function buildLocalScript({ numNodes, botsPerNode, sleepTime, safeName, workload = 'walkaround', seed, worldType }) {
   const wlLabel = WORKLOAD_LABEL[workload] || 'WalkAround';
   return `
 from yardstick_benchmark.model import Node
@@ -608,26 +640,19 @@ try:
             ))
 except Exception as _e:
     print(f'[warn] workload patch: {_e}', flush=True)
-${workloadSetup(workload)}
-# Patch PaperMC start playbook: increase wait_for timeout and add JVM heap flags
+${workloadSetup(workload, { seed, worldType })}
+# Patch PaperMC start playbook: increase wait_for timeout for normal-world generation
 try:
     import yardstick_benchmark.games.minecraft.server as _pmc_mod
     _pmc_dir = os.path.dirname(_pmc_mod.__file__)
     _start_yml = os.path.join(_pmc_dir, 'papermc_start.yml')
     _txt = open(_start_yml).read()
-    _changed = False
+    _orig = _txt
     if 'timeout:' not in _txt:
         _txt = _txt.rstrip() + chr(10) + '        timeout: 900' + chr(10)
-        _changed = True
-    if '-Xms' not in _txt:
-        _txt = _txt.replace(
-            'nohup java -javaagent:',
-            'nohup java -Xms512m -Xmx1g -javaagent:'
-        )
-        _changed = True
-    if _changed:
+    if _txt != _orig:
         open(_start_yml, 'w').write(_txt)
-        print('[patch] PaperMC start: timeout=900s, JVM heap 512m-1g', flush=True)
+        print('[patch] PaperMC start: timeout=900s', flush=True)
 except Exception as _e:
     print(f'[warn] PaperMC patch: {_e}', flush=True)
 

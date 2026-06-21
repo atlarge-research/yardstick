@@ -5,7 +5,7 @@ const { buildDasScript, buildCloudScript, buildLocalScript, buildExperimentCmd }
 const { getSocketAws } = require('../cloud');
 
 function registerExperimentHandlers(socket) {
-  socket.on('ssh:run-experiment', async ({ sessionId, username: dasUsername, numNodes = 2, botsPerNode = 10, sleepTime = 10, runName = '', mode: clientMode, workload = 'walkaround' }) => {
+  socket.on('ssh:run-experiment', async ({ sessionId, username: dasUsername, numNodes = 2, botsPerNode = 10, sleepTime = 10, runName = '', mode: clientMode, workload = 'walkaround', seed, worldType = 'normal' }) => {
     const session = sessions.get(sessionId);
     if (!session) { socket.emit('ssh:error', { message: 'No active session.' }); return; }
 
@@ -45,7 +45,7 @@ function registerExperimentHandlers(socket) {
       let experimentScript;
 
       if (isLocalMode) {
-        experimentScript = buildLocalScript({ numNodes, botsPerNode, sleepTime, safeName, workload });
+        experimentScript = buildLocalScript({ numNodes, botsPerNode, sleepTime, safeName, workload, seed, worldType });
       } else if (isCloudMode) {
         const workerIps = [];
         let { imageId: imgId, region: reg, instanceType: instType } = session;
@@ -71,11 +71,12 @@ function registerExperimentHandlers(socket) {
           if (!awsProv) {
             socket.emit('log', { message: 'Warning: Not authenticated to AWS — launching in single-instance mode.', level: 'warn' });
           } else {
-            socket.emit('log', { message: `Launching ${numNodes - 1} worker instance(s)...` });
+            const workerInstanceType = 't3.xlarge';
+            socket.emit('log', { message: `Launching ${numNodes - 1} worker instance(s) (${workerInstanceType})...` });
             workerInstanceIds = await awsProv.launch({
               region: reg,
               imageId: imgId,
-              instanceType: instType || 't3.small',
+              instanceType: workerInstanceType,
               keyName: session.keyName || undefined,
               securityGroupIds: session.securityGroupIds || [],
               count: numNodes - 1,
@@ -116,6 +117,8 @@ function registerExperimentHandlers(socket) {
           workerIps,
           workerUser: session.username || 'ubuntu',
           workload,
+          seed,
+          worldType,
         });
       } else {
         experimentScript = buildDasScript({
@@ -125,6 +128,8 @@ function registerExperimentHandlers(socket) {
           safeName,
           scratchDir: cmds.scratchDir,
           workload,
+          seed,
+          worldType,
         });
       }
 

@@ -27,13 +27,15 @@ export default function ExperimentView({
   const [botsPerNode, setBotsPerNode] = useState(10);
   const [sleepTime, setSleepTime] = useState(60);
   const [workload, setWorkload] = useState('walkaround');
+  const [worldType, setWorldType] = useState('normal');
+  const [seed, setSeed] = useState('8888947372893898991');
 
   const WORKLOAD_LABELS: Record<string, string> = {
     walkaround: 'WalkAround', chopwood: 'ChopWood', explore: 'Explore', mineore: 'MineOre',
   };
 
   const handleRun = () => {
-    onRunExperiment({ username, numNodes, botsPerNode, sleepTime, runName: runName.trim(), workload });
+    onRunExperiment({ username, numNodes, botsPerNode, sleepTime, runName: runName.trim(), workload, worldType, seed: seed.trim() });
   };
 
   return (
@@ -120,6 +122,22 @@ export default function ExperimentView({
               <option value="explore">Explore</option>
               <option value="mineore">MineOre</option>
             </StyledSelect>
+          </Box>
+          <Box>
+            <Text {...labelProps}>World Type</Text>
+            <StyledSelect {...inputProps} value={worldType} onChange={(e) => setWorldType(e.target.value)} disabled={experimentRunning}>
+              <option value="normal">Normal (default)</option>
+              <option value="flat">Flat (superflat)</option>
+              <option value="large_biomes">Large Biomes</option>
+              <option value="amplified">Amplified</option>
+            </StyledSelect>
+          </Box>
+          <Box gridColumn={{ base: '1', md: 'span 2' }}>
+            <Text {...labelProps}>World Seed</Text>
+            <StyledInput {...inputProps} type="text" placeholder="leave blank for random" value={seed} onChange={(e) => setSeed(e.target.value)} disabled={experimentRunning} />
+            <Text fontSize="0.75rem" color={c.textDim} mt={1}>
+              A fixed seed keeps terrain reproducible across runs. Flat worlds have no trees or ore, so ChopWood/MineOre need Normal.
+            </Text>
           </Box>
           <Box>
             <Text {...labelProps}>Number of Nodes</Text>

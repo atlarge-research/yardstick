@@ -38,6 +38,10 @@ worker_bot.once("spawn", async () => {
 
     await worker_bot.waitForChunksToLoad()
 
+    let sp = worker_bot.entity.position
+    let biome = mcData.biomes[worker_bot.blockAt(sp) ? worker_bot.blockAt(sp).biome.id : -1]
+    console.log(`${Date.now()/1000} ${username} spawned at ${Math.round(sp.x)} ${Math.round(sp.y)} ${Math.round(sp.z)} biome=${biome ? biome.name : 'unknown'}`)
+
     let x = getRandomInt(-20, 20)
     let z = getRandomInt(-20, 20)
 
@@ -68,7 +72,7 @@ worker_bot.once("spawn", async () => {
             })
 
             if (block == null) {
-            // We want to expand our search space if we do not find at matching block 
+            // We want to expand our search space if we do not find at matching block
             distance *= 2
             continue;
           }
@@ -76,6 +80,7 @@ worker_bot.once("spawn", async () => {
             let goal = new GoalNear(block.position.x, block.position.y, block.position.z, 1)
             await worker_bot.pathfinder.goto(goal)
             await worker_bot.dig(worker_bot.blockAt(block.position))
+            console.log(`${Date.now()/1000} chopped log at ${block.position.x} ${block.position.y} ${block.position.z}`)
         } catch (e) {
 
             console.log("caught error:", e, e.stack);
