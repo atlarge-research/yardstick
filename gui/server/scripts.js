@@ -45,7 +45,7 @@ from datetime import timedelta as _td
 class Workload(RemoteApplication):
     def __init__(self, nodes, server_host, worker_bot_file='walkaround_worker_bot.js',
                  duration=_td(seconds=60), spawn_x=0, spawn_y=0, box_width=32,
-                 box_x=-16, box_z=-16, bots_join_delay=_td(seconds=5), bots_per_node=1):
+                 box_x=-16, box_z=-16, bots_join_delay=_td(seconds=1), bots_per_node=1):
         _d = _Path(__file__).parent
         name = worker_bot_file.replace('_worker_bot.js', '').replace('_bot.js', '')
         super().__init__(name, nodes,
