@@ -252,20 +252,29 @@ class AwsProvider {
     await client.send(new StopInstancesCommand({ InstanceIds: ids }));
   }
 
-  async ensureSelfIngressSSH(region, securityGroupIds) {
+  // Ensure the security group permits the intra-cluster traffic the benchmark
+  // needs between worker and server instances: SSH (22) for orchestration,
+  // Minecraft (25565) for the bot clients, and RCON (25575) for spawn setup.
+  // Each rule is self-referential (source = the same group) so it only opens
+  // traffic between the cluster's own instances. Authorized one port at a time
+  // so an already-present rule (Duplicate) does not block the others.
+  async ensureSelfIngress(region, securityGroupIds) {
     const client = this._client(region);
+    const ports = [22, 25565, 25575];
     for (const sgId of (securityGroupIds || [])) {
-      try {
-        await client.send(new AuthorizeSecurityGroupIngressCommand({
-          GroupId: sgId,
-          IpPermissions: [{
-            IpProtocol: 'tcp', FromPort: 22, ToPort: 22,
-            UserIdGroupPairs: [{ GroupId: sgId }],
-          }],
-        }));
-      } catch (e) {
-        if (e.name !== 'InvalidPermission.Duplicate') {
-          // best-effort — ignore other errors
+      for (const port of ports) {
+        try {
+          await client.send(new AuthorizeSecurityGroupIngressCommand({
+            GroupId: sgId,
+            IpPermissions: [{
+              IpProtocol: 'tcp', FromPort: port, ToPort: port,
+              UserIdGroupPairs: [{ GroupId: sgId }],
+            }],
+          }));
+        } catch (e) {
+          if (e.name !== 'InvalidPermission.Duplicate') {
+            // best-effort — ignore other errors
+          }
         }
       }
     }

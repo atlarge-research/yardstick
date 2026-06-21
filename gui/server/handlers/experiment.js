@@ -85,8 +85,8 @@ function registerExperimentHandlers(socket) {
             });
 
             if (session.securityGroupIds?.length > 0) {
-              socket.emit('log', { message: 'Ensuring security group allows intra-SG SSH...' });
-              await awsProv.ensureSelfIngressSSH(reg, session.securityGroupIds);
+              socket.emit('log', { message: 'Ensuring security group allows intra-SG SSH, Minecraft (25565), and RCON (25575)...' });
+              await awsProv.ensureSelfIngress(reg, session.securityGroupIds);
             }
 
             socket.emit('log', { message: 'Waiting for worker private IPs...' });
