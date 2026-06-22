@@ -11,7 +11,7 @@ run_dir = os.path.expandvars(os.path.expanduser(os.environ.get('YS_RUN_DIR', '')
 print(f"DEBUG:RESOLVED_RUN_DIR:{run_dir}", file=sys.stderr)
 if not os.path.isdir(run_dir):
     print(f"DEBUG:RUN_DIR_MISSING:{run_dir}", file=sys.stderr)
-    print(json.dumps({"cpu": [], "tick": [], "mem": [], "nodes": []}))
+    print(json.dumps({"cpu": [], "tick": [], "mem": [], "nodes": [], "server_node": None}))
     sys.exit(0)
 
 all_files = glob.glob(f"{run_dir}/**/*", recursive=True)
@@ -47,13 +47,26 @@ for cpu_file in glob.glob(f"{run_dir}/**/cpu.csv", recursive=True):
             if len(parts) < 17 or parts[3] != "cpu-total":
                 continue
             ts = int(parts[0])
-            time_active = float(parts[6]) if parts[6] else 0
-            time_idle = float(parts[9]) if parts[9] else 0
-            total = time_active + time_idle
-            util = round(100 * time_active / total, 2) if total > 0 else 0
-            cpu_data.append({"ts": ts, "node": node_name, "util": util})
+            active = float(parts[6]) if parts[6] else 0
+            idle = float(parts[9]) if parts[9] else 0
+            total = active + idle
+            # Telegraf emits two cpu-total rows per timestamp: a cumulative
+            # time_* counter row (active+idle is thousands of seconds, giving a
+            # meaningless since-boot average) and a usage_* percentage row
+            # (active+idle == 100). Keep only the percentage row, which is the
+            # real instantaneous utilisation; usage_active is that utilisation.
+            if not (99.0 <= total <= 101.0):
+                continue
+            cpu_data.append({"ts": ts, "node": node_name, "util": round(active, 2)})
 
 tick_data = []
+# The tick metric is collected only on the Minecraft server node, so the
+# directory holding it identifies the server (works regardless of whether nodes
+# are named server/clientN or by hostname, as on DAS).
+server_node = None
+for tick_file in glob.glob(f"{run_dir}/**/minecraft_tick_times.csv", recursive=True):
+    server_node = Path(tick_file).parent.parent.name
+    break
 for tick_file in glob.glob(f"{run_dir}/**/minecraft_tick_times.csv", recursive=True):
     with open(tick_file) as f:
         for line in f:
@@ -99,7 +112,7 @@ if mem_data:
         del d["ts"]
 
 nodes_found = sorted(set(d["node"] for d in cpu_data)) if cpu_data else []
-print(json.dumps({"cpu": cpu_data, "tick": tick_data, "mem": mem_data, "nodes": nodes_found}))
+print(json.dumps({"cpu": cpu_data, "tick": tick_data, "mem": mem_data, "nodes": nodes_found, "server_node": server_node}))
 `;
 
 function execOnce(session, command) {

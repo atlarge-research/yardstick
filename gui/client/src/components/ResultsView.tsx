@@ -18,6 +18,7 @@ interface ChartData {
   cpu: MetricRecord[];
   mem: MetricRecord[];
   tick: Array<{ t: number; dur: number }>;
+  server_node?: string | null;
 }
 
 type GraphId = 'cpu' | 'tick' | 'mem' | 'tick-hist' | 'tick-cdf' | 'cpu-hist';
@@ -240,8 +241,14 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
     ))
   );
 
-  const cpuValues = chartData?.cpu.map((d) => Number(d.util || 0)).filter((v) => Number.isFinite(v)) || [];
-  const memValues = chartData?.mem.map((d) => Number(d.pct || 0)).filter((v) => Number.isFinite(v)) || [];
+  // Summary cards describe the system under test (the Minecraft server), so CPU
+  // and memory are taken from the server node alone, not pooled across the
+  // load-generating client nodes (whose pathfinding CPU would otherwise
+  // dominate). The per-node time-series charts below still show every node.
+  const serverNode = chartData?.server_node;
+  const onServer = (d: MetricRecord) => !serverNode || d.node === serverNode;
+  const cpuValues = chartData?.cpu.filter(onServer).map((d) => Number(d.util || 0)).filter((v) => Number.isFinite(v)) || [];
+  const memValues = chartData?.mem.filter(onServer).map((d) => Number(d.pct || 0)).filter((v) => Number.isFinite(v)) || [];
   const tickValues = tickSorted.map((d) => d.dur).filter((v) => Number.isFinite(v));
 
   const cpuStats = summarize(cpuValues);
@@ -415,11 +422,11 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
 
           <Grid templateColumns={{ base: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }} gap={3}>
             <Box {...cardProps} mb={0} p={4}>
-              <Text color={c.textDim} fontSize="0.75rem">CPU p95</Text>
+              <Text color={c.textDim} fontSize="0.75rem">Server CPU p95</Text>
               <Heading fontSize="1.15rem" mt={1}>{hasCpu ? toPercent(cpuStats.p95) : 'N/A'}</Heading>
             </Box>
             <Box {...cardProps} mb={0} p={4}>
-              <Text color={c.textDim} fontSize="0.75rem">Memory p95</Text>
+              <Text color={c.textDim} fontSize="0.75rem">Server Mem p95</Text>
               <Heading fontSize="1.15rem" mt={1}>{hasMem ? toPercent(memStats.p95) : 'N/A'}</Heading>
             </Box>
             <Box {...cardProps} mb={0} p={4}>
@@ -435,7 +442,7 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
           {hasCpu && visibleGraphs.has('cpu') && (
             <Box {...cardProps} pb={6}>
               <Heading fontSize="1rem" fontWeight={600} mb={0.5}>CPU Utilization</Heading>
-              <Text color={c.textDim} fontSize="0.8rem" mb={3}>Percentage of active CPU time per node (cpu-total)</Text>
+              <Text color={c.textDim} fontSize="0.8rem" mb={3}>Percentage of active CPU time per node (cpu-total). The server is the system under test; the client nodes are the load generators.</Text>
               <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={cpuPivot}>
                   <CartesianGrid strokeDasharray="3 3" stroke={c.border} />
@@ -533,7 +540,7 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
           {visibleGraphs.has('cpu-hist') && cpuHistogram.length > 0 && (
             <Box {...cardProps} pb={6}>
               <Heading fontSize="1rem" fontWeight={600} mb={0.5}>CPU Utilization Distribution</Heading>
-              <Text color={c.textDim} fontSize="0.8rem" mb={3}>Histogram of CPU utilization samples across nodes</Text>
+              <Text color={c.textDim} fontSize="0.8rem" mb={3}>Histogram of server CPU utilization samples</Text>
               <ResponsiveContainer width="100%" height={320}>
                 <BarChart data={cpuHistogram}>
                   <CartesianGrid strokeDasharray="3 3" stroke={c.border} />
