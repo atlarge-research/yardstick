@@ -42,8 +42,8 @@
         cmd: |
           _f=/tmp/_bots_{{ inventory_hostname }}.log
           cat bot-*.log > $_f 2>/dev/null || true
-          echo "node {{ inventory_hostname }}: $(wc -l < $_f 2>/dev/null) lines | chops=$(grep -c 'chopped log at' $_f 2>/dev/null) | mines=$(grep -c 'mined ore at' $_f 2>/dev/null)"
-          echo "markers: spawned=$(grep -c 'spawned at' $_f 2>/dev/null) | worker_err=$(grep -c 'worker error' $_f 2>/dev/null) | no_resource=$(grep -c 'no wood within\|no ore within' $_f 2>/dev/null) | caught=$(grep -c 'caught error' $_f 2>/dev/null)"
+          echo "node {{ inventory_hostname }}: $(wc -l < $_f 2>/dev/null) lines | peak_bots=$(grep -oE 'bots: [0-9]+' $_f 2>/dev/null | grep -oE '[0-9]+' | sort -n | tail -1) | enough=$(grep -c 'Enough bots connected' $_f 2>/dev/null) | chops=$(grep -c 'chopped log at' $_f 2>/dev/null) | mines=$(grep -c 'mined ore at' $_f 2>/dev/null)"
+          echo "markers: worker_err=$(grep -c 'worker error' $_f 2>/dev/null) | no_resource=$(grep -c 'no wood within\|no ore within' $_f 2>/dev/null) | caught=$(grep -c 'caught error' $_f 2>/dev/null)"
           echo "--- first 5 lines ---"
           head -5 $_f 2>/dev/null || true
           echo "--- worker/biome/error samples ---"

@@ -111,6 +111,24 @@ if mem_data:
         d["t"] = round((d["ts"] - t0) / 60, 2)
         del d["ts"]
 
+# Relabel node directories to friendly roles so DAS hostnames (node034, ...)
+# display the same way as local/AWS runs (server / client1..N). The server is
+# the node that produced the tick metric; everything else is a client, numbered
+# in sorted order. This is idempotent for local/AWS dirs that are already named
+# server/clientN.
+all_node_names = set(d["node"] for d in cpu_data) | set(d["node"] for d in mem_data)
+name_map = {}
+if server_node is not None:
+    name_map[server_node] = "server"
+for i, n in enumerate(sorted(n for n in all_node_names if n != server_node), start=1):
+    name_map[n] = f"client{i}"
+for d in cpu_data:
+    d["node"] = name_map.get(d["node"], d["node"])
+for d in mem_data:
+    d["node"] = name_map.get(d["node"], d["node"])
+if server_node is not None:
+    server_node = "server"
+
 nodes_found = sorted(set(d["node"] for d in cpu_data)) if cpu_data else []
 print(json.dumps({"cpu": cpu_data, "tick": tick_data, "mem": mem_data, "nodes": nodes_found, "server_node": server_node}))
 `;

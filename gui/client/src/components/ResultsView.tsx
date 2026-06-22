@@ -450,9 +450,27 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
                   <YAxis domain={[0, 100]} label={{ value: 'Utilization %', angle: -90, position: 'insideLeft', fill: c.textDim }} {...axisProps} />
                   <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => `${v} min`} />
                   <Legend />
-                  {nodes.map((node, i) => (
-                    <Line key={node} type="monotone" dataKey={node} stroke={NODE_COLORS[i % NODE_COLORS.length]} dot={false} strokeWidth={1.5} isAnimationActive={false} />
-                  ))}
+                  {/* Render client lines first (thin, faded background load), then the
+                      server line last so it draws bold and on top as the system under test. */}
+                  {[...nodes]
+                    .map((node, i) => ({ node, color: NODE_COLORS[i % NODE_COLORS.length] }))
+                    .sort((a, b) => Number(a.node === serverNode) - Number(b.node === serverNode))
+                    .map(({ node, color }) => {
+                      const isServer = !!serverNode && node === serverNode;
+                      return (
+                        <Line
+                          key={node}
+                          type="monotone"
+                          dataKey={node}
+                          name={node}
+                          stroke={isServer ? '#0984e3' : color}
+                          strokeWidth={isServer ? 3 : 1}
+                          strokeOpacity={isServer ? 1 : 0.4}
+                          dot={false}
+                          isAnimationActive={false}
+                        />
+                      );
+                    })}
                 </LineChart>
               </ResponsiveContainer>
             </Box>
