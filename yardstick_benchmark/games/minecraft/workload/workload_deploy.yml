@@ -43,10 +43,10 @@
     - name: Get RCON client
       shell: |
         mkdir -p {{wd}}/rcon
-        wget -qO {{wd}}/rcon/RCON.js "https://raw.githubusercontent.com/tehbeard/node-rcon/master/RCON.js"
-        wget -qO {{wd}}/rcon/Packet.js "https://raw.githubusercontent.com/tehbeard/node-rcon/master/Packet.js"
+        wget --timeout=20 --tries=3 -qO {{wd}}/rcon/RCON.js "https://raw.githubusercontent.com/tehbeard/node-rcon/master/RCON.js"
+        wget --timeout=20 --tries=3 -qO {{wd}}/rcon/Packet.js "https://raw.githubusercontent.com/tehbeard/node-rcon/master/Packet.js"
       ignore_errors: yes
-      async: 7200
+      async: 180
       poll: 5
     - name: Set game spawn location
       shell:
