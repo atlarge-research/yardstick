@@ -1,4 +1,4 @@
-var RCON = require('./rcon/RCON');
+var RCON = require('./RCON');
 var rcon = new RCON();
 
 const host = process.env.MC_HOST;

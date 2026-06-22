@@ -22,6 +22,8 @@ function workloadSetup(workload, opts = {}) {
   const stopYml   = JSON.stringify(readWlFile('workload_stop.yml'));
   const cleanYml  = JSON.stringify(readWlFile('workload_cleanup.yml'));
   const setSpawnStr = JSON.stringify(readWlFile('set_spawn.js'));
+  const rconJsStr = JSON.stringify(readWlFile('RCON.js'));
+  const packetJsStr = JSON.stringify(readWlFile('Packet.js'));
   // Apply GUI-configured world settings to server.properties.j2 so seed and
   // world type are reproducible without editing files. Defaults (when not
   // provided) leave whatever the on-disk template already has.
@@ -91,6 +93,8 @@ try:
         ('workload_bot.js', ${ctrlStr}),
         ('${workerBotFile}', ${wrkrStr}),
         ('set_spawn.js', ${setSpawnStr}),
+        ('RCON.js', ${rconJsStr}),
+        ('Packet.js', ${packetJsStr}),
     ]:
         if _wl_src:
             open(_wl_os.path.join(_wl_pkg_dir, _wl_name), 'w').write(_wl_src)

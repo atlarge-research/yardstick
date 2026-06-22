@@ -40,14 +40,13 @@
         src: "{{item}}"
         dest: "{{wd}}"
       with_items: "{{scripts}}"
-    - name: Get RCON client
-      shell: |
-        mkdir -p {{wd}}/rcon
-        wget --timeout=20 --tries=3 -qO {{wd}}/rcon/RCON.js "https://raw.githubusercontent.com/tehbeard/node-rcon/master/RCON.js"
-        wget --timeout=20 --tries=3 -qO {{wd}}/rcon/Packet.js "https://raw.githubusercontent.com/tehbeard/node-rcon/master/Packet.js"
-      ignore_errors: yes
-      async: 180
-      poll: 5
+    - name: Copy bundled RCON client
+      copy:
+        src: "{{ item }}"
+        dest: "{{wd}}/"
+      with_items:
+        - "{{ scripts[0] | dirname }}/RCON.js"
+        - "{{ scripts[0] | dirname }}/Packet.js"
     - name: Set game spawn location
       shell:
         cmd: |
