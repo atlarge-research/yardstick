@@ -8,7 +8,7 @@ function isHomeMode(mode) {
 function buildPipelineCommands(mode, user) {
   const useHome = isHomeMode(mode);
   const condaDir = useHome ? '$HOME/miniconda3' : `/var/scratch/${user}/miniconda3`;
-  const scratchDir = useHome ? '$HOME/yardstick' : `/var/scratch/${user}/yardstick`;
+  const scratchDir = useHome ? '$HOME/experiments' : `/var/scratch/${user}/yardstick`;
 
   return {
     installMiniconda: [

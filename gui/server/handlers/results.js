@@ -133,8 +133,8 @@ function registerResultsHandlers(socket) {
 
     const m = clientMode || session.mode || 'das5';
     const user = dasUsername || session.username;
-    const scratchDir = isHomeMode(m) ? '$HOME/yardstick' : `/var/scratch/${user}/yardstick`;
-    const basePath = isHomeMode(m) ? 'str(Path.home() / "yardstick")' : JSON.stringify(`/var/scratch/${user}/yardstick`);
+    const scratchDir = isHomeMode(m) ? '$HOME/experiments' : `/var/scratch/${user}/yardstick`;
+    const basePath = isHomeMode(m) ? 'str(Path.home() / "experiments")' : JSON.stringify(`/var/scratch/${user}/yardstick`);
 
     const cmd = `python3 - <<'__YS_PY__'
 import os, sys, json
@@ -166,7 +166,7 @@ __YS_PY__`;
 
     const m = clientMode || session.mode || 'das5';
     const user = dasUsername || session.username;
-    const scratchDir = isHomeMode(m) ? '$HOME/yardstick' : `/var/scratch/${user}/yardstick`;
+    const scratchDir = isHomeMode(m) ? '$HOME/experiments' : `/var/scratch/${user}/yardstick`;
     const runDir = `${scratchDir}/${runId}`;
 
     try {

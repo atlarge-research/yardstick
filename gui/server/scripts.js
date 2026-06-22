@@ -559,7 +559,7 @@ try:
 
     import random as _rnd; timestamp = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + str(_rnd.randint(1000,9999))
     run_label = '${safeName}_' + timestamp if '${safeName}' else timestamp
-    dest = Path(os.path.expanduser('~')) / 'yardstick' / run_label
+    dest = Path(os.path.expanduser('~')) / 'experiments' / run_label
     dest.mkdir(parents=True, exist_ok=True)
 
     # Fetch server data with a local copy (synchronize pull mode doesn't work
@@ -919,7 +919,7 @@ try:
 
     import random as _rnd; timestamp = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + str(_rnd.randint(1000,9999))
     run_label = '${safeName}_' + timestamp if '${safeName}' else timestamp
-    dest = Path(home) / 'yardstick' / run_label
+    dest = Path(home) / 'experiments' / run_label
     dest.mkdir(parents=True, exist_ok=True)
     # With Docker bind-mounts the node wds are already on the host filesystem,
     # so copy directly instead of going through rsync-based fetch.

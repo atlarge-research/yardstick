@@ -22,6 +22,12 @@
       template:
         src: "{{papermc_template}}"
         dest: "{{wd}}/server.properties"
+    - name: Disable connection throttle so all bots can join from one IP
+      copy:
+        dest: "{{wd}}/bukkit.yml"
+        content: |
+          settings:
+            connection-throttle: -1
     - name: Accept EULA
       copy:
         content: "eula=true"
