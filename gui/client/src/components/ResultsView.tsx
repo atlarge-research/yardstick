@@ -8,6 +8,8 @@ import { Box, Flex, Text, Heading, Button, Icon, Spinner, Grid } from '@chakra-u
 import { LuRefreshCw, LuDownload, LuTriangleAlert, LuLoader } from 'react-icons/lu';
 import { useSocket } from '../context/SocketContext';
 import { c, radii, cardProps, inputProps, StyledSelect } from '../theme';
+import ChartCard from './ChartCard';
+import type { LegendEntry } from '../utils/exportChartPdf';
 
 interface MetricRecord {
   t: number;
@@ -438,6 +440,29 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
   const tickBoxes = buildTickBoxes(tickSorted);
   const cpuBoxes = chartData?.cpu ? buildNodeBoxes(chartData.cpu, 'util', serverNode) : [];
 
+  // Legends for the PDF export: the recharts <Legend> is an HTML overlay
+  // outside the chart SVG, so the exporter redraws these natively.
+  const cpuLegend: LegendEntry[] = nodes.map((node, i) => {
+    const isServer = !!serverNode && node === serverNode;
+    return {
+      label: isServer ? `${node} (server)` : node,
+      color: isServer ? '#0984e3' : NODE_COLORS[i % NODE_COLORS.length],
+    };
+  });
+  const memLegend: LegendEntry[] = nodes.map((node, i) => ({
+    label: node,
+    color: NODE_COLORS[i % NODE_COLORS.length],
+  }));
+  const tickBoxLegend: LegendEntry[] = [
+    { label: 'p25-p75 box', color: '#e17055' },
+    { label: 'mean', color: '#fdcb6e' },
+  ];
+  const cpuBoxLegend: LegendEntry[] = [
+    { label: 'p25-p75 box', color: '#6c5ce7' },
+    ...(serverNode ? [{ label: 'server', color: '#0984e3' }] : []),
+    { label: 'mean', color: '#fdcb6e' },
+  ];
+
   const applyTemplate = (templateId: string) => {
     setSelectedTemplate(templateId);
     const template = RESULT_TEMPLATES.find((t) => t.id === templateId);
@@ -599,8 +624,9 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
 
           <Grid templateColumns={{ base: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }} gap={3}>
             <Box {...cardProps} mb={0} p={4}>
-              <Text color={c.textDim} fontSize="0.75rem">Server CPU p95</Text>
-              <Heading fontSize="1.15rem" mt={1}>{hasCpu ? toPercent(cpuStats.p95) : 'N/A'}</Heading>
+              <Text color={c.textDim} fontSize="0.75rem">Server CPU mean</Text>
+              <Heading fontSize="1.15rem" mt={1}>{hasCpu ? toPercent(cpuStats.avg) : 'N/A'}</Heading>
+              <Text color={c.textDim} fontSize="0.7rem" mt={1}>p95 {hasCpu ? toPercent(cpuStats.p95) : 'N/A'}</Text>
             </Box>
             <Box {...cardProps} mb={0} p={4}>
               <Text color={c.textDim} fontSize="0.75rem">Server Mem p95</Text>
@@ -617,9 +643,13 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
           </Grid>
 
           {hasCpu && visibleGraphs.has('cpu') && (
-            <Box {...cardProps} pb={6}>
-              <Heading fontSize="1rem" fontWeight={600} mb={0.5}>CPU Utilization</Heading>
-              <Text color={c.textDim} fontSize="0.8rem" mb={3}>Percentage of active CPU time per node (cpu-total). The server is the system under test; the client nodes are the load generators.</Text>
+            <ChartCard
+              title="CPU Utilization"
+              subtitle="Percentage of active CPU time per node (cpu-total). The server is the system under test; the client nodes are the load generators."
+              exportName="cpu"
+              runId={selectedRun}
+              legend={cpuLegend}
+            >
               <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={cpuPivot}>
                   <CartesianGrid strokeDasharray="3 3" stroke={c.border} />
@@ -650,13 +680,16 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
                     })}
                 </LineChart>
               </ResponsiveContainer>
-            </Box>
+            </ChartCard>
           )}
 
           {hasTick && visibleGraphs.has('tick') && (
-            <Box {...cardProps} pb={6}>
-              <Heading fontSize="1rem" fontWeight={600} mb={0.5}>Minecraft Tick Duration</Heading>
-              <Text color={c.textDim} fontSize="0.8rem" mb={3}>Server tick processing time (lower is better, 50 ms = real-time threshold)</Text>
+            <ChartCard
+              title="Minecraft Tick Duration"
+              subtitle="Server tick processing time (lower is better, 50 ms = real-time threshold)"
+              exportName="tick"
+              runId={selectedRun}
+            >
               <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={tickSorted}>
                   <CartesianGrid strokeDasharray="3 3" stroke={c.border} />
@@ -667,13 +700,17 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
                   <ReferenceLine y={50} stroke="#fdcb6e" strokeDasharray="5 5" ifOverflow="extendDomain" label={{ value: '50 ms', position: 'insideTopRight', fill: c.warning }} />
                 </LineChart>
               </ResponsiveContainer>
-            </Box>
+            </ChartCard>
           )}
 
           {hasMem && visibleGraphs.has('mem') && (
-            <Box {...cardProps} pb={6}>
-              <Heading fontSize="1rem" fontWeight={600} mb={0.5}>Memory Utilization</Heading>
-              <Text color={c.textDim} fontSize="0.8rem" mb={3}>Used memory percentage per node</Text>
+            <ChartCard
+              title="Memory Utilization"
+              subtitle="Used memory percentage per node"
+              exportName="mem"
+              runId={selectedRun}
+              legend={memLegend}
+            >
               <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={memPivot}>
                   <CartesianGrid strokeDasharray="3 3" stroke={c.border} />
@@ -686,13 +723,16 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
                   ))}
                 </LineChart>
               </ResponsiveContainer>
-            </Box>
+            </ChartCard>
           )}
 
           {visibleGraphs.has('tick-hist') && tickHistogram.length > 0 && (
-            <Box {...cardProps} pb={6}>
-              <Heading fontSize="1rem" fontWeight={600} mb={0.5}>Tick Duration Distribution</Heading>
-              <Text color={c.textDim} fontSize="0.8rem" mb={3}>Histogram of tick times for variability analysis</Text>
+            <ChartCard
+              title="Tick Duration Distribution"
+              subtitle="Histogram of tick times for variability analysis"
+              exportName="tick-hist"
+              runId={selectedRun}
+            >
               <ResponsiveContainer width="100%" height={320}>
                 <BarChart data={tickHistogram}>
                   <CartesianGrid strokeDasharray="3 3" stroke={c.border} />
@@ -706,13 +746,16 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
                   <Bar dataKey="count" fill="#e17055" isAnimationActive={false} />
                 </BarChart>
               </ResponsiveContainer>
-            </Box>
+            </ChartCard>
           )}
 
           {visibleGraphs.has('tick-cdf') && tickCdf.length > 0 && (
-            <Box {...cardProps} pb={6}>
-              <Heading fontSize="1rem" fontWeight={600} mb={0.5}>Tick Duration CDF</Heading>
-              <Text color={c.textDim} fontSize="0.8rem" mb={3}>Cumulative distribution of tick duration (lower is better)</Text>
+            <ChartCard
+              title="Tick Duration CDF"
+              subtitle="Cumulative distribution of tick duration (lower is better)"
+              exportName="tick-cdf"
+              runId={selectedRun}
+            >
               <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={tickCdf}>
                   <CartesianGrid strokeDasharray="3 3" stroke={c.border} />
@@ -729,13 +772,16 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
                   )}
                 </LineChart>
               </ResponsiveContainer>
-            </Box>
+            </ChartCard>
           )}
 
           {visibleGraphs.has('cpu-hist') && cpuHistogram.length > 0 && (
-            <Box {...cardProps} pb={6}>
-              <Heading fontSize="1rem" fontWeight={600} mb={0.5}>CPU Utilization Distribution</Heading>
-              <Text color={c.textDim} fontSize="0.8rem" mb={3}>Histogram of server CPU utilization samples</Text>
+            <ChartCard
+              title="CPU Utilization Distribution"
+              subtitle="Histogram of server CPU utilization samples"
+              exportName="cpu-hist"
+              runId={selectedRun}
+            >
               <ResponsiveContainer width="100%" height={320}>
                 <BarChart data={cpuHistogram}>
                   <CartesianGrid strokeDasharray="3 3" stroke={c.border} />
@@ -749,13 +795,17 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
                   <Bar dataKey="count" fill="#6c5ce7" isAnimationActive={false} />
                 </BarChart>
               </ResponsiveContainer>
-            </Box>
+            </ChartCard>
           )}
 
           {visibleGraphs.has('tick-box') && tickBoxes.length > 0 && (
-            <Box {...cardProps} pb={6}>
-              <Heading fontSize="1rem" fontWeight={600} mb={0.5}>Tick Duration Box Plot</Heading>
-              <Text color={c.textDim} fontSize="0.8rem" mb={3}>One box per run minute: box spans p25 to p75 with the median line, whiskers span min to max, the dot marks the mean. 50 ms = real-time threshold.</Text>
+            <ChartCard
+              title="Tick Duration Box Plot"
+              subtitle="One box per run minute: box spans p25 to p75 with the median line, whiskers span min to max, the dot marks the mean. 50 ms = real-time threshold."
+              exportName="tick-box"
+              runId={selectedRun}
+              legend={tickBoxLegend}
+            >
               <BoxPlotChart
                 data={tickBoxes}
                 boxFill="#e17055"
@@ -763,20 +813,24 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
                 referenceY={50}
                 referenceLabel="50 ms"
               />
-            </Box>
+            </ChartCard>
           )}
 
           {visibleGraphs.has('cpu-box') && cpuBoxes.length > 0 && (
-            <Box {...cardProps} pb={6}>
-              <Heading fontSize="1rem" fontWeight={600} mb={0.5}>CPU Utilization Box Plot</Heading>
-              <Text color={c.textDim} fontSize="0.8rem" mb={3}>One box per node over the whole run: box spans p25 to p75 with the median line, whiskers span min to max, the dot marks the mean. The blue box is the server, the system under test.</Text>
+            <ChartCard
+              title="CPU Utilization Box Plot"
+              subtitle="One box per node over the whole run: box spans p25 to p75 with the median line, whiskers span min to max, the dot marks the mean. The blue box is the server, the system under test."
+              exportName="cpu-box"
+              runId={selectedRun}
+              legend={cpuBoxLegend}
+            >
               <BoxPlotChart
                 data={cpuBoxes}
                 boxFill="#6c5ce7"
                 yLabel="Utilization %"
                 yDomain={[0, 100]}
               />
-            </Box>
+            </ChartCard>
           )}
 
           {!hasCpu && !hasTick && !hasMem && (

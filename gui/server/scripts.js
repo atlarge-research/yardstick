@@ -234,6 +234,30 @@ try:
 except Exception as _e:
     print(f'[warn] papermc_stop patch: {_e}', flush=True)
 
+# Patch fetch.yml to exclude regenerable bulk (bot node_modules, world dirs,
+# server runtime/jars) from the pull, so a multi-run DAS sweep does not fill
+# scratch. Only the telegraf metrics CSV and logs are read downstream.
+try:
+    import yardstick_benchmark as _ysb
+    _fetch_yml = os.path.join(os.path.dirname(_ysb.__file__), 'fetch.yml')
+    _txt = open(_fetch_yml).read()
+    if 'rsync_opts' not in _txt and 'mode: pull' in _txt:
+        _opts = ('mode: pull\\n'
+                 '        rsync_opts:\\n'
+                 '          - "--exclude=node_modules"\\n'
+                 '          - "--exclude=*.jar"\\n'
+                 '          - "--exclude=world"\\n'
+                 '          - "--exclude=world_nether"\\n'
+                 '          - "--exclude=world_the_end"\\n'
+                 '          - "--exclude=libraries"\\n'
+                 '          - "--exclude=versions"\\n'
+                 '          - "--exclude=cache"')
+        _txt = _txt.replace('mode: pull', _opts, 1)
+        open(_fetch_yml, 'w').write(_txt)
+        print('[patch] fetch.yml exclusions added', flush=True)
+except Exception as _e:
+    print(f'[warn] fetch.yml patch: {_e}', flush=True)
+
 def _run(label, fn):
     print(f'[>>] {label}...', flush=True)
     try:
@@ -605,11 +629,15 @@ try:
     # for local→local; also avoids the ansible.posix dependency for this step).
     _server_dest = dest / 'server'
     if papermc_node.wd.exists():
-        # Skip the Minecraft world dirs: they are large, regenerated from the
-        # seed on every run, and never read by the parser, so copying them just
-        # fills the node's 20GB disk over a multi-run campaign (no space left).
+        # Skip everything the parser never reads and that is regenerated on every
+        # run: the world dirs, the unpacked server runtime (libraries/versions/
+        # cache/plugins), and the jars. Left unchecked these fill the node's disk
+        # over a multi-run campaign (no space left). Only the telegraf metrics CSV
+        # and logs/ are needed downstream.
         shutil.copytree(str(papermc_node.wd), str(_server_dest), dirs_exist_ok=True,
-                        ignore=shutil.ignore_patterns('world', 'world_nether', 'world_the_end'))
+                        ignore=shutil.ignore_patterns('world', 'world_nether', 'world_the_end',
+                                                      'node_modules', 'libraries', 'versions',
+                                                      'cache', 'plugins', '*.jar'))
         print('[fetch] server data collected', flush=True)
     else:
         print(f'[warn] server wd missing: {papermc_node.wd}', flush=True)
@@ -624,8 +652,14 @@ try:
         _label = f'client{i + 1}'
         _wdest = dest / _label
         _wdest.mkdir(parents=True, exist_ok=True)
+        # Exclude the bot's node_modules (hundreds of MB per worker) and any
+        # server-runtime cruft; only the telegraf metrics CSV and the workload
+        # log are read downstream. This keeps each fetched run small.
+        _excludes = ['--exclude=node_modules', '--exclude=*.jar', '--exclude=world',
+                     '--exclude=world_nether', '--exclude=world_the_end',
+                     '--exclude=libraries', '--exclude=versions', '--exclude=cache']
         _r = _sp.run(
-            ['rsync', '-az', '-e', _ssh_e, f'{_worker_user}@{ip}:{wnode.wd}/', str(_wdest) + '/'],
+            ['rsync', '-az'] + _excludes + ['-e', _ssh_e, f'{_worker_user}@{ip}:{wnode.wd}/', str(_wdest) + '/'],
             capture_output=True, text=True, timeout=120,
         )
         if _r.returncode == 0:
@@ -973,10 +1007,15 @@ try:
     dest = Path(home) / 'experiments' / run_label
     dest.mkdir(parents=True, exist_ok=True)
     # With Docker bind-mounts the node wds are already on the host filesystem,
-    # so copy directly instead of going through rsync-based fetch.
+    # so copy directly instead of going through rsync-based fetch. Skip the world
+    # dirs, the bot node_modules, and the server runtime/jars: none are read by
+    # the parser and they bloat every run on the laptop's disk.
+    _skip = _shutil.ignore_patterns('world', 'world_nether', 'world_the_end',
+                                    'node_modules', 'libraries', 'versions',
+                                    'cache', 'plugins', '*.jar')
     for node in nodes:
         if node.wd.exists():
-            _shutil.copytree(str(node.wd), str(dest / node.wd.name), dirs_exist_ok=True)
+            _shutil.copytree(str(node.wd), str(dest / node.wd.name), dirs_exist_ok=True, ignore=_skip)
     print('', flush=True)
     print('━' * 56, flush=True)
     print(f'  Results saved to {dest}', flush=True)

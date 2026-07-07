@@ -15,11 +15,13 @@
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/xterm": "^5.5.0",
     "framer-motion": "^12.35.0",
+    "jspdf": "^4.2.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^5.6.0",
     "recharts": "^3.7.0",
-    "socket.io-client": "^4.7.4"
+    "socket.io-client": "^4.7.4",
+    "svg2pdf.js": "^2.7.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.28",
