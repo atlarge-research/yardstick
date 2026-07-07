@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Box, Flex, Text, Heading, Button } from '@chakra-ui/react';
 import Terminal from './Terminal';
-import type { TerminalOutputMap } from '../hooks/useYardstick';
+import type { TerminalOutputMap } from '../hooks/useJoystick';
 import { c, radii, cardProps, inputProps, StyledInput } from '../theme';
 
 interface ManualCommandProps {

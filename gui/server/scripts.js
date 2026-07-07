@@ -238,6 +238,13 @@ def _run(label, fn):
     print(f'[>>] {label}...', flush=True)
     try:
         result = fn()
+        # ansible_runner returns a result object instead of raising on play
+        # failure; without this check a failed play would print [OK] and the
+        # experiment would continue against a broken deployment.
+        _rc = getattr(result, 'rc', 0) or 0
+        _st = getattr(result, 'status', None)
+        if _rc != 0 or (_st is not None and _st != 'successful'):
+            raise RuntimeError(f'ansible play failed (rc={_rc}, status={_st})')
         print(f'[OK] {label}', flush=True)
         return result
     except Exception as e:
@@ -249,7 +256,7 @@ def _run(label, fn):
 
 print('', flush=True)
 print('━' * 56, flush=True)
-print('  Yardstick Experiment', flush=True)
+print('  Joystick Experiment', flush=True)
 print(f'  Workload  : ${wlLabel}', flush=True)
 print(f'  Duration  : ${sleepTime}s', flush=True)
 print(f'  Nodes     : ${numNodes} (1 server + ${numNodes - 1} worker(s))', flush=True)
@@ -272,12 +279,22 @@ try:
     _run('Deploy PaperMC', papermc.deploy)
     _run('Start PaperMC', papermc.start)
 
-    wl = Workload(nodes[1:], nodes[0].host, worker_bot_file='${WORKLOAD_BOT[workload] || 'walkaround_worker_bot.js'}', bots_per_node=${botsPerNode}, duration=timedelta(seconds=${sleepTime}))
+    wl = Workload(nodes[1:], nodes[0].host, worker_bot_file='${WORKLOAD_BOT[workload] || 'walkaround_worker_bot.js'}', bots_per_node=${botsPerNode}, duration=timedelta(seconds=${sleepTime}), bots_join_delay=timedelta(seconds=1))
     _run('Deploy ${wlLabel}', wl.deploy)
     _run('Start Telegraf', telegraf.start)
     _run('Run ${wlLabel} bots', wl.start)
-    _run('Stop Telegraf', telegraf.stop)
-    _run('Stop PaperMC', papermc.stop)
+    # Teardown is best-effort: the measurement is already complete once the bots
+    # stop, so a flaky Stop step (e.g. a missing telegraf PID on one node) must
+    # never abort the run and skip the fetch, which would trigger cleanup and
+    # destroy the data. Warn and continue to the fetch instead.
+    try:
+        _run('Stop Telegraf', telegraf.stop)
+    except Exception as e:
+        print(f'[warn] stop Telegraf (non-fatal, keeping data): {e}', flush=True)
+    try:
+        _run('Stop PaperMC', papermc.stop)
+    except Exception as e:
+        print(f'[warn] stop PaperMC (non-fatal, keeping data): {e}', flush=True)
 
     import random as _rnd; timestamp = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + str(_rnd.randint(1000,9999))
     run_label = '${safeName}_' + timestamp if '${safeName}' else timestamp
@@ -414,7 +431,7 @@ CACHE = Path(home) / '.yardstick-cache'
 CACHE.mkdir(parents=True, exist_ok=True)
 DOWNLOADS = [
     ('paper-1.20.1-58.jar',
-     'https://api.papermc.io/v2/projects/paper/versions/1.20.1/builds/58/downloads/paper-1.20.1-58.jar',
+     'https://fill-data.papermc.io/v1/objects/99b21ca62c520d1e678b2e650bf967181d18d0b138636afa4136b3d095d55f58/paper-1.20.1-58.jar',
      1_000_000),
     ('jolokia-agent-jvm-2.0.3-javaagent.jar',
      'https://search.maven.org/remotecontent?filepath=org/jolokia/jolokia-agent-jvm/2.0.3/jolokia-agent-jvm-2.0.3-javaagent.jar',
@@ -431,7 +448,8 @@ def _ensure_cached(fname, url, min_size, retries=5, timeout=60):
         try:
             print(f'[fetch] {url} (attempt {attempt}/{retries})', flush=True)
             tmp = dest.with_suffix(dest.suffix + '.part')
-            with urllib.request.urlopen(url, timeout=timeout) as resp, open(tmp, 'wb') as f:
+            _req = urllib.request.Request(url, headers={'User-Agent': 'yardstick-benchmark/1.0'})
+            with urllib.request.urlopen(_req, timeout=timeout) as resp, open(tmp, 'wb') as f:
                 shutil.copyfileobj(resp, f, length=64 * 1024)
             if tmp.stat().st_size < min_size:
                 raise IOError(f'downloaded file is too small ({tmp.stat().st_size} bytes)')
@@ -452,6 +470,13 @@ def _run(label, fn):
     print(f'[>>] {label}...', flush=True)
     try:
         result = fn()
+        # ansible_runner returns a result object instead of raising on play
+        # failure; without this check a failed play would print [OK] and the
+        # experiment would continue against a broken deployment.
+        _rc = getattr(result, 'rc', 0) or 0
+        _st = getattr(result, 'status', None)
+        if _rc != 0 or (_st is not None and _st != 'successful'):
+            raise RuntimeError(f'ansible play failed (rc={_rc}, status={_st})')
         print(f'[OK] {label}', flush=True)
         return result
     except Exception as e:
@@ -463,7 +488,7 @@ def _run(label, fn):
 
 print('', flush=True)
 print('━' * 56, flush=True)
-print('  Yardstick Experiment', flush=True)
+print('  Joystick Experiment', flush=True)
 print(f'  Workload  : ${wlLabel}', flush=True)
 print(f'  Duration  : ${sleepTime}s', flush=True)
 print(f'  Workers   : ${workerIps.length}  |  Bots/node : ${botsPerNode}  |  Total bots : ${workerIps.length * botsPerNode}', flush=True)
@@ -517,7 +542,7 @@ try:
             pass
         raise
 
-    wl = Workload(wl_nodes, papermc_node.host, worker_bot_file='${WORKLOAD_BOT[workload] || 'walkaround_worker_bot.js'}', bots_per_node=${botsPerNode}, duration=timedelta(seconds=${sleepTime}))
+    wl = Workload(wl_nodes, papermc_node.host, worker_bot_file='${WORKLOAD_BOT[workload] || 'walkaround_worker_bot.js'}', bots_per_node=${botsPerNode}, duration=timedelta(seconds=${sleepTime}), bots_join_delay=timedelta(seconds=1))
     _run('Deploy ${wlLabel}', wl.deploy)
 
     _run('Start Telegraf', telegraf.start)
@@ -558,8 +583,18 @@ try:
         for _t in _log_threads:
             _t.join(timeout=3)
 
-    _run('Stop Telegraf', telegraf.stop)
-    _run('Stop PaperMC', papermc.stop)
+    # Teardown is best-effort: the measurement is already complete once the bots
+    # stop, so a flaky Stop step (e.g. a missing telegraf PID on one node) must
+    # never abort the run and skip the fetch, which would trigger cleanup and
+    # destroy the data. Warn and continue to the fetch instead.
+    try:
+        _run('Stop Telegraf', telegraf.stop)
+    except Exception as e:
+        print(f'[warn] stop Telegraf (non-fatal, keeping data): {e}', flush=True)
+    try:
+        _run('Stop PaperMC', papermc.stop)
+    except Exception as e:
+        print(f'[warn] stop PaperMC (non-fatal, keeping data): {e}', flush=True)
 
     import random as _rnd; timestamp = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + str(_rnd.randint(1000,9999))
     run_label = '${safeName}_' + timestamp if '${safeName}' else timestamp
@@ -570,7 +605,11 @@ try:
     # for local→local; also avoids the ansible.posix dependency for this step).
     _server_dest = dest / 'server'
     if papermc_node.wd.exists():
-        shutil.copytree(str(papermc_node.wd), str(_server_dest), dirs_exist_ok=True)
+        # Skip the Minecraft world dirs: they are large, regenerated from the
+        # seed on every run, and never read by the parser, so copying them just
+        # fills the node's 20GB disk over a multi-run campaign (no space left).
+        shutil.copytree(str(papermc_node.wd), str(_server_dest), dirs_exist_ok=True,
+                        ignore=shutil.ignore_patterns('world', 'world_nether', 'world_the_end'))
         print('[fetch] server data collected', flush=True)
     else:
         print(f'[warn] server wd missing: {papermc_node.wd}', flush=True)
@@ -720,7 +759,7 @@ CACHE = Path(home) / '.yardstick-cache'
 CACHE.mkdir(parents=True, exist_ok=True)
 DOWNLOADS = [
     ('paper-1.20.1-58.jar',
-     'https://api.papermc.io/v2/projects/paper/versions/1.20.1/builds/58/downloads/paper-1.20.1-58.jar',
+     'https://fill-data.papermc.io/v1/objects/99b21ca62c520d1e678b2e650bf967181d18d0b138636afa4136b3d095d55f58/paper-1.20.1-58.jar',
      1_000_000),
     ('jolokia-agent-jvm-2.0.3-javaagent.jar',
      'https://search.maven.org/remotecontent?filepath=org/jolokia/jolokia-agent-jvm/2.0.3/jolokia-agent-jvm-2.0.3-javaagent.jar',
@@ -736,7 +775,8 @@ def _ensure_cached(fname, url, min_size, retries=3, timeout=60):
         try:
             print(f'[fetch] {fname} (attempt {attempt}/{retries})', flush=True)
             tmp = dest.with_suffix(dest.suffix + '.part')
-            with urllib.request.urlopen(url, timeout=timeout) as resp, open(tmp, 'wb') as f:
+            _req = urllib.request.Request(url, headers={'User-Agent': 'yardstick-benchmark/1.0'})
+            with urllib.request.urlopen(_req, timeout=timeout) as resp, open(tmp, 'wb') as f:
                 _shutil.copyfileobj(resp, f, length=64 * 1024)
             if tmp.stat().st_size < min_size:
                 raise IOError(f'file too small ({tmp.stat().st_size} bytes)')
@@ -782,6 +822,13 @@ def _run(label, fn):
     print(f'[>>] {label}...', flush=True)
     try:
         result = fn()
+        # ansible_runner returns a result object instead of raising on play
+        # failure; without this check a failed play would print [OK] and the
+        # experiment would continue against a broken deployment.
+        _rc = getattr(result, 'rc', 0) or 0
+        _st = getattr(result, 'status', None)
+        if _rc != 0 or (_st is not None and _st != 'successful'):
+            raise RuntimeError(f'ansible play failed (rc={_rc}, status={_st})')
         print(f'[OK] {label}', flush=True)
         return result
     except Exception as e:
@@ -793,7 +840,7 @@ def _run(label, fn):
 
 print('', flush=True)
 print('━' * 56, flush=True)
-print('  Yardstick Experiment', flush=True)
+print('  Joystick Experiment', flush=True)
 print(f'  Workload  : ${wlLabel}', flush=True)
 print(f'  Duration  : ${sleepTime}s', flush=True)
 print(f'  Nodes     : ${numNodes} (1 server + ${numNodes - 1} worker(s))', flush=True)
@@ -907,7 +954,7 @@ try:
         _pmc_tail.join(timeout=5)
 
     wl_nodes = client_nodes if client_nodes else [server_node]
-    wl = Workload(wl_nodes, server_node.host, worker_bot_file='${WORKLOAD_BOT[workload] || 'walkaround_worker_bot.js'}', bots_per_node=${botsPerNode}, duration=timedelta(seconds=${sleepTime}))
+    wl = Workload(wl_nodes, server_node.host, worker_bot_file='${WORKLOAD_BOT[workload] || 'walkaround_worker_bot.js'}', bots_per_node=${botsPerNode}, duration=timedelta(seconds=${sleepTime}), bots_join_delay=timedelta(seconds=1))
     _run('Deploy ${wlLabel}', wl.deploy)
     _run('Start Telegraf', telegraf.start)
     _run('Run ${wlLabel} bots', wl.start)

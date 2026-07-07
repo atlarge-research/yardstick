@@ -3,13 +3,26 @@
   gather_facts: true
   hosts: all
   tasks:
+    - name: Kill any stale PaperMC from a previous run (frees port 25565)
+      # A run that aborts before Stop PaperMC can leave an orphaned server
+      # holding the port, so the next deploy's server fails to bind and never
+      # becomes ready. The bracket class '[p]aper' matches the java process but
+      # NOT pkill's own command line (which contains the literal '[p]aper'), so
+      # pkill can't SIGKILL its own shell (rc -9). Best-effort, never fatal.
+      shell: pkill -9 -f '[p]aper-1.20.1-58.jar' || true
+      changed_when: false
+      failed_when: false
     - file:
         path: "{{ wd }}"
         state: directory
     - name: Download PaperMC
+      # api.papermc.io/v2 downloads were shut down (HTTP 410); same jar now
+      # served by the Fill CDN, pinned by sha256 for reproducibility.
       get_url:
-        url: https://api.papermc.io/v2/projects/paper/versions/1.20.1/builds/58/downloads/paper-1.20.1-58.jar
+        url: https://fill-data.papermc.io/v1/objects/99b21ca62c520d1e678b2e650bf967181d18d0b138636afa4136b3d095d55f58/paper-1.20.1-58.jar
         dest: "{{ wd }}/paper-1.20.1-58.jar"
+        checksum: sha256:99b21ca62c520d1e678b2e650bf967181d18d0b138636afa4136b3d095d55f58
+        timeout: 60
     - name: Wipe existing world for reproducible seed
       file:
         path: "{{wd}}/{{item}}"

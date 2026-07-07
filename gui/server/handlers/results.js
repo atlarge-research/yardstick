@@ -11,7 +11,7 @@ run_dir = os.path.expandvars(os.path.expanduser(os.environ.get('YS_RUN_DIR', '')
 print(f"DEBUG:RESOLVED_RUN_DIR:{run_dir}", file=sys.stderr)
 if not os.path.isdir(run_dir):
     print(f"DEBUG:RUN_DIR_MISSING:{run_dir}", file=sys.stderr)
-    print(json.dumps({"cpu": [], "tick": [], "mem": [], "nodes": [], "server_node": None}))
+    print(json.dumps({"cpu": [], "tick": [], "mem": [], "nodes": [], "server_node": None, "plateau_t": None}))
     sys.exit(0)
 
 all_files = glob.glob(f"{run_dir}/**/*", recursive=True)
@@ -95,21 +95,21 @@ for mem_file in glob.glob(f"{run_dir}/**/mem.csv", recursive=True):
                 continue
             mem_data.append({"ts": ts, "node": node_name, "pct": round(used_pct, 2)})
 
-if cpu_data:
-    t0 = min(d["ts"] for d in cpu_data)
-    for d in cpu_data:
-        d["t"] = round((d["ts"] - t0) / 60, 2)
-        del d["ts"]
-if tick_data:
-    t0 = min(d["ts"] for d in tick_data)
-    for d in tick_data:
-        d["t"] = round((d["ts"] - t0) / 60, 2)
-        del d["ts"]
-if mem_data:
-    t0 = min(d["ts"] for d in mem_data)
-    for d in mem_data:
-        d["t"] = round((d["ts"] - t0) / 60, 2)
-        del d["ts"]
+# Normalise every series against a single shared t0 so the cross-series charts
+# line up on one time axis.
+_all_ts = ([d["ts"] for d in cpu_data]
+           + [d["ts"] for d in tick_data]
+           + [d["ts"] for d in mem_data])
+t0 = min(_all_ts) if _all_ts else 0
+for d in cpu_data:
+    d["t"] = round((d["ts"] - t0) / 60, 2)
+    del d["ts"]
+for d in tick_data:
+    d["t"] = round((d["ts"] - t0) / 60, 2)
+    del d["ts"]
+for d in mem_data:
+    d["t"] = round((d["ts"] - t0) / 60, 2)
+    del d["ts"]
 
 # Relabel node directories to friendly roles so DAS hostnames (node034, ...)
 # display the same way as local/AWS runs (server / client1..N). The server is

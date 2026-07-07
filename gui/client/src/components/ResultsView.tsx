@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer, ReferenceLine, BarChart, Bar,
+  ComposedChart, Scatter, Cell,
 } from 'recharts';
 import { Box, Flex, Text, Heading, Button, Icon, Spinner, Grid } from '@chakra-ui/react';
 import { LuRefreshCw, LuDownload, LuTriangleAlert, LuLoader } from 'react-icons/lu';
@@ -21,7 +22,7 @@ interface ChartData {
   server_node?: string | null;
 }
 
-type GraphId = 'cpu' | 'tick' | 'mem' | 'tick-hist' | 'tick-cdf' | 'cpu-hist';
+type GraphId = 'cpu' | 'tick' | 'mem' | 'tick-hist' | 'tick-cdf' | 'cpu-hist' | 'tick-box' | 'cpu-box';
 
 interface ResultTemplate {
   id: string;
@@ -55,6 +56,8 @@ const GRAPH_LABELS: Record<GraphId, string> = {
   'tick-hist': 'Tick Distribution (Histogram)',
   'tick-cdf': 'Tick Distribution (CDF)',
   'cpu-hist': 'CPU Distribution (Histogram)',
+  'tick-box': 'Tick Duration (Box Plot)',
+  'cpu-box': 'CPU per Node (Box Plot)',
 };
 
 const RESULT_TEMPLATES: ResultTemplate[] = [
@@ -66,12 +69,12 @@ const RESULT_TEMPLATES: ResultTemplate[] = [
   {
     id: 'stability-focus',
     label: 'Stability focus',
-    graphs: ['tick', 'tick-hist', 'tick-cdf'],
+    graphs: ['tick', 'tick-hist', 'tick-cdf', 'tick-box'],
   },
   {
     id: 'capacity-planning',
     label: 'Capacity planning',
-    graphs: ['cpu', 'mem', 'cpu-hist'],
+    graphs: ['cpu', 'mem', 'cpu-hist', 'cpu-box'],
   },
   {
     id: 'custom',
@@ -151,6 +154,82 @@ function buildCdf(values: number[]): Array<{ value: number; cdf: number }> {
   }));
 }
 
+interface BoxDatum {
+  name: string;
+  n: number;
+  min: number;
+  q1: number;
+  median: number;
+  q3: number;
+  max: number;
+  avg: number;
+  // Stacked segments recharts draws bottom-up; capLine renders the three
+  // horizontal lines (whisker caps and median) as zero-height bars.
+  base: number;
+  whiskerLow: number;
+  boxLow: number;
+  boxHigh: number;
+  whiskerHigh: number;
+  capLine: number;
+  isServer?: boolean;
+}
+
+function buildBoxDatum(name: string, values: number[], isServer = false): BoxDatum | null {
+  const vals = values.filter((v) => Number.isFinite(v));
+  if (vals.length === 0) return null;
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const q1 = percentile(vals, 25);
+  const median = percentile(vals, 50);
+  const q3 = percentile(vals, 75);
+  const avg = vals.reduce((acc, v) => acc + v, 0) / vals.length;
+  return {
+    name,
+    n: vals.length,
+    min: Number(min.toFixed(2)),
+    q1: Number(q1.toFixed(2)),
+    median: Number(median.toFixed(2)),
+    q3: Number(q3.toFixed(2)),
+    max: Number(max.toFixed(2)),
+    avg: Number(avg.toFixed(2)),
+    base: min,
+    whiskerLow: q1 - min,
+    boxLow: median - q1,
+    boxHigh: q3 - median,
+    whiskerHigh: max - q3,
+    capLine: 0,
+    isServer,
+  };
+}
+
+// One box per minute of the run, so the distribution's evolution stays visible.
+function buildTickBoxes(ticks: Array<{ t: number; dur: number }>): BoxDatum[] {
+  const buckets = new Map<number, number[]>();
+  for (const { t, dur } of ticks) {
+    const m = Math.floor(t);
+    if (!buckets.has(m)) buckets.set(m, []);
+    buckets.get(m)!.push(dur);
+  }
+  return Array.from(buckets.keys())
+    .sort((a, b) => a - b)
+    .map((m) => buildBoxDatum(`${m}-${m + 1} min`, buckets.get(m)!))
+    .filter((d): d is BoxDatum => d !== null);
+}
+
+// One box per node; the server (system under test) is flagged for highlighting.
+function buildNodeBoxes(records: MetricRecord[], valueKey: string, serverNode?: string | null): BoxDatum[] {
+  const byNode = new Map<string, number[]>();
+  for (const r of records) {
+    const node = r.node as string;
+    if (!byNode.has(node)) byNode.set(node, []);
+    byNode.get(node)!.push(Number(r[valueKey] || 0));
+  }
+  return Array.from(byNode.keys())
+    .sort((a, b) => Number(b === serverNode) - Number(a === serverNode) || a.localeCompare(b))
+    .map((node) => buildBoxDatum(node, byNode.get(node)!, !!serverNode && node === serverNode))
+    .filter((d): d is BoxDatum => d !== null);
+}
+
 function pivotByTime(records: MetricRecord[], valueKey: string, groupKey: string): Record<string, unknown>[] {
   const map = new Map<number, Record<string, unknown>>();
   for (const r of records) {
@@ -163,6 +242,98 @@ function pivotByTime(records: MetricRecord[], valueKey: string, groupKey: string
 
 const tooltipStyle = { background: c.surface2, border: `1px solid ${c.border}`, borderRadius: radii.sm };
 const axisProps = { tick: { fill: c.textDim, fontSize: 11 }, stroke: c.border };
+
+interface BoxShapeProps {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+}
+
+// Horizontal line across the bar slot: whisker caps and the median.
+function HorizonBar({ x, y, width, strokeWidth = 2 }: BoxShapeProps & { strokeWidth?: number }) {
+  if (x == null || y == null || width == null) return null;
+  return <line x1={x + width * 0.2} y1={y} x2={x + width * 0.8} y2={y} stroke="#dfe6e9" strokeWidth={strokeWidth} />;
+}
+
+// Vertical dashed line through the bar slot centre: the whisker stems.
+function DotBar({ x, y, width, height }: BoxShapeProps) {
+  if (x == null || y == null || width == null || height == null) return null;
+  return (
+    <line
+      x1={x + width / 2}
+      y1={y}
+      x2={x + width / 2}
+      y2={y + height}
+      stroke="#b2bec3"
+      strokeWidth={1.5}
+      strokeDasharray="4 3"
+    />
+  );
+}
+
+function BoxPlotTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: BoxDatum }> }) {
+  if (!active || !payload || payload.length === 0) return null;
+  const d = payload[0].payload;
+  const rows: Array<[string, number]> = [
+    ['Max', d.max], ['p75', d.q3], ['Median', d.median], ['Mean', d.avg], ['p25', d.q1], ['Min', d.min],
+  ];
+  return (
+    <Box style={tooltipStyle} p={2.5} fontSize="0.8rem">
+      <Text fontWeight={700} mb={1}>{d.name}{d.isServer ? ' (server)' : ''}</Text>
+      {rows.map(([label, value]) => (
+        <Flex key={label} justify="space-between" gap={4}>
+          <Text color={c.textDim}>{label}</Text>
+          <Text>{toNumber(value)}</Text>
+        </Flex>
+      ))}
+      <Text color={c.textDim} mt={1}>{d.n} samples</Text>
+    </Box>
+  );
+}
+
+interface BoxPlotChartProps {
+  data: BoxDatum[];
+  boxFill: string;
+  yLabel: string;
+  yDomain?: [number, number | 'auto'];
+  referenceY?: number;
+  referenceLabel?: string;
+}
+
+// Box-and-whisker rendered as a stacked-bar composition (the recharts-sanctioned
+// approach): a transparent base up to the minimum, dashed whisker stems, the
+// interquartile box split at the median, and zero-height bars drawing the caps
+// and median as horizontal lines. Whiskers span the full min-max range.
+function BoxPlotChart({ data, boxFill, yLabel, yDomain, referenceY, referenceLabel }: BoxPlotChartProps) {
+  const cellFill = (d: BoxDatum) => (d.isServer ? '#0984e3' : boxFill);
+  return (
+    <ResponsiveContainer width="100%" height={320}>
+      <ComposedChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" stroke={c.border} />
+        <XAxis dataKey="name" {...axisProps} />
+        <YAxis domain={yDomain ?? [0, 'auto']} label={{ value: yLabel, angle: -90, position: 'insideLeft', fill: c.textDim }} {...axisProps} />
+        <Tooltip content={<BoxPlotTooltip />} />
+        <Bar stackId="box" dataKey="base" fill="none" isAnimationActive={false} legendType="none" />
+        <Bar stackId="box" dataKey="capLine" shape={<HorizonBar />} isAnimationActive={false} legendType="none" />
+        <Bar stackId="box" dataKey="whiskerLow" shape={<DotBar />} isAnimationActive={false} legendType="none" />
+        <Bar stackId="box" dataKey="boxLow" isAnimationActive={false} legendType="none">
+          {data.map((d) => <Cell key={d.name} fill={cellFill(d)} fillOpacity={0.85} />)}
+        </Bar>
+        <Bar stackId="box" dataKey="capLine" shape={<HorizonBar strokeWidth={3} />} isAnimationActive={false} legendType="none" />
+        <Bar stackId="box" dataKey="boxHigh" isAnimationActive={false} legendType="none">
+          {data.map((d) => <Cell key={d.name} fill={cellFill(d)} fillOpacity={0.6} />)}
+        </Bar>
+        <Bar stackId="box" dataKey="whiskerHigh" shape={<DotBar />} isAnimationActive={false} legendType="none" />
+        <Bar stackId="box" dataKey="capLine" shape={<HorizonBar />} isAnimationActive={false} legendType="none" />
+        <Scatter dataKey="avg" fill="#fdcb6e" isAnimationActive={false} legendType="none" />
+        {referenceY != null && (
+          <ReferenceLine y={referenceY} stroke="#fdcb6e" strokeDasharray="5 5" ifOverflow="extendDomain" label={{ value: referenceLabel, position: 'insideTopRight', fill: c.warning }} />
+        )}
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+}
 
 export default function ResultsView({ connected, sessionId, mode, username }: ResultsViewProps) {
   const socket = useSocket();
@@ -238,6 +409,8 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
       || (graph === 'tick-hist' && hasTick)
       || (graph === 'tick-cdf' && hasTick)
       || (graph === 'cpu-hist' && hasCpu)
+      || (graph === 'tick-box' && hasTick)
+      || (graph === 'cpu-box' && hasCpu)
     ))
   );
 
@@ -247,6 +420,7 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
   // dominate). The per-node time-series charts below still show every node.
   const serverNode = chartData?.server_node;
   const onServer = (d: MetricRecord) => !serverNode || d.node === serverNode;
+
   const cpuValues = chartData?.cpu.filter(onServer).map((d) => Number(d.util || 0)).filter((v) => Number.isFinite(v)) || [];
   const memValues = chartData?.mem.filter(onServer).map((d) => Number(d.pct || 0)).filter((v) => Number.isFinite(v)) || [];
   const tickValues = tickSorted.map((d) => d.dur).filter((v) => Number.isFinite(v));
@@ -261,6 +435,8 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
   const tickHistogram = buildHistogram(tickValues, 20);
   const cpuHistogram = buildHistogram(cpuValues, 16);
   const tickCdf = buildCdf(tickValues);
+  const tickBoxes = buildTickBoxes(tickSorted);
+  const cpuBoxes = chartData?.cpu ? buildNodeBoxes(chartData.cpu, 'util', serverNode) : [];
 
   const applyTemplate = (templateId: string) => {
     setSelectedTemplate(templateId);
@@ -383,6 +559,7 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
                   ))}
                 </StyledSelect>
               </Box>
+
 
               <Box as="details" bg={c.bg} border="1px solid" borderColor={c.border} borderRadius={radii.sm} p={3}>
                 <Text as="summary" color={c.text} fontSize="0.88rem" fontWeight={600} cursor="pointer" userSelect="none">
@@ -572,6 +749,33 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
                   <Bar dataKey="count" fill="#6c5ce7" isAnimationActive={false} />
                 </BarChart>
               </ResponsiveContainer>
+            </Box>
+          )}
+
+          {visibleGraphs.has('tick-box') && tickBoxes.length > 0 && (
+            <Box {...cardProps} pb={6}>
+              <Heading fontSize="1rem" fontWeight={600} mb={0.5}>Tick Duration Box Plot</Heading>
+              <Text color={c.textDim} fontSize="0.8rem" mb={3}>One box per run minute: box spans p25 to p75 with the median line, whiskers span min to max, the dot marks the mean. 50 ms = real-time threshold.</Text>
+              <BoxPlotChart
+                data={tickBoxes}
+                boxFill="#e17055"
+                yLabel="Tick (ms)"
+                referenceY={50}
+                referenceLabel="50 ms"
+              />
+            </Box>
+          )}
+
+          {visibleGraphs.has('cpu-box') && cpuBoxes.length > 0 && (
+            <Box {...cardProps} pb={6}>
+              <Heading fontSize="1rem" fontWeight={600} mb={0.5}>CPU Utilization Box Plot</Heading>
+              <Text color={c.textDim} fontSize="0.8rem" mb={3}>One box per node over the whole run: box spans p25 to p75 with the median line, whiskers span min to max, the dot marks the mean. The blue box is the server, the system under test.</Text>
+              <BoxPlotChart
+                data={cpuBoxes}
+                boxFill="#6c5ce7"
+                yLabel="Utilization %"
+                yDomain={[0, 100]}
+              />
             </Box>
           )}
 

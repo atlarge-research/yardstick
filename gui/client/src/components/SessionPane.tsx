@@ -3,9 +3,9 @@ import { Box, Flex, Text, Heading, Button, Icon } from '@chakra-ui/react';
 import { LuPackage, LuFlaskConical, LuSquareTerminal, LuChartBar, LuCloud } from 'react-icons/lu';
 import type { IconType } from 'react-icons';
 import { createSocket } from '../socket';
-import useYardstick from '../hooks/useYardstick';
+import useJoystick from '../hooks/useJoystick';
 import { SocketProvider } from '../context/SocketContext';
-import type { SshConnectOptions, StepStatus } from '../hooks/useYardstick';
+import type { SshConnectOptions, StepStatus } from '../hooks/useJoystick';
 import ConnectForm from './ConnectForm';
 import PipelineView from './PipelineView';
 import ExperimentView from './ExperimentView';
@@ -73,7 +73,7 @@ export default function SessionPane({ onStatusChange, onLabelChange }: SessionPa
     sshConnect, localConnect, sshDisconnect, detectEnv,
     runPipeline, runExperiment, runSingleCommand, awsLaunch, awsTerminate,
     connectToCloudInstance,
-  } = useYardstick(socket);
+  } = useJoystick(socket);
 
   const [tab, setTab] = useState<TabId>('setup');
   const [sshUsername, setSshUsername] = useState('');
@@ -141,7 +141,7 @@ export default function SessionPane({ onStatusChange, onLabelChange }: SessionPa
             <Box w="100%" maxW="720px">
               <Box textAlign="center" mb={8}>
                 <Heading fontSize="2.4rem" fontWeight={800} color={c.accentLight} letterSpacing="-0.02em" mb={1.5}>
-                  Yardstick
+                  Joystick
                 </Heading>
                 <Text color={c.textDim} fontSize="1rem">Minecraft-like Game Benchmark</Text>
               </Box>
@@ -178,7 +178,7 @@ export default function SessionPane({ onStatusChange, onLabelChange }: SessionPa
     <SocketProvider value={socket}>
     <Flex direction="column" flex="1" bg={c.bg} overflow="hidden">
       <Flex as="header" align="center" gap={3.5} px={8} py="18px" borderBottom="1px solid" borderColor={c.border} bg={c.surface}>
-        <Heading fontSize="1.5rem" fontWeight={700} color={c.accentLight}>Yardstick</Heading>
+        <Heading fontSize="1.5rem" fontWeight={700} color={c.accentLight}>Joystick</Heading>
         <Text color={c.textDim} fontSize="0.9rem">Benchmark</Text>
         <Flex as="nav" ml="auto" gap={1.5}>
           {TABS.map((t) => {

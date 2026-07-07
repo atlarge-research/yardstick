@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, type FormEvent, type ChangeEvent, typ
 import { Box, Flex, Grid, Text, Heading, Button, Badge, Icon, Spinner } from '@chakra-ui/react';
 import { LuMonitor, LuGlobe, LuHash, LuServer, LuCloud, LuBookmark, LuTrash2 } from 'react-icons/lu';
 import type { IconType } from 'react-icons';
-import type { SshConnectOptions, StepStatus } from '../hooks/useYardstick';
+import type { SshConnectOptions, StepStatus } from '../hooks/useJoystick';
 import { c, fonts, radii, cardProps, inputProps, labelProps, StyledInput, StyledTextarea } from '../theme';
 
 type AuthMethod = 'password' | 'key';

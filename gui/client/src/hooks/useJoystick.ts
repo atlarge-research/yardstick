@@ -57,7 +57,7 @@ const STEPS: Step[] = [
   { id: 'experiment', label: 'Experiment', description: 'Run a benchmark experiment' },
 ];
 
-export default function useYardstick(socket: Socket) {
+export default function useJoystick(socket: Socket) {
   const [connected, setConnected] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [mode, setMode] = useState('das5');

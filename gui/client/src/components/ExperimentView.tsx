@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Box, Flex, Grid, Text, Heading, Button, Icon, Spinner } from '@chakra-ui/react';
 import { LuTriangleAlert, LuCircleCheck } from 'react-icons/lu';
 import Terminal from './Terminal';
-import type { ExperimentConfig, TerminalOutputMap } from '../hooks/useYardstick';
+import type { ExperimentConfig, TerminalOutputMap } from '../hooks/useJoystick';
 import { c, fonts, radii, cardProps, inputProps, labelProps, StyledInput, StyledSelect } from '../theme';
 
 interface ExperimentViewProps {

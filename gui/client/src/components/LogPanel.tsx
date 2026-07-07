@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { Box, Flex, Text } from '@chakra-ui/react';
-import type { LogEntry } from '../hooks/useYardstick';
+import type { LogEntry } from '../hooks/useJoystick';
 import { c, fonts, radii } from '../theme';
 
 interface LogPanelProps {

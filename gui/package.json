@@ -1,8 +1,8 @@
 {
-  "name": "yardstick-gui",
+  "name": "joystick-gui",
   "version": "2.0.0",
   "private": true,
-  "description": "GUI for automating Yardstick benchmark setup and installation",
+  "description": "Joystick: a GUI benchmarking tool built on the Yardstick benchmark",
   "homepage": "https://github.com/atlarge-research/yardstick",
   "author": {
     "name": "marwan amrhar",
@@ -32,8 +32,8 @@
     "electron-builder": "^26.8.1"
   },
   "build": {
-    "appId": "com.yardstick.gui",
-    "productName": "Yardstick",
+    "appId": "com.joystick.gui",
+    "productName": "Joystick",
     "npmRebuild": false,
     "files": [
       "electron/**/*",

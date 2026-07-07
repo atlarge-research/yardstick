@@ -208,7 +208,7 @@ function registerConnectionHandlers(socket) {
     socket.emit('ssh:disconnected', { sessionId });
   });
 
-  // Legacy handlers — kept for backwards compatibility with useYardstick hook
+  // Legacy handlers — kept for backwards compatibility with the useJoystick hook
   socket.on('aws:launch-instances', async ({ region = 'us-east-1', count = 1, instanceType = 't3.micro', amiId = null, keyName = null, securityGroupIds = [] }) => {
     try {
       socket.emit('log', { message: `Launching ${count} instance(s) in ${region}...`, level: 'cmd' });

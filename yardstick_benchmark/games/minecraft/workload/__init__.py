@@ -16,7 +16,7 @@ class Workload(RemoteApplication):
         box_width: int = 32,
         box_x: int = -16,
         box_z: int = -16,
-        bots_join_delay: timedelta = timedelta(seconds=5),
+        bots_join_delay: timedelta = timedelta(seconds=1),
         bots_per_node: int = 1,
     ):
         name = worker_bot_file.replace('_worker_bot.js', '').replace('_bot.js', '')

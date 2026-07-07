@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Box, Flex, Grid, Text, Heading, Button, Icon, Spinner } from '@chakra-ui/react';
 import { LuCheck, LuX, LuSearch, LuPackageCheck, LuCircleDot } from 'react-icons/lu';
 import Terminal from './Terminal';
-import type { StepStatus, EnvChecks, TerminalOutputMap } from '../hooks/useYardstick';
+import type { StepStatus, EnvChecks, TerminalOutputMap } from '../hooks/useJoystick';
 import { c, radii, cardProps } from '../theme';
 
 type DetectStatus = 'checking' | 'ok' | 'missing' | 'waiting';

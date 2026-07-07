@@ -1,5 +1,26 @@
 const { app, BrowserWindow } = require('electron');
 const net = require('net');
+const fs = require('fs');
+const path = require('path');
+
+// The app was renamed from Yardstick to Joystick, which moved Electron's
+// userData directory and with it the saved connection profiles in
+// localStorage. If this install has no data yet but an old directory
+// exists, adopt its storage once.
+function migrateLegacyUserData() {
+  const newDir = app.getPath('userData');
+  const marker = path.join(newDir, 'Local Storage');
+  if (fs.existsSync(marker)) return;
+  const appData = app.getPath('appData');
+  for (const legacy of ['yardstick-gui', 'Yardstick']) {
+    const oldStorage = path.join(appData, legacy, 'Local Storage');
+    if (fs.existsSync(oldStorage)) {
+      fs.mkdirSync(newDir, { recursive: true });
+      fs.cpSync(oldStorage, marker, { recursive: true });
+      return;
+    }
+  }
+}
 
 let mainWindow;
 let serverPort;
@@ -35,7 +56,7 @@ function createWindow(port) {
     height: 860,
     minWidth: 900,
     minHeight: 600,
-    title: 'Yardstick Benchmark',
+    title: 'Joystick',
     backgroundColor: '#0f1117',
     webPreferences: {
       nodeIntegration: false,
@@ -52,6 +73,7 @@ function createWindow(port) {
 }
 
 app.whenReady().then(async () => {
+  migrateLegacyUserData();
   serverPort = await startBackend();
   createWindow(serverPort);
 

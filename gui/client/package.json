@@ -1,5 +1,5 @@
 {
-  "name": "yardstick-gui-client",
+  "name": "joystick-gui-client",
   "private": true,
   "version": "2.0.0",
   "type": "module",
