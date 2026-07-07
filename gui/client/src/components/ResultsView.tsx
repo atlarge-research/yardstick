@@ -440,6 +440,16 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
   const tickBoxes = buildTickBoxes(tickSorted);
   const cpuBoxes = chartData?.cpu ? buildNodeBoxes(chartData.cpu, 'util', serverNode) : [];
 
+  // Auto-fit the tick box plot's y-axis to the data. Otherwise the 50 ms
+  // reference line forces the axis up to ~60 ms and a healthy run (all boxes
+  // well under 30 ms) gets crushed into the bottom third and is unreadable.
+  // The 50 ms threshold line is only drawn when it falls within the fitted range.
+  const tickBoxMax = tickBoxes.reduce((m, b) => Math.max(m, b.max), 0);
+  const tickBoxYMax = tickBoxMax >= 45
+    ? Math.ceil((Math.max(tickBoxMax, 55) * 1.05) / 10) * 10
+    : Math.max(10, Math.ceil((tickBoxMax * 1.25) / 5) * 5);
+  const tickBoxShowThreshold = tickBoxYMax >= 50;
+
   // Legends for the PDF export: the recharts <Legend> is an HTML overlay
   // outside the chart SVG, so the exporter redraws these natively.
   const cpuLegend: LegendEntry[] = nodes.map((node, i) => {
@@ -801,7 +811,7 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
           {visibleGraphs.has('tick-box') && tickBoxes.length > 0 && (
             <ChartCard
               title="Tick Duration Box Plot"
-              subtitle="One box per run minute: box spans p25 to p75 with the median line, whiskers span min to max, the dot marks the mean. 50 ms = real-time threshold."
+              subtitle="One box per run minute: box spans p25 to p75 with the median line, whiskers span min to max, the dot marks the mean. The y-axis auto-scales to the data; the 50 ms real-time threshold is marked when it falls in range."
               exportName="tick-box"
               runId={selectedRun}
               legend={tickBoxLegend}
@@ -810,7 +820,8 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
                 data={tickBoxes}
                 boxFill="#e17055"
                 yLabel="Tick (ms)"
-                referenceY={50}
+                yDomain={[0, tickBoxYMax]}
+                referenceY={tickBoxShowThreshold ? 50 : undefined}
                 referenceLabel="50 ms"
               />
             </ChartCard>
