@@ -8,5 +8,18 @@
         src: "{{node_wd}}"
         dest: "{{dest}}"
         mode: pull
+        # Skip everything the parser never reads and that regenerates each run:
+        # the bot node_modules (hundreds of MB per worker), the world dirs, and
+        # the unpacked server runtime/jars. Only the telegraf metrics CSV and the
+        # logs are needed, so this keeps DAS scratch from filling over a sweep.
+        rsync_opts:
+          - "--exclude=node_modules"
+          - "--exclude=*.jar"
+          - "--exclude=world"
+          - "--exclude=world_nether"
+          - "--exclude=world_the_end"
+          - "--exclude=libraries"
+          - "--exclude=versions"
+          - "--exclude=cache"
     - debug:
         msg: "Output files have been written to {{dest}}"
