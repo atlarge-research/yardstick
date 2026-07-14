@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  Legend, ResponsiveContainer, ReferenceLine, BarChart, Bar,
+  Legend, ResponsiveContainer, ReferenceLine, ReferenceArea, BarChart, Bar,
   ComposedChart, Scatter, Cell,
 } from 'recharts';
 import { Box, Flex, Text, Heading, Button, Icon, Spinner, Grid } from '@chakra-ui/react';
@@ -21,10 +21,15 @@ interface ChartData {
   cpu: MetricRecord[];
   mem: MetricRecord[];
   tick: Array<{ t: number; dur: number }>;
+  jvm?: Array<{ t: number; cores: number; ncpu: number }>;
+  heap?: Array<{ t: number; gb: number; maxgb: number }>;
+  tps?: number;
   server_node?: string | null;
+  window?: { start: number; end: number } | null;
 }
 
-type GraphId = 'cpu' | 'tick' | 'mem' | 'tick-hist' | 'tick-cdf' | 'cpu-hist' | 'tick-box' | 'cpu-box';
+type GraphId = 'cpu' | 'tick' | 'mem' | 'tick-hist' | 'tick-cdf' | 'cpu-hist' | 'tick-box' | 'cpu-box'
+  | 'jvm' | 'heap';
 
 interface ResultTemplate {
   id: string;
@@ -60,23 +65,30 @@ const GRAPH_LABELS: Record<GraphId, string> = {
   'cpu-hist': 'CPU Distribution (Histogram)',
   'tick-box': 'Tick Duration (Box Plot)',
   'cpu-box': 'CPU per Node (Box Plot)',
+  jvm: 'Server CPU (JVM cores busy)',
+  heap: 'Server Memory (JVM heap)',
 };
 
 const RESULT_TEMPLATES: ResultTemplate[] = [
   {
     id: 'paper-baseline',
     label: 'Yardstick / Meterstick baseline',
-    graphs: ['cpu', 'tick', 'mem', 'tick-hist', 'tick-cdf'],
+    graphs: ['tick', 'tick-hist', 'tick-cdf', 'jvm', 'heap'],
   },
   {
-    id: 'stability-focus',
-    label: 'Stability focus',
-    graphs: ['tick', 'tick-hist', 'tick-cdf', 'tick-box'],
+    id: 'overload',
+    label: 'Overload / scalability (tick budget)',
+    graphs: ['tick', 'tick-cdf', 'tick-box', 'jvm'],
   },
   {
-    id: 'capacity-planning',
-    label: 'Capacity planning',
-    graphs: ['cpu', 'mem', 'cpu-hist', 'cpu-box'],
+    id: 'environment',
+    label: 'Environment comparison (server resources)',
+    graphs: ['jvm', 'heap', 'tick', 'tick-box'],
+  },
+  {
+    id: 'load-generator',
+    label: 'Load-generator health (are the clients the bottleneck?)',
+    graphs: ['cpu', 'mem', 'cpu-box'],
   },
   {
     id: 'custom',
@@ -348,6 +360,7 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
   const [error, setError] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('paper-baseline');
   const [selectedGraphs, setSelectedGraphs] = useState<Set<GraphId>>(new Set(RESULT_TEMPLATES[0].graphs));
+  const [fullWindowStats, setFullWindowStats] = useState(false);
 
   const listRuns = useCallback(() => {
     setListing(true);
@@ -423,13 +436,35 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
   const serverNode = chartData?.server_node;
   const onServer = (d: MetricRecord) => !serverNode || d.node === serverNode;
 
-  const cpuValues = chartData?.cpu.filter(onServer).map((d) => Number(d.util || 0)).filter((v) => Number.isFinite(v)) || [];
-  const memValues = chartData?.mem.filter(onServer).map((d) => Number(d.pct || 0)).filter((v) => Number.isFinite(v)) || [];
-  const tickValues = tickSorted.map((d) => d.dur).filter((v) => Number.isFinite(v));
+  // The collection window is longer than the workload (deploy, bot ramp,
+  // teardown), and every extra second is an idle, fast tick that dilutes the
+  // statistics. The parser recovers from the bot logs the window in which
+  // every worker node held its full bot count; by default the summary cards
+  // and distribution charts are computed over that window alone, while the
+  // time-series charts still draw the whole run with the window marked.
+  const loadWindow = chartData?.window ?? null;
+  const clipToWindow = !!loadWindow && !fullWindowStats;
+  const inWindow = (t: number) => !clipToWindow || (t >= loadWindow!.start && t <= loadWindow!.end);
+
+  const cpuValues = chartData?.cpu.filter(onServer).filter((d) => inWindow(d.t)).map((d) => Number(d.util || 0)).filter((v) => Number.isFinite(v)) || [];
+  const memValues = chartData?.mem.filter(onServer).filter((d) => inWindow(d.t)).map((d) => Number(d.pct || 0)).filter((v) => Number.isFinite(v)) || [];
+  const tickValues = tickSorted.filter((d) => inWindow(d.t)).map((d) => d.dur).filter((v) => Number.isFinite(v));
 
   const cpuStats = summarize(cpuValues);
   const memStats = summarize(memValues);
   const tickStats = summarize(tickValues);
+
+  // Server-side JVM metrics. Node CPU%/RAM% average over the whole machine, so a
+  // single-threaded server on a 32-core node looks idle; these do not.
+  const jvmSeries = chartData?.jvm ?? [];
+  const heapSeries = chartData?.heap ?? [];
+  const hasJvm = jvmSeries.length > 0;
+  const hasHeap = heapSeries.length > 0;
+  const jvmStats = summarize(jvmSeries.filter((d) => inWindow(d.t)).map((d) => d.cores).filter((v) => Number.isFinite(v)));
+  const heapStats = summarize(heapSeries.filter((d) => inWindow(d.t)).map((d) => d.gb).filter((v) => Number.isFinite(v)));
+  const nCpu = hasJvm ? jvmSeries[0].ncpu : 0;
+  const heapMax = hasHeap ? heapSeries[0].maxgb : 0;
+  const tps = chartData?.tps ?? 0;
   const tickOver50Pct = tickValues.length > 0
     ? (tickValues.filter((v) => v > 50).length / tickValues.length) * 100
     : 0;
@@ -632,15 +667,49 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
             </Grid>
           </Box>
 
-          <Grid templateColumns={{ base: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }} gap={3}>
+          {loadWindow && (
+            <Flex align="center" gap={2} mb={3} px={1}>
+              <Text color={c.textDim} fontSize="0.78rem">
+                {clipToWindow
+                  ? `Statistics computed over the delivered-load window (${loadWindow.start.toFixed(1)} to ${loadWindow.end.toFixed(1)} min), when every worker node held its full bot count. Time-series charts show the whole run.`
+                  : 'Statistics computed over the whole collection window, including deploy, bot ramp, and teardown time (idle server).'}
+              </Text>
+              <Button
+                variant="plain"
+                h="auto"
+                px={2}
+                py={1}
+                fontSize="0.75rem"
+                fontWeight={600}
+                border="1px solid"
+                borderColor={c.border}
+                borderRadius={radii.sm}
+                color={c.textDim}
+                _hover={{ bg: c.surface2, color: c.text }}
+                onClick={() => setFullWindowStats((v) => !v)}
+              >
+                {clipToWindow ? 'Use full window' : 'Use load window'}
+              </Button>
+            </Flex>
+          )}
+          <Grid templateColumns={{ base: 'repeat(2, 1fr)', md: 'repeat(5, 1fr)' }} gap={3}>
             <Box {...cardProps} mb={0} p={4}>
-              <Text color={c.textDim} fontSize="0.75rem">Server CPU mean</Text>
-              <Heading fontSize="1.15rem" mt={1}>{hasCpu ? toPercent(cpuStats.avg) : 'N/A'}</Heading>
-              <Text color={c.textDim} fontSize="0.7rem" mt={1}>p95 {hasCpu ? toPercent(cpuStats.p95) : 'N/A'}</Text>
+              <Text color={c.textDim} fontSize="0.75rem">Server CPU (cores busy)</Text>
+              <Heading fontSize="1.15rem" mt={1}>
+                {hasJvm ? `${toNumber(jvmStats.avg)} / ${nCpu}` : hasCpu ? toPercent(cpuStats.avg) : 'N/A'}
+              </Heading>
+              <Text color={c.textDim} fontSize="0.7rem" mt={1}>
+                {hasJvm ? `peak ${toNumber(jvmStats.max)} cores` : 'node cpu-total'}
+              </Text>
             </Box>
             <Box {...cardProps} mb={0} p={4}>
-              <Text color={c.textDim} fontSize="0.75rem">Server Mem p95</Text>
-              <Heading fontSize="1.15rem" mt={1}>{hasMem ? toPercent(memStats.p95) : 'N/A'}</Heading>
+              <Text color={c.textDim} fontSize="0.75rem">Server heap used</Text>
+              <Heading fontSize="1.15rem" mt={1}>
+                {hasHeap ? `${toNumber(heapStats.avg)} GB` : hasMem ? toPercent(memStats.p95) : 'N/A'}
+              </Heading>
+              <Text color={c.textDim} fontSize="0.7rem" mt={1}>
+                {hasHeap ? `peak ${toNumber(heapStats.max)} of ${heapMax} GB` : 'node mem p95'}
+              </Text>
             </Box>
             <Box {...cardProps} mb={0} p={4}>
               <Text color={c.textDim} fontSize="0.75rem">Tick p95</Text>
@@ -649,8 +718,54 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
             <Box {...cardProps} mb={0} p={4}>
               <Text color={c.textDim} fontSize="0.75rem">Tick &gt; 50 ms</Text>
               <Heading fontSize="1.15rem" mt={1}>{hasTick ? toPercent(tickOver50Pct) : 'N/A'}</Heading>
+              <Text color={c.textDim} fontSize="0.7rem" mt={1}>
+                {hasTick ? `${tickValues.length} ticks` : ''}
+              </Text>
+            </Box>
+            <Box {...cardProps} mb={0} p={4}>
+              <Text color={c.textDim} fontSize="0.75rem">Throughput</Text>
+              <Heading fontSize="1.15rem" mt={1}>{tps > 0 ? `${toNumber(tps)} TPS` : 'N/A'}</Heading>
+              <Text color={c.textDim} fontSize="0.7rem" mt={1}>target 20</Text>
             </Box>
           </Grid>
+
+          {hasJvm && visibleGraphs.has('jvm') && (
+            <ChartCard
+              title="Server CPU (JVM cores busy)"
+              subtitle={`Cores actually consumed by the Minecraft JVM, out of ${nCpu} available. Node CPU% averages over every core, so a saturated single-threaded tick loop reads as near-idle on a many-core machine; this does not. Above roughly 1.0 the tick loop has no headroom left.`}
+              exportName="jvm-cores"
+              runId={selectedRun}
+            >
+              <ResponsiveContainer width="100%" height={320}>
+                <LineChart data={jvmSeries}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={c.border} />
+                  <XAxis dataKey="t" type="number" domain={['dataMin', 'dataMax']} allowDecimals label={{ value: 'Time (min)', position: 'insideBottom', offset: -5, fill: c.textDim }} {...axisProps} />
+                  <YAxis label={{ value: 'Cores busy', angle: -90, position: 'insideLeft', fill: c.textDim }} {...axisProps} />
+                  <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => `${v} min`} />
+                  <Line type="monotone" dataKey="cores" name="JVM cores busy" stroke="#6c5ce7" strokeWidth={2} dot={false} isAnimationActive={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartCard>
+          )}
+
+          {hasHeap && visibleGraphs.has('heap') && (
+            <ChartCard
+              title="Server Memory (JVM heap)"
+              subtitle={`Heap actually used by the Minecraft JVM, against a ${heapMax} GB ceiling. Node RAM% is diluted by the machine's total memory; heap is what fills up and drives garbage collection.`}
+              exportName="jvm-heap"
+              runId={selectedRun}
+            >
+              <ResponsiveContainer width="100%" height={320}>
+                <LineChart data={heapSeries}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={c.border} />
+                  <XAxis dataKey="t" type="number" domain={['dataMin', 'dataMax']} allowDecimals label={{ value: 'Time (min)', position: 'insideBottom', offset: -5, fill: c.textDim }} {...axisProps} />
+                  <YAxis label={{ value: 'Heap used (GB)', angle: -90, position: 'insideLeft', fill: c.textDim }} {...axisProps} />
+                  <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => `${v} min`} />
+                  <Line type="monotone" dataKey="gb" name="Heap used (GB)" stroke="#00b894" strokeWidth={2} dot={false} isAnimationActive={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartCard>
+          )}
 
           {hasCpu && visibleGraphs.has('cpu') && (
             <ChartCard
@@ -696,7 +811,7 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
           {hasTick && visibleGraphs.has('tick') && (
             <ChartCard
               title="Minecraft Tick Duration"
-              subtitle="Server tick processing time (lower is better, 50 ms = real-time threshold)"
+              subtitle="Every individual server tick, scraped from the server's tick ring buffer (roughly 2000 per run, not a 5-second average). Lower is better; 50 ms is the real-time budget, and a tick above it means the server fell behind."
               exportName="tick"
               runId={selectedRun}
             >
@@ -706,6 +821,9 @@ export default function ResultsView({ connected, sessionId, mode, username }: Re
                   <XAxis dataKey="t" type="number" domain={['dataMin', 'dataMax']} allowDecimals label={{ value: 'Time (min)', position: 'insideBottom', offset: -5, fill: c.textDim }} {...axisProps} />
                   <YAxis label={{ value: 'Tick (ms)', angle: -90, position: 'insideLeft', fill: c.textDim }} {...axisProps} />
                   <Tooltip contentStyle={tooltipStyle} labelFormatter={(v) => `${v} min`} />
+                  {loadWindow && (
+                    <ReferenceArea x1={loadWindow.start} x2={loadWindow.end} fill="#00b894" fillOpacity={0.08} stroke="#00b894" strokeOpacity={0.35} strokeDasharray="4 4" label={{ value: 'full bot load', position: 'insideTopLeft', fill: c.textDim, fontSize: 11 }} />
+                  )}
                   <Line type="monotone" dataKey="dur" name="Tick Duration" stroke="#e17055" dot={false} strokeWidth={1.5} isAnimationActive={false} />
                   <ReferenceLine y={50} stroke="#fdcb6e" strokeDasharray="5 5" ifOverflow="extendDomain" label={{ value: '50 ms', position: 'insideTopRight', fill: c.warning }} />
                 </LineChart>
