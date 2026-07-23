@@ -26,7 +26,7 @@ gui/
 
 An Express server (port 3001) that handles all remote operations. It exposes a Socket.IO namespace that the client connects to.
 
-- **SSH** -- Uses the `ssh2` library to open persistent SSH sessions to remote hosts (DAS-5, DAS-6, AWS EC2, Azure VMs, or any custom host). Supports password and private-key auth, and optional jump-host tunneling (ProxyJump) for off-campus access.
+- **SSH** -- Uses the `ssh2` library to open persistent SSH sessions to remote hosts (DAS-5, DAS-6, AWS EC2, or any custom host). Supports password and private-key auth, and optional jump-host tunneling (ProxyJump) for off-campus access.
 - **Local mode** -- Runs commands directly via Node's `child_process.spawn` for local-machine setups.
 - **Pipeline** -- Orchestrates the full install pipeline (Miniconda, conda env, dependencies, workspace clone, verification) by executing each step over the active SSH or local session and streaming stdout/stderr back to the client in real time.
 - **Experiments** -- Launches the Ansible-driven experiment workflow (provision, deploy, run, collect, clean) and streams output. (incomplete)
@@ -53,7 +53,7 @@ A thin wrapper that turns the web app into a native desktop window.
 
 The app runs identically whether opened in Electron or in a regular browser tab.
 
-Cloud providers do not require a separate transport. Pick the AWS or Azure preset, enter the VM public DNS or IP, and connect over SSH like any other remote host.
+Cloud providers do not require a separate transport. Pick the AWS preset, enter the VM public DNS or IP, and connect over SSH like any other remote host.
 
 ## Quick Start
 
