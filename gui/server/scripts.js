@@ -74,6 +74,72 @@ def WalkAround(nodes, server_host, **kwargs):
 `);
   return `
 print('[patch] ===== patch script build ${new Date().toISOString()} (world-wipe + nohup launch + worker diagnostics) =====', flush=True)
+
+# Repair a damaged install before anything else touches it. Older GUI builds wrote
+# an empty string over packaged playbooks whenever they could not read their own
+# repo copy, leaving 0-byte YAML behind. Ansible runs an empty play without
+# complaint, so the damage resurfaces later as an unrelated-looking failure.
+# These files ship in the wheel, so reinstalling the same version restores them.
+# This has to run before the patches below, which write into the same files.
+_YS_WHEEL_FILES = [
+    'clean.yml',
+    'fetch.yml',
+    'games/minecraft/server/papermc_deploy.yml',
+    'games/minecraft/server/papermc_start.yml',
+    'games/minecraft/server/papermc_stop.yml',
+    'games/minecraft/server/server.properties.j2',
+    'games/minecraft/workload/walkaround_deploy.yml',
+    'games/minecraft/workload/walkaround_start.yml',
+    'monitoring/telegraf_deploy.yml',
+    'monitoring/telegraf_start.yml',
+    'monitoring/telegraf_stop.yml',
+    'monitoring/telegraf_cleanup.yml',
+    'monitoring/telegraf.conf.j2',
+]
+
+def _ys_damaged(rels):
+    import os as _d_os
+    import yardstick_benchmark as _d_pkg
+    _d_root = _d_os.path.dirname(_d_pkg.__file__)
+    _d_bad = []
+    for _d_rel in rels:
+        _d_p = _d_os.path.join(_d_root, *_d_rel.split('/'))
+        if not _d_os.path.exists(_d_p) or _d_os.path.getsize(_d_p) == 0:
+            _d_bad.append(_d_rel)
+    return _d_bad
+
+try:
+    _ys_bad = _ys_damaged(_YS_WHEEL_FILES)
+    if _ys_bad:
+        print('[heal] installed yardstick_benchmark is damaged (' + str(len(_ys_bad)) + ' empty/missing): ' + ', '.join(_ys_bad), flush=True)
+        import sys as _ys_sys, subprocess as _ys_sp
+        _ys_ver, _ys_editable = None, False
+        try:
+            import importlib.metadata as _ys_md, json as _ys_json
+            _ys_ver = _ys_md.version('yardstick-benchmark')
+            for _ys_f in (_ys_md.files('yardstick-benchmark') or []):
+                if _ys_f.name == 'direct_url.json':
+                    _ys_editable = bool(_ys_json.loads(_ys_f.read_text()).get('dir_info', {}).get('editable'))
+                    break
+        except Exception:
+            pass
+        if _ys_editable:
+            # Reinstalling would detach the editable link; the damage is in the checkout.
+            print('[heal] editable install detected; restore the source checkout instead (git checkout --)', flush=True)
+        else:
+            # Pin the installed version so healing never silently changes behaviour.
+            _ys_spec = 'yardstick-benchmark' + ('==' + _ys_ver if _ys_ver else '')
+            print('[heal] reinstalling ' + _ys_spec, flush=True)
+            _ys_r = _ys_sp.run([_ys_sys.executable, '-m', 'pip', 'install',
+                                '--force-reinstall', '--no-deps', '--quiet', _ys_spec],
+                               capture_output=True, text=True)
+            if _ys_r.returncode != 0:
+                print('[heal] pip failed: ' + ((_ys_r.stderr or '').strip()[-300:] or 'no output'), flush=True)
+            _ys_bad = _ys_damaged(_YS_WHEEL_FILES)
+            print('[heal] repaired' if not _ys_bad else '[heal] still damaged: ' + ', '.join(_ys_bad), flush=True)
+except Exception as _ys_e:
+    print(f'[warn] integrity check: {_ys_e}', flush=True)
+
 # Ensure Workload class, YAML playbooks, and worker bot JS files are present in the installed package
 try:
     import yardstick_benchmark.games.minecraft.workload as _wl_pkg
@@ -93,6 +159,13 @@ try:
         ('workload_cleanup.yml', ${cleanYml}),
     ]:
         _wl_yml_path = _wl_os.path.join(_wl_pkg_dir, _wl_yml_name)
+        # Empty means the repo copy was unreadable (GUI server deployed without the
+        # repo alongside it); writing it truncates the installed playbook to 0 bytes
+        # and permanently breaks the package. Some playbooks are legitimately empty
+        # (stop/cleanup are no-ops), so only refuse a write that would destroy content.
+        if not _wl_yml_src and _wl_os.path.exists(_wl_yml_path) and _wl_os.path.getsize(_wl_yml_path) > 0:
+            print(f'[warn] {_wl_yml_name} not found next to the GUI server; keeping installed copy', flush=True)
+            continue
         open(_wl_yml_path, 'w').write(_wl_yml_src)
     # Overwrite bot controller, worker bot, and set_spawn to reflect local edits
     for _wl_name, _wl_src in [
@@ -154,6 +227,22 @@ try:
         print('[patch] papermc_deploy.yml: download pinned to Fill CDN (api v2 returns HTTP 410)', flush=True)
 except Exception as _pmc_e:
     print(f'[warn] papermc download patch: {_pmc_e}', flush=True)
+
+# Final gate. Everything above has had its chance to repair the install, so if a
+# file this run actually needs is still empty, stop here with a message that names
+# it. An empty playbook makes Ansible report success on a play that did nothing,
+# which would otherwise surface as a silently wrong benchmark rather than a crash.
+# workload_*.yml are created by the patch step and are not in the wheel, so pip
+# cannot restore them; only a readable repo copy can.
+_ys_final = _ys_damaged(_YS_WHEEL_FILES + [
+    'games/minecraft/workload/workload_deploy.yml',
+    'games/minecraft/workload/workload_start.yml',
+])
+if _ys_final:
+    raise RuntimeError(
+        'installed yardstick_benchmark is still damaged after repair: ' + ', '.join(_ys_final)
+        + '. Run the GUI server from a checkout of the yardstick repo so it can restore these files.')
+print('[check] installed package integrity OK', flush=True)
 `;
 }
 
