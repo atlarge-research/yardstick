@@ -27,7 +27,18 @@ function runLocal(command, socket, stepId) {
       socket.emit('terminal:data', { stepId, data: stripAnsi(text), isStderr: true });
     });
 
-    proc.on('close', (code) => {
+    // A signal-killed process reports code === null, which must not read as
+    // success: the command died partway through whatever it was doing.
+    proc.on('close', (code, signal) => {
+      if (signal) {
+        const msg = `Command terminated by ${signal}`;
+        if (stepId) socket.emit('step:error', { stepId, stdout, stderr, code, signal });
+        socket.emit('log', { message: `[FAIL] ${msg}`, level: 'error' });
+        const err = new Error(msg);
+        err.stdout = stdout;
+        err.stderr = stderr;
+        return reject(err);
+      }
       if (code === 0 || code === null) {
         if (stepId) {
           socket.emit('step:complete', { stepId, code });
@@ -93,7 +104,19 @@ __YARDSTICK_SCRIPT__`;
         socket.emit('terminal:data', { stepId, data: stripAnsi(text), isStderr: true });
       });
 
-      stream.on('close', (code) => {
+      // As in runLocal: an explicit signal means the remote command was killed.
+      // A null code with no signal still counts as success, since some servers
+      // close the channel without sending an exit status.
+      stream.on('close', (code, signal) => {
+        if (signal) {
+          const msg = `Remote command terminated by ${signal}`;
+          if (stepId) socket.emit('step:error', { stepId, stdout, stderr, code, signal });
+          socket.emit('log', { message: `[FAIL] ${msg}`, level: 'error' });
+          const err = new Error(msg);
+          err.stdout = stdout;
+          err.stderr = stderr;
+          return reject(err);
+        }
         if (code === 0 || code === null) {
           if (stepId) {
             socket.emit('step:complete', { stepId, code });

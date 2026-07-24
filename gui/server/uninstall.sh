@@ -134,18 +134,52 @@ if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
 fi
 
 # --- leftover processes ----------------------------------------------------
+# These target the PaperMC server jar, the bot launcher, and the monitoring agent
+# started with its per-host config.
+#
+# Two rules when touching this list, both learned the hard way:
+#   1. Keep the [x] bracket form. pgrep -f matches full command lines, and when
+#      the GUI pipes this file to a shell, the script text IS a command line.
+#      Written plainly, a pattern matches the shell running the script, which
+#      then kills itself before removing anything.
+#   2. Never spell a matching command line out in a comment either, for exactly
+#      the same reason. Describe it instead. is_own_process below is the backstop.
 PROC_PATTERNS=(
-  'paper-1.20.1-.*\.jar'
-  'telegraf --config telegraf-'
-  'yardstick/run/.*node .*index\.js'
+  'paper-1[.]20[.]1-.*[.]jar'
+  'node workload_bot[.]js'
+  'telegraf --config telegraf[-]'
 )
+# True if pid is this shell, an ancestor of it, or one of its own children
+# (command substitutions briefly inherit this shell's command line).
+is_own_process() {
+  local pid="$1" hops=0 cur
+  [ "$pid" = "$$" ] && return 0
+  [ "$pid" = "$PPID" ] && return 0
+  cur="$pid"
+  while [ "$hops" -lt 12 ]; do
+    cur=$(ps -o ppid= -p "$cur" 2>/dev/null | tr -d ' ')
+    [ -z "$cur" ] && return 1
+    [ "$cur" = "1" ] && return 1
+    [ "$cur" = "$$" ] && return 0
+    hops=$((hops + 1))
+  done
+  return 1
+}
+
 PROC_PIDS=""
 if [ "$KEEP_PROCESSES" = 0 ]; then
   for pat in "${PROC_PATTERNS[@]}"; do
     pids=$(pgrep -u "$USER_NAME" -f "$pat" 2>/dev/null || true)
     [ -n "$pids" ] && PROC_PIDS="$PROC_PIDS $pids" || true
   done
-  PROC_PIDS=$(echo "$PROC_PIDS" | tr ' ' '\n' | sed '/^$/d' | sort -u | tr '\n' ' ')
+  _kept=""
+  for p in $PROC_PIDS; do
+    is_own_process "$p" && continue
+    # Skip anything that already exited between the scan and now.
+    kill -0 "$p" 2>/dev/null || continue
+    _kept="$_kept $p"
+  done
+  PROC_PIDS=$(echo "$_kept" | tr ' ' '\n' | sed '/^$/d' | sort -u | tr '\n' ' ')
 fi
 
 # --- ~/.bashrc conda block -------------------------------------------------
@@ -281,7 +315,23 @@ if [ "$REMOVE_SWAPFILE" = 1 ]; then
   fi
 fi
 
+# --- verify ----------------------------------------------------------------
+# Removal can fail quietly (permissions, NFS handles, a process holding a file),
+# so re-check instead of trusting the loops above.
+LEFTOVER=""
+for t in ${TARGETS[@]+"${TARGETS[@]}"}; do
+  [ -e "$t" ] && LEFTOVER="$LEFTOVER $t" || true
+done
+
+if [ -n "$LEFTOVER" ]; then
+  echo
+  echo "[FAIL] Uninstall incomplete. Still present:" >&2
+  for t in $LEFTOVER; do echo "  $t" >&2; done
+  exit 1
+fi
+
 echo
+echo "[OK] Verified: none of the removed paths remain."
 echo "Uninstall complete."
 if [ "$PURGE" = 1 ]; then
   echo "The Joystick desktop app itself is not removed by this script:"
