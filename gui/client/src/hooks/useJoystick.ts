@@ -290,6 +290,64 @@ export default function useJoystick(socket: Socket) {
     [sessionId]
   );
 
+  // Uninstall
+  const [uninstallRunning, setUninstallRunning] = useState(false);
+  const [uninstallDone, setUninstallDone] = useState(false);
+  const [uninstallError, setUninstallError] = useState<string | null>(null);
+  const [uninstallPreview, setUninstallPreview] = useState<string | null>(null);
+  const [uninstallPreviewing, setUninstallPreviewing] = useState(false);
+
+  useEffect(() => {
+    const onPreview = ({ output }: { output: string }) => {
+      setUninstallPreview(output);
+      setUninstallPreviewing(false);
+    };
+    const onComplete = () => {
+      setUninstallRunning(false);
+      setUninstallDone(true);
+      setUninstallError(null);
+      setUninstallPreview(null);
+    };
+    const onError = ({ message }: { message: string }) => {
+      setUninstallRunning(false);
+      setUninstallPreviewing(false);
+      setUninstallError(message);
+    };
+
+    socket.on('uninstall:preview-ready', onPreview);
+    socket.on('uninstall:complete', onComplete);
+    socket.on('uninstall:error', onError);
+    return () => {
+      socket.off('uninstall:preview-ready', onPreview);
+      socket.off('uninstall:complete', onComplete);
+      socket.off('uninstall:error', onError);
+    };
+  }, []);
+
+  const previewUninstall = useCallback(
+    (opts: { username: string; purge: boolean; nvm: boolean }) => {
+      if (!sessionId) return;
+      setUninstallError(null);
+      setUninstallPreview(null);
+      setUninstallPreviewing(true);
+      setTerminalOutput((prev) => ({ ...prev, 'uninstall-preview': '' }));
+      socket.emit('uninstall:preview', { sessionId, mode, ...opts });
+    },
+    [sessionId, mode]
+  );
+
+  const runUninstall = useCallback(
+    (opts: { username: string; purge: boolean; nvm: boolean }) => {
+      if (!sessionId) return;
+      setUninstallError(null);
+      setUninstallDone(false);
+      setUninstallRunning(true);
+      setTerminalOutput((prev) => ({ ...prev, uninstall: '' }));
+      socket.emit('uninstall:run', { sessionId, mode, ...opts });
+    },
+    [sessionId, mode]
+  );
+
   // AWS automation helpers
   useEffect(() => {
     const onLaunched = ({ instances }: { instances: string }) => {
@@ -374,6 +432,13 @@ export default function useJoystick(socket: Socket) {
     runPipeline,
     runExperiment,
     runSingleCommand,
+    uninstallRunning,
+    uninstallDone,
+    uninstallError,
+    uninstallPreview,
+    uninstallPreviewing,
+    previewUninstall,
+    runUninstall,
     awsLaunch,
     awsTerminate,
     awsEvents: awsEvents,

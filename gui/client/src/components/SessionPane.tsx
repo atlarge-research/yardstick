@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Box, Flex, Text, Heading, Button, Icon } from '@chakra-ui/react';
-import { LuPackage, LuFlaskConical, LuSquareTerminal, LuChartBar, LuCloud } from 'react-icons/lu';
+import { LuPackage, LuFlaskConical, LuSquareTerminal, LuChartBar, LuCloud, LuTrash2 } from 'react-icons/lu';
 import type { IconType } from 'react-icons';
 import { createSocket } from '../socket';
 import useJoystick from '../hooks/useJoystick';
@@ -11,6 +11,7 @@ import PipelineView from './PipelineView';
 import ExperimentView from './ExperimentView';
 import ResultsView from './ResultsView';
 import ManualCommand from './ManualCommand';
+import UninstallView from './UninstallView';
 import LogPanel from './LogPanel';
 import CloudPanel from './cloud/CloudPanel';
 import AwsCloudContent from './cloud/AwsCloudContent';
@@ -19,7 +20,7 @@ import { c, radii, cardProps } from '../theme';
 
 export type SessionStatus = 'idle' | 'connecting' | 'connected' | 'running' | 'done' | 'error';
 
-type TabId = 'setup' | 'experiment' | 'results' | 'terminal' | 'cloud';
+type TabId = 'setup' | 'experiment' | 'results' | 'terminal' | 'cloud' | 'uninstall';
 
 interface TabDef {
   id: TabId;
@@ -34,6 +35,7 @@ const TABS: TabDef[] = [
   { id: 'results',    label: 'Results',    icon: LuChartBar,       statusKey: null },
   { id: 'cloud',      label: 'Cloud',      icon: LuCloud,          statusKey: null },
   { id: 'terminal',   label: 'Terminal',   icon: LuSquareTerminal, statusKey: null },
+  { id: 'uninstall',  label: 'Uninstall',  icon: LuTrash2,         statusKey: null },
 ];
 
 function OutlineBtn({ children, ...props }: React.ComponentProps<typeof Button>) {
@@ -73,6 +75,8 @@ export default function SessionPane({ onStatusChange, onLabelChange }: SessionPa
     sshConnect, localConnect, sshDisconnect, detectEnv,
     runPipeline, runExperiment, runSingleCommand, awsLaunch, awsTerminate,
     connectToCloudInstance,
+    uninstallRunning, uninstallDone, uninstallError, uninstallPreview, uninstallPreviewing,
+    previewUninstall, runUninstall,
   } = useJoystick(socket);
 
   const [tab, setTab] = useState<TabId>('setup');
@@ -271,6 +275,22 @@ export default function SessionPane({ onStatusChange, onLabelChange }: SessionPa
 
           {tab === 'cloud' && (
             <CloudPanel onUseInstance={handleUseInstance} />
+          )}
+
+          {tab === 'uninstall' && (
+            <UninstallView
+              connected={connected}
+              username={sshUsername}
+              mode={mode}
+              terminalOutput={terminalOutput}
+              uninstallRunning={uninstallRunning}
+              uninstallDone={uninstallDone}
+              uninstallError={uninstallError}
+              uninstallPreview={uninstallPreview}
+              uninstallPreviewing={uninstallPreviewing}
+              onPreview={previewUninstall}
+              onUninstall={runUninstall}
+            />
           )}
 
           {tab === 'terminal' && (

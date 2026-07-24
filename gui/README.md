@@ -31,6 +31,7 @@ An Express server (port 3001) that handles all remote operations. It exposes a S
 - **Pipeline** -- Orchestrates the full install pipeline (Miniconda, conda env, dependencies, workspace clone, verification) by executing each step over the active SSH or local session and streaming stdout/stderr back to the client in real time.
 - **Experiments** -- Launches the Ansible-driven experiment workflow (provision, deploy, run, collect, clean) and streams output. (incomplete)
 - **Results** -- Lists available experiment runs on the remote filesystem, reads their CSV metric files, parses them, and sends structured chart data back to the client. (incomplete)
+- **Uninstall** -- Pipes `server/uninstall.sh` to the connected host to reverse the install pipeline (conda env, Miniconda, run directories, Docker artifacts, leftover processes). Options are passed as `YS_*` environment variables, so the same file also runs standalone with `--dry-run`, `--purge` and `--nvm` flags.
 
 The server keeps no database -- all state lives in memory for the duration of a session.
 
@@ -40,7 +41,7 @@ A single-page React app built with Vite.
 
 - **UI framework** -- Chakra UI for layout and styling, react-icons for icons, Recharts for charts.
 - **Socket hook** -- `useYardstick` manages all Socket.IO communication, connection state, terminal output buffers, environment checks, and pipeline/experiment progress in one custom hook.
-- **Pages** -- Four tabs after connecting: Setup (environment detection + install pipeline), Experiment (configure and launch a benchmark run), Results (incomplete still), and Terminal (run arbitrary commands on the remote host).
+- **Pages** -- Tabs after connecting: Setup (environment detection + install pipeline), Experiment (configure and launch a benchmark run), Results (incomplete still), Cloud, Terminal (run arbitrary commands on the remote host), and Uninstall (preview and remove the installation).
 
 The production build (`npx vite build`) outputs static files to `client/dist/`, which the Express server serves at `/`.
 

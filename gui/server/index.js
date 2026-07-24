@@ -9,6 +9,7 @@ const { sessions } = require('./session');
 const { registerConnectionHandlers } = require('./handlers/connection');
 const { registerExperimentHandlers } = require('./handlers/experiment');
 const { registerResultsHandlers } = require('./handlers/results');
+const { registerUninstallHandlers } = require('./handlers/uninstall');
 
 const app = express();
 app.use(cors());
@@ -29,6 +30,7 @@ io.on('connection', (socket) => {
   registerConnectionHandlers(socket);
   registerExperimentHandlers(socket);
   registerResultsHandlers(socket);
+  registerUninstallHandlers(socket);
   socket.on('disconnect', () => console.log(`[ws] client disconnected: ${socket.id}`));
 });
 
