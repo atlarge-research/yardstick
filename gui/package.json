@@ -5,7 +5,7 @@
   "description": "Joystick: a GUI benchmarking tool built on the Yardstick benchmark",
   "homepage": "https://github.com/atlarge-research/yardstick",
   "author": {
-    "name": "marwan amrhar",
+    "name": "Marwan Amrhar",
     "email": "marwan1amrhar@gmail.com"
   },
   "main": "electron/main.js",
@@ -41,6 +41,19 @@
       "client/dist/**/*",
       "node_modules/**/*",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../yardstick_benchmark/games/minecraft",
+        "to": "yardstick_benchmark/games/minecraft",
+        "filter": [
+          "**/*.yml",
+          "**/*.j2",
+          "**/*.js",
+          "!**/__pycache__/**",
+          "!**/node_modules/**"
+        ]
+      }
     ],
     "directories": {
       "output": "release"

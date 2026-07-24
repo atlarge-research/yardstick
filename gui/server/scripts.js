@@ -1,8 +1,20 @@
 const fs = require('fs');
 const path = require('path');
 
-const WORKLOAD_DIR = path.resolve(__dirname, '../../yardstick_benchmark/games/minecraft/workload');
-const SERVER_DIR = path.resolve(__dirname, '../../yardstick_benchmark/games/minecraft/server');
+// The playbooks and bot scripts live in the repo during development, but a packaged
+// build has no repo around it: this file ends up inside resources/app.asar, so
+// '../../yardstick_benchmark' resolves to a path that does not exist and every read
+// returns ''. electron-builder copies the tree next to the asar instead (see
+// build.extraResources in package.json), so check there before giving up. An empty
+// read is not a harmless miss: it used to be written straight over the installed
+// playbooks, and Ansible reports an empty play as successful.
+function resolveDataDir(rel) {
+  const candidates = [path.resolve(__dirname, '../../yardstick_benchmark', rel)];
+  if (process.resourcesPath) candidates.push(path.join(process.resourcesPath, 'yardstick_benchmark', rel));
+  return candidates.find(p => fs.existsSync(p)) || candidates[0];
+}
+const WORKLOAD_DIR = resolveDataDir('games/minecraft/workload');
+const SERVER_DIR = resolveDataDir('games/minecraft/server');
 function readSrvFile(name) { try { return fs.readFileSync(path.join(SERVER_DIR, name), 'utf8'); } catch (e) { return ''; } }
 // PaperMC jar pinned for reproducibility across all runs. api.papermc.io/v2 was
 // sunset and now answers every download with HTTP 410 Gone, so the jar is fetched
