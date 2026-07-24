@@ -4,6 +4,12 @@ const path = require('path');
 const WORKLOAD_DIR = path.resolve(__dirname, '../../yardstick_benchmark/games/minecraft/workload');
 const SERVER_DIR = path.resolve(__dirname, '../../yardstick_benchmark/games/minecraft/server');
 function readSrvFile(name) { try { return fs.readFileSync(path.join(SERVER_DIR, name), 'utf8'); } catch (e) { return ''; } }
+// PaperMC jar pinned for reproducibility across all runs. api.papermc.io/v2 was
+// sunset and now answers every download with HTTP 410 Gone, so the jar is fetched
+// from the Fill CDN by content hash instead.
+const PAPER_JAR = 'paper-1.20.1-58.jar';
+const PAPER_SHA256 = '99b21ca62c520d1e678b2e650bf967181d18d0b138636afa4136b3d095d55f58';
+const PAPER_URL = `https://fill-data.papermc.io/v1/objects/${PAPER_SHA256}/${PAPER_JAR}`;
 const WORKLOAD_BOT = { chopwood: 'chopwood_worker_bot.js', explore: 'explore_worker_bot.js', mineore: 'mineore_worker_bot.js' };
 const WORKLOAD_LABEL = { walkaround: 'WalkAround', chopwood: 'ChopWood', explore: 'Explore', mineore: 'MineOre' };
 
@@ -111,12 +117,43 @@ try:
         if _pmc_deploy:
             open(_wl_os.path.join(_srv_dir, 'papermc_deploy.yml'), 'w').write(_pmc_deploy)
             print('[patch] papermc_deploy.yml (world wipe) overwritten in installed package', flush=True)
+        else:
+            print('[warn] papermc_deploy.yml not found next to the GUI server; keeping installed copy', flush=True)
     except Exception as _srv_e:
         print(f'[warn] server props setup: {_srv_e}', flush=True)
     from yardstick_benchmark.games.minecraft.workload import Workload
 except Exception as _wl_e:
     print(f'[warn] workload setup: {_wl_e}', flush=True)
     from yardstick_benchmark.games.minecraft.workload import WalkAround as Workload
+
+# Repair the PaperMC download in whatever papermc_deploy.yml ends up installed.
+# api.papermc.io/v2 was sunset and answers every download with HTTP 410 Gone, so
+# an installed package predating the fix cannot deploy at all. This runs even when
+# the overwrite above was skipped (GUI server deployed without the repo alongside).
+# The checksum matters as much as the URL: without it get_url still contacts the
+# server to revalidate an already-staged jar, so a dead URL fails the play anyway.
+try:
+    import os as _pmc_os
+    import yardstick_benchmark.games.minecraft.server as _pmc_srv
+    _pmc_yml = _pmc_os.path.join(_pmc_os.path.dirname(_pmc_srv.__file__), 'papermc_deploy.yml')
+    _pmc_txt = open(_pmc_yml).read()
+    _pmc_orig = _pmc_txt
+    _pmc_has_sum = '${PAPER_SHA256}' in _pmc_txt
+    _pmc_out = []
+    for _pmc_ln in _pmc_txt.split(chr(10)):
+        _pmc_ind = _pmc_ln[:len(_pmc_ln) - len(_pmc_ln.lstrip())]
+        if 'url:' in _pmc_ln and 'api.papermc.io' in _pmc_ln:
+            _pmc_ln = _pmc_ind + 'url: ${PAPER_URL}'
+        _pmc_out.append(_pmc_ln)
+        if not _pmc_has_sum and 'dest:' in _pmc_ln and '${PAPER_JAR}' in _pmc_ln:
+            _pmc_out.append(_pmc_ind + 'checksum: sha256:${PAPER_SHA256}')
+            _pmc_has_sum = True
+    _pmc_txt = chr(10).join(_pmc_out)
+    if _pmc_txt != _pmc_orig:
+        open(_pmc_yml, 'w').write(_pmc_txt)
+        print('[patch] papermc_deploy.yml: download pinned to Fill CDN (api v2 returns HTTP 410)', flush=True)
+except Exception as _pmc_e:
+    print(f'[warn] papermc download patch: {_pmc_e}', flush=True)
 `;
 }
 
@@ -454,8 +491,8 @@ for _ip in _worker_ips:
 CACHE = Path(home) / '.yardstick-cache'
 CACHE.mkdir(parents=True, exist_ok=True)
 DOWNLOADS = [
-    ('paper-1.20.1-58.jar',
-     'https://fill-data.papermc.io/v1/objects/99b21ca62c520d1e678b2e650bf967181d18d0b138636afa4136b3d095d55f58/paper-1.20.1-58.jar',
+    ('${PAPER_JAR}',
+     '${PAPER_URL}',
      1_000_000),
     ('jolokia-agent-jvm-2.0.3-javaagent.jar',
      'https://search.maven.org/remotecontent?filepath=org/jolokia/jolokia-agent-jvm/2.0.3/jolokia-agent-jvm-2.0.3-javaagent.jar',
@@ -792,8 +829,8 @@ _ym._gen_inv = _patched_gen_inv
 CACHE = Path(home) / '.yardstick-cache'
 CACHE.mkdir(parents=True, exist_ok=True)
 DOWNLOADS = [
-    ('paper-1.20.1-58.jar',
-     'https://fill-data.papermc.io/v1/objects/99b21ca62c520d1e678b2e650bf967181d18d0b138636afa4136b3d095d55f58/paper-1.20.1-58.jar',
+    ('${PAPER_JAR}',
+     '${PAPER_URL}',
      1_000_000),
     ('jolokia-agent-jvm-2.0.3-javaagent.jar',
      'https://search.maven.org/remotecontent?filepath=org/jolokia/jolokia-agent-jvm/2.0.3/jolokia-agent-jvm-2.0.3-javaagent.jar',
