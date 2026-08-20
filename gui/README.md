@@ -123,10 +123,3 @@ cd client && npm run dev
 ```
 
 Then open `http://localhost:5173` in a browser. Vite proxies API/socket calls to port 3001.
-
-## To-Do
-
-The GUI is not nearly finished, there's still some critical things to be done:
-- Allow for custom experiments
-- Properly testing and integration of connecting with clouds
-- Proper results analysis
