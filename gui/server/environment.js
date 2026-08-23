@@ -20,7 +20,11 @@ function buildPipelineCommands(mode, user) {
       // on a fresh install, so walk up to the nearest existing ancestor.
       `check_dir="$target_dir"`,
       `while [ ! -d "$check_dir" ] && [ "$check_dir" != "/" ]; do check_dir=$(dirname "$check_dir"); done`,
-      `free_gb=$(df -BG "$check_dir" | awk 'NR==2{gsub(/G/,""); print $4+0}')`,
+      // -P -k is POSIX and works on both GNU coreutils and BSD/macOS df; -BG is
+      // GNU-only and makes this report 0GB free on macOS, failing the check below
+      // before anything is even downloaded. -P also keeps the entry on one line
+      // when the device name is long, which NR==2 relies on.
+      `free_gb=$(df -Pk "$check_dir" | awk 'NR==2{print int($4/1048576)}')`,
       `echo "Disk space available at $check_dir: \${free_gb}GB"`,
       `if [ "\${free_gb:-0}" -lt 8 ]; then`,
       `  echo "[FAIL] Only \${free_gb}GB free at $check_dir. At least 8GB required (recommend 20GB). Free space/quota there (check 'quota -s') and try again." >&2`,
@@ -31,7 +35,19 @@ function buildPipelineCommands(mode, user) {
       `else`,
       `  echo "Downloading Miniconda..."`,
       `  mkdir -p "$target_dir"`,
-      `  url=https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh`,
+      // Pick the installer matching the host, not the developer's machine: the
+      // Linux build does not run on macOS at all, and an Apple Silicon Mac needs
+      // the arm64 one (Anaconda names it 'arm64' on MacOSX, 'aarch64' on Linux).
+      `  case "$(uname -s)" in`,
+      `    Darwin) conda_os=MacOSX ;;`,
+      `    *)      conda_os=Linux ;;`,
+      `  esac`,
+      `  case "$(uname -m)" in`,
+      `    arm64|aarch64) [ "$conda_os" = MacOSX ] && conda_arch=arm64 || conda_arch=aarch64 ;;`,
+      `    *)             conda_arch=x86_64 ;;`,
+      `  esac`,
+      `  url=https://repo.anaconda.com/miniconda/Miniconda3-latest-\${conda_os}-\${conda_arch}.sh`,
+      `  echo "Installer: $(basename "$url")"`,
       `  if command -v wget >/dev/null 2>&1; then`,
       `    wget -q "$url" -O "$target_dir/miniconda.sh"`,
       `  elif command -v curl >/dev/null 2>&1; then`,
@@ -64,6 +80,12 @@ function buildPipelineCommands(mode, user) {
 
     installDeps: [
       `set -e`,
+      // macOS has neither 'free' nor 'fallocate', and its swap is grown on demand
+      // by the kernel. Without this guard swap_mb comes back empty, reads as 0, and
+      // the branch below tries to dd a 2GB /swapfile onto a read-only root volume.
+      `if [ "$(uname -s)" = "Darwin" ]; then`,
+      `  echo "[OK] macOS manages swap dynamically, skipping swapfile setup."`,
+      `else`,
       `swap_mb=$(free -m | awk '/^Swap:/{print $2}')`,
       `if [ "\${swap_mb:-0}" -lt 1024 ] && [ ! -e /swapfile ]; then`,
       `  echo "Swap is \${swap_mb}MB, creating 2GB swapfile..."`,
@@ -73,6 +95,7 @@ function buildPipelineCommands(mode, user) {
       `    echo "[warn] swapfile setup failed, continuing without extra swap"`,
       `else`,
       `  echo "[OK] Swap already present (\${swap_mb}MB) or /swapfile exists, skipping."`,
+      `fi`,
       `fi`,
       `export PATH="${condaDir}/bin:$PATH"`,
       `eval "$(conda shell.bash hook)"`,
@@ -122,7 +145,18 @@ function buildPipelineCommands(mode, user) {
       `fi`,
       ...(needsDocker ? [
         `if ! command -v docker >/dev/null 2>&1; then`,
-        `  if sudo -n true 2>/dev/null; then`,
+        // Homebrew installs casks without root, so this branch must come before the
+        // passwordless-sudo gate below -- a Mac normally has sudo asking for a
+        // password, which would otherwise send the user to Linux apt-get advice.
+        `  if [ "$(uname -s)" = "Darwin" ]; then`,
+        `    if command -v brew >/dev/null 2>&1; then`,
+        `      echo "Installing Docker Desktop via Homebrew (required for Local mode's multi-node containers)..."`,
+        `      brew install --cask docker 2>&1 || echo "[WARN] Homebrew could not install Docker Desktop. Install it from https://www.docker.com/products/docker-desktop/ and start it, then re-run Setup." >&2`,
+        `    else`,
+        `      echo "[WARN] Docker isn't installed and Homebrew isn't available to install it automatically." >&2`,
+        `      echo "       Install Docker Desktop from https://www.docker.com/products/docker-desktop/, start it, then re-run Setup." >&2`,
+        `    fi`,
+        `  elif sudo -n true 2>/dev/null; then`,
         `    echo "Installing Docker (required for Local mode's multi-node containers)..."`,
         `    if command -v apt-get >/dev/null 2>&1; then`,
         `      sudo -n apt-get update -q 2>&1 || true`,
@@ -133,8 +167,6 @@ function buildPipelineCommands(mode, user) {
         `      sudo -n yum install -y docker 2>&1 || true`,
         `    elif command -v pacman >/dev/null 2>&1; then`,
         `      sudo -n pacman -S --noconfirm --needed docker 2>&1 || true`,
-        `    elif command -v brew >/dev/null 2>&1; then`,
-        `      brew install --cask docker 2>&1 || true`,
         `    else`,
         `      echo "[WARN] No supported package manager found to install Docker automatically." >&2`,
         `    fi`,
@@ -145,7 +177,22 @@ function buildPipelineCommands(mode, user) {
         `    echo "         sudo usermod -aG docker \\$USER && newgrp docker" >&2`,
         `  fi`,
         `fi`,
-        `if sudo -n true 2>/dev/null; then`,
+        // On macOS the daemon is Docker Desktop, not a system service: there is no
+        // systemctl/service to enable and no docker group to join, so the whole
+        // Linux branch below is skipped and the app is launched instead. Docker
+        // Desktop takes a while to come up, hence the wait.
+        `if [ "$(uname -s)" = "Darwin" ]; then`,
+        `  if command -v docker >/dev/null 2>&1 && ! docker info >/dev/null 2>&1; then`,
+        `    echo "Starting Docker Desktop..."`,
+        `    open -a Docker 2>/dev/null || open -a "Docker Desktop" 2>/dev/null || true`,
+        `    for _i in $(seq 1 60); do docker info >/dev/null 2>&1 && break; sleep 2; done`,
+        `    if docker info >/dev/null 2>&1; then`,
+        `      echo "[OK] Docker Desktop is running."`,
+        `    else`,
+        `      echo "[WARN] Docker Desktop did not become ready in 120s. Start it from Applications, wait for the whale icon to stop animating, then re-run Setup." >&2`,
+        `    fi`,
+        `  fi`,
+        `elif sudo -n true 2>/dev/null; then`,
         `  if command -v systemctl >/dev/null 2>&1; then`,
         `    sudo -n systemctl enable --now docker 2>/dev/null || true`,
         `  elif command -v service >/dev/null 2>&1; then`,
@@ -163,8 +210,12 @@ function buildPipelineCommands(mode, user) {
         `  node_major=$(node -e 'process.stdout.write(process.versions.node.split(".")[0])' 2>/dev/null || echo 0)`,
         `fi`,
         `if [ "\${node_major:-0}" -lt 18 ]; then`,
-        `  echo "Node.js is $node_major (<18); installing Node 20 from NodeSource..."`,
-        `  if command -v dnf >/dev/null 2>&1; then`,
+        `  echo "Node.js is $node_major (<18); installing Node 20..."`,
+        // Homebrew first on macOS: NodeSource ships no macOS repository, so the
+        // apt/dnf branches below can never satisfy this on a Mac.
+        `  if [ "$(uname -s)" = "Darwin" ] && command -v brew >/dev/null 2>&1; then`,
+        `    brew install node@20 2>&1 && brew link --overwrite --force node@20 2>&1 || echo "[WARN] Homebrew could not install Node 20. Install Node >=18 manually." >&2`,
+        `  elif command -v dnf >/dev/null 2>&1; then`,
         `    curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo -n bash - && sudo -n dnf install -y nodejs`,
         `  elif command -v apt-get >/dev/null 2>&1; then`,
         `    sudo -n DEBIAN_FRONTEND=noninteractive apt-get remove -y libnode-dev nodejs npm 2>/dev/null || true`,
@@ -226,8 +277,16 @@ function buildPipelineCommands(mode, user) {
         `else`,
         `  echo "[FAIL] Docker is required for Local mode (used to run multi-node worker containers) but 'docker info' failed." >&2`,
         `  if ! command -v docker >/dev/null 2>&1; then`,
-        `    echo "       Docker isn't installed and this session has no passwordless sudo to install it automatically." >&2`,
-        `    echo "       Ask your administrator, or install it yourself on the host with sudo, then re-run Setup." >&2`,
+        `    if [ "$(uname -s)" = "Darwin" ]; then`,
+        `      echo "       Install Docker Desktop from https://www.docker.com/products/docker-desktop/ (or 'brew install --cask docker'), start it, then re-run Setup." >&2`,
+        `    else`,
+        `      echo "       Docker isn't installed and this session has no passwordless sudo to install it automatically." >&2`,
+        `      echo "       Ask your administrator, or install it yourself on the host with sudo, then re-run Setup." >&2`,
+        `    fi`,
+        `  elif [ "$(uname -s)" = "Darwin" ]; then`,
+        // No docker group on macOS: 'docker info' failing here means the Desktop VM
+        // is not up, which is a different fix from the Linux group-membership one.
+        `    echo "       Docker Desktop is installed but its engine isn't running. Open Docker from Applications, wait for the whale icon to stop animating, then re-run Setup." >&2`,
         `  else`,
         `    echo "       If Docker was just installed, log out and back in (or run 'newgrp docker') so your docker group membership takes effect, then re-run Setup." >&2`,
         `  fi`,

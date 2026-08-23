@@ -81,6 +81,7 @@ All commands are run from the `gui/` root unless noted otherwise.
 | `npm start` | Runs `npm run build && electron .`. First builds the client (see above), then launches Electron. Electron loads `electron/main.js`, which boots the Express server in-process on port 3001 and opens a `BrowserWindow` pointed at `http://localhost:3001`. This is the primary way to run the app. |
 | `npm run dist:linux` | Builds release artifacts for Linux (`AppImage` and `.deb`) in `gui/release/`. |
 | `npm run dist:win` | Builds a Windows NSIS installer (`.exe`) in `gui/release/`. |
+| `npm run dist:mac` | Builds macOS disk images (`.dmg`) for Apple Silicon and Intel in `gui/release/`. Must be run on a Mac. |
 | `npm run dist:linux-win` | Builds both Linux and Windows release artifacts in one command. |
 
 ## Release Packaging
@@ -94,6 +95,9 @@ npm run dist:linux
 # Windows installer (.exe)
 npm run dist:win
 
+# macOS disk images (.dmg) -- only works on a Mac, see below
+npm run dist:mac
+
 # Build Linux + Windows in one run
 npm run dist:linux-win
 ```
@@ -106,9 +110,33 @@ gui/release/
 
 Typical outputs:
 
-- `Yardstick-<version>.AppImage`
-- `yardstick-gui_<version>_amd64.deb`
-- `Yardstick Setup <version>.exe`
+- `Joystick-<version>.AppImage`
+- `joystick-gui_<version>_amd64.deb`
+- `Joystick Setup <version>.exe`
+- `Joystick-<version>-arm64.dmg` (Apple Silicon)
+- `Joystick-<version>-x64.dmg` (Intel Macs)
+
+### Building for macOS
+
+electron-builder refuses to build macOS targets from Linux or Windows (`Build for
+macOS is supported only on macOS`), because the `.dmg` step needs Apple's own
+tooling. Run `npm run dist:mac` on a Mac; one run produces both architectures, so
+either kind of Mac can build for both.
+
+The build is **unsigned** -- there is no Apple Developer certificate in the repo.
+electron-builder ad-hoc signs the `arm64` app (Apple Silicon refuses to launch
+anything unsigned) and leaves the `x64` app unsigned. Neither is notarized, so
+Gatekeeper blocks the first launch on someone else's Mac; they clear it once with:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Joystick.app
+```
+
+To ship a properly signed build instead, install a "Developer ID Application"
+certificate in the build machine's keychain -- electron-builder finds it on its
+own. Notarization additionally needs `"notarize": true` in the `build.mac` block
+of `package.json` plus `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD` and
+`APPLE_TEAM_ID` in the environment.
 
 ## Development workflow (without Electron)
 

@@ -84,6 +84,12 @@ app.whenReady().then(async () => {
   });
 });
 
+// On macOS an app stays running when its last window closes and is brought back
+// by clicking the dock icon -- that is what the 'activate' handler above is for.
+// Quitting here unconditionally would make it unreachable and would also kill the
+// in-process backend, so only quit on the platforms where that is the convention.
 app.on('window-all-closed', () => {
-  app.quit();
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
 });
