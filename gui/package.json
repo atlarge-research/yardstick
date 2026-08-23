@@ -11,6 +11,7 @@
   "main": "electron/main.js",
   "scripts": {
     "install:all": "npm install && cd client && npm install",
+    "prebuild": "npm run install:all",
     "build": "cd client && npx vite build",
     "start": "npm run build && electron .",
     "pack": "npm run build && electron-builder --dir",

@@ -59,14 +59,13 @@ Cloud providers do not require a separate transport. Pick the AWS preset, enter 
 ## Quick Start
 
 ```bash
-# 1. install all dependencies (server + client)
-npm run install:all
-
-# 2. build the client and launch the Electron app
+# build the client and launch the Electron app
 npm start
 ```
 
 That's it, a window opens with the GUI ready to connect to a remote host.
+Dependencies install themselves on the first build, so there is no separate
+setup step. To install them without building anything, run `npm run install:all`.
 
 If you prefer a browser, see [Development workflow](#development-workflow-no-electron) below.
 
@@ -76,7 +75,8 @@ All commands are run from the `gui/` root unless noted otherwise.
 
 | Command | What it does |
 |---|---|
-| `npm run install:all` | Runs `npm install` in `gui/` to install server and Electron dependencies, then `cd client && npm install` to install frontend dependencies. One command to set up both halves of the project. |
+| `npm run install:all` | Runs `npm install` in `gui/` to install server and Electron dependencies, then `cd client && npm install` to install frontend dependencies. One command to set up both halves of the project. You rarely need to run it by hand -- every build runs it first (see `prebuild` below). |
+| `npm run prebuild` | Runs `npm run install:all`. npm invokes this automatically before `npm run build`, so `npm start` and every `dist:*` command install their own dependencies before compiling. Forgetting `install:all` can no longer fail a build with `Cannot find package 'vite'`. Already-installed dependencies make it a fast no-op. |
 | `npm run build` | Runs `cd client && npx vite build`. Compiles the TypeScript/React source in `client/src/` into static files in `client/dist/` (HTML, CSS, JS bundle). This is the production build of the frontend only, the server needs no build step because it is plain JavaScript. |
 | `npm start` | Runs `npm run build && electron .`. First builds the client (see above), then launches Electron. Electron loads `electron/main.js`, which boots the Express server in-process on port 3001 and opens a `BrowserWindow` pointed at `http://localhost:3001`. This is the primary way to run the app. |
 | `npm run dist:linux` | Builds release artifacts for Linux (`AppImage` and `.deb`) in `gui/release/`. |
