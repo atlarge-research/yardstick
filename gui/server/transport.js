@@ -106,7 +106,8 @@ __YARDSTICK_SCRIPT__`;
 
       // As in runLocal: an explicit signal means the remote command was killed.
       // A null code with no signal still counts as success, since some servers
-      // close the channel without sending an exit status.
+      // close the channel without sending an exit status. ssh2 reports that same
+      // case as undefined rather than null, so accept both.
       stream.on('close', (code, signal) => {
         if (signal) {
           const msg = `Remote command terminated by ${signal}`;
@@ -117,7 +118,7 @@ __YARDSTICK_SCRIPT__`;
           err.stderr = stderr;
           return reject(err);
         }
-        if (code === 0 || code === null) {
+        if (code === 0 || code === null || code === undefined) {
           if (stepId) {
             socket.emit('step:complete', { stepId, code });
             socket.emit('log', { message: `[OK] Step ${stepId} done` });

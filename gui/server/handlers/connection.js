@@ -168,7 +168,7 @@ function registerConnectionHandlers(socket) {
     const user = dasUsername || session.username;
     const condaDir = isHomeMode(mode) ? '$HOME/miniconda3' : `/var/scratch/${user}/miniconda3`;
     socket.emit('log', { message: 'Detecting existing environment...' });
-    await runEnvChecks(session, condaDir, socket);
+    await runEnvChecks(session, condaDir, socket, mode);
   });
 
   socket.on('ssh:run-pipeline', async ({ sessionId, username: dasUsername, mode: clientMode }) => {
@@ -208,7 +208,7 @@ function registerConnectionHandlers(socket) {
     socket.emit('ssh:disconnected', { sessionId });
   });
 
-  // Legacy handlers — kept for backwards compatibility with the useJoystick hook
+  // Legacy handlers, kept for backwards compatibility with the useJoystick hook
   socket.on('aws:launch-instances', async ({ region = 'us-east-1', count = 1, instanceType = 't3.micro', amiId = null, keyName = null, securityGroupIds = [] }) => {
     try {
       socket.emit('log', { message: `Launching ${count} instance(s) in ${region}...`, level: 'cmd' });

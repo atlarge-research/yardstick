@@ -1,13 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 
-// The playbooks and bot scripts live in the repo during development, but a packaged
-// build has no repo around it: this file ends up inside resources/app.asar, so
-// '../../yardstick_benchmark' resolves to a path that does not exist and every read
-// returns ''. electron-builder copies the tree next to the asar instead (see
-// build.extraResources in package.json), so check there before giving up. An empty
-// read is not a harmless miss: it used to be written straight over the installed
-// playbooks, and Ansible reports an empty play as successful.
+// In a packaged build this file lives inside resources/app.asar, where
+// '../../yardstick_benchmark' does not exist. electron-builder copies the tree
+// next to the asar (build.extraResources in package.json), so check there too.
 function resolveDataDir(rel) {
   const candidates = [path.resolve(__dirname, '../../yardstick_benchmark', rel)];
   if (process.resourcesPath) candidates.push(path.join(process.resourcesPath, 'yardstick_benchmark', rel));
@@ -27,6 +23,127 @@ const WORKLOAD_LABEL = { walkaround: 'WalkAround', chopwood: 'ChopWood', explore
 
 function readWlFile(name) {
   try { return fs.readFileSync(path.join(WORKLOAD_DIR, name), 'utf8'); } catch (e) { return ''; }
+}
+
+// Returns Python code that has to run before the generated script's first
+// "from yardstick_benchmark.X import Y". A reinstall that failed halfway (disk
+// quota) can drop whole modules, not just leave empty YAML behind, so check
+// files and importability and repair before any top-level import runs.
+function integrityCheckScript() {
+  return `
+print('[patch] ===== patch script build ${new Date().toISOString()} (world-wipe + nohup launch + worker diagnostics) =====', flush=True)
+
+# Older GUI builds truncated packaged playbooks to 0 bytes when they could not
+# read their repo copy, and Ansible reports an empty play as successful. These
+# files ship in the wheel, so reinstalling the same version restores them.
+_YS_WHEEL_FILES = [
+    'clean.yml',
+    'fetch.yml',
+    'games/minecraft/server/papermc_deploy.yml',
+    'games/minecraft/server/papermc_start.yml',
+    'games/minecraft/server/papermc_stop.yml',
+    'games/minecraft/server/server.properties.j2',
+    'games/minecraft/workload/walkaround_deploy.yml',
+    'games/minecraft/workload/walkaround_start.yml',
+    'monitoring/telegraf_deploy.yml',
+    'monitoring/telegraf_start.yml',
+    'monitoring/telegraf_stop.yml',
+    'monitoring/telegraf_cleanup.yml',
+    'monitoring/telegraf.conf.j2',
+]
+# Modules the generated script imports at top level.
+_YS_CORE_MODULES = [
+    'yardstick_benchmark.model',
+    'yardstick_benchmark.provisioning',
+    'yardstick_benchmark.monitoring',
+    'yardstick_benchmark.games.minecraft.server',
+    'yardstick_benchmark.games.minecraft.workload',
+]
+
+def _ys_damaged(rels):
+    import os as _d_os
+    import yardstick_benchmark as _d_pkg
+    _d_root = _d_os.path.dirname(_d_pkg.__file__)
+    _d_bad = []
+    for _d_rel in rels:
+        _d_p = _d_os.path.join(_d_root, *_d_rel.split('/'))
+        if not _d_os.path.exists(_d_p) or _d_os.path.getsize(_d_p) == 0:
+            _d_bad.append(_d_rel)
+    return _d_bad
+
+def _ys_unimportable(mods):
+    import importlib as _d_il
+    _d_bad = []
+    for _d_m in mods:
+        try:
+            _d_il.import_module(_d_m)
+        except Exception as _d_e:
+            _d_bad.append(f'{_d_m} ({type(_d_e).__name__}: {_d_e})')
+    return _d_bad
+
+def _ys_report(bad_files, bad_mods):
+    parts = []
+    if bad_files:
+        parts.append(str(len(bad_files)) + ' empty/missing file(s): ' + ', '.join(bad_files))
+    if bad_mods:
+        parts.append(str(len(bad_mods)) + ' unimportable module(s): ' + ', '.join(bad_mods))
+    return '; '.join(parts)
+
+try:
+    _ys_bad = _ys_damaged(_YS_WHEEL_FILES)
+    _ys_bad_mods = _ys_unimportable(_YS_CORE_MODULES)
+    if _ys_bad or _ys_bad_mods:
+        print('[heal] installed yardstick_benchmark is damaged: ' + _ys_report(_ys_bad, _ys_bad_mods), flush=True)
+        import sys as _ys_sys, subprocess as _ys_sp
+        _ys_ver, _ys_editable = None, False
+        try:
+            import importlib.metadata as _ys_md, json as _ys_json
+            _ys_ver = _ys_md.version('yardstick-benchmark')
+            for _ys_f in (_ys_md.files('yardstick-benchmark') or []):
+                if _ys_f.name == 'direct_url.json':
+                    _ys_editable = bool(_ys_json.loads(_ys_f.read_text()).get('dir_info', {}).get('editable'))
+                    break
+        except Exception:
+            pass
+        if _ys_editable:
+            # Reinstalling would detach the editable link; the damage is in the checkout.
+            raise RuntimeError(
+                'editable install of yardstick-benchmark is damaged (' + _ys_report(_ys_bad, _ys_bad_mods)
+                + '). Restore the source checkout instead (git checkout -- <paths>) rather than reinstalling.')
+        # --force-reinstall uninstalls before it writes, so out of disk space it
+        # removes the old package and then fails to restore it. Don't try.
+        import shutil as _ys_shutil
+        _ys_free = _ys_shutil.disk_usage(_ys_sys.prefix).free
+        if _ys_free < 20 * 1024 * 1024:
+            raise RuntimeError(
+                f'pip repair skipped: only {_ys_free // 1024}KB free in {_ys_sys.prefix!r}. '
+                "Free space in that environment (check 'quota -s') before retrying.")
+        # Pin the installed version so healing never silently changes behaviour.
+        _ys_spec = 'yardstick-benchmark' + ('==' + _ys_ver if _ys_ver else '')
+        print('[heal] reinstalling ' + _ys_spec, flush=True)
+        _ys_r = _ys_sp.run([_ys_sys.executable, '-m', 'pip', 'install',
+                            '--force-reinstall', '--no-deps', '--quiet', _ys_spec],
+                           capture_output=True, text=True)
+        if _ys_r.returncode != 0:
+            _ys_err = (_ys_r.stderr or '').strip()
+            print('[heal] pip failed: ' + (_ys_err[-300:] or 'no output'), flush=True)
+            if 'Disk quota exceeded' in _ys_err or 'No space left on device' in _ys_err:
+                raise RuntimeError(
+                    'pip repair aborted: disk quota exceeded while reinstalling yardstick-benchmark. '
+                    f"Free space in {_ys_sys.prefix!r} (check 'quota -s') and try again.")
+        _ys_bad = _ys_damaged(_YS_WHEEL_FILES)
+        _ys_bad_mods = _ys_unimportable(_YS_CORE_MODULES)
+        if _ys_bad or _ys_bad_mods:
+            raise RuntimeError(
+                'installed yardstick_benchmark is still damaged after repair: ' + _ys_report(_ys_bad, _ys_bad_mods)
+                + '. Run the GUI server from a checkout of the yardstick repo so it can restore these files, '
+                'or pip install --force-reinstall yardstick-benchmark once disk space is available.')
+        print('[heal] repaired', flush=True)
+except RuntimeError:
+    raise
+except Exception as _ys_e:
+    print(f'[warn] integrity check: {_ys_e}', flush=True)
+`;
 }
 
 // Returns Python code that ensures the Workload class and worker bot JS files are
@@ -85,73 +202,6 @@ def WalkAround(nodes, server_host, **kwargs):
     return Workload(nodes, server_host, **kwargs)
 `);
   return `
-print('[patch] ===== patch script build ${new Date().toISOString()} (world-wipe + nohup launch + worker diagnostics) =====', flush=True)
-
-# Repair a damaged install before anything else touches it. Older GUI builds wrote
-# an empty string over packaged playbooks whenever they could not read their own
-# repo copy, leaving 0-byte YAML behind. Ansible runs an empty play without
-# complaint, so the damage resurfaces later as an unrelated-looking failure.
-# These files ship in the wheel, so reinstalling the same version restores them.
-# This has to run before the patches below, which write into the same files.
-_YS_WHEEL_FILES = [
-    'clean.yml',
-    'fetch.yml',
-    'games/minecraft/server/papermc_deploy.yml',
-    'games/minecraft/server/papermc_start.yml',
-    'games/minecraft/server/papermc_stop.yml',
-    'games/minecraft/server/server.properties.j2',
-    'games/minecraft/workload/walkaround_deploy.yml',
-    'games/minecraft/workload/walkaround_start.yml',
-    'monitoring/telegraf_deploy.yml',
-    'monitoring/telegraf_start.yml',
-    'monitoring/telegraf_stop.yml',
-    'monitoring/telegraf_cleanup.yml',
-    'monitoring/telegraf.conf.j2',
-]
-
-def _ys_damaged(rels):
-    import os as _d_os
-    import yardstick_benchmark as _d_pkg
-    _d_root = _d_os.path.dirname(_d_pkg.__file__)
-    _d_bad = []
-    for _d_rel in rels:
-        _d_p = _d_os.path.join(_d_root, *_d_rel.split('/'))
-        if not _d_os.path.exists(_d_p) or _d_os.path.getsize(_d_p) == 0:
-            _d_bad.append(_d_rel)
-    return _d_bad
-
-try:
-    _ys_bad = _ys_damaged(_YS_WHEEL_FILES)
-    if _ys_bad:
-        print('[heal] installed yardstick_benchmark is damaged (' + str(len(_ys_bad)) + ' empty/missing): ' + ', '.join(_ys_bad), flush=True)
-        import sys as _ys_sys, subprocess as _ys_sp
-        _ys_ver, _ys_editable = None, False
-        try:
-            import importlib.metadata as _ys_md, json as _ys_json
-            _ys_ver = _ys_md.version('yardstick-benchmark')
-            for _ys_f in (_ys_md.files('yardstick-benchmark') or []):
-                if _ys_f.name == 'direct_url.json':
-                    _ys_editable = bool(_ys_json.loads(_ys_f.read_text()).get('dir_info', {}).get('editable'))
-                    break
-        except Exception:
-            pass
-        if _ys_editable:
-            # Reinstalling would detach the editable link; the damage is in the checkout.
-            print('[heal] editable install detected; restore the source checkout instead (git checkout --)', flush=True)
-        else:
-            # Pin the installed version so healing never silently changes behaviour.
-            _ys_spec = 'yardstick-benchmark' + ('==' + _ys_ver if _ys_ver else '')
-            print('[heal] reinstalling ' + _ys_spec, flush=True)
-            _ys_r = _ys_sp.run([_ys_sys.executable, '-m', 'pip', 'install',
-                                '--force-reinstall', '--no-deps', '--quiet', _ys_spec],
-                               capture_output=True, text=True)
-            if _ys_r.returncode != 0:
-                print('[heal] pip failed: ' + ((_ys_r.stderr or '').strip()[-300:] or 'no output'), flush=True)
-            _ys_bad = _ys_damaged(_YS_WHEEL_FILES)
-            print('[heal] repaired' if not _ys_bad else '[heal] still damaged: ' + ', '.join(_ys_bad), flush=True)
-except Exception as _ys_e:
-    print(f'[warn] integrity check: {_ys_e}', flush=True)
-
 # Ensure Workload class, YAML playbooks, and worker bot JS files are present in the installed package
 try:
     import yardstick_benchmark.games.minecraft.workload as _wl_pkg
@@ -171,10 +221,9 @@ try:
         ('workload_cleanup.yml', ${cleanYml}),
     ]:
         _wl_yml_path = _wl_os.path.join(_wl_pkg_dir, _wl_yml_name)
-        # Empty means the repo copy was unreadable (GUI server deployed without the
-        # repo alongside it); writing it truncates the installed playbook to 0 bytes
-        # and permanently breaks the package. Some playbooks are legitimately empty
-        # (stop/cleanup are no-ops), so only refuse a write that would destroy content.
+        # Empty source means the repo copy was unreadable; writing it would
+        # truncate the installed playbook. Some playbooks are legitimately empty
+        # (stop/cleanup), so only refuse a write that would destroy content.
         if not _wl_yml_src and _wl_os.path.exists(_wl_yml_path) and _wl_os.path.getsize(_wl_yml_path) > 0:
             print(f'[warn] {_wl_yml_name} not found next to the GUI server; keeping installed copy', flush=True)
             continue
@@ -209,14 +258,20 @@ try:
     from yardstick_benchmark.games.minecraft.workload import Workload
 except Exception as _wl_e:
     print(f'[warn] workload setup: {_wl_e}', flush=True)
-    from yardstick_benchmark.games.minecraft.workload import WalkAround as Workload
+    # A half-installed package breaks even this fallback import, so report that
+    # rather than letting a bare ImportError end the script.
+    try:
+        from yardstick_benchmark.games.minecraft.workload import WalkAround as Workload
+    except Exception as _wl_e2:
+        raise RuntimeError(
+            f'installed yardstick_benchmark.games.minecraft.workload is unusable: {_wl_e2}. '
+            'Run the GUI server from a checkout of the yardstick repo so it can restore these files.'
+        ) from _wl_e2
 
-# Repair the PaperMC download in whatever papermc_deploy.yml ends up installed.
-# api.papermc.io/v2 was sunset and answers every download with HTTP 410 Gone, so
-# an installed package predating the fix cannot deploy at all. This runs even when
-# the overwrite above was skipped (GUI server deployed without the repo alongside).
-# The checksum matters as much as the URL: without it get_url still contacts the
-# server to revalidate an already-staged jar, so a dead URL fails the play anyway.
+# Repair the PaperMC download in whatever papermc_deploy.yml ends up installed:
+# api.papermc.io/v2 is sunset and returns 410 Gone. Runs even when the overwrite
+# above was skipped. The checksum matters as much as the URL, since without it
+# get_url revalidates an already-staged jar against the dead server.
 try:
     import os as _pmc_os
     import yardstick_benchmark.games.minecraft.server as _pmc_srv
@@ -240,12 +295,10 @@ try:
 except Exception as _pmc_e:
     print(f'[warn] papermc download patch: {_pmc_e}', flush=True)
 
-# Final gate. Everything above has had its chance to repair the install, so if a
-# file this run actually needs is still empty, stop here with a message that names
-# it. An empty playbook makes Ansible report success on a play that did nothing,
-# which would otherwise surface as a silently wrong benchmark rather than a crash.
-# workload_*.yml are created by the patch step and are not in the wheel, so pip
-# cannot restore them; only a readable repo copy can.
+# Final gate: if a file this run needs is still empty, stop and name it rather
+# than let Ansible report success on a play that did nothing. workload_*.yml are
+# written by the patch step above and are not in the wheel, so only a readable
+# repo copy can restore them.
 _ys_final = _ys_damaged(_YS_WHEEL_FILES + [
     'games/minecraft/workload/workload_deploy.yml',
     'games/minecraft/workload/workload_start.yml',
@@ -260,7 +313,7 @@ print('[check] installed package integrity OK', flush=True)
 
 function buildDasScript({ numNodes, botsPerNode, sleepTime, safeName, scratchDir, workload = 'walkaround', seed, worldType }) {
   const wlLabel = WORKLOAD_LABEL[workload] || 'WalkAround';
-  return `
+  return `${integrityCheckScript()}
 from yardstick_benchmark.provisioning import Das
 from yardstick_benchmark.monitoring import Telegraf
 from yardstick_benchmark.games.minecraft.server import PaperMC
@@ -275,10 +328,9 @@ if os.path.exists(_nvm_lock):
     os.remove(_nvm_lock)
     print('[patch] removed stale NVM lock file', flush=True)
 
-# Patch RemoteAction.run: unique ControlPath per call in /tmp (local disk, not NFS).
-# Each play gets a fresh master — no stale sockets from prior plays cause "Shared
-# connection closed". Socket survives shutil.rmtree(private_data_dir) because it's
-# outside private_data_dir.
+# Patch RemoteAction.run: unique ControlPath per call in /tmp (local disk, not
+# NFS), so no stale socket from a prior play causes "Shared connection closed".
+# Living outside private_data_dir, it survives shutil.rmtree of that directory.
 try:
     from yardstick_benchmark import model as _ys_model
     import ansible_runner as _ar
@@ -445,10 +497,8 @@ try:
     _run('Deploy ${wlLabel}', wl.deploy)
     _run('Start Telegraf', telegraf.start)
     _run('Run ${wlLabel} bots', wl.start)
-    # Teardown is best-effort: the measurement is already complete once the bots
-    # stop, so a flaky Stop step (e.g. a missing telegraf PID on one node) must
-    # never abort the run and skip the fetch, which would trigger cleanup and
-    # destroy the data. Warn and continue to the fetch instead.
+    # Teardown is best-effort: the measurement is done once the bots stop, so a
+    # flaky Stop must not abort the run before the fetch and lose the data.
     try:
         _run('Stop Telegraf', telegraf.stop)
     except Exception as e:
@@ -480,7 +530,7 @@ finally:
 
 function buildCloudScript({ botsPerNode, sleepTime, safeName, workerIps, workerUser, workload = 'walkaround', seed, worldType }) {
   const wlLabel = WORKLOAD_LABEL[workload] || 'WalkAround';
-  return `
+  return `${integrityCheckScript()}
 from yardstick_benchmark.monitoring import Telegraf
 from yardstick_benchmark.games.minecraft.server import PaperMC
 import yardstick_benchmark
@@ -657,8 +707,18 @@ print(f'  Workers   : ${workerIps.length}  |  Bots/node : ${botsPerNode}  |  Tot
 ${safeName ? `print('  Run name  : ${safeName}', flush=True)\n` : ''}print('━' * 56, flush=True)
 print('', flush=True)
 
+def _kill_stale_papermc():
+    # A run that crashed before 'Stop PaperMC' leaves a java process on :25565,
+    # and the next deploy fails to bind. Clear the jar and the port first.
+    _r1 = _sp.run(['pkill', '-9', '-f', '${PAPER_JAR}'], capture_output=True)
+    _r2 = _sp.run(['bash', '-c', 'fuser -k -9 25565/tcp 2>/dev/null'], capture_output=True)
+    if _r1.returncode == 0 or _r2.returncode == 0:
+        print('[cleanup] killed a stale PaperMC process from a previous run', flush=True)
+        _time.sleep(1)
+
 papermc = None
 try:
+    _kill_stale_papermc()
     _run('Clean nodes', lambda: yardstick_benchmark.clean(nodes))
 
     telegraf = Telegraf(nodes)
@@ -745,10 +805,8 @@ try:
         for _t in _log_threads:
             _t.join(timeout=3)
 
-    # Teardown is best-effort: the measurement is already complete once the bots
-    # stop, so a flaky Stop step (e.g. a missing telegraf PID on one node) must
-    # never abort the run and skip the fetch, which would trigger cleanup and
-    # destroy the data. Warn and continue to the fetch instead.
+    # Teardown is best-effort: the measurement is done once the bots stop, so a
+    # flaky Stop must not abort the run before the fetch and lose the data.
     try:
         _run('Stop Telegraf', telegraf.stop)
     except Exception as e:
@@ -767,11 +825,9 @@ try:
     # for local→local; also avoids the ansible.posix dependency for this step).
     _server_dest = dest / 'server'
     if papermc_node.wd.exists():
-        # Skip everything the parser never reads and that is regenerated on every
-        # run: the world dirs, the unpacked server runtime (libraries/versions/
-        # cache/plugins), and the jars. Left unchecked these fill the node's disk
-        # over a multi-run campaign (no space left). Only the telegraf metrics CSV
-        # and logs/ are needed downstream.
+        # Only the telegraf CSV and logs/ are read downstream. Copying the world
+        # dirs, the unpacked runtime and the jars fills the node's disk over a
+        # multi-run campaign.
         shutil.copytree(str(papermc_node.wd), str(_server_dest), dirs_exist_ok=True,
                         ignore=shutil.ignore_patterns('world', 'world_nether', 'world_the_end',
                                                       'node_modules', 'libraries', 'versions',
@@ -803,7 +859,7 @@ try:
         if _r.returncode == 0:
             print(f'[fetch] worker {ip} ({_label}) data collected', flush=True)
         elif 'rsync' in _r.stderr or 'command not found' in _r.stderr:
-            # rsync not installed on worker — fall back to scp.
+            # rsync not installed on worker, fall back to scp.
             # Copy the directory itself to the parent; since wnode.wd.name == _label
             # scp creates dest/_label/ which is exactly _wdest.
             print(f'[fetch] rsync unavailable on {ip}, trying scp...', flush=True)
@@ -832,7 +888,7 @@ finally:
 
 function buildLocalScript({ numNodes, botsPerNode, sleepTime, safeName, workload = 'walkaround', seed, worldType }) {
   const wlLabel = WORKLOAD_LABEL[workload] || 'WalkAround';
-  return `
+  return `${integrityCheckScript()}
 from yardstick_benchmark.model import Node
 from yardstick_benchmark.monitoring import Telegraf
 from yardstick_benchmark.games.minecraft.server import PaperMC
@@ -1023,10 +1079,9 @@ print('', flush=True)
 papermc = None
 _started = []
 try:
-    # Start one Docker container per node with --network host so all processes
-    # share the host network stack (PaperMC binds to 0.0.0.0 and bots on other
-    # containers reach it via localhost). The working directory is bind-mounted
-    # at the same host path so Ansible file paths work unchanged.
+    # One container per node, --network host so bots reach PaperMC on localhost.
+    # The working directory is bind-mounted at the same host path so Ansible
+    # file paths work unchanged.
     for node in nodes:
         _cname = _container_map[node.host]
         # Pre-clean from the host before Docker mounts the directory; rmtree
@@ -1117,7 +1172,7 @@ try:
                     print(line, flush=True)
                 print('--- end log ---', flush=True)
             else:
-                print('No PaperMC log found — Java may have crashed before writing logs.', flush=True)
+                print('No PaperMC log found. Java may have crashed before writing logs.', flush=True)
         except Exception:
             pass
         raise
@@ -1144,10 +1199,8 @@ try:
     run_label = '${safeName}_' + timestamp if '${safeName}' else timestamp
     dest = Path(home) / 'experiments' / run_label
     dest.mkdir(parents=True, exist_ok=True)
-    # With Docker bind-mounts the node wds are already on the host filesystem,
-    # so copy directly instead of going through rsync-based fetch. Skip the world
-    # dirs, the bot node_modules, and the server runtime/jars: none are read by
-    # the parser and they bloat every run on the laptop's disk.
+    # Bind-mounted node wds are already on the host filesystem, so copy directly
+    # instead of using the rsync-based fetch. Skip what the parser never reads.
     _skip = _shutil.ignore_patterns('world', 'world_nether', 'world_the_end',
                                     'node_modules', 'libraries', 'versions',
                                     'cache', 'plugins', '*.jar')

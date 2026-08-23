@@ -9,6 +9,15 @@ function registerExperimentHandlers(socket) {
     const session = sessions.get(sessionId);
     if (!session) { socket.emit('ssh:error', { message: 'No active session.' }); return; }
 
+    // Two runs on the same session would bind PaperMC to the same port on the
+    // same host, and the second one fails with "Address already in use".
+    if (session.experimentRunning) {
+      socket.emit('ssh:error', { message: 'An experiment is already running for this session.' });
+      socket.emit('log', { message: '[BLOCKED] An experiment is already running for this session. Wait for it to finish first.', level: 'warn' });
+      return;
+    }
+    session.experimentRunning = true;
+
     const mode = clientMode || session.mode || 'das5';
     const user = dasUsername || session.username;
     const cmds = buildPipelineCommands(mode, user);
@@ -19,7 +28,7 @@ function registerExperimentHandlers(socket) {
     // Pre-flight gate
     try {
       socket.emit('log', { message: 'Running pre-flight checks...' });
-      const { checks, allReady } = await runEnvChecks(session, condaDir, socket);
+      const { checks, allReady } = await runEnvChecks(session, condaDir, socket, mode);
       if (!allReady) {
         const missing = [];
         if (!checks.miniconda) missing.push('Miniconda');
@@ -27,18 +36,21 @@ function registerExperimentHandlers(socket) {
         if (!checks.packages)  missing.push('Python packages (yardstick-benchmark)');
         if (!checks.ansible)   missing.push('Ansible CLI');
         if (!checks.workspace) missing.push('Experiments workspace (~/experiments)');
+        if (!checks.docker)    missing.push('Docker (required for Local mode)');
         socket.emit('experiment:preflight-failed', { missing });
+        session.experimentRunning = false;
         return;
       }
       socket.emit('log', { message: '[OK] Pre-flight checks passed.' });
     } catch (pfErr) {
       socket.emit('experiment:preflight-failed', { missing: ['Unable to verify environment - run Setup first.'] });
       socket.emit('log', { message: `Pre-flight error: ${pfErr.message}`, level: 'error' });
+      session.experimentRunning = false;
       return;
     }
 
     const isLocalMode = mode === 'local';
-    const isCloudMode = ['aws', 'custom-ssh'].includes(mode);
+    const isCloudMode = ['aws', 'custom'].includes(mode);
     let workerInstanceIds = [];
 
     try {
@@ -69,7 +81,7 @@ function registerExperimentHandlers(socket) {
         if (numNodes > 1 && imgId && reg) {
           const awsProv = getSocketAws(socket.id);
           if (!awsProv) {
-            socket.emit('log', { message: 'Warning: Not authenticated to AWS — launching in single-instance mode.', level: 'warn' });
+            socket.emit('log', { message: 'Warning: Not authenticated to AWS, launching in single-instance mode.', level: 'warn' });
           } else {
             const workerInstanceType = 't3.xlarge';
             socket.emit('log', { message: `Launching ${numNodes - 1} worker instance(s) (${workerInstanceType})...` });
@@ -142,6 +154,7 @@ function registerExperimentHandlers(socket) {
       socket.emit('experiment:error', { message: err.message });
       socket.emit('log', { message: `Experiment failed: ${err.message}`, level: 'error' });
     } finally {
+      session.experimentRunning = false;
       if (workerInstanceIds.length > 0) {
         const awsProv = getSocketAws(socket.id);
         if (awsProv) {

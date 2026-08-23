@@ -17,13 +17,19 @@ interface InstallSubstep {
   label: string;
 }
 
-const CHECK_ITEMS: CheckItem[] = [
+const BASE_CHECK_ITEMS: CheckItem[] = [
   { key: 'miniconda', label: 'Miniconda' },
   { key: 'condaEnv', label: 'Conda environment' },
   { key: 'packages', label: 'Python packages' },
   { key: 'ansible', label: 'Ansible CLI' },
   { key: 'workspace', label: 'Experiments workspace' },
 ];
+
+const DOCKER_CHECK_ITEM: CheckItem = { key: 'docker', label: 'Docker' };
+
+function checkItemsForMode(mode: string): CheckItem[] {
+  return mode === 'local' ? [...BASE_CHECK_ITEMS, DOCKER_CHECK_ITEM] : BASE_CHECK_ITEMS;
+}
 
 const INSTALL_SUBSTEPS: InstallSubstep[] = [
   { id: 'install-miniconda', label: 'Miniconda' },
@@ -70,6 +76,7 @@ export default function PipelineView({
   envChecks, envReady, detecting, detectingItem,
 }: PipelineViewProps) {
   const modeLabel = ({ local: 'locally', das5: 'on DAS-5', das6: 'on DAS-6', aws: 'on AWS', custom: 'on the remote host' } as Record<string, string>)[mode] || 'remotely';
+  const checkItems = checkItemsForMode(mode);
 
   useEffect(() => {
     if (connected && envChecks === null && !detecting) onDetectEnv(username);
@@ -80,7 +87,7 @@ export default function PipelineView({
     if (!envChecks) return 'waiting';
     if (envChecks[key] === true) return 'ok';
     if (envChecks[key] === false && detectingItem !== key) {
-      const order = CHECK_ITEMS.map((ci) => ci.key);
+      const order = checkItems.map((ci) => ci.key);
       const myIdx = order.indexOf(key);
       const curIdx = detectingItem ? order.indexOf(detectingItem) : order.length;
       if (curIdx > myIdx) return 'missing';
@@ -99,7 +106,7 @@ export default function PipelineView({
           Probing the remote host to see what's already installed.
         </Text>
         <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={2.5}>
-          {CHECK_ITEMS.map((item) => {
+          {checkItems.map((item) => {
             const st = detectStatus(item.key);
             return (
               <Flex key={item.key} align="center" gap={2.5} px={3.5} py={3} bg={statusBg(st)} border="1px solid" borderColor={statusColor(st)} borderRadius={radii.sm}>
@@ -134,7 +141,7 @@ export default function PipelineView({
           </Text>
 
           <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={2.5}>
-            {CHECK_ITEMS.map((item) => {
+            {checkItems.map((item) => {
               const ok = envChecks?.[item.key];
               return (
                 <Flex key={item.key} align="center" gap={2.5} px={3.5} py={3} bg={ok ? 'rgba(0,184,148,0.06)' : 'rgba(253,203,110,0.06)'} border="1px solid" borderColor={ok ? c.success : c.warning} borderRadius={radii.sm}>

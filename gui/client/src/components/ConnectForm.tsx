@@ -7,10 +7,13 @@ import { c, fonts, radii, cardProps, inputProps, labelProps, StyledInput, Styled
 
 type AuthMethod = 'password' | 'key';
 
-const DAS_PROFILES_KEY = 'yardstick_das_profiles';
+const CONNECTION_PROFILES_KEY = 'yardstick_connection_profiles';
 
-interface DasProfile {
+interface ConnectionProfile {
   name: string;
+  group: Group;
+  host: string;
+  port: string;
   username: string;
   authMethod: AuthMethod;
   password: string;
@@ -24,16 +27,16 @@ interface DasProfile {
   jumpPrivateKey: string;
 }
 
-function loadDasProfiles(): DasProfile[] {
+function loadConnectionProfiles(): ConnectionProfile[] {
   try {
-    return JSON.parse(localStorage.getItem(DAS_PROFILES_KEY) || '[]');
+    return JSON.parse(localStorage.getItem(CONNECTION_PROFILES_KEY) || '[]');
   } catch {
     return [];
   }
 }
 
-function saveDasProfilesToStorage(profiles: DasProfile[]) {
-  localStorage.setItem(DAS_PROFILES_KEY, JSON.stringify(profiles));
+function saveConnectionProfilesToStorage(profiles: ConnectionProfile[]) {
+  localStorage.setItem(CONNECTION_PROFILES_KEY, JSON.stringify(profiles));
 }
 
 interface ModePreset {
@@ -78,6 +81,10 @@ const GROUPS: GroupDef[] = [
   { id: 'ssh',   label: 'SSH',   icon: LuGlobe },
   { id: 'local', label: 'Local', icon: LuMonitor },
 ];
+
+// Groups that save profiles here. 'cloud' has its own server-side credential
+// store and 'local' needs no credentials.
+const PROFILE_GROUPS: Group[] = ['das', 'ssh'];
 
 const SUB_PROVIDERS: Partial<Record<Group, SubProviderDef[]>> = {
   cloud: [
@@ -181,14 +188,19 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange, pre
   const [jumpPassword, setJumpPassword] = useState('');
   const [jumpPrivateKey, setJumpPrivateKey] = useState('');
 
-  const [dasProfiles, setDasProfiles] = useState<DasProfile[]>(loadDasProfiles);
+  const [connectionProfiles, setConnectionProfiles] = useState<ConnectionProfile[]>(loadConnectionProfiles);
   const [selectedProfile, setSelectedProfile] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileName, setProfileName] = useState('');
 
+  const group = groupForMode(mode);
+  const profilesForGroup = connectionProfiles.filter((p) => p.group === group);
+
   const loadProfile = useCallback((name: string) => {
-    const profile = dasProfiles.find((p) => p.name === name);
+    const profile = profilesForGroup.find((p) => p.name === name);
     if (!profile) return;
+    setHost(profile.host || MODE_PRESETS[mode]?.host || '');
+    setPort(profile.port || MODE_PRESETS[mode]?.port || '22');
     setUsername(profile.username);
     setAuthMethod(profile.authMethod);
     setPassword(profile.password);
@@ -201,30 +213,30 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange, pre
     setJumpPassword(profile.jumpPassword);
     setJumpPrivateKey(profile.jumpPrivateKey);
     setSelectedProfile(name);
-  }, [dasProfiles, mode]);
+  }, [profilesForGroup, mode]);
 
   const saveProfile = useCallback(() => {
     const name = profileName.trim();
     if (!name) return;
-    const profile: DasProfile = {
-      name, username, authMethod, password, privateKey,
+    const profile: ConnectionProfile = {
+      name, group, host, port, username, authMethod, password, privateKey,
       useJumpHost, jumpHost, jumpPort, jumpUsername,
       jumpAuthMethod, jumpPassword, jumpPrivateKey,
     };
-    const updated = [...dasProfiles.filter((p) => p.name !== name), profile];
-    setDasProfiles(updated);
-    saveDasProfilesToStorage(updated);
+    const updated = [...connectionProfiles.filter((p) => !(p.name === name && p.group === group)), profile];
+    setConnectionProfiles(updated);
+    saveConnectionProfilesToStorage(updated);
     setSelectedProfile(name);
     setSavingProfile(false);
     setProfileName('');
-  }, [profileName, username, authMethod, password, privateKey, useJumpHost, jumpHost, jumpPort, jumpUsername, jumpAuthMethod, jumpPassword, jumpPrivateKey, dasProfiles]);
+  }, [profileName, group, host, port, username, authMethod, password, privateKey, useJumpHost, jumpHost, jumpPort, jumpUsername, jumpAuthMethod, jumpPassword, jumpPrivateKey, connectionProfiles]);
 
   const deleteProfile = useCallback((name: string) => {
-    const updated = dasProfiles.filter((p) => p.name !== name);
-    setDasProfiles(updated);
-    saveDasProfilesToStorage(updated);
+    const updated = connectionProfiles.filter((p) => !(p.name === name && p.group === group));
+    setConnectionProfiles(updated);
+    saveConnectionProfilesToStorage(updated);
     if (selectedProfile === name) setSelectedProfile('');
-  }, [dasProfiles, selectedProfile]);
+  }, [connectionProfiles, group, selectedProfile]);
 
   useEffect(() => {
     const preset = MODE_PRESETS[mode];
@@ -259,7 +271,6 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange, pre
   const isConnected = status === 'completed';
   const isLocal = mode === 'local';
   const isSSH = !isLocal;
-  const group = groupForMode(mode);
   const subProviders = SUB_PROVIDERS[group];
   const preset = MODE_PRESETS[mode] || MODE_PRESETS.das5;
   const hostPlaceholder = preset.hostPlaceholder || 'hostname';
@@ -269,7 +280,7 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange, pre
     lines: [
       'Use the instance public DNS or Elastic IP as the hostname.',
       'Port 22 must be open in the instance security group.',
-      'EC2 AMIs disable password auth by default — use SSH key.',
+      'EC2 AMIs disable password auth by default, use SSH key.',
     ],
   } : null;
 
@@ -354,7 +365,7 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange, pre
         </>
       )}
 
-      {group === 'das' && dasProfiles.length > 0 && (
+      {PROFILE_GROUPS.includes(group) && profilesForGroup.length > 0 && (
         <Box mb={4} p={3} bg={c.bg} border="1px solid" borderColor={c.border} borderRadius={radii.md}>
           <Text {...labelProps} mb={2}>Saved profiles</Text>
           <Flex gap={2} align="center" flexWrap="wrap">
@@ -368,7 +379,7 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange, pre
               }}
             >
               <option value="">— select a profile —</option>
-              {dasProfiles.map((p) => (
+              {profilesForGroup.map((p) => (
                 <option key={p.name} value={p.name} style={{ backgroundColor: c.bg }}>{p.name}</option>
               ))}
             </select>
@@ -471,7 +482,7 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange, pre
             )}
           </Button>
 
-          {group === 'das' && !savingProfile && (
+          {PROFILE_GROUPS.includes(group) && !savingProfile && (
             <Button
               type="button"
               variant="plain"
@@ -494,7 +505,7 @@ export default function ConnectForm({ onConnect, status, mode, onModeChange, pre
           )}
         </Flex>
 
-        {group === 'das' && savingProfile && (
+        {PROFILE_GROUPS.includes(group) && savingProfile && (
           <Flex gap={2} align="center" mt={1} flexWrap="wrap">
             <StyledInput
               {...inputProps}

@@ -2,24 +2,30 @@ const { spawn } = require('child_process');
 const os = require('os');
 
 function isHomeMode(mode) {
-  return mode === 'local' || mode === 'aws' || mode === 'custom-ssh';
+  return mode === 'local' || mode === 'aws' || mode === 'custom';
 }
 
 function buildPipelineCommands(mode, user) {
   const useHome = isHomeMode(mode);
+  const needsDocker = mode === 'local';
   const condaDir = useHome ? '$HOME/miniconda3' : `/var/scratch/${user}/miniconda3`;
   const scratchDir = useHome ? '$HOME/experiments' : `/var/scratch/${user}/yardstick`;
 
   return {
     installMiniconda: [
       `set -e`,
-      `free_gb=$(df -BG "$HOME" | awk 'NR==2{gsub(/G/,""); print $4+0}')`,
-      `echo "Disk space available: \${free_gb}GB"`,
+      `target_dir=${condaDir}`,
+      // Check the target filesystem, not $HOME: on DAS the conda dir lives under
+      // /var/scratch/$user, which has its own quota. target_dir doesn't exist yet
+      // on a fresh install, so walk up to the nearest existing ancestor.
+      `check_dir="$target_dir"`,
+      `while [ ! -d "$check_dir" ] && [ "$check_dir" != "/" ]; do check_dir=$(dirname "$check_dir"); done`,
+      `free_gb=$(df -BG "$check_dir" | awk 'NR==2{gsub(/G/,""); print $4+0}')`,
+      `echo "Disk space available at $check_dir: \${free_gb}GB"`,
       `if [ "\${free_gb:-0}" -lt 8 ]; then`,
-      `  echo "[FAIL] Only \${free_gb}GB free disk space. At least 8GB required (recommend 20GB). Resize the root volume in the AWS console and try again." >&2`,
+      `  echo "[FAIL] Only \${free_gb}GB free at $check_dir. At least 8GB required (recommend 20GB). Free space/quota there (check 'quota -s') and try again." >&2`,
       `  exit 1`,
       `fi`,
-      `target_dir=${condaDir}`,
       `if [ -f "$target_dir/bin/conda" ]; then`,
       `  echo "[OK] Miniconda already installed at $target_dir -- skipping."`,
       `else`,
@@ -114,6 +120,42 @@ function buildPipelineCommands(mode, user) {
       `  _cjava=$(conda run -n yardstick bash -c 'which java' 2>/dev/null || true)`,
       `  [ -n "$_cjava" ] && export PATH="$(dirname "$_cjava"):$PATH"`,
       `fi`,
+      ...(needsDocker ? [
+        `if ! command -v docker >/dev/null 2>&1; then`,
+        `  if sudo -n true 2>/dev/null; then`,
+        `    echo "Installing Docker (required for Local mode's multi-node containers)..."`,
+        `    if command -v apt-get >/dev/null 2>&1; then`,
+        `      sudo -n apt-get update -q 2>&1 || true`,
+        `      sudo -n DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io 2>&1 || true`,
+        `    elif command -v dnf >/dev/null 2>&1; then`,
+        `      sudo -n dnf install -y docker 2>&1 || true`,
+        `    elif command -v yum >/dev/null 2>&1; then`,
+        `      sudo -n yum install -y docker 2>&1 || true`,
+        `    elif command -v pacman >/dev/null 2>&1; then`,
+        `      sudo -n pacman -S --noconfirm --needed docker 2>&1 || true`,
+        `    elif command -v brew >/dev/null 2>&1; then`,
+        `      brew install --cask docker 2>&1 || true`,
+        `    else`,
+        `      echo "[WARN] No supported package manager found to install Docker automatically." >&2`,
+        `    fi`,
+        `  else`,
+        `    echo "[WARN] Docker isn't installed and this session has no passwordless sudo, so it can't be installed automatically." >&2`,
+        `    echo "       Ask your administrator, or run this yourself on the host (it will prompt for your password):" >&2`,
+        `    echo "         sudo apt-get install -y docker.io   # (or: dnf/yum/pacman install docker)" >&2`,
+        `    echo "         sudo usermod -aG docker \\$USER && newgrp docker" >&2`,
+        `  fi`,
+        `fi`,
+        `if sudo -n true 2>/dev/null; then`,
+        `  if command -v systemctl >/dev/null 2>&1; then`,
+        `    sudo -n systemctl enable --now docker 2>/dev/null || true`,
+        `  elif command -v service >/dev/null 2>&1; then`,
+        `    sudo -n service docker start 2>/dev/null || true`,
+        `  fi`,
+        `  if command -v docker >/dev/null 2>&1 && ! groups "$USER" 2>/dev/null | grep -qw docker; then`,
+        `    sudo -n usermod -aG docker "$USER" 2>/dev/null && echo "[OK] Added $USER to the docker group (log out/in for it to take effect without sudo)." || true`,
+        `  fi`,
+        `fi`,
+      ] : []),
       ...(useHome ? [
         `echo "Checking system tools required by the workload..."`,
         `node_major=0`,
@@ -176,13 +218,28 @@ function buildPipelineCommands(mode, user) {
       `if java -version >/dev/null 2>&1; then`,
       `  echo "[OK] java: $(java -version 2>&1 | head -1)"`,
       `else`,
-      `  echo "[INFO] java not on PATH — OK for local mode (Docker provides it); required for AWS/DAS nodes."`,
+      `  echo "[INFO] java not on PATH: OK for local mode (Docker provides it), required for AWS/DAS nodes."`,
       `fi`,
-      `if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then`,
-      `  echo "[OK] docker: $(docker --version)"`,
-      `else`,
-      `  echo "[WARN] Docker not running — local multi-node mode requires Docker." >&2`,
-      `fi`,
+      ...(needsDocker ? [
+        `if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then`,
+        `  echo "[OK] docker: $(docker --version)"`,
+        `else`,
+        `  echo "[FAIL] Docker is required for Local mode (used to run multi-node worker containers) but 'docker info' failed." >&2`,
+        `  if ! command -v docker >/dev/null 2>&1; then`,
+        `    echo "       Docker isn't installed and this session has no passwordless sudo to install it automatically." >&2`,
+        `    echo "       Ask your administrator, or install it yourself on the host with sudo, then re-run Setup." >&2`,
+        `  else`,
+        `    echo "       If Docker was just installed, log out and back in (or run 'newgrp docker') so your docker group membership takes effect, then re-run Setup." >&2`,
+        `  fi`,
+        `  exit 1`,
+        `fi`,
+      ] : [
+        `if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then`,
+        `  echo "[OK] docker: $(docker --version)"`,
+        `else`,
+        `  echo "[INFO] Docker not detected -- not required for this connection mode."`,
+        `fi`,
+      ]),
       ...(useHome ? [
         `for tool in rsync wget git node npm; do`,
         `  if command -v "$tool" >/dev/null 2>&1; then`,
@@ -203,8 +260,9 @@ function buildPipelineCommands(mode, user) {
   };
 }
 
-async function runEnvChecks(session, condaDir, socket) {
-  const checks = { miniconda: false, condaEnv: false, packages: false, ansible: false, workspace: false };
+async function runEnvChecks(session, condaDir, socket, mode) {
+  const needsDocker = mode === 'local';
+  const checks = { miniconda: false, condaEnv: false, packages: false, ansible: false, workspace: false, docker: !needsDocker };
 
   function probe(label, cmd, timeoutMs = 15000) {
     return new Promise((resolve) => {
@@ -275,16 +333,22 @@ async function runEnvChecks(session, condaDir, socket) {
     emitProgress('workspace');
     checks.workspace = await probe('Workspace', 'test -d ~/experiments');
     emitProgress(null);
+
+    if (needsDocker) {
+      emitProgress('docker');
+      checks.docker = await probe('Docker', 'docker info');
+      emitProgress(null);
+    }
   } catch (e) {
     // defaults are fine
   }
 
-  const allReady = checks.miniconda && checks.condaEnv && checks.packages && checks.ansible && checks.workspace;
+  const allReady = checks.miniconda && checks.condaEnv && checks.packages && checks.ansible && checks.workspace && checks.docker;
   socket.emit('env:detected', { checks, allReady });
   socket.emit('log', {
     message: allReady
       ? 'Environment fully set up -- ready to run experiments.'
-      : `Environment check: miniconda=${checks.miniconda ? 'OK' : 'MISS'} env=${checks.condaEnv ? 'OK' : 'MISS'} packages=${checks.packages ? 'OK' : 'MISS'} ansible=${checks.ansible ? 'OK' : 'MISS'} workspace=${checks.workspace ? 'OK' : 'MISS'}`,
+      : `Environment check: miniconda=${checks.miniconda ? 'OK' : 'MISS'} env=${checks.condaEnv ? 'OK' : 'MISS'} packages=${checks.packages ? 'OK' : 'MISS'} ansible=${checks.ansible ? 'OK' : 'MISS'} workspace=${checks.workspace ? 'OK' : 'MISS'}${needsDocker ? ` docker=${checks.docker ? 'OK' : 'MISS'}` : ''}`,
   });
   return { checks, allReady };
 }
