@@ -4,6 +4,8 @@
     yardstick validate experiment.toml   check it without deploying anything
     yardstick run experiment.toml        run the benchmark
     yardstick list                       show the built-in games and workloads
+    yardstick machines list              show machines Yardstick provisioned
+    yardstick machines release           give them all back
 
 Also reachable as ``python -m yardstick_benchmark``.
 """
@@ -65,6 +67,22 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     sub.add_parser("list", help="list the built-in games and workloads")
+
+    cloud_parser = sub.add_parser(
+        "machines",
+        help="inspect or release machines Yardstick provisioned",
+    )
+    cloud_parser.add_argument(
+        "action",
+        choices=["list", "release"],
+        help="'list' shows what is on record; 'release' gives it all back",
+    )
+    cloud_parser.add_argument(
+        "-p",
+        "--provider",
+        default="ubicloud",
+        help="provider whose ledger to act on (default: ubicloud)",
+    )
     return parser
 
 
@@ -87,6 +105,42 @@ def main(argv=None) -> int:
             "\nAny of these can also be given as a dotted import path in a "
             "configuration file, so your own classes work the same way."
         )
+        return 0
+
+    if args.command == "machines":
+        from yardstick_benchmark.config import PROVIDERS, resolve
+
+        try:
+            provider = resolve(args.provider, PROVIDERS, "provider")()
+        except Exception as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        records = provider.acquired()
+        if args.action == "list":
+            if not records:
+                print(f"no machines on record ({provider.ledger.path})")
+                return 0
+            print(f"machines on record in {provider.ledger.path}:")
+            for record in records:
+                print(f"  {record['ref']:48s} {record.get('host') or '(no address)'}")
+            return 0
+        if not records:
+            print("nothing to release")
+            return 0
+        # Identifier-driven, like every other release path: this walks the
+        # ledger Yardstick wrote, never the provider's inventory.
+        released = provider.release_all()
+        print(f"released {len(released)} machine(s)")
+        for ref in released:
+            print(f"  {ref}")
+        remaining = provider.acquired()
+        if remaining:
+            print(
+                f"warning: {len(remaining)} still on record; "
+                f"see {provider.ledger.path}",
+                file=sys.stderr,
+            )
+            return 1
         return 0
 
     if args.command == "init":

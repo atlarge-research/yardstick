@@ -50,6 +50,7 @@ except ModuleNotFoundError:  # pragma: no cover - exercised on 3.9/3.10
 
 from yardstick_benchmark.games.minecraft.server import MinecraftServer
 from yardstick_benchmark.games.minecraft.workload import WalkAround, WorldGeneration
+from yardstick_benchmark.provisioning import Das, ProvisioningError, Ubicloud
 from yardstick_benchmark.util import is_localhost
 
 
@@ -62,6 +63,12 @@ GAMES: Dict[str, type] = {
 WORKLOADS: Dict[str, type] = {
     "walkaround": WalkAround,
     "worldgen": WorldGeneration,
+}
+
+#: Short names usable as ``[provisioning] provider``.
+PROVIDERS: Dict[str, type] = {
+    "ubicloud": Ubicloud,
+    "das": Das,
 }
 
 
@@ -242,6 +249,45 @@ class DeploymentConfig:
 
 
 @dataclass
+class ProvisioningConfig:
+    """How to acquire machines, for the modes that need to.
+
+    Options other than those named here are passed to the provider's
+    constructor, so provider-specific settings (an Ubicloud location, the SSH
+    key to install, machine sizes) live here without this module having to
+    mirror them. ``[provisioning.server]`` and ``[provisioning.workload]``
+    override them for one group of machines:
+
+        [provisioning]
+        provider = "ubicloud"
+        workload_nodes = 2
+        location = "eu-central-h1"
+
+        [provisioning.server]
+        size = "standard-4"
+
+        [provisioning.workload]
+        size = "standard-2"
+    """
+
+    provider: str = "ubicloud"
+    #: Machines to run emulated players on. The game server always gets one
+    #: of its own, so that the players never compete with it for CPU.
+    workload_nodes: int = 1
+    #: Options shared by both groups, passed to the provider's constructor.
+    options: Dict[str, Any] = field(default_factory=dict)
+    #: Per-group overrides.
+    server: Dict[str, Any] = field(default_factory=dict)
+    workload: Dict[str, Any] = field(default_factory=dict)
+
+    def options_for(self, group: str) -> Dict[str, Any]:
+        """Constructor options for one group of machines."""
+        merged = dict(self.options)
+        merged.update(self.server if group == "server" else self.workload)
+        return merged
+
+
+@dataclass
 class MonitoringConfig:
     """What to collect while the workload runs."""
 
@@ -271,6 +317,7 @@ class BenchmarkConfig:
     workload: str = "worldgen"
     workload_options: Dict[str, Any] = field(default_factory=dict)
     deployment: DeploymentConfig = field(default_factory=DeploymentConfig)
+    provisioning: ProvisioningConfig = field(default_factory=ProvisioningConfig)
     monitoring: MonitoringConfig = field(default_factory=MonitoringConfig)
     output: OutputConfig = field(default_factory=OutputConfig)
 
@@ -288,7 +335,14 @@ class BenchmarkConfig:
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any], where: str = "") -> "BenchmarkConfig":
-        known_sections = {"deployment", "game", "workload", "monitoring", "output"}
+        known_sections = {
+            "deployment",
+            "game",
+            "workload",
+            "monitoring",
+            "output",
+            "provisioning",
+        }
         unknown = set(data) - known_sections
         if unknown:
             raise ConfigError(
@@ -320,9 +374,14 @@ class BenchmarkConfig:
             workload=workload,
             workload_options=workload_options,
             deployment=_build_section(DeploymentConfig, section("deployment"), where),
+            provisioning=_build_provisioning(section("provisioning"), where),
             monitoring=_build_section(MonitoringConfig, section("monitoring"), where),
             output=_build_section(OutputConfig, section("output"), where),
         )
+
+    @property
+    def provider_class(self) -> type:
+        return resolve(self.provisioning.provider, PROVIDERS, "provider")
 
     @property
     def game_class(self) -> type:
@@ -354,22 +413,33 @@ class BenchmarkConfig:
                 f"[deployment] server_host {server_host!r} is not in hosts "
                 f"{self.deployment.hosts}"
             )
-        if self.deployment.mode != "local":
-            raise ConfigError(
-                f"[deployment] mode = {self.deployment.mode!r} is not "
-                f"supported yet: Yardstick cannot yet stage files onto a "
-                f"machine other than the one it runs on (see "
-                f"yardstick_benchmark.util.stage). Use mode = 'local' and run "
-                f"Yardstick on the machine that should host the deployment."
-            )
-        remote_hosts = [h for h in self.deployment.hosts if not is_localhost(h)]
-        if remote_hosts:
-            raise ConfigError(
-                f"[deployment] mode = 'local' runs everything on this machine, "
-                f"but hosts names {', '.join(remote_hosts)}. Either use "
-                f"hosts = ['localhost'], or run Yardstick on the machine you "
-                f"want the deployment on."
-            )
+        if self.deployment.mode == "local":
+            remote_hosts = [h for h in self.deployment.hosts if not is_localhost(h)]
+            if remote_hosts:
+                raise ConfigError(
+                    f"[deployment] mode = 'local' runs everything on this "
+                    f"machine, but hosts names {', '.join(remote_hosts)}. "
+                    f"Either use hosts = ['localhost'], or run Yardstick on "
+                    f"the machine you want the deployment on."
+                )
+        else:
+            if self.provisioning.workload_nodes < 1:
+                raise ConfigError("[provisioning] workload_nodes must be at least 1")
+            provider = self.provider_class
+            for group in ("server", "workload"):
+                where = f"[provisioning.{group}]"
+                kwargs = build_kwargs(
+                    provider, self.provisioning.options_for(group), where=where
+                )
+                # Actually construct it: the provider's own guards (machine
+                # size, storage size, a missing SSH key) live in __init__,
+                # and checking option *names* alone would let a run get as
+                # far as provisioning before hitting them. Constructing a
+                # provisioner touches nothing remote.
+                try:
+                    provider(**kwargs)
+                except ProvisioningError as exc:
+                    raise ConfigError(f"{where}: {exc}") from exc
         build_kwargs(self.game_class, self.game_options, where="[game]")
         build_kwargs(
             self.workload_class,
@@ -388,6 +458,29 @@ class BenchmarkConfig:
         )
 
 
+def _build_provisioning(values: Mapping[str, Any], where: str) -> ProvisioningConfig:
+    """Split the [provisioning] table into named fields and provider options."""
+    raw = dict(values)
+    server = raw.pop("server", {})
+    workload = raw.pop("workload", {})
+    for name, value in (("server", server), ("workload", workload)):
+        if not isinstance(value, dict):
+            raise ConfigError(f"{where}: [provisioning.{name}] must be a table")
+    provider = raw.pop("provider", "ubicloud")
+    workload_nodes = raw.pop("workload_nodes", 1)
+    if not isinstance(workload_nodes, int) or isinstance(workload_nodes, bool):
+        raise ConfigError(f"{where}: [provisioning] workload_nodes must be an integer")
+    # Fail fast on an unknown provider, rather than after a deployment.
+    resolve(str(provider), PROVIDERS, "provider")
+    return ProvisioningConfig(
+        provider=str(provider),
+        workload_nodes=workload_nodes,
+        options=raw,
+        server=dict(server),
+        workload=dict(workload),
+    )
+
+
 def _build_section(cls: type, values: Mapping[str, Any], where: str):
     fields = {f.name for f in cls.__dataclass_fields__.values()}  # type: ignore[attr-defined]
     unknown = set(values) - fields
@@ -403,7 +496,7 @@ def _build_section(cls: type, values: Mapping[str, Any], where: str):
 EXAMPLE_CONFIG = """\
 # Yardstick benchmark configuration.
 #
-# Run it with:  yardstick run experiment.toml
+# Run it with:   yardstick run experiment.toml
 # Check it with: yardstick validate experiment.toml
 
 [deployment]
@@ -411,19 +504,38 @@ EXAMPLE_CONFIG = """\
 # machines running the game, the players and the metrics stack):
 #
 #   local    both are this machine -- everything runs where you start
-#            Yardstick. The only mode supported today.
-#   cloud    control plane here, data plane on remote hosts.
-#   cluster  control plane on a cluster head node, data plane on the worker
-#            nodes you reserved (e.g. with `preserve` on DAS-6).
+#            Yardstick.
+#   cloud    control plane here, data plane on VMs provisioned on demand.
+#   cluster  control plane on a cluster head node, data plane on worker
+#            nodes reserved with `preserve` (e.g. DAS-6).
 #
-# cloud and cluster need Yardstick to copy files onto another machine, which
-# is not implemented yet (see yardstick_benchmark.util.stage). Until then,
-# run Yardstick on the machine that should host the deployment.
+# For cloud and cluster, see [provisioning] below.
 mode = "local"
 hosts = ["localhost"]
 # Working directory on each node. Worlds, logs and the metrics database live
 # here during a run.
 wd = "/tmp/yardstick"
+
+# Only used when mode is "cloud" or "cluster".
+#
+# [provisioning]
+# provider = "ubicloud"          # or "das", or an import path
+# workload_nodes = 1             # machines running emulated players; the
+#                                # game server always gets one to itself
+# location = "eu-central-h1"     # options here go to the provider, and are
+#                                # shared by both groups below
+#
+# The game server wants headroom over its JVM heap (4 GB by default) and
+# several cores for chunk generation; the emulated players are much lighter.
+# yardstick_benchmark.saturation checks after every run whether the workload
+# machines were actually the bottleneck, so you find out if these are too
+# small rather than quietly measuring the wrong thing.
+#
+# [provisioning.server]
+# size = "standard-4"            # 4 vCPU / 16 GB on Ubicloud
+#
+# [provisioning.workload]
+# size = "standard-2"            # 2 vCPU / 8 GB
 
 [game]
 type = "minecraft"

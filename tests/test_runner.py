@@ -7,11 +7,13 @@ before teardown removes the database. None of that needs a container.
 """
 
 import json
+from pathlib import Path
 
 import pytest
 
 from yardstick_benchmark import runner
 from yardstick_benchmark.config import BenchmarkConfig
+from yardstick_benchmark.model import Node
 
 
 class FakeComponent:
@@ -83,15 +85,41 @@ class FakeWorkload:
         BUILT["log"].append("workload.cleanup")
 
 
+class FakeInfo:
+    bucket = "yardstick"
+    organization = "yardstick"
+    urls = ["http://localhost:8086"]
+    token = "token"
+
+
 class FakeInfluxDB(FakeComponent):
     def __init__(self, node, **kwargs):
         super().__init__(BUILT["log"], "influxdb")
         self.node = node
         self.exported = None
+        self.info = FakeInfo()
         BUILT["influxdb"] = self
 
     def get_info(self):
-        return "influx-info"
+        return self.info
+
+    # The saturation check queries the database directly; answer with no
+    # rows, which it reports as "could not check" rather than as healthy.
+    def _client(self):
+        return self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def query_api(self):
+        return self
+
+    def query(self, query=None, org=None):
+        BUILT.setdefault("queries", []).append(query)
+        return []
 
     def export_csv(self, dest, start=None, stop=None):
         self._log.append("influxdb.export_csv")
@@ -170,7 +198,7 @@ def test_workload_is_told_how_to_reach_the_server(tmp_path):
     options = BUILT["workloads"][0].options
     assert options["server_host"] == "localhost"
     assert options["rcon_password"] == "hunter2"
-    assert options["influxdb_info"] == "influx-info"
+    assert options["influxdb_info"] is BUILT["influxdb"].info
     assert options["bots_per_node"] == 4
 
 
@@ -227,3 +255,112 @@ def test_telegraf_scrapes_jolokia_only_on_the_server_node(tmp_path):
     assert by_host["127.0.0.1"]["jolokia"] is True
     assert by_host["127.0.0.2"]["jolokia"] is False
     assert by_host["127.0.0.2"]["execd_minecraft_ticks"] is False
+
+
+class FakePool:
+    """Stands in for a Provisioner in cloud/cluster mode."""
+
+    def __init__(self, **options):
+        self.options = options
+        self.released = []
+        self.ledger = type("L", (), {"path": "/tmp/ledger.json"})()
+        BUILT.setdefault("pools", []).append(self)
+
+    def provision(self, num, wd=None):
+        base = len(BUILT.setdefault("provisioned", []))
+        nodes = [
+            Node(f"198.51.100.{base + i}", Path(wd or "/home/ubi/yardstick"))
+            for i in range(num)
+        ]
+        BUILT["provisioned"].extend(nodes)
+        return nodes
+
+    def release(self, nodes):
+        self.released.extend(nodes)
+        BUILT.setdefault("released", []).extend(nodes)
+
+
+def _cloud_config(tmp_path, extra=""):
+    text = f"""
+[deployment]
+mode = "cloud"
+wd = "/home/ubi/yardstick"
+
+[provisioning]
+provider = "tests.test_runner.FakePool"
+workload_nodes = 2
+
+[game]
+type = "tests.test_runner.FakeGame"
+
+[workload]
+type = "tests.test_runner.FakeWorkload"
+bots_per_node = 2
+
+[output]
+dir = "{tmp_path / "results"}"
+{extra}
+"""
+    path = tmp_path / "cloud.toml"
+    path.write_text(text)
+    return BenchmarkConfig.from_toml(path)
+
+
+def test_cloud_mode_provisions_a_server_and_workload_machines(tmp_path):
+    runner.run(_cloud_config(tmp_path))
+    provisioned = BUILT["provisioned"]
+    assert len(provisioned) == 3, "one server plus two workload machines"
+    # The game server gets a machine to itself, so players never compete with
+    # it for CPU.
+    assert BUILT["game"].node.host == provisioned[0].host
+    assert {w.node.host for w in BUILT["workloads"]} == {
+        n.host for n in provisioned[1:]
+    }
+
+
+def test_cloud_mode_releases_every_machine_afterwards(tmp_path):
+    runner.run(_cloud_config(tmp_path))
+    assert len(BUILT["released"]) == 3
+
+
+def test_cloud_machines_are_released_even_when_the_run_fails(tmp_path, monkeypatch):
+    """A leaked VM bills until someone notices."""
+
+    def boom(self, health_check=None):
+        raise RuntimeError("workload exploded")
+
+    monkeypatch.setattr(FakeWorkload, "run", boom)
+    with pytest.raises(RuntimeError, match="exploded"):
+        runner.run(_cloud_config(tmp_path))
+    assert len(BUILT["released"]) == 3, "machines must be given back regardless"
+
+
+def test_server_and_workload_groups_get_their_own_provisioner_options(tmp_path):
+    config = _cloud_config(
+        tmp_path,
+        extra="\n[provisioning.server]\nsize = 'big'\n"
+        "\n[provisioning.workload]\nsize = 'small'\n",
+    )
+    runner.run(config)
+    # validate() constructs each provider too, to run its own guards, so the
+    # pools that actually provisioned are the last two.
+    sizes = [pool.options.get("size") for pool in BUILT["pools"][-2:]]
+    assert sizes == ["big", "small"]
+
+
+def test_saturation_is_checked_and_recorded_in_the_manifest(tmp_path):
+    results = runner.run(_config(tmp_path))
+    manifest = json.loads((results / "run.json").read_text())
+    assert "workload_saturation" in manifest
+    # The fake database returns no rows, which must read as "could not
+    # check" rather than as a clean bill of health.
+    assert manifest["workload_saturation"]["checked"] is False
+    assert manifest["workload_saturation"]["ok"] is False
+
+
+def test_telegraf_tags_identify_the_node_and_its_role(tmp_path):
+    runner.run(_config(tmp_path, hosts='["127.0.0.1", "127.0.0.2"]'))
+    tags = {t.node.host: t.options["tags"] for t in BUILT["telegrafs"]}
+    assert tags["127.0.0.1"]["yardstick_role"] == "server"
+    assert tags["127.0.0.2"]["yardstick_role"] == "workload"
+    assert tags["127.0.0.2"]["yardstick_node"] == "127.0.0.2"

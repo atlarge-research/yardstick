@@ -211,14 +211,80 @@ def test_local_is_the_default_mode(tmp_path):
     config.validate()
 
 
-@pytest.mark.parametrize("mode", ["cloud", "cluster"])
-def test_remote_modes_are_rejected_with_an_explanation(tmp_path, mode):
-    """They're the documented topologies, but they need remote staging. Say
-    so up front instead of failing partway through a deployment."""
+@pytest.mark.parametrize("mode,provider", [("cloud", "ubicloud"), ("cluster", "das")])
+def test_remote_modes_validate_now_that_staging_works(tmp_path, mode, provider):
     config = BenchmarkConfig.from_toml(
-        _write(tmp_path, f"[deployment]\nmode = '{mode}'\nhosts = ['localhost']")
+        _write(
+            tmp_path,
+            f"[deployment]\nmode = '{mode}'\n\n"
+            f"[provisioning]\nprovider = '{provider}'\nworkload_nodes = 2\n",
+        )
     )
-    with pytest.raises(ConfigError, match="not supported yet"):
+    config.validate()
+    assert config.provisioning.workload_nodes == 2
+
+
+def test_remote_modes_do_not_require_hosts_to_be_local(tmp_path):
+    """In cloud/cluster mode the machines are provisioned, so the local-only
+    host check must not apply."""
+    config = BenchmarkConfig.from_toml(
+        _write(
+            tmp_path,
+            "[deployment]\nmode = 'cloud'\nhosts = ['some-remote-host']\n"
+            "server_host = 'some-remote-host'\n",
+        )
+    )
+    config.validate()
+
+
+def test_provider_options_are_checked_against_the_provider(tmp_path):
+    config = BenchmarkConfig.from_toml(
+        _write(
+            tmp_path,
+            "[deployment]\nmode = 'cloud'\n\n"
+            "[provisioning]\nprovider = 'ubicloud'\nlocationn = 'eu-central-h1'\n",
+        )
+    )
+    with pytest.raises(ConfigError, match="locationn"):
+        config.validate()
+
+
+def test_per_group_options_override_the_shared_ones(tmp_path):
+    config = BenchmarkConfig.from_toml(
+        _write(
+            tmp_path,
+            "[deployment]\nmode = 'cloud'\n\n"
+            "[provisioning]\nprovider = 'ubicloud'\nsize = 'standard-2'\n"
+            "location = 'eu-central-h1'\n\n"
+            "[provisioning.server]\nsize = 'standard-4'\n",
+        )
+    )
+    config.validate()
+    assert config.provisioning.options_for("server")["size"] == "standard-4"
+    assert config.provisioning.options_for("workload")["size"] == "standard-2"
+    # Shared options reach both groups.
+    assert config.provisioning.options_for("server")["location"] == "eu-central-h1"
+
+
+def test_an_unknown_provider_lists_the_known_ones(tmp_path):
+    with pytest.raises(ConfigError, match="das, ubicloud"):
+        BenchmarkConfig.from_toml(
+            _write(tmp_path, "[provisioning]\nprovider = 'aws'\n")
+        )
+
+
+def test_an_oversized_machine_is_refused_at_validate_time(tmp_path):
+    """The size guard lives in the provisioner; validate() must surface it
+    before anything is created."""
+    config = BenchmarkConfig.from_toml(
+        _write(
+            tmp_path,
+            "[deployment]\nmode = 'cloud'\n\n"
+            "[provisioning]\nprovider = 'ubicloud'\n\n"
+            "[provisioning.server]\nsize = 'standard-60'\n",
+        )
+    )
+    with pytest.raises(ConfigError, match="standard-60"):
         config.validate()
 
 

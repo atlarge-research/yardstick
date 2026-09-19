@@ -14,10 +14,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from contextlib import contextmanager
+
 from yardstick_benchmark.config import BenchmarkConfig, build_kwargs
 from yardstick_benchmark.deployment import Deployment
 from yardstick_benchmark.model import Node
 from yardstick_benchmark.monitoring import InfluxDB, Telegraf
+from yardstick_benchmark.saturation import check_workload_saturation
 from yardstick_benchmark.util import fan_out
 
 
@@ -32,16 +35,83 @@ def run(config: BenchmarkConfig, results_dir: Optional[Path] = None) -> Path:
     """
     config.validate()
 
-    wd = Path(config.deployment.wd)
-    server_host = config.deployment.resolved_server_host()
-    nodes = {host: Node(host, wd) for host in config.deployment.hosts}
-    server_node = nodes[server_host]
-    workload_nodes = [nodes[h] for h in config.deployment.workload_hosts()]
-
     if results_dir is None:
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         results_dir = Path(config.output.dir) / f"{config.workload}-{stamp}"
     results_dir = Path(results_dir)
+
+    with machines(config) as (server_node, workload_nodes):
+        return _run_on(config, server_node, workload_nodes, results_dir)
+
+
+@contextmanager
+def machines(config: BenchmarkConfig):
+    """Yield ``(server_node, workload_nodes)`` for the configured mode.
+
+    In `local` mode the machines already exist and nothing is acquired. In
+    `cloud`/`cluster` mode they are provisioned and then released again --
+    always, including when the benchmark raises, because a leaked VM bills
+    until someone notices and a leaked cluster reservation blocks other
+    users.
+    """
+    if config.deployment.mode == "local":
+        wd = Path(config.deployment.wd)
+        nodes = {host: Node(host, wd) for host in config.deployment.hosts}
+        server_host = config.deployment.resolved_server_host()
+        yield nodes[server_host], [nodes[h] for h in config.deployment.workload_hosts()]
+        return
+
+    provider = config.provider_class
+    acquired: List[Any] = []
+    try:
+        server_pool = provider(
+            **build_kwargs(
+                provider,
+                config.provisioning.options_for("server"),
+                where="[provisioning.server]",
+            )
+        )
+        logger.info("provisioning 1 server machine")
+        server_nodes = server_pool.provision(1, wd=config.deployment.wd or None)
+        acquired.append((server_pool, server_nodes))
+
+        workload_pool = provider(
+            **build_kwargs(
+                provider,
+                config.provisioning.options_for("workload"),
+                where="[provisioning.workload]",
+            )
+        )
+        count = config.provisioning.workload_nodes
+        logger.info("provisioning %d workload machine(s)", count)
+        workload_nodes = workload_pool.provision(count, wd=config.deployment.wd or None)
+        acquired.append((workload_pool, workload_nodes))
+
+        yield server_nodes[0], workload_nodes
+    finally:
+        for pool, pool_nodes in reversed(acquired):
+            try:
+                logger.info("releasing %d machine(s)", len(pool_nodes))
+                pool.release(pool_nodes)
+            except Exception as exc:
+                logger.error(
+                    "could not release machines (%s). They are recorded in %s; "
+                    "run `yardstick cloud release` to give them back.",
+                    exc,
+                    pool.ledger.path,
+                )
+
+
+def _run_on(
+    config: BenchmarkConfig,
+    server_node: Node,
+    workload_nodes: List[Node],
+    results_dir: Path,
+) -> Path:
+    server_host = server_node.host
+    nodes = {server_node.host: server_node}
+    for node in workload_nodes:
+        nodes.setdefault(node.host, node)
 
     influxdb = InfluxDB(server_node)
     server = config.game_class(
@@ -52,14 +122,20 @@ def run(config: BenchmarkConfig, results_dir: Optional[Path] = None) -> Path:
     components: List[Any] = [influxdb, server]
     if config.monitoring.enabled:
         for node in nodes.values():
+            is_server = node.host == server_host
             telegraf = Telegraf(
                 node,
                 # Only the server's node has a JVM to scrape.
-                jolokia=config.monitoring.jolokia and node.host == server_host,
+                jolokia=config.monitoring.jolokia and is_server,
                 jolokia_port=getattr(server, "jolokia_port", 8778),
-                execd_minecraft_ticks=(
-                    config.monitoring.minecraft_ticks and node.host == server_host
-                ),
+                execd_minecraft_ticks=(config.monitoring.minecraft_ticks and is_server),
+                # Tag every metric with where it came from and what that
+                # machine was doing, so server and player metrics can be told
+                # apart after the fact.
+                tags={
+                    "yardstick_node": node.host,
+                    "yardstick_role": "server" if is_server else "workload",
+                },
             )
             telegraf.set_output_influxdb2(influxdb.get_info())
             components.append(telegraf)
@@ -99,6 +175,19 @@ def run(config: BenchmarkConfig, results_dir: Optional[Path] = None) -> Path:
             fan_out(workloads, lambda w: w.cleanup())
 
         finished_at = datetime.now(timezone.utc)
+
+        # Did the players actually keep up? If the workload nodes ran out of
+        # CPU or memory, the server did less work than the experiment asked
+        # for and the numbers understate the load. Check before teardown,
+        # while the database is still up.
+        saturation = check_workload_saturation(
+            influxdb,
+            start=started_at.isoformat(),
+            stop=finished_at.isoformat(),
+        )
+        if not saturation.ok:
+            logger.warning("%s", saturation.summary())
+
         # Export before leaving the block: teardown stops the database, and
         # with keep_node_data = false it deletes its storage too.
         logger.info("exporting metrics to %s", results_dir)
@@ -115,14 +204,19 @@ def run(config: BenchmarkConfig, results_dir: Optional[Path] = None) -> Path:
         "finished_at": finished_at.isoformat(),
         "duration_s": (finished_at - started_at).total_seconds(),
         "total_bots": total_bots,
-        "hosts": config.deployment.hosts,
+        "hosts": sorted(nodes),
         "server_host": server_host,
         "workload_hosts": [n.host for n in workload_nodes],
         "config": _manifest_config(config),
         "files": sorted(p.name for p in written),
+        # Recorded next to the data, so a result can't be read later without
+        # the caveat that came with it.
+        "workload_saturation": saturation.as_dict(),
     }
     (results_dir / "run.json").write_text(json.dumps(manifest, indent=2) + "\n")
     logger.info("wrote %d measurement file(s) to %s", len(written), results_dir)
+    if not saturation.ok:
+        print(saturation.summary())
     return results_dir
 
 
