@@ -97,8 +97,9 @@ from this run understate the load the players were meant to generate:
   Re-run with fewer players per node, or on larger workload nodes.
 ```
 
-The same finding is written into `run.json`, so a result cannot be read later
-without the caveat that came with it. The game server is deliberately not
+The same finding is written into `run.json` and shown in a banner at the top
+of the run's `report.html`, above the charts it invalidates, so a result
+cannot be read later without the caveat that came with it. The game server is deliberately not
 checked — it is supposed to run hot, that is the measurement.
 
 ## Install
@@ -167,7 +168,8 @@ type = "mypackage.workloads.MyWorkload"
 
 Results land in `results/<workload>-<timestamp>/`: one CSV per measurement,
 plus a `run.json` manifest recording the configuration, timings and files
-produced. Load a measurement with:
+produced, plus a `report.html` — see [The report](#the-report). Load a
+measurement with:
 
 ```python
 from yardstick_benchmark.results import read_csv
@@ -182,6 +184,30 @@ df = read_csv("results/worldgen-20260919-101500/minecraft_tick.csv",
 > naive read leaves the header rows in as data and stacks mismatched columns
 > on top of each other — it returns a DataFrame that looks right and is not.
 > `read_csv()` above parses each table separately and aligns them by name.
+
+### The report
+
+Every run also writes `report.html` next to its data: one self-contained page
+— no server, no kernel, no network — answering "how did this run go?" without
+opening a notebook. It shows the configuration, tick duration over time with
+its distribution and p50/p95/p99 beside it, the server's CPU, memory, JVM heap
+and GC, and, in a banner above everything else, whether the emulated players
+kept up. If they did not, the page says so in those terms rather than
+presenting the charts as a measurement.
+
+Regenerate it for any past run — the report is built from the exported CSVs,
+not from the metrics database, so a results directory stays reportable long
+after its InfluxDB is gone:
+
+```sh
+uv run yardstick report results/worldgen-20260919-101500
+uv run yardstick report results/worldgen-20260919-101500 -o /tmp/run.html
+```
+
+Reports need the `notebooks` extra (pandas, matplotlib, seaborn). Without it
+`yardstick report` says which packages to install, and `yardstick run` logs a
+warning and skips the report — a run that produced its data is not failed by a
+chart that could not be drawn.
 
 ### From Python
 
