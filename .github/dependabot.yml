@@ -1,0 +1,69 @@
+# Dependabot version updates for the dependency trees that actually ship
+# from `main`.
+#
+# Security *alerts* are repo-wide and also fire for manifests that only exist
+# on other branches (`ys/go.mod`,
+# `terrastick/analysis-scripts/requirements.txt`). Those are deliberately not
+# listed here: version updates only run against paths on the default branch,
+# and cleaning them up is branch hygiene (see #54), not a dependency bump.
+#
+# Updates are grouped so a week's worth of transitive churn arrives as one PR
+# per ecosystem instead of one per package -- a single stale Pillow was
+# responsible for 13 separate alerts before this config existed. Major
+# upgrades are left ungrouped so they land as their own reviewable PR.
+version: 2
+updates:
+  # Python: pyproject.toml + uv.lock. Only influxdb-client, jinja2 and plumbum
+  # are direct runtime deps; everything else here arrives through the
+  # `notebooks` extra or the dev group.
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      python:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "deps"
+
+  # Mineflayer workload. NOTE: this tree is baked into the published container
+  # image (docker.io/jdonkervliet/yardstick-mineflayer, see the Dockerfile in
+  # that directory). Merging a lock bump here changes nothing at runtime until
+  # the image is rebuilt and republished, so these are kept monthly and should
+  # be batched with an image release rather than merged on sight.
+  - package-ecosystem: "npm"
+    directory: "/yardstick_benchmark/games/minecraft/workload"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    groups:
+      npm:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "deps"
+
+  # The Jolokia tick collector. Its compiled binary is committed and run by
+  # Telegraf's execd input, so a dependency bump here also needs `make check`
+  # and the rebuilt binary committed -- CI's `go` job covers the build.
+  - package-ecosystem: "gomod"
+    directory: "/yardstick_benchmark/monitoring"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "deps"
+
+  # Actions pinned in .github/workflows/ci.yml.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"
