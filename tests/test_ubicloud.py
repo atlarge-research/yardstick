@@ -339,3 +339,30 @@ def test_machines_are_created_concurrently(fake, monkeypatch):
     cloud = fake(max_vms=4)
     cloud.provision(4)
     assert max(concurrent) > 1, "creates ran one after another"
+
+
+def test_constructing_does_not_need_an_ssh_key(tmp_path, monkeypatch):
+    """`yardstick validate` constructs a provisioner to check machine sizes.
+    That has to work on a machine with no SSH key -- whether a configuration
+    is well-formed is a different question from whether this machine happens
+    to be ready to provision. CI has no key, and this failed there."""
+    monkeypatch.setenv("HOME", str(tmp_path))  # no ~/.ssh at all
+    Ubicloud(size="standard-2", ledger=tmp_path / "l.json")  # must not raise
+
+
+def test_a_missing_ssh_key_is_reported_when_machines_are_created(fake, monkeypatch):
+    """...but it must still fail clearly, and before anything is created."""
+    monkeypatch.setenv("HOME", str(fake.ledger_path.parent / "nohome"))
+    cloud = fake(ssh_public_key=None)
+    with pytest.raises(UbicloudError, match="no SSH public key found"):
+        cloud.provision(1)
+    assert fake.log() == [], "nothing should have reached the CLI"
+    assert cloud.acquired() == [], "and nothing should be left on record"
+
+
+def test_an_explicit_key_is_used_verbatim(fake):
+    cloud = fake(ssh_public_key="ssh-ed25519 AAAAexplicit me@host")
+    cloud._wait_until_provisioned = lambda record, timeout_s: None
+    cloud.provision(1)
+    create = next(args for args in fake.log() if args[2:3] == ["create"])
+    assert create[-1] == "ssh-ed25519 AAAAexplicit me@host"

@@ -86,6 +86,33 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _warn_if_not_ready_to_provision(config) -> None:
+    """Report anything about *this machine* that would stop a run starting."""
+    from yardstick_benchmark.config import build_kwargs
+    from yardstick_benchmark.provisioning import ProvisioningError
+
+    provider = config.provider_class
+    try:
+        pool = provider(
+            **build_kwargs(
+                provider, config.provisioning.options_for("server"), where=""
+            )
+        )
+    except Exception:
+        return
+    resolve = getattr(pool, "resolve_ssh_public_key", None)
+    if callable(resolve):
+        try:
+            resolve()
+        except ProvisioningError as exc:
+            print(f"\nwarning: {exc}", file=sys.stderr)
+            print(
+                "         The configuration is valid; this machine just "
+                "cannot provision yet.",
+                file=sys.stderr,
+            )
+
+
 def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
     logging.basicConfig(
@@ -185,6 +212,11 @@ def main(argv=None) -> int:
                 f"  players:  {provisioning.workload_nodes} machine(s) "
                 f"({workload_opts.get('size', 'provider default')})"
             )
+            # The configuration can be perfectly valid while this machine is
+            # not yet able to act on it, so this is a warning rather than an
+            # error -- a config is often checked somewhere other than where
+            # it will run.
+            _warn_if_not_ready_to_provision(config)
         return 0
 
     # Imported here so `validate`, `init` and `list` stay usable on a machine

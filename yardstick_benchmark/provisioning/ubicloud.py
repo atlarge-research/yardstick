@@ -42,7 +42,8 @@ class Ubicloud(Provisioner):
         ssh_public_key: Public key to install on each VM, either the key
             material itself or the name of a key already registered with
             Ubicloud. Defaults to ``~/.ssh/id_ed25519.pub`` or
-            ``~/.ssh/id_rsa.pub``, whichever exists.
+            ``~/.ssh/id_rsa.pub``, whichever exists, resolved when machines
+            are actually created.
         location: Ubicloud location to create VMs in.
         size: Machine size, from :attr:`ALLOWED_SIZES`.
         storage_gib: Boot disk size.
@@ -166,7 +167,13 @@ touch {READY_MARKER}
                 f"storage_gib {storage_gib} is not a valid Ubicloud storage "
                 f"size. Permitted: {', '.join(map(str, self.ALLOWED_STORAGE_GIB))}"
             )
-        self.ssh_public_key = ssh_public_key or _default_ssh_public_key()
+        # Resolved lazily, not here: constructing a provisioner should not
+        # require the machine doing the constructing to be ready to provision.
+        # `yardstick validate` builds one to check machine sizes, and that
+        # must work on a machine with no SSH key at all -- checking whether a
+        # configuration is well-formed is a different question from whether
+        # this machine can run it.
+        self._ssh_public_key = ssh_public_key
         self.location = location
         self.size = size
         self.storage_gib = storage_gib
@@ -180,6 +187,25 @@ touch {READY_MARKER}
         self.cli = cli
 
     # ---------------------------------------------------------------- CLI
+
+    def resolve_ssh_public_key(self) -> str:
+        """The key to install on each VM, resolving the default if needed.
+
+        Raises ProvisioningError with an actionable message when no key was
+        configured and none can be found.
+        """
+        if self._ssh_public_key:
+            return self._ssh_public_key
+        for name in ("id_ed25519.pub", "id_rsa.pub"):
+            path = Path.home() / ".ssh" / name
+            if path.is_file():
+                return path.read_text().strip()
+        raise ProvisioningError(
+            "no SSH public key found (~/.ssh/id_ed25519.pub or "
+            "~/.ssh/id_rsa.pub). Set ssh_public_key in the [provisioning] "
+            "section of your config, to either the key material or the name "
+            "of a key registered with Ubicloud."
+        )
 
     def _run(self, *args: str, timeout: float = 300) -> str:
         cmd = [self.cli, *args]
@@ -240,6 +266,9 @@ touch {READY_MARKER}
                 f"refusing to create {num} VMs: the cap is {self.max_vms}. "
                 f"Pass max_vms= explicitly if you really want more."
             )
+        # Resolve before creating anything: a missing key should fail with a
+        # clear message rather than part way through a fleet.
+        self._ssh_public_key = self.resolve_ssh_public_key()
         run_id = uuid.uuid4().hex[:8]
         template = wd or self.DEFAULT_WD
         refs: List[str] = []
@@ -290,7 +319,7 @@ touch {READY_MARKER}
         ]
         if self.init_script:
             create_args += ["-i", self.init_script]
-        create_args.append(self.ssh_public_key)
+        create_args.append(self.resolve_ssh_public_key())
         self._run(*create_args)
 
     def _refresh(self, ref: str) -> Dict[str, Any]:
@@ -360,16 +389,3 @@ touch {READY_MARKER}
             Path(str(record["wd"])),
             user=str(record.get("unix_user") or self.unix_user),
         )
-
-
-def _default_ssh_public_key() -> str:
-    for name in ("id_ed25519.pub", "id_rsa.pub"):
-        path = Path.home() / ".ssh" / name
-        if path.is_file():
-            return path.read_text().strip()
-    raise ProvisioningError(
-        "no SSH public key found (~/.ssh/id_ed25519.pub or ~/.ssh/id_rsa.pub). "
-        "Set ssh_public_key in the [provisioning] section of your config, to "
-        "either the key material or the name of a key registered with "
-        "Ubicloud."
-    )
