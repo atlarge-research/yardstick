@@ -329,7 +329,7 @@
   # default_field_prefix    = ""
   # default_field_separator = "."
   # Add agents URLs to query
-  urls = ["http://localhost:8778/jolokia"]
+  urls = ["{{ jolokia_url | default("http://localhost:8778/jolokia") }}"]
   # username = ""
   # password = ""
   # response_timeout = "5s"

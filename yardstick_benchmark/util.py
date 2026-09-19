@@ -10,6 +10,7 @@ from contextlib import contextmanager
 from typing import Callable, Iterable, Optional, TypeVar
 
 from plumbum import SshMachine, local
+from plumbum.machines.local import LocalMachine
 
 
 T = TypeVar("T")
@@ -96,10 +97,14 @@ def wait_for_url(url: str, timeout_s: float, poll_s: float = 1.0) -> None:
 # TCP-level keepalive. BatchMode avoids a dead host hanging on a password
 # prompt.
 _SSH_KEEPALIVE_OPTS = [
-    "-o", "ServerAliveInterval=15",
-    "-o", "ServerAliveCountMax=8",
-    "-o", "TCPKeepAlive=yes",
-    "-o", "BatchMode=yes",
+    "-o",
+    "ServerAliveInterval=15",
+    "-o",
+    "ServerAliveCountMax=8",
+    "-o",
+    "TCPKeepAlive=yes",
+    "-o",
+    "BatchMode=yes",
 ]
 
 
@@ -120,3 +125,25 @@ def remote(host: str):
         yield machine
     finally:
         machine.close()
+
+
+def stage(machine, src, dst: str) -> None:
+    """Copy the local file `src` onto `machine` at path `dst`.
+
+    Parent directories are created as needed.
+
+    NOTE: staging to a genuinely remote node is not implemented. plumbum's
+    ``LocalPath.copy()`` rejects a ``RemotePath`` destination outright, so
+    every deploy() that stages files works only when the node is localhost.
+    Fixing it means switching to ``machine.upload()`` here (and making sure
+    the destination directory exists on the far side first). Until then, fail
+    with an explicit message rather than a bare TypeError from deep inside
+    plumbum.
+    """
+    if not isinstance(machine, LocalMachine):
+        raise NotImplementedError(
+            f"cannot stage {src} to {machine}: copying files to a remote node "
+            "is not implemented yet (see yardstick_benchmark.util.stage). "
+            "Yardstick currently only supports nodes whose host is localhost."
+        )
+    local.path(src).copy(local.path(dst))
