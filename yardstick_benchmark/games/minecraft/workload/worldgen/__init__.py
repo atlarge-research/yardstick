@@ -56,7 +56,7 @@ class WorldGeneration(MineflayerWorkload):
         start_distance: int = 2000,
         step_distance: int = 1500,
         teleport_y: int = 200,
-        chunk_load_timeout: timedelta = timedelta(seconds=60),
+        chunk_load_timeout: timedelta = timedelta(seconds=30),
         bots_join_delay: timedelta = timedelta(seconds=5),
         bot_index: int = 0,
         server_port: int = GAME_PORT,
@@ -96,7 +96,11 @@ class WorldGeneration(MineflayerWorkload):
                 damage).
             chunk_load_timeout: Per-teleport safety cap on how long to wait
                 for the target chunk to load before giving up on that one and
-                moving on.
+                moving on. Defaults to 30s to match the server's own keepalive
+                limit: the server drops a client after roughly 30s of
+                main-thread stall, and that limit is not configurable, so a
+                teleport whose generation exceeds it is treated as the ceiling
+                rather than something to wait out.
             bots_join_delay: Delay between successive players joining on this
                 node.
             bot_index: Index of this node's workload among all nodes; also

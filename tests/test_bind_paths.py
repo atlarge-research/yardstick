@@ -59,13 +59,17 @@ def _args_for(component):
 
         class FakeMachine:
             def __getitem__(self, name):
+                # start() reads /proc/meminfo to size the JVM heap from the
+                # node's own RAM, so the fake has to answer that.
+                output = "MemTotal:       16000000 kB\n" if name == "cat" else ""
+
                 class Cmd:
                     def __getitem__(self, args):
                         captured["args"] = list(args)
                         return self
 
                     def __call__(self, *a, **k):
-                        return ""
+                        return output
 
                 return Cmd()
 

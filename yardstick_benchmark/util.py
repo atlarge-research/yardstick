@@ -93,13 +93,15 @@ def wait_for_url(url: str, timeout_s: float, poll_s: float = 1.0) -> None:
     )
 
 
+# SSH options for every remote() connection.
+#
 # Keep long-lived SSH sessions (e.g. a foreground workload run that streams
 # output for minutes) from being dropped during quiet/laggy periods: send a
 # keepalive every 15s and only give up after ~8 missed (~2min), and enable
 # TCP-level keepalive. BatchMode avoids a dead host hanging on a password
 # prompt. The same options are handed to scp (see stage()), which otherwise
 # gets none of them and would sit on a password prompt during a file upload.
-_SSH_KEEPALIVE_OPTS = [
+_SSH_OPTS = [
     "-o",
     "ServerAliveInterval=15",
     "-o",
@@ -137,8 +139,8 @@ def remote(host: str, user: Optional[str] = None):
     machine = SshMachine(
         host,
         user=user,
-        ssh_opts=_SSH_KEEPALIVE_OPTS,
-        scp_opts=_SSH_KEEPALIVE_OPTS,
+        ssh_opts=_SSH_OPTS,
+        scp_opts=_SSH_OPTS,
     )
     try:
         yield machine

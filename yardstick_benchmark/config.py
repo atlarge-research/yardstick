@@ -11,7 +11,7 @@ A minimal configuration::
 
     [deployment]
     hosts = ["localhost"]
-    wd = "/tmp/yardstick"
+    wd = "/tmp/yardstick"   # made per-user automatically if omitted
 
     [game]
     type = "minecraft"
@@ -35,6 +35,7 @@ is an error that names the ones that would have worked.
 path (``mypackage.workloads.MyWorkload``) for a class of your own.
 """
 
+import getpass
 import importlib
 import inspect
 import re
@@ -43,10 +44,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Union, get_args, get_origin
 
-try:  # Python 3.11+
-    import tomllib
-except ModuleNotFoundError:  # pragma: no cover - exercised on 3.9/3.10
-    import tomli as tomllib  # type: ignore[no-redef]
+import tomllib
 
 from yardstick_benchmark.games.minecraft.server import MinecraftServer
 from yardstick_benchmark.games.minecraft.workload import WalkAround, WorldGeneration
@@ -231,7 +229,9 @@ class DeploymentConfig:
 
     mode: str = "local"
     hosts: List[str] = field(default_factory=lambda: ["localhost"])
-    wd: str = "/tmp/yardstick"
+    #: Per-user by default: on a shared machine a single /tmp/yardstick would
+    #: be created by whoever got there first, locking everyone else out.
+    wd: str = field(default_factory=lambda: f"/tmp/{getpass.getuser()}-yardstick")
     #: Host running the game server. Defaults to the first entry in `hosts`.
     server_host: Optional[str] = None
 
@@ -567,7 +567,7 @@ mode = "local"
 hosts = ["localhost"]
 # Working directory on each node. Worlds, logs and the metrics database live
 # here during a run.
-wd = "/tmp/yardstick"
+wd = "/tmp/yardstick"   # made per-user automatically if omitted
 
 # Only used when mode is "cloud" or "cluster".
 #

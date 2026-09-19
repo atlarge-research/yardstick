@@ -15,300 +15,187 @@ This is orders of magnitudes lower than today's most scalable worlds, such as EV
 The only way MLG operators can support their high player numbers and sustain their high popularity is by
 splitting players across a large number of small instances, preventing players from playing together in large groups.
 
-In this tutorial, you make your first steps into exploring the performance of MLGs by running performance evaluation experiments with Yardstick,<sup id="a3">[3](#fn3)</sup><sup>,</sup><sup id="a4">[4](#fn4)</sup> our MLG benchmark.
+In this tutorial, you take your first steps in exploring the performance of MLGs by running performance evaluation experiments with Yardstick,<sup id="a3">[3](#fn3)</sup><sup>,</sup><sup id="a4">[4](#fn4)</sup> our MLG benchmark.
 
 ## Setting Up
 
 ### SSH
 
-We run the Yardstick benchmark on the [DAS-6 compute cluster](https://www.cs.vu.nl/das/) at the VU.
-To connect to DAS-6, append the following configuration to your SSH configuration file, located at `~/.ssh/config`:
+We run the Yardstick benchmark on the [DAS-5 compute cluster](https://www.cs.vu.nl/das5/) at the VU.
+To connect to DAS-5, append the following configuration to your SSH configuration file, located at `~/.ssh/config`:
 
 ```
-Host das6
-	HostName fs0.das6.cs.vu.nl
-	User DAS6_USERNAME
+Host das5
+	HostName fs0.das5.cs.vu.nl
+	User DAS_5_USERNAME
 ```
 
-You should now be able to connect to the DAS-6 using the command `ssh das6`.
-SSH will first request your VUnet password, and then your DAS-6 password.
+You should now be able to connect to the DAS-5 using the command `ssh das5`.
+SSH will first request your VUnet password, and then your DAS-5 password.
 
 > [!TIP]
-> If you connect to the DAS-6 regularly, it is worth switching to public-key authentication using `ssh-keygen` and `ssh-copy-id`. This is left as an exercise for the reader.
+> If you connect to the DAS-5 regularly, it is worth switching to public-key authentication using `ssh-keygen` and `ssh-copy-id`. This is left as an exercise for the reader.
 
 > [!TIP]
-> Use [eduVPN](https://www.eduvpn.org/client-apps/) to connet to the DAS-6 when you're not directly connected to the VU campus network.
+> Connecting from outside of the university network? You can either use [eduVPN](https://www.eduvpn.org/client-apps/) to connect to the DAS-5 when you're not directly connected to the VU campus network, or use `ssh das5-remote` after adding this to your `~/.ssh/config`:
+>
+> ```
+> Host das5-remote
+> 	HostName fs0.das5.cs.vu.nl
+> 	User DAS_5_USERNAME
+> 	ProxyJump vu-data
+> ```
 
 ### VSCode
 
 We will work with a remote [Jupyter Notebook](https://jupyter.org/), which is easy to read and modify through [VSCode](https://code.visualstudio.com/).
 If you have not done so already, install VSCode.
-Next, use its "Connect to Host..." feature to connect VSCode to DAS6.
+Next, use its "Connect to Host..." feature to connect VSCode to DAS-5.
 
-### Python Environment
+### Yardstick
 
-Now that your VSCode is connected to DAS6, open a terminal (shortcut: `ctrl+~`).
-We use [uv](https://docs.astral.sh/uv/) to manage Python and Yardstick's
-dependencies. It installs as a single binary and needs no administrator rights:
+Now that your VSCode is connected to DAS-5, open a terminal (shortcut: `ctrl+~`) and run the following commands:
 
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
-
-Close (`ctrl+D`) and reopen (`ctrl+~`) your shell so `uv` is on your `PATH`.
-
-> [!IMPORTANT]
-> By default, users on DAS6 have limited storage space in their home
-> directory, which the container images will exhaust. Point both uv's cache
-> and apptainer's at your scratch directory before you start, and add these
-> lines to your `~/.bashrc` so they apply to every new shell:
->
-> ```bash
-> export UV_CACHE_DIR=/var/scratch/`whoami`/uv-cache
-> export APPTAINER_CACHEDIR=/var/scratch/`whoami`/apptainer-cache
-> ```
-
-Now get Yardstick and its dependencies:
-
-```bash
-git clone https://github.com/atlarge-research/yardstick
+curl -LsSf https://astral.sh/uv/install.sh | sh
+git clone https://github.com/atlarge-research/yardstick.git
 cd yardstick
 uv sync --extra notebooks
 ```
 
-That creates a `.venv` in the repository with everything the benchmark and
-the example notebooks need. There is nothing else to install: the game
-server, the metrics database, the metrics agent and the emulated players all
-run as [apptainer](https://apptainer.org/) containers, which DAS6 already
-provides.
-
-Check that it worked:
-
-```bash
-uv run yardstick list
-```
-
 ## Running Experiments
 
-There are two ways to run Yardstick, and this tutorial uses both.
+You are now ready to visit the [world generation experiment](../experiments/world_generation_time.ipynb) and start running experiments with Yardstick.
 
-### Reserving a Node
+Open the `yardstick` directory in VSCode (`ctrl+shift+p > File: Open Folder`), and then open `experiments > world_generation_time.ipynb`. Make sure to select the right Python kernel and you will be ready to go.
 
-DAS6 is a shared cluster. The machine you land on when you `ssh das6` is the
-*head node*, which everyone shares and which you should never run a benchmark
-on -- your measurements would be meaningless and you'd disrupt everyone
-else's. Instead you reserve a compute node for yourself.
-
-It is worth being precise about what runs where. Yardstick separates the
-**control plane** -- the process that decides what to deploy and when -- from
-the **data plane**, the machines actually running the game server, the
-emulated players and the metrics stack. On a cluster, the intended
-arrangement is Yardstick's `cluster` mode: control plane on the head node,
-data plane on the worker nodes you reserved.
+In the remainder of this section, we will ask you to perform increasingly difficult experiments,
+which will make you increasingly adept at using Yardstick specifically, and performing experiments on a distributed system generally.
 
 > [!NOTE]
-> `cluster` mode exists, but it has not yet been exercised against a real
-> multi-node DAS reservation. This tutorial therefore uses `local` mode and
-> puts *both* planes on a single reserved worker node: fewer moving parts,
-> and the head node stays free, which is the part that matters. Once you are
-> comfortable, `mode = "cluster"` with a `[provisioning]` section is the
-> arrangement to graduate to.
+> Here starts the challenging part of the tutorial. Each subsection can easily take 30 minutes or multiple hours to complete.
+> If you are doing this tutorial as part of a lecture or workshop, there may not be sufficient time remaining to complete all exercises.
+> This is by design. If you are out of time but remain curious about this work, feel free to explore the remaining sections from home. Your account is likely valid for several weeks.
 
-Reserve a node for 30 minutes and log in to it:
+### Jupyter Notebook Example
 
-```bash
-preserve -np 1 -t 1800
-preserve -llist
-```
+We recommend reading the file line by line to develop a sufficiently good understanding of what is going on.
+The notebook compares world generation across three Minecraft versions. Run the cells from the top: first **Setup**, then **Start InfluxDB** (this brings up the metrics database on the headnode and leaves it running), then the **Experiment runner**. Each of the three **Run** cells leases its own two compute nodes, runs one version, and releases them, so a single version takes roughly 10-15 minutes and all three take ~30-45 minutes. You can run just one version cell to start, or all three for the full comparison. The plot cells below read the captured results, so you can re-run them at any time.
 
-`preserve -llist` gives an overview of reservations on DAS6. You'll see a
-line similar to the one below, with your username:
+> [!IMPORTANT]
+> Leave the **Cleanup** cell (at the very bottom) for last -- it stops and deletes InfluxDB. Run it only when you are finished with all the exercises, otherwise the later exercises and the metric-exploration cells will have no database to query.
+
+While an experiment is running, you can run `preserve -llist` in the terminal to get an overview of node reservations on the DAS-5. You'll likely see a line similar to the one below, with your username:
 
 ```
 id      user            start           stop            state   nhosts  hosts
 351651  core2435        06/21   07:02   06/21   07:18   R       2       node001 node015
 ```
 
-This shows that user `core2435` has reserved 2 nodes: `node001` and `node015`
-from 7:02am until 7:18am.
+This shows that user `core2435` has reserved 2 nodes: `node001` and `node015` from 7:02am until 7:18am.
 
-Which node did you reserve? How many nodes are in use by others? How many do
-they use?
+> **Question 1**  
+> Which nodes did you reserve? How many nodes are in use by others? How many nodes do they use?
 
-Once your reservation's state is `R`, connect to your node and go back to the
-repository:
+Once your runs have completed, it is time to review the resulting plots.
 
-```bash
-ssh node0XY
-cd yardstick
-```
+> **Question 2**  
+> Are the results surprising? Why (not)?
 
-> [!IMPORTANT]
-> Your reservation ends at the time `preserve -llist` shows, and your
-> processes are killed when it does. If a run stops abruptly, check whether
-> your reservation expired -- and reserve more time than you think you need.
+### Visualizing Results
 
-### Your First Run: a Configuration File
+Study the tick duration over time for the different configurations.
 
-The quickest way to run a benchmark is to describe it in a file. From the
-`yardstick` directory on your reserved node:
-
-```bash
-uv run yardstick init experiment.toml
-```
-
-Open `experiment.toml` and read it -- it is commented, and every setting in
-it is one you may want to change later. Then check and run it:
-
-```bash
-uv run yardstick validate experiment.toml
-uv run yardstick run experiment.toml -v
-```
-
-The first run takes a while (~10 minutes): it downloads the container images,
-boots a Minecraft server, runs the workload, and collects metrics. This is
-expected.
-
-While it runs, open a second terminal on the same node and watch the
-containers Yardstick started:
-
-```bash
-apptainer instance list
-```
-
-When the run finishes it prints a results directory. It contains one CSV per
-measurement plus a `run.json` recording exactly what was run:
-
-```bash
-ls results/*/
-cat results/*/run.json
-```
-
-### The Notebook
-
-A configuration file is convenient, but for exploring results you want the
-data and the plots in the same place. Open `experiments/tick_latency.ipynb`
-in VSCode, connected to your reserved node. When prompted for a kernel, choose the `.venv/bin/python`
-interpreter in the repository; VSCode may also offer to install the Jupyter
-and Python extensions, which you should accept.
-
-We recommend reading the notebook cell by cell to develop a sufficiently good
-understanding of what is going on. Then run all cells.
-
-When the experiment has completed, it is time to review the resulting plots.
-
-Are the numbers surprising? Why (not)?
-
-In the remainder of this section, we will ask you to perform increasingly difficult experiments,
-which will make you increasingly adept at using Yardstick specifically, and performing experiments on a distributed system generally.
-
-> [!NOTE]
-> Here starts the challenging part of the tutorial. Each subsection can easily take 30 minutes to complete.
-> If you are doing this tutorial as part of a lecture or workshop, there may not be sufficient time remaining to complete all exercises.
-> This is by design. If you are out of time but remain curious about this work, feel free to explore the remaining sections from home. Your account is likely valid for several weeks.
-
-### Visualize Another Metric
-
-The notebook plots the server's tick duration, which is the headline measure
-of how hard the server is working. It is far from the only thing collected:
-Telegraf records CPU, memory, disk and network metrics for every node, and
-the JVM's heap and garbage-collection behaviour for the server.
-
-Run `uv run yardstick run experiment.toml` and look at the CSV files in the
-results directory to see what is available. Then add a cell to the notebook
-that plots another metric -- we recommend the network bandwidth usage of the
-server node.
-
-A measurement file loads into pandas with:
-
-```python
-import pandas as pd
-df = pd.read_csv("results/<run>/net.csv", comment="#")
-```
+> **Question 3**  
+> Do the tick durations match your expectations?
+> Why (not)?
 
 ### Compare by Varying the Number of Players
 
-Edit the notebook to run the experiment twice in a row with different numbers
-of players, and plot both results on the same axes.
+Edit the notebook to run the experiments with a different number of players.
 
-Does changing the number of players have an impact on the game's performance?
-
-> [!TIP]
-> `experiments/world_generation_time.ipynb` already does this -- it loops over
-> several player counts in one run cell. Read it for the pattern.
+> **Question 4**  
+> Does changing the number of players have an impact on the game's performance?
 
 ### Compare by Changing the Game's Configuration
 
-The server's *simulation distance* controls how many chunks around each
-player the server actively ticks, so it directly affects how much work each
-player creates. It is a setting on the game server:
+Edit the notebook to evaluate the impact of changing the view range.
 
-```toml
-[game]
-simulation_distance = 4
-```
+> **Question 5**  
+> How does the view distance affect the game's performance?
 
-Run the benchmark at a few different simulation distances and compare.
+### Visualize Network Bandwidth Usage
 
-How does this distance affect the game's performance? Is the relationship
-what you expected?
+The data used for the previous plots is obtained by querying an InfluxDB database instance containing the experiment measurements.
+This database contains several other metrics and measurements.
 
-> [!TIP]
-> Set `seed` in the `[game]` section so every run generates the same world.
-> Without it, you are comparing runs over different terrain.
+Visualize the network bandwidth usage of the server node. The **Exploring all metrics** cell near the bottom of the notebook lists every available measurement and field (look at the `net` measurement) and shows how to plot any of them in pandas, without writing Flux -- though you can write a Flux query directly if you prefer. Note that the `net` byte counters are cumulative, so take their per-interval difference to turn them into a bandwidth (rate).
+
+> **Question 6**  
+> What does the network usage look like?
+> Why does it look like this?
 
 ### Evaluate the Impact of Player Workloads
 
-The first experiment uses a player workload called `WalkAround`, in which
-players connect and walk around a predefined area. `WorldGeneration` is
-another: players teleport to unexplored terrain and wait for the server to
-generate it. Run both and compare -- `uv run yardstick list` shows what is
-available, and you select one with:
+The example uses a player workload called `WorldGeneration`,
+in which a variable number of players connect to the server and teleport to new areas to trigger terrain generation.
 
-```toml
-[workload]
-type = "worldgen"
+We suspect that the behavior of players can have a significant impact on the game's performance.
+
+Edit Yardstick's internals and add a new player workload with different player behavior.
+
+> **Question 7**  
+> How does the workload affect the game's performance?
+
+### Running a Benchmark Without a Notebook
+
+The notebook is the right tool while you are exploring, because the data and
+the plots stay in one place. For a plain run there is also a command-line
+path, which describes the whole experiment in a file instead of in code:
+
+```bash
+uv run yardstick init experiment.toml   # writes a commented starter config
+uv run yardstick validate experiment.toml
+uv run yardstick run experiment.toml
 ```
 
-How does the workload affect the game's performance? Why would world
-generation stress a server differently from walking around?
+Open `experiment.toml` and read it — every setting in it is one the notebook
+sets in Python. Results land in a directory of CSV files plus a `run.json`
+recording exactly what produced them, which you can load with:
 
-### Write Your Own Workload
-
-We suspect that the behavior of players can have a significant impact on the
-game's performance. Write a workload of your own to find out.
-
-A workload is a Python class plus the JavaScript its emulated players run.
-Start from `yardstick_benchmark/games/minecraft/workload/walkaround/`: it is
-about a hundred lines, and the base class in `workload/base.py` documents
-what a subclass has to supply. Your class does not need to be registered
-anywhere -- name it by its import path in the configuration file:
-
-```toml
-[workload]
-type = "mypackage.MyWorkload"
+```python
+from yardstick_benchmark.results import read_csv
+df = read_csv("results/<run>/minecraft_tick.csv", field="tick_duration_ms")
 ```
 
-How does your workload affect the game's performance?
+> **Question 8**
+> Run one of the earlier exercises again through the configuration file
+> instead of the notebook. Which of the two would you rather use for a
+> sweep over many configurations, and why?
 
 ### Done Before Time Runs Out?
 
-Explore Yardstick's features freely, or ask the lecture to come up with an ad-hoc exercise to complete.
+Explore Yardstick's features freely, or ask the lecturer to come up with an ad-hoc exercise to complete.
 
 ## BONUS: Connect to the Game Server during Your Experiment
 
-While debugging your experiments, it can be useful to see what the game and its emulated players are doing. Because the DAS-6 worker nodes are not accessible from the Internet, you cannot *directly* connect to the game server with your local Minecraft client.
+While debugging your experiments, it can be useful to see what the game and its emulated players are doing. Because the DAS-5 worker nodes are not accessible from the Internet, you cannot *directly* connect to the game server with your local Minecraft client.
 However, you can easily work around this by creating an SSH tunnel.
 
 Start by running your experiment or by launching the game server manually on a worker node.
-Next, use `preserve -llist` to identify which machine (e.g., node0XY) is running the game server.<sup id="a4">[4](#fn4)</sup> Now create two SSH tunnels from your local machine to the worker node that is running the game server, replacing `node0XY` with the correct hostname:
+Next, use `preserve -llist` to identify which machine (e.g., node0XY) is running the game server.<sup id="a4b">[4](#fn4)</sup> Now create an SSH tunnel from your local machine to the worker node that is running the game server, replacing `node0XY` with the correct hostname:
 
 ```
-ssh -L 25565:node0XY:25565 das6
+ssh -L 25565:node0XY:25565 das5
 ```
 *Working out how this command works exactly is left as an exercise for the reader.*
 
-Finally, start your Minecraft client on your local machine -- matching the version the server runs, which is the `version` setting in the `[game]` section (see `MinecraftServer.DEFAULT_VERSION` for the default) -- and connect to the server at `localhost:25565`. You should now be connected to the game server running on the DAS-6.
+Finally, start a Minecraft Java client **matching the server version you ran** (e.g. `1.21.11`) on your local machine and connect to the server at `localhost:25565`. You should now be connected to the game server running on the DAS-5.
+
+> [!TIP]
+> [Prism Launcher](https://prismlauncher.org/) lets you install and switch between Minecraft versions easily, so you can match whichever version your experiment ran. Because the experiment servers run with authentication disabled (`online-mode=false`), an *offline* account (any username, no Mojang login) is enough to connect.
+>
+> Launching the Java client does still require owning Minecraft Java Edition. If you don't have a license you can't join with a graphical client -- but the emulated players' behaviour is fully captured by the metrics and plots, which is what the benchmark is really about.
 
 ---
 

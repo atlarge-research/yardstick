@@ -77,9 +77,14 @@ class MinecraftServer:
 
     # JVM heap (itzg MEMORY env -> -Xms/-Xmx). itzg defaults to 1G, which a
     # world-gen workload (many players streaming fresh chunks) exhausts ->
-    # java.lang.OutOfMemoryError. Default to a roomier heap so memory isn't
-    # the bottleneck; bump it via the `memory` kwarg for heavier runs.
-    DEFAULT_MEMORY = "4G"
+    # java.lang.OutOfMemoryError.
+    #
+    # `memory=None` instead sizes the heap from the machine it will run on:
+    # half its total RAM, read at start() because the node may be nothing like
+    # the machine running Yardstick. Half leaves the rest for the OS, the page
+    # cache and the JVM's own off-heap use. A fixed default cannot do this --
+    # 4G starves a large node and overcommits a small one.
+    DEFAULT_MEMORY = None
 
     # itzg (like vanilla) caps the server at 20 players, which silently
     # rejects bots in any benchmark run larger than that. A scalability
@@ -100,7 +105,7 @@ class MinecraftServer:
         rcon_password: str = "",
         version: str = DEFAULT_VERSION,
         max_tick_time: int = DEFAULT_MAX_TICK_TIME,
-        memory: str = DEFAULT_MEMORY,
+        memory: Optional[str] = DEFAULT_MEMORY,
         max_players: int = DEFAULT_MAX_PLAYERS,
         seed: Optional[str] = None,
         view_distance: int = DEFAULT_VIEW_DISTANCE,
@@ -128,7 +133,8 @@ class MinecraftServer:
                 Mineflayer can speak; see DEFAULT_VERSION.
             max_tick_time: server.properties max-tick-time. -1 disables the
                 Watchdog; see DEFAULT_MAX_TICK_TIME.
-            memory: JVM heap size (itzg MEMORY), e.g. "4G".
+            memory: JVM heap size (itzg MEMORY), e.g. "4G". None sizes it
+                from the node's own RAM; see DEFAULT_MEMORY.
             max_players: server.properties max-players.
             seed: server.properties level-seed. Pin this to make world
                 generation reproducible across runs; None lets the server
@@ -188,12 +194,28 @@ class MinecraftServer:
         self._monitor_stop: Optional[threading.Event] = None
         self._monitor_thread: Optional[threading.Thread] = None
 
-    def _env(self) -> Dict[str, str]:
+    def _resolve_memory(self, machine) -> str:
+        """The itzg MEMORY value: the explicit `memory`, else half the node's
+        total RAM, read from /proc/meminfo on the machine that will run it."""
+        if self.memory:
+            return self.memory
+        meminfo = machine["cat"]["/proc/meminfo"]()
+        for line in meminfo.splitlines():
+            if line.startswith("MemTotal:"):
+                # "MemTotal:       65799324 kB" -- the value is in kB.
+                total_kb = int(line.split()[1])
+                # Half the RAM, in MiB (itzg accepts e.g. "32768M").
+                return f"{total_kb // 2 // 1024}M"
+        raise RuntimeError(
+            f"could not read MemTotal from /proc/meminfo on {self.node.host}"
+        )
+
+    def _env(self, memory: str) -> Dict[str, str]:
         """The image environment derived from this server's configuration."""
         jvm_opts = f"-javaagent:/opt/jolokia.jar=port={self.jolokia_port},host=0.0.0.0"
         env = {
             "EULA": "TRUE",
-            "MEMORY": self.memory,
+            "MEMORY": memory,
             "VERSION": self.version,
             "ENABLE_JMX": "true",
             "ENABLE_RCON": "true",
@@ -223,9 +245,9 @@ class MinecraftServer:
         env.update(self.extra_env)
         return env
 
-    def _env_args(self) -> List[str]:
+    def _env_args(self, memory: str) -> List[str]:
         args: List[str] = []
-        for key, value in self._env().items():
+        for key, value in self._env(memory).items():
             args += ["--env", f"{key}={value}"]
         return args
 
@@ -247,6 +269,7 @@ class MinecraftServer:
         """
         with remote(self.node.host, self.node.user) as machine:
             self._stage(machine)
+            memory = self._resolve_memory(machine)
             args = (
                 [
                     "instance",
@@ -258,7 +281,7 @@ class MinecraftServer:
                     "--bind",
                     f"{self.jolokia_jar}:/opt/jolokia.jar",
                 ]
-                + self._env_args()
+                + self._env_args(memory)
                 + [self.image_url, self.instance_name]
             )
             machine["apptainer"][args]()

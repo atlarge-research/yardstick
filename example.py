@@ -15,6 +15,7 @@ This file is the other path: composing components yourself, which is what you
 do when an experiment needs something the configuration file doesn't cover.
 """
 
+import getpass
 from datetime import timedelta
 from pathlib import Path
 
@@ -28,7 +29,10 @@ RESULTS = Path("results/example")
 
 
 def main() -> None:
-    node = Node("localhost", Path("/tmp/ysat"))
+    # Working dir lives on the shared /tmp, so prefix it with the username:
+    # two users on one machine would otherwise collide on a single directory,
+    # and whoever creates it first owns it, locking the other out.
+    node = Node("localhost", Path(f"/tmp/{getpass.getuser()}-ysat"))
 
     # Metrics: one InfluxDB instance, one Telegraf agent that scrapes
     # Jolokia and runs the execd minecraft_tick collector.

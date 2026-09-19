@@ -49,7 +49,22 @@ class InfluxDB(object):
     """
 
     DEFAULT_IMAGE_URL = "docker://influxdb:2.8"
+
+    #: InfluxDB's own default. Note that apptainer runs the container on the
+    #: host network namespace, so this is a *host* port on the node.
     DEFAULT_PORT = 8086
+
+    @staticmethod
+    def default_port() -> int:
+        """A port unlikely to collide with another user's database.
+
+        On a shared machine -- a cluster head node, say -- every user
+        defaulting to 8086 means only the first to bind wins, and everyone
+        else's client silently reaches that instance and is rejected by it,
+        because their admin token is different. Deriving the port from the
+        uid gives each user their own by default; pass `port` to override.
+        """
+        return InfluxDB.DEFAULT_PORT + (os.getuid() % 1000)
 
     def __init__(
         self,
@@ -57,7 +72,7 @@ class InfluxDB(object):
         name: str = "influxdb",
         admin_password: str = "password",
         admin_token: Optional[str] = None,
-        port: int = DEFAULT_PORT,
+        port: Optional[int] = None,
         image_url: str = DEFAULT_IMAGE_URL,
     ):
         """
@@ -68,7 +83,8 @@ class InfluxDB(object):
                 on a shared node.
             admin_password: Initial admin password.
             admin_token: Initial admin token. Generated if not given.
-            port: HTTP port the database listens on.
+            port: HTTP port the database listens on. Defaults to a
+                per-user port derived from the OS uid; see DEFAULT_PORT.
             image_url: Container image to run.
         """
         self.node = node
@@ -76,7 +92,7 @@ class InfluxDB(object):
         self.image_url = image_url
         self.admin_password = admin_password
         self.admin_token = admin_token or random_string(16)
-        self.port = port
+        self.port = self.default_port() if port is None else port
         self.wd = f"{node.wd}/{name}"
         self.data_dir = f"{self.wd}/data"
         self.config_dir = f"{self.wd}/config"
