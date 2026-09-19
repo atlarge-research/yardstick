@@ -52,5 +52,5 @@ dev = [
 
 [tool.pytest.ini_options]
 markers = [
-    "slow: integration tests that start real apptainer instances; skipped by default with '-m \"not slow\"'",
+    "slow: integration tests that need real infrastructure -- apptainer instances, container pulls, or SSH; skipped by default with '-m \"not slow\"'",
 ]
