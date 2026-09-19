@@ -50,6 +50,7 @@ except ModuleNotFoundError:  # pragma: no cover - exercised on 3.9/3.10
 
 from yardstick_benchmark.games.minecraft.server import MinecraftServer
 from yardstick_benchmark.games.minecraft.workload import WalkAround, WorldGeneration
+from yardstick_benchmark.util import is_localhost
 
 
 #: Short names usable as ``[game] type``.
@@ -191,10 +192,37 @@ def build_kwargs(
     return kwargs
 
 
+#: How the control plane (the process running Yardstick) relates to the data
+#: plane (the machines running the game, the players and the metrics stack).
+DEPLOYMENT_MODES = ("local", "cloud", "cluster")
+
+
 @dataclass
 class DeploymentConfig:
-    """Which machines to run on, and where to put things on them."""
+    """Which machines to run on, and where to put things on them.
 
+    ``mode`` names the topology:
+
+    ``local``
+        Control plane and data plane are the same machine. Everything runs
+        where you started Yardstick. This is the mode that works today.
+
+    ``cloud``
+        Control plane is your local machine; the data plane is a set of
+        remote hosts you name in ``hosts``.
+
+    ``cluster``
+        Control plane is the cluster's head node; the data plane is the
+        worker nodes you reserved. On DAS-6 you run Yardstick on the head
+        node and it drives the nodes from ``preserve``.
+
+    ``cloud`` and ``cluster`` both need Yardstick to stage files onto a
+    machine other than the one it runs on, which is not implemented yet (see
+    :func:`yardstick_benchmark.util.stage`). Configurations using them are
+    rejected up front rather than failing partway through a deployment.
+    """
+
+    mode: str = "local"
     hosts: List[str] = field(default_factory=lambda: ["localhost"])
     wd: str = "/tmp/yardstick"
     #: Host running the game server. Defaults to the first entry in `hosts`.
@@ -311,6 +339,13 @@ class BenchmarkConfig:
         an unknown option or an unparsable duration is reported now rather
         than after the images have been pulled.
         """
+        if self.deployment.mode not in DEPLOYMENT_MODES:
+            raise ConfigError(
+                f"[deployment] unknown mode {self.deployment.mode!r}. "
+                f"Valid modes: {', '.join(DEPLOYMENT_MODES)}"
+            )
+        # Structural problems first: they're true regardless of which mode is
+        # supported, so report them before the capability limit below.
         if not self.deployment.hosts:
             raise ConfigError("[deployment] hosts must list at least one host")
         server_host = self.deployment.resolved_server_host()
@@ -318,6 +353,22 @@ class BenchmarkConfig:
             raise ConfigError(
                 f"[deployment] server_host {server_host!r} is not in hosts "
                 f"{self.deployment.hosts}"
+            )
+        if self.deployment.mode != "local":
+            raise ConfigError(
+                f"[deployment] mode = {self.deployment.mode!r} is not "
+                f"supported yet: Yardstick cannot yet stage files onto a "
+                f"machine other than the one it runs on (see "
+                f"yardstick_benchmark.util.stage). Use mode = 'local' and run "
+                f"Yardstick on the machine that should host the deployment."
+            )
+        remote_hosts = [h for h in self.deployment.hosts if not is_localhost(h)]
+        if remote_hosts:
+            raise ConfigError(
+                f"[deployment] mode = 'local' runs everything on this machine, "
+                f"but hosts names {', '.join(remote_hosts)}. Either use "
+                f"hosts = ['localhost'], or run Yardstick on the machine you "
+                f"want the deployment on."
             )
         build_kwargs(self.game_class, self.game_options, where="[game]")
         build_kwargs(
@@ -356,8 +407,19 @@ EXAMPLE_CONFIG = """\
 # Check it with: yardstick validate experiment.toml
 
 [deployment]
-# Machines to run on. Only localhost is supported today; staging files to a
-# remote node is not implemented yet (see yardstick_benchmark.util.stage).
+# How the control plane (this process) relates to the data plane (the
+# machines running the game, the players and the metrics stack):
+#
+#   local    both are this machine -- everything runs where you start
+#            Yardstick. The only mode supported today.
+#   cloud    control plane here, data plane on remote hosts.
+#   cluster  control plane on a cluster head node, data plane on the worker
+#            nodes you reserved (e.g. with `preserve` on DAS-6).
+#
+# cloud and cluster need Yardstick to copy files onto another machine, which
+# is not implemented yet (see yardstick_benchmark.util.stage). Until then,
+# run Yardstick on the machine that should host the deployment.
+mode = "local"
 hosts = ["localhost"]
 # Working directory on each node. Worlds, logs and the metrics database live
 # here during a run.

@@ -130,7 +130,8 @@ def test_server_host_must_be_one_of_the_hosts(tmp_path):
     config = BenchmarkConfig.from_toml(
         _write(
             tmp_path,
-            "[deployment]\nhosts = ['a', 'b']\nserver_host = 'c'",
+            "[deployment]\nhosts = ['127.0.0.1', '127.0.0.2']\n"
+            "server_host = '127.0.0.9'",
         )
     )
     with pytest.raises(ConfigError, match="not in hosts"):
@@ -202,3 +203,43 @@ def test_parse_duration_rejects_nonsense():
         parse_duration("later")
     with pytest.raises(ConfigError):
         parse_duration(None)
+
+
+def test_local_is_the_default_mode(tmp_path):
+    config = BenchmarkConfig.from_toml(_write(tmp_path, ""))
+    assert config.deployment.mode == "local"
+    config.validate()
+
+
+@pytest.mark.parametrize("mode", ["cloud", "cluster"])
+def test_remote_modes_are_rejected_with_an_explanation(tmp_path, mode):
+    """They're the documented topologies, but they need remote staging. Say
+    so up front instead of failing partway through a deployment."""
+    config = BenchmarkConfig.from_toml(
+        _write(tmp_path, f"[deployment]\nmode = '{mode}'\nhosts = ['localhost']")
+    )
+    with pytest.raises(ConfigError, match="not supported yet"):
+        config.validate()
+
+
+def test_an_unknown_mode_lists_the_valid_ones(tmp_path):
+    config = BenchmarkConfig.from_toml(_write(tmp_path, "[deployment]\nmode = 'k8s'"))
+    with pytest.raises(ConfigError, match="local, cloud, cluster"):
+        config.validate()
+
+
+def test_local_mode_rejects_hosts_it_cannot_reach(tmp_path):
+    config = BenchmarkConfig.from_toml(
+        _write(tmp_path, "[deployment]\nhosts = ['localhost', 'node042']")
+    )
+    with pytest.raises(ConfigError, match="node042"):
+        config.validate()
+
+
+def test_local_mode_accepts_loopback_aliases(tmp_path):
+    """Distinct loopback addresses are a legitimate way to exercise a
+    multi-node layout on one machine."""
+    config = BenchmarkConfig.from_toml(
+        _write(tmp_path, "[deployment]\nhosts = ['127.0.0.1', '127.0.0.2']")
+    )
+    config.validate()

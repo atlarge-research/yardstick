@@ -15,11 +15,26 @@ New to this? Start with the [tutorial](docs/tutorial.md).
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) to manage
   Python and dependencies.
 
+## Deployment topologies
+
+Yardstick distinguishes the **control plane** (the process running Yardstick)
+from the **data plane** (the machines running the game, the emulated players
+and the metrics stack). Three arrangements are meaningful:
+
+| `mode` | Control plane | Data plane | Status |
+| --- | --- | --- | --- |
+| `local` | this machine | this machine | **supported** |
+| `cloud` | your local machine | remote hosts | not yet |
+| `cluster` | cluster head node | reserved worker nodes | not yet |
+
 > [!IMPORTANT]
-> Yardstick currently runs everything on `localhost`. Staging files to a
-> remote node is not implemented (see `yardstick_benchmark.util.stage`), so a
-> configuration naming other hosts will fail with an explicit error. The
-> single-machine path is complete and is what the tutorial uses.
+> Only `local` works today. `cloud` and `cluster` both require Yardstick to
+> copy files onto a machine other than the one it runs on, which is not
+> implemented (see `yardstick_benchmark.util.stage`); configurations using
+> them are rejected up front with an explanation rather than failing partway
+> through a deployment. Until then, run Yardstick **on** the machine that
+> should host the deployment -- on a cluster, that means running it on a
+> reserved worker node rather than the head node.
 
 ## Install
 
@@ -51,6 +66,7 @@ A configuration looks like this:
 
 ```toml
 [deployment]
+mode = "local"
 hosts = ["localhost"]
 wd = "/tmp/yardstick"
 

@@ -99,9 +99,20 @@ DAS6 is a shared cluster. The machine you land on when you `ssh das6` is the
 on -- your measurements would be meaningless and you'd disrupt everyone
 else's. Instead you reserve a compute node for yourself.
 
-Yardstick currently runs all of its components on the machine it is started
-from, so the benchmark has to run *on* the node you reserve. Reserve one for
-30 minutes and log in to it:
+It is worth being precise about what runs where. Yardstick separates the
+**control plane** -- the process that decides what to deploy and when -- from
+the **data plane**, the machines actually running the game server, the
+emulated players and the metrics stack. On a cluster, the intended
+arrangement is Yardstick's `cluster` mode: control plane on the head node,
+data plane on the worker nodes you reserved.
+
+> [!NOTE]
+> That mode is not implemented yet -- Yardstick cannot currently copy files
+> onto a machine other than the one it runs on. So for this tutorial we use
+> `local` mode and put *both* planes on a reserved worker node. The head node
+> stays free, which is the part that matters.
+
+Reserve a node for 30 minutes and log in to it:
 
 ```bash
 preserve -np 1 -t 1800

@@ -210,10 +210,10 @@ def test_keep_node_data_skips_cleanup(tmp_path):
 
 
 def test_one_workload_per_player_node_with_distinct_indices(tmp_path):
-    runner.run(_config(tmp_path, hosts='["srv", "c1", "c2"]'))
+    runner.run(_config(tmp_path, hosts='["127.0.0.1", "127.0.0.2", "127.0.0.3"]'))
     workloads = BUILT["workloads"]
     assert len(workloads) == 2
-    assert [w.node.host for w in workloads] == ["c1", "c2"]
+    assert [w.node.host for w in workloads] == ["127.0.0.2", "127.0.0.3"]
     assert sorted(w.options["bot_index"] for w in workloads) == [0, 1]
     # Every workload needs the global total so players can be spread out.
     assert {w.options["total_bots"] for w in workloads} == {8}
@@ -222,8 +222,8 @@ def test_one_workload_per_player_node_with_distinct_indices(tmp_path):
 def test_telegraf_scrapes_jolokia_only_on_the_server_node(tmp_path):
     """The JVM only exists on the server's node; asking the other nodes'
     agents to scrape Jolokia would just log connection errors."""
-    runner.run(_config(tmp_path, hosts='["srv", "c1"]'))
+    runner.run(_config(tmp_path, hosts='["127.0.0.1", "127.0.0.2"]'))
     by_host = {t.node.host: t.options for t in BUILT["telegrafs"]}
-    assert by_host["srv"]["jolokia"] is True
-    assert by_host["c1"]["jolokia"] is False
-    assert by_host["c1"]["execd_minecraft_ticks"] is False
+    assert by_host["127.0.0.1"]["jolokia"] is True
+    assert by_host["127.0.0.2"]["jolokia"] is False
+    assert by_host["127.0.0.2"]["execd_minecraft_ticks"] is False
