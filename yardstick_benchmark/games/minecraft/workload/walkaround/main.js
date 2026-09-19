@@ -5,6 +5,8 @@ const { Worker } = require('worker_threads');
 const lib = require('../lib.js');
 
 const host = process.env.MC_HOST;
+const port = parseInt(process.env.MC_PORT || '25565');
+const version = process.env.MC_VERSION || undefined;
 const timeout_s = parseInt(process.env.DURATION);
 const num_bots = parseInt(process.env.BOTS_PER_NODE);
 const box_width = parseInt(process.env.BOX_WIDTH);
@@ -26,6 +28,8 @@ function sleep(ms) {
 function start_worker(username) {
     const workerData = {
         host: host,
+        port: port,
+        version: version,
         username: username,
         time_left_ms: timeout_s * 1000 - (Date.now() - start),
         box_center: center,
@@ -45,11 +49,18 @@ function start_worker(username) {
 }
 
 async function run() {
-    const bot = lib.createBot({ host, username: `jeff-${bot_index}` });
+    const bot = lib.createBot({ host, port, version, username: `jeff-${bot_index}` });
     bot.once('spawn', async () => {
         bot.creative.startFlying();
         bot.creative
             .flyTo(center)
+            .catch((err) => {
+                // The spawn loop below hangs off this promise, so a rejection
+                // here means no players ever join and the run silently does
+                // nothing. Creative flight needs the server in creative mode.
+                console.error(`jeff could not fly to the box: ${err}`);
+                process.exit(1);
+            })
             .then(async () => {
                 bot.quit("constructs have been placed. jeff's job is done");
                 let b = 0;

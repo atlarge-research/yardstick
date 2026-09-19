@@ -7,6 +7,8 @@ const { workerData } = require('worker_threads');
 const lib = require('../lib.js');
 
 const host = workerData.host;
+const port = workerData.port;
+const version = workerData.version;
 const username = workerData.username;
 const box_center = workerData.box_center;
 const box_width = workerData.box_width;
@@ -23,7 +25,7 @@ function nextGoal(bot) {
     return new GoalXZ(x, z);
 }
 
-const worker_bot = lib.createBot({ host, username });
+const worker_bot = lib.createBot({ host, port, version, username });
 worker_bot.loadPlugin(pathfinder);
 worker_bot.once('spawn', async () => {
     const defaultMove = new Movements(worker_bot);
