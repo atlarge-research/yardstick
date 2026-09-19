@@ -165,10 +165,26 @@ def main(argv=None) -> int:
 
     if args.command == "validate":
         print(f"{args.config}: ok")
+        print(f"  mode:     {config.deployment.mode}")
         print(f"  game:     {config.game} ({config.game_class.__name__})")
         print(f"  workload: {config.workload} ({config.workload_class.__name__})")
-        print(f"  server:   {config.deployment.resolved_server_host()}")
-        print(f"  players:  {', '.join(config.deployment.workload_hosts())}")
+        if config.deployment.mode == "local":
+            print(f"  server:   {config.deployment.resolved_server_host()}")
+            print(f"  players:  {', '.join(config.deployment.workload_hosts())}")
+        else:
+            # The machines don't exist yet, so report what will be acquired
+            # rather than the local-mode host lists, which mean nothing here.
+            provisioning = config.provisioning
+            print(f"  provider: {provisioning.provider}")
+            server_opts = provisioning.options_for("server")
+            workload_opts = provisioning.options_for("workload")
+            print(
+                f"  server:   1 machine ({server_opts.get('size', 'provider default')})"
+            )
+            print(
+                f"  players:  {provisioning.workload_nodes} machine(s) "
+                f"({workload_opts.get('size', 'provider default')})"
+            )
         return 0
 
     # Imported here so `validate`, `init` and `list` stay usable on a machine

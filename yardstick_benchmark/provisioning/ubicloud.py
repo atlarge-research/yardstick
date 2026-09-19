@@ -128,6 +128,11 @@ touch {READY_MARKER}
         "standard-16",
     )
 
+    #: Every storage size Ubicloud accepts for *some* machine size. Which of
+    #: them a given size accepts is narrower and decided server-side --
+    #: burstable-2, for instance, takes only 20 or 40. This list is therefore
+    #: a typo check, not a guarantee; the API is the authority and its
+    #: rejection names the sizes that would have worked.
     ALLOWED_STORAGE_GIB = (10, 20, 40, 80, 160, 320, 600, 640, 1200, 2400)
 
     #: Cap on VMs per provision() call.
