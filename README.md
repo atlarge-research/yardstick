@@ -19,22 +19,87 @@ New to this? Start with the [tutorial](docs/tutorial.md).
 
 Yardstick distinguishes the **control plane** (the process running Yardstick)
 from the **data plane** (the machines running the game, the emulated players
-and the metrics stack). Three arrangements are meaningful:
+and the metrics stack):
 
-| `mode` | Control plane | Data plane | Status |
+| `mode` | Control plane | Data plane | Machines come from |
 | --- | --- | --- | --- |
-| `local` | this machine | this machine | **supported** |
-| `cloud` | your local machine | remote hosts | not yet |
-| `cluster` | cluster head node | reserved worker nodes | not yet |
+| `local` | this machine | this machine | already there |
+| `cloud` | your local machine | provisioned VMs | Ubicloud |
+| `cluster` | cluster head node | reserved worker nodes | `preserve` (DAS-6) |
+
+For `cloud` and `cluster`, a `[provisioning]` section says how to get
+machines, and Yardstick acquires them at the start of a run and gives them
+back at the end -- including when the run fails.
 
 > [!IMPORTANT]
-> Only `local` works today. `cloud` and `cluster` both require Yardstick to
-> copy files onto a machine other than the one it runs on, which is not
-> implemented (see `yardstick_benchmark.util.stage`); configurations using
-> them are rejected up front with an explanation rather than failing partway
-> through a deployment. Until then, run Yardstick **on** the machine that
-> should host the deployment -- on a cluster, that means running it on a
-> reserved worker node rather than the head node.
+> Remote staging works but has not yet been exercised against a real
+> two-machine deployment; see the caveats in `tests/test_staging.py`. If a
+> run is interrupted before its machines are released, `yardstick machines
+> list` shows what is still held and `yardstick machines release` gives it
+> back.
+
+### Provisioning
+
+```toml
+[deployment]
+mode = "cloud"
+
+[provisioning]
+provider = "ubicloud"        # or "das", or an import path
+workload_nodes = 2           # machines running emulated players
+location = "eu-central-h1"   # options here go to the provider
+
+[provisioning.server]
+size = "standard-4"          # 4 vCPU / 16 GB
+
+[provisioning.workload]
+size = "standard-2"          # 2 vCPU / 8 GB
+```
+
+Options other than `provider` and `workload_nodes` are passed to the
+provider's constructor, so provider-specific settings (the SSH key to
+install, the location, machine sizes) live here directly. The game server
+always gets a machine to itself, so the emulated players never compete with
+the thing being measured for CPU.
+
+Ubicloud needs a personal access token in `UBI_TOKEN` and the `ubi` CLI on
+`PATH`; see [their quick start](https://www.ubicloud.com/docs/quick-start/cli).
+
+**On machine sizes.** Ubicloud's standard line is 4 GB of RAM per vCPU.
+`MinecraftServer` defaults to a 4 GB JVM heap, and a vanilla server wants
+roughly 6 GB for 10-20 players, with several cores useful once chunk
+generation is in play -- hence `standard-4` for the server. The emulated
+players are much lighter, so `standard-2`. You do not have to trust that
+guess: see *Is the result trustworthy?* below.
+
+**On safety.** Releasing machines is always addressed by an identifier
+recorded when they were acquired, written to a ledger on disk *before* the
+machine is created. Nothing in Yardstick lists your account and deletes what
+looks like its own — so it cannot destroy a VM it did not create, and a run
+that dies can still be cleaned up from a later process.
+
+## Is the result trustworthy?
+
+A benchmark result only means something if the emulated players kept up. If
+the machines running the bots run out of CPU or memory, the players send
+fewer actions and load fewer chunks, so the server does *less* work — and the
+run reports a healthy-looking server exactly when it has stopped measuring
+anything. Nothing else notices: every component stays up and the workload
+exits cleanly.
+
+After each run Yardstick checks whether the workload machines had headroom
+(sustained CPU, peak memory, any real swapping) and says so:
+
+```
+WARNING: workload nodes were resource constrained, so the server-side numbers
+from this run understate the load the players were meant to generate:
+  - workload node 198.51.100.4: mean CPU usage reached 94.2% (threshold 85%)
+  Re-run with fewer players per node, or on larger workload nodes.
+```
+
+The same finding is written into `run.json`, so a result cannot be read later
+without the caveat that came with it. The game server is deliberately not
+checked — it is supposed to run hot, that is the measurement.
 
 ## Install
 
@@ -91,7 +156,8 @@ option is rejected immediately, with the list of names that would have
 worked. Durations accept `"90s"`, `"5m"`, `"1h"` or a plain number of
 seconds.
 
-`uv run yardstick list` shows the built-in games and workloads. `type` also
+`uv run yardstick list` shows the built-in games and workloads, and
+`uv run yardstick machines list` shows any provisioned machines still held. `type` also
 takes a dotted import path, so a class of your own needs no registration:
 
 ```toml

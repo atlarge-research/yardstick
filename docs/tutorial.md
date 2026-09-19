@@ -107,10 +107,12 @@ arrangement is Yardstick's `cluster` mode: control plane on the head node,
 data plane on the worker nodes you reserved.
 
 > [!NOTE]
-> That mode is not implemented yet -- Yardstick cannot currently copy files
-> onto a machine other than the one it runs on. So for this tutorial we use
-> `local` mode and put *both* planes on a reserved worker node. The head node
-> stays free, which is the part that matters.
+> `cluster` mode exists, but it has not yet been exercised against a real
+> multi-node DAS reservation. This tutorial therefore uses `local` mode and
+> puts *both* planes on a single reserved worker node: fewer moving parts,
+> and the head node stays free, which is the part that matters. Once you are
+> comfortable, `mode = "cluster"` with a `[provisioning]` section is the
+> arrangement to graduate to.
 
 Reserve a node for 30 minutes and log in to it:
 
