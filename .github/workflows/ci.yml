@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --extra notebooks
+      - name: Lint
+        run: uv run ruff check .
+      - name: Check formatting
+        run: uv run ruff format --check .
+      - name: Test
+        # The `slow` tests start real apptainer instances and pull container
+        # images; they're for a machine with apptainer, not for CI.
+        run: uv run pytest -m "not slow" -v
+
+  notebooks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --extra notebooks
+      - name: Check notebooks are committed without outputs
+        # nbstripout is a local git filter, so a clone that never ran
+        # `nbstripout --install` can commit outputs. Catch that here.
+        run: |
+          uv run nbstripout --verify example.ipynb experiments/*.ipynb
+
+  go:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: yardstick_benchmark/monitoring
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: yardstick_benchmark/monitoring/go.mod
+      - name: Vet
+        run: go vet ./...
+      - name: Build
+        # The compiled collector is committed (Telegraf's execd input runs it
+        # on the node), so make sure the source it came from still builds.
+        run: make check
