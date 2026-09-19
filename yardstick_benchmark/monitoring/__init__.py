@@ -276,6 +276,7 @@ class Telegraf(object):
         jolokia: bool = False,
         jolokia_port: int = JOLOKIA_PORT,
         execd_minecraft_ticks: bool = False,
+        tags: Optional[Dict[str, str]] = None,
     ):
         """Configure a Telegraf agent for one node.
 
@@ -295,6 +296,10 @@ class Telegraf(object):
                 bind-mount it into the Telegraf container at
                 /opt/jolokia_get_minecraft_tick, where the rendered execd
                 input plugin will run it.
+            tags: Extra tags applied to every metric this agent emits
+                (Telegraf's [global_tags]). The runner sets `yardstick_node`
+                and `yardstick_role` so metrics can be attributed to a
+                machine and to its job in the deployment.
         """
         self.node = node
         self.name = name
@@ -302,6 +307,7 @@ class Telegraf(object):
         self.jolokia = jolokia
         self.jolokia_port = jolokia_port
         self.execd_minecraft_ticks = execd_minecraft_ticks
+        self.tags = dict(tags) if tags else {"yardstick_node": node.host}
         self.influxdb_info: Optional[InfluxDBInfo] = None
         self.config_template = os.path.join(
             os.path.dirname(__file__), "telegraf.conf.j2"
@@ -334,6 +340,7 @@ class Telegraf(object):
                         jolokia=self.jolokia,
                         jolokia_url=f"http://localhost:{self.jolokia_port}/jolokia",
                         jolokia_to_mc_ticks_script=self.execd_minecraft_ticks,
+                        global_tags=self.tags,
                     )
                 )
 

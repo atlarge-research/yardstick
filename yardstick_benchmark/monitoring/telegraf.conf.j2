@@ -16,10 +16,14 @@
 
 # Global tags can be specified here in key="value" format.
 [global_tags]
-  # dc = "us-east-1" # will tag all metrics with dc=us-east-1
-  # rack = "1a"
-  ## Environment variables can be used as tags, and throughout the config file
-  # user = "$USER"
+  ## Yardstick tags every metric with the node it came from and that node's
+  ## role in the deployment, because a container's own hostname is not a
+  ## reliable way to tell which machine a measurement belongs to -- and
+  ## telling the game server's metrics from the emulated players' is the
+  ## whole point of collecting them.
+{% for key, value in (global_tags | default({})).items() %}
+  {{ key }} = "{{ value }}"
+{% endfor %}
 
 # Configuration for telegraf agent
 [agent]
