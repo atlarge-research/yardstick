@@ -367,7 +367,7 @@
     paths = ["AvailableProcessors", "CommittedVirtualMemorySize", "FreePhysicalMemorySize", "FreeSwapSpaceSize", "MaxFileDescriptorCount", "OpenFileDescriptorCount", "ProcessCpuLoad", "ProcessCpuTime", "SystemCpuLoad", "SystemLoadAverage", "TotalPhysicalMemorySize", "TotalSwapSpaceSize"]
   [[inputs.jolokia2_agent.metric]]
     name  = "minecraft_tick_times"
-    mbean = "net.minecraft.server:type=Serve"
+    mbean = "net.minecraft.server:type=Server"
     paths = ["averageTickTime", "tickTimes"]
 {% endif %}
 
