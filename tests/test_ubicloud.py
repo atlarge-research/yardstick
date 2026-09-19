@@ -56,6 +56,11 @@ if len(args) >= 3 and args[0] == "vm":
             "id": f"vm{n:026d}",
             "ip4": f"203.0.113.{n}",
             "ip6": f"2001:db8::{n}",
+            # A real VM also sits in a private subnet, and `ubi vm show`
+            # reports both the addresses it has there and the subnet itself.
+            "private-ipv4": f"10.0.0.{n}",
+            "private-ipv6": f"fd00::{n}",
+            "subnet": os.environ.get("FAKE_UBI_SUBNET", "default-subnet"),
             "state": "running",
         }
         json.dump(state, open(STATE, "w"))
@@ -366,3 +371,55 @@ def test_an_explicit_key_is_used_verbatim(fake):
     cloud.provision(1)
     create = next(args for args in fake.log() if args[2:3] == ["create"])
     assert create[-1] == "ssh-ed25519 AAAAexplicit me@host"
+
+
+def test_private_addresses_and_the_subnet_are_recorded(fake):
+    """The public address is the one the control plane needs; the private one
+    is what the machines should use between themselves. Both are reported by
+    `ubi vm show`, so both are kept."""
+    cloud = fake()
+    nodes = cloud.provision(2)
+
+    assert {n.host for n in nodes} == {"203.0.113.1", "203.0.113.2"}, (
+        "SSH comes from outside the subnet, so host stays the public address"
+    )
+    assert {n.private_host for n in nodes} == {"10.0.0.1", "10.0.0.2"}
+    assert {n.subnet for n in nodes} == {"eu-central-h1/default-subnet"}
+
+    # And on record, so a machine can still be understood from the ledger
+    # after the process that made it is gone.
+    for record in cloud.acquired():
+        assert record["private_ip4"].startswith("10.0.0.")
+        assert record["private_ip6"].startswith("fd00::")
+        assert record["subnet"] == "default-subnet"
+
+
+def test_machines_from_one_location_address_each_other_privately(fake):
+    cloud = fake()
+    first, second = cloud.provision(2)
+    assert first.data_plane_host(second) == first.private_host
+    assert second.data_plane_host(first) == second.private_host
+
+
+def test_a_vm_with_no_private_subnet_is_addressed_publicly(fake, monkeypatch):
+    """Nothing here assumes a private network exists: without one, every
+    address falls back to the public one rather than to something unroutable."""
+    monkeypatch.setenv("FAKE_UBI_SUBNET", "")
+    cloud = fake()
+    first, second = cloud.provision(2)
+    assert first.subnet is None
+    assert first.data_plane_host(second) == first.host
+
+
+def test_subnets_in_different_locations_are_never_confused(fake):
+    """Ubicloud's subnet names are unique within a location, not across them.
+    Two groups in different locations must not exchange private addresses
+    just because their default subnets happen to share a name."""
+    here = fake()
+    there = fake(location="eu-north-h1")
+    (local_node,) = here.provision(1)
+    (distant,) = there.provision(1)
+
+    assert local_node.subnet != distant.subnet
+    assert local_node.data_plane_host(distant) == local_node.host
+    assert distant.data_plane_host(local_node) == distant.host

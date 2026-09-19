@@ -72,6 +72,16 @@ generation is in play -- hence `standard-4` for the server. The emulated
 players are much lighter, so `standard-2`. You do not have to trust that
 guess: see *Is the result trustworthy?* below.
 
+**On addressing.** Provisioned machines are reached over SSH by their public
+address, but the benchmark's own traffic — players connecting to the server,
+RCON, Telegraf writing to InfluxDB — uses the private address of the
+provider's subnet whenever both machines report the *same* subnet. Routing
+that traffic out through the public interface and back would add latency and,
+worse, variance to exactly the numbers being measured. Machines that do not
+share a subnet (different locations, `cluster` and `local` mode) keep using
+the public address. Which address each flow used is written to `run.json`
+under `addressing`, so a past result can still be interpreted.
+
 **On safety.** Releasing machines is always addressed by an identifier
 recorded when they were acquired, written to a ledger on disk *before* the
 machine is created. Nothing in Yardstick lists your account and deletes what
