@@ -1,0 +1,149 @@
+name: Slow tests
+
+# The `slow` tests need apptainer, container pulls and SSH, so they are out
+# of the per-push CI job -- which left them running nowhere at all, free to
+# rot. This job runs them on demand and once a week.
+#
+# Trigger by hand: Actions -> "Slow tests" -> "Run workflow" (or
+# `gh workflow run slow-tests.yml`, optionally with
+# `-f pytest_args="tests/test_influxdb_ingest.py -k telegraf"`).
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: >-
+          Runner image. Ubuntu 22.04 by default: from 23.10 Ubuntu blocks
+          unprivileged user namespaces with AppArmor, which is what apptainer
+          needs to run rootless. The job relaxes that where it can, but
+          jammy is the configuration the provisioner itself bootstraps.
+        default: ubuntu-22.04
+        required: false
+      pytest_args:
+        description: "Extra pytest arguments (paths, -k expressions, ...)"
+        default: ""
+        required: false
+  schedule:
+    # Mondays, 04:17 UTC. Not on the hour: scheduled jobs queue behind
+    # everyone else's cron.
+    - cron: "17 4 * * 1"
+
+# Container pulls are the slow part; two of these at once buys nothing.
+concurrency:
+  group: slow-tests
+  cancel-in-progress: false
+
+jobs:
+  slow:
+    runs-on: ${{ inputs.runner || 'ubuntu-22.04' }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install apptainer
+        # The same PPA the Ubicloud bootstrap uses (see
+        # Ubicloud.DEFAULT_INIT_SCRIPT), so this job exercises the install
+        # path a provisioned node gets.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y software-properties-common
+          sudo add-apt-repository -y ppa:apptainer/ppa
+          sudo apt-get update
+          sudo apt-get install -y apptainer
+          apptainer --version
+
+      - name: Allow unprivileged user namespaces
+        # A no-op on jammy. On 24.04 and later the sysctl exists and
+        # defaults to 1, which stops apptainer starting a container as an
+        # ordinary user.
+        run: |
+          if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          else
+            echo "no AppArmor userns restriction on this image"
+          fi
+
+      - name: Check apptainer can pull and run a container
+        # Fail here rather than twenty minutes into a test if docker:// pulls
+        # are broken (they convert the image with mksquashfs, which has been
+        # known to crash in some apptainer builds).
+        run: |
+          apptainer exec docker://alpine:3 /bin/true
+          df -h /
+
+      - name: Enable key-based SSH to localhost
+        # tests/test_staging.py's slow test skips itself without this, and a
+        # test that always skips is the situation this workflow exists to fix.
+        run: |
+          sudo apt-get install -y openssh-server
+          sudo systemctl start ssh || sudo service ssh start
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519
+          cat ~/.ssh/id_ed25519.pub >> ~/.ssh/authorized_keys
+          chmod 600 ~/.ssh/authorized_keys
+          ssh-keyscan -H localhost >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -o BatchMode=yes localhost true
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run the slow tests
+        # -rs lists every skip with its reason, which is what the summary
+        # step below turns into the verdict on how much actually ran. The
+        # dispatch input goes through the environment rather than into the
+        # script text, so it cannot smuggle in shell of its own.
+        env:
+          PYTEST_ARGS: ${{ inputs.pytest_args }}
+        run: uv run pytest -m slow -v -rs --junitxml=slow-tests.xml $PYTEST_ARGS
+
+      - name: Summarise what actually ran
+        # A run where every test skipped is not a pass. `preserve` is never
+        # on a hosted runner, so tests/test_das_integration.py always skips
+        # here -- but if *nothing* ran, this job proved nothing and says so.
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, sys
+          from xml.etree import ElementTree
+
+          report = pathlib.Path("slow-tests.xml")
+          if not report.exists():
+              sys.exit("no test report: pytest did not get as far as running")
+
+          suite = ElementTree.parse(report).getroot().find("testsuite")
+          total = int(suite.get("tests", 0))
+          skipped = int(suite.get("skipped", 0))
+          failures = int(suite.get("failures", 0)) + int(suite.get("errors", 0))
+          ran = total - skipped
+
+          lines = [f"**{ran} of {total} slow tests ran**, {failures} failed.", ""]
+          for case in suite.iter("testcase"):
+              skip = case.find("skipped")
+              if skip is not None:
+                  lines.append(
+                      f"- skipped `{case.get('classname')}::{case.get('name')}`"
+                      f" -- {skip.get('message', '')}"
+                  )
+          summary = "\n".join(lines)
+          print(summary)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+              f.write(summary + "\n")
+
+          if ran == 0:
+              sys.exit(
+                  "every slow test skipped: this job verified nothing. Check "
+                  "that apptainer installed and that SSH to localhost works."
+              )
+          PY
+
+      - name: Upload the test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: slow-tests-report
+          path: slow-tests.xml
+          if-no-files-found: warn
