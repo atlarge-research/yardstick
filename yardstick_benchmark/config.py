@@ -181,7 +181,12 @@ def build_kwargs(
         kwargs[key] = value
 
     for key, value in (context or {}).items():
-        if key in params and key not in kwargs:
+        if key in kwargs:
+            continue
+        # A class that declares **kwargs has opted into receiving keywords it
+        # didn't name, so give it the whole context; otherwise only pass what
+        # it actually declared.
+        if key in params or accepts_kwargs:
             kwargs[key] = value
     return kwargs
 
