@@ -1,3 +1,5 @@
+import os
+import posixpath
 import socket
 import ipaddress
 import string
@@ -95,7 +97,8 @@ def wait_for_url(url: str, timeout_s: float, poll_s: float = 1.0) -> None:
 # output for minutes) from being dropped during quiet/laggy periods: send a
 # keepalive every 15s and only give up after ~8 missed (~2min), and enable
 # TCP-level keepalive. BatchMode avoids a dead host hanging on a password
-# prompt.
+# prompt. The same options are handed to scp (see stage()), which otherwise
+# gets none of them and would sit on a password prompt during a file upload.
 _SSH_KEEPALIVE_OPTS = [
     "-o",
     "ServerAliveInterval=15",
@@ -120,7 +123,9 @@ def remote(host: str):
     if is_localhost(host):
         yield local
         return
-    machine = SshMachine(host, ssh_opts=_SSH_KEEPALIVE_OPTS)
+    machine = SshMachine(
+        host, ssh_opts=_SSH_KEEPALIVE_OPTS, scp_opts=_SSH_KEEPALIVE_OPTS
+    )
     try:
         yield machine
     finally:
@@ -130,20 +135,35 @@ def remote(host: str):
 def stage(machine, src, dst: str) -> None:
     """Copy the local file `src` onto `machine` at path `dst`.
 
-    Parent directories are created as needed.
+    Works for either kind of machine yielded by :func:`remote`: a local node
+    gets a plain filesystem copy, a genuinely remote one an ``scp`` upload
+    via plumbum's ``machine.upload()``. (``LocalPath.copy()`` cannot be used
+    for the remote case -- it rejects a ``RemotePath`` destination outright,
+    with a ``TypeError`` from deep inside plumbum.)
 
-    NOTE: staging to a genuinely remote node is not implemented. plumbum's
-    ``LocalPath.copy()`` rejects a ``RemotePath`` destination outright, so
-    every deploy() that stages files works only when the node is localhost.
-    Fixing it means switching to ``machine.upload()`` here (and making sure
-    the destination directory exists on the far side first). Until then, fail
-    with an explicit message rather than a bare TypeError from deep inside
-    plumbum.
+    The destination's parent directories are created first, on whichever side
+    the destination lives. Callers stage into paths such as
+    ``{node.wd}/walkaround-ab12cd34/walkaround/main.js`` whose intermediate
+    directories do not exist yet, and ``scp`` will not create them.
+
+    An executable `src` is staged as an executable: ``scp`` does not reliably
+    carry the mode across (OpenSSH's SFTP-backed scp drops it unless given
+    ``-p``), and the Go collector staged by ``Telegraf.deploy()`` has to be
+    runnable on the node.
     """
-    if not isinstance(machine, LocalMachine):
-        raise NotImplementedError(
-            f"cannot stage {src} to {machine}: copying files to a remote node "
-            "is not implemented yet (see yardstick_benchmark.util.stage). "
-            "Yardstick currently only supports nodes whose host is localhost."
-        )
-    local.path(src).copy(local.path(dst))
+    src_path = local.path(src)
+    if not src_path.is_file():
+        raise FileNotFoundError(f"cannot stage {src_path}: not a readable file")
+
+    parent = posixpath.dirname(dst)
+    if parent:
+        machine["mkdir"]["-p", parent]()
+
+    if isinstance(machine, LocalMachine):
+        # shutil-backed, and already mode-preserving.
+        src_path.copy(machine.path(dst))
+    else:
+        machine.upload(str(src_path), dst)
+
+    if os.access(str(src_path), os.X_OK):
+        machine["chmod"]["+x", dst]()

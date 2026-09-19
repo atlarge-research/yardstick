@@ -341,9 +341,14 @@ class Telegraf(object):
             os.remove(name)
 
             if self.execd_minecraft_ticks:
-                dst = f"{self.wd}/jolokia_get_minecraft_tick"
-                stage(machine, mc_ticks_binary, dst)
-                machine["chmod"]["+x", dst]()
+                # stage() carries the binary's executable bit over to the
+                # node (scp would otherwise drop it), so Telegraf's execd
+                # input can run it straight from the bind mount.
+                stage(
+                    machine,
+                    mc_ticks_binary,
+                    f"{self.wd}/jolokia_get_minecraft_tick",
+                )
 
     def start(self) -> None:
         with remote(self.node.host) as machine:
