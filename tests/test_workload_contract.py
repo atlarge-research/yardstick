@@ -59,6 +59,20 @@ def test_js_env_vars_are_all_supplied(tmp_path, workload_index):
 
 
 @pytest.mark.parametrize("workload_index", [0, 1])
+def test_no_env_vars_are_sent_unread(tmp_path, workload_index):
+    """The mirror of the test above: an env var the Python side sets but no
+    .js file reads is either a leftover from a removed feature or a typo on
+    the Python side, and both look like working configuration."""
+    workload = _workloads(Node("localhost", tmp_path))[workload_index]
+    # NODE_OPTIONS is read by the node runtime itself, not by our scripts.
+    unread = set(workload._env()) - _js_env_names(workload) - {"NODE_OPTIONS"}
+    assert not unread, (
+        f"{type(workload).__name__} sets {sorted(unread)}, which no staged "
+        f"JavaScript reads"
+    )
+
+
+@pytest.mark.parametrize("workload_index", [0, 1])
 def test_env_values_are_all_strings(tmp_path, workload_index):
     """apptainer --env takes KEY=VALUE strings; a stray int or timedelta here
     would be str()'d somewhere unhelpful (e.g. "0:01:00" for a timedelta)."""
@@ -119,6 +133,36 @@ def test_workloads_get_distinct_working_directories(tmp_path):
     a = WalkAround(node, server_host="localhost")
     b = WalkAround(node, server_host="localhost")
     assert a.wd != b.wd
+
+
+def test_walkaround_needs_no_creative_mode(tmp_path):
+    """WalkAround must run against a default (survival) server.
+
+    Its entry script used to fly a bot to the box with `bot.creative.flyTo`,
+    and hang the loop that starts every emulated player off that flight's
+    promise. On the survival server this repo deploys by default the flight
+    always failed, so no player ever joined and the run silently measured an
+    idle server. Nothing in this workload may depend on creative mode again.
+    """
+    node = Node("localhost", tmp_path)
+    workload = WalkAround(node, server_host="localhost")
+    for relpath in workload.FILES:
+        source = (WORKLOAD_ROOT / relpath).read_text()
+        # Skip the comment that explains why this is banned.
+        code = "\n".join(
+            line for line in source.splitlines() if not line.lstrip().startswith("//")
+        )
+        assert ".creative" not in code, f"{relpath} uses the creative-mode API"
+
+
+def test_walkaround_requires_no_rcon(tmp_path):
+    """WalkAround deliberately needs no server-side privileges at all: the
+    players just walk. If that ever changes, the RCON password has to be
+    threaded through __init__ and config.py's runner context, so make the
+    change deliberate rather than a silently missing env var."""
+    node = Node("localhost", tmp_path)
+    workload = WalkAround(node, server_host="localhost")
+    assert not [name for name in _js_env_names(workload) if name.startswith("RCON")]
 
 
 def _normalise(relpath: str, target: str) -> Path:

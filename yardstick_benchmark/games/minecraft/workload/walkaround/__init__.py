@@ -5,6 +5,12 @@ and walk around a fixed box near spawn for `duration`, then disconnect and the
 entry script exits. Useful as background load while something else (Telegraf,
 Jolokia) measures the server.
 
+The players walk on foot with mineflayer-pathfinder, so the workload needs
+nothing from the server beyond letting a player connect: no creative mode, no
+operator privileges, no RCON. It therefore runs on a default (survival)
+server. If no player manages to join, the entry script exits non-zero rather
+than quietly measuring an idle server for the full `duration`.
+
 Setting the world spawn happens via MinecraftServer.set_world_spawn() over
 RCON, not via a workload script.
 """
@@ -51,8 +57,8 @@ class WalkAround(MineflayerWorkload):
             server_host: Hostname/IP of the Minecraft server.
             duration: How long the players walk around before disconnecting.
             box_width: Side length, in blocks, of the box players walk in.
-            box_x: X coordinate of the box's corner.
-            box_z: Z coordinate of the box's corner.
+            box_x: X coordinate of the box's centre.
+            box_z: Z coordinate of the box's centre.
             bots_join_delay: Delay between successive players joining.
             bots_per_node: Number of emulated players to run on this node.
             bot_index: Index of this node's workload among all nodes; used to
