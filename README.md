@@ -239,6 +239,23 @@ Adding a component of your own needs no registration either -- anything with
 `deploy`/`start`/`stop`/`cleanup` can join a `Deployment`. An optional
 `ready()` is awaited after `start()`.
 
+### Sharing a machine
+
+Components do not assume the machine is theirs alone. Every one of them names
+its apptainer instance `<kind>-<uuid>` by default, so two runs on one node --
+a parameter sweep of yours, or another user's benchmark -- never collide, and
+teardown can never stop someone else's container. Pass `name=` when you want a
+predictable name to attach to while debugging, or when a component outlives
+the process that created it (as the persistent InfluxDB in
+`experiments/world_generation_time.ipynb` does).
+
+Credentials -- the server's RCON password, InfluxDB's admin token -- are never
+passed as `--env` arguments, because anything on an apptainer command line is
+readable by every user of the node through `ps`. They are written to
+mode-0600 files under `node.wd` and handed to apptainer as `--env-file`.
+`fetch()` copies `node.wd` back with `rsync -a`, so those files keep their
+mode locally too; `clean()` removes them from the node.
+
 ### From a notebook
 
 `experiments/` holds cookbook-style notebooks that deploy, run, query and

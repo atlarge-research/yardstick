@@ -6,7 +6,6 @@ with :meth:`Telegraf.set_output_influxdb2`.
 """
 
 import os
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence
@@ -16,7 +15,15 @@ from jinja2 import Template
 from influxdb_client.client.influxdb_client import InfluxDBClient
 
 from yardstick_benchmark.model import Node
-from yardstick_benchmark.util import random_string, remote, stage, wait_for_url
+from yardstick_benchmark.util import (
+    random_string,
+    remote,
+    render_env_file,
+    stage,
+    unique_instance_name,
+    wait_for_url,
+    write_private_file,
+)
 
 
 # Default port the Minecraft server's Jolokia agent listens on. Kept in step
@@ -69,7 +76,7 @@ class InfluxDB(object):
     def __init__(
         self,
         node: Node,
-        name: str = "influxdb",
+        name: str = "",
         admin_password: str = "password",
         admin_token: Optional[str] = None,
         port: Optional[int] = None,
@@ -78,9 +85,13 @@ class InfluxDB(object):
         """
         Args:
             node: Node to run the database on.
-            name: Apptainer instance name. Override it to run more than one
-                database, or to avoid clashing with another user's instance
-                on a shared node.
+            name: Apptainer instance name, and the directory under
+                ``node.wd`` holding the database. Defaults to a unique
+                ``influxdb-<uuid>``, so two runs on one node get two
+                databases instead of fighting over one name and one data
+                directory. Pass it to keep a database across restarts of the
+                process that created it -- a notebook, say -- or for a
+                predictable name while debugging.
             admin_password: Initial admin password.
             admin_token: Initial admin token. Generated if not given.
             port: HTTP port the database listens on. Defaults to a
@@ -88,14 +99,18 @@ class InfluxDB(object):
             image_url: Container image to run.
         """
         self.node = node
-        self.name = name
+        self.name = name or unique_instance_name("influxdb")
         self.image_url = image_url
         self.admin_password = admin_password
         self.admin_token = admin_token or random_string(16)
         self.port = self.default_port() if port is None else port
-        self.wd = f"{node.wd}/{name}"
+        self.wd = f"{node.wd}/{self.name}"
         self.data_dir = f"{self.wd}/data"
         self.config_dir = f"{self.wd}/config"
+        # The setup environment carries the admin password and admin token,
+        # so it is written to a mode-0600 file on the node and handed to
+        # apptainer as --env-file instead of as --env arguments.
+        self.env_file = f"{self.wd}/influxdb.env"
 
     @property
     def url(self) -> str:
@@ -124,9 +139,27 @@ class InfluxDB(object):
             f"{self.config_dir}:/etc/influxdb2",
         ]
 
+    def _env(self, initialised: bool) -> Dict[str, str]:
+        """The image environment for a start on this data directory."""
+        env = {"INFLUXD_HTTP_BIND_ADDRESS": f":{self.port}"}
+        if not initialised:
+            env.update(
+                {
+                    "DOCKER_INFLUXDB_INIT_MODE": "setup",
+                    "DOCKER_INFLUXDB_INIT_USERNAME": "admin",
+                    "DOCKER_INFLUXDB_INIT_PASSWORD": self.admin_password,
+                    "DOCKER_INFLUXDB_INIT_ORG": "yardstick",
+                    "DOCKER_INFLUXDB_INIT_BUCKET": "yardstick",
+                    "DOCKER_INFLUXDB_INIT_ADMIN_TOKEN": self.admin_token,
+                }
+            )
+        return env
+
     def start(self) -> None:
         with remote(self.node.host, self.node.user) as machine:
             machine["mkdir"]["-p", self.data_dir, self.config_dir]()
+            env = self._env(self._initialised(machine))
+            write_private_file(machine, self.env_file, render_env_file(env))
             args = (
                 [
                     "instance",
@@ -136,26 +169,12 @@ class InfluxDB(object):
                 ]
                 + self._bind_args()
                 + [
-                    "--env",
-                    f"INFLUXD_HTTP_BIND_ADDRESS=:{self.port}",
+                    "--env-file",
+                    self.env_file,
+                    self.image_url,
+                    self.name,
                 ]
             )
-            if not self._initialised(machine):
-                args += [
-                    "--env",
-                    "DOCKER_INFLUXDB_INIT_MODE=setup",
-                    "--env",
-                    "DOCKER_INFLUXDB_INIT_USERNAME=admin",
-                    "--env",
-                    f"DOCKER_INFLUXDB_INIT_PASSWORD={self.admin_password}",
-                    "--env",
-                    "DOCKER_INFLUXDB_INIT_ORG=yardstick",
-                    "--env",
-                    "DOCKER_INFLUXDB_INIT_BUCKET=yardstick",
-                    "--env",
-                    f"DOCKER_INFLUXDB_INIT_ADMIN_TOKEN={self.admin_token}",
-                ]
-            args += [self.image_url, self.name]
             machine["apptainer"][args]()
 
     def stop(self) -> None:
@@ -297,7 +316,7 @@ class Telegraf(object):
     def __init__(
         self,
         node: Node,
-        name: str = "telegraf",
+        name: str = "",
         image_url: str = DEFAULT_IMAGE_URL,
         jolokia: bool = False,
         jolokia_port: int = JOLOKIA_PORT,
@@ -308,9 +327,11 @@ class Telegraf(object):
 
         Args:
             node: The node on which to run Telegraf.
-            name: Apptainer instance name. Override it to run more than one
-                agent on a node, or to avoid clashing with another user's
-                instance on a shared node.
+            name: Apptainer instance name. Defaults to a unique
+                ``telegraf-<uuid>``, so a second agent on the node -- a
+                concurrent run of yours, or another user's -- neither
+                clashes with this one nor gets stopped by its ``stop()``.
+                Pass it for a predictable name while debugging.
             image_url: Container image to run. Defaults to the upstream
                 Telegraf image on Docker Hub.
             jolokia: If True, render a `jolokia2_agent` input pointing at
@@ -328,7 +349,7 @@ class Telegraf(object):
                 machine and to its job in the deployment.
         """
         self.node = node
-        self.name = name
+        self.name = name or unique_instance_name("telegraf")
         self.image_url = image_url
         self.jolokia = jolokia
         self.jolokia_port = jolokia_port
@@ -338,7 +359,7 @@ class Telegraf(object):
         self.config_template = os.path.join(
             os.path.dirname(__file__), "telegraf.conf.j2"
         )
-        self.wd = f"{node.wd}/{name}-{random_string(8)}"
+        self.wd = f"{node.wd}/{self.name}"
 
     def set_output_influxdb2(self, info: InfluxDBInfo) -> None:
         self.influxdb_info = info
@@ -350,28 +371,27 @@ class Telegraf(object):
                 "set_output_influxdb2(influxdb.get_info()) before deploy()"
             )
         mc_ticks_binary = Path(__file__).parent / "jolokia_get_minecraft_tick"
+        with open(self.config_template) as f:
+            template = Template(f.read())
+        config = template.render(
+            outputs_influxdb_v2=True,
+            outputs_influxdb_v2_urls=self.influxdb_info.urls,
+            outputs_influxdb_v2_token=self.influxdb_info.token,
+            outputs_influxdb_v2_organization=self.influxdb_info.organization,
+            outputs_influxdb_v2_bucket=self.influxdb_info.bucket,
+            jolokia=self.jolokia,
+            jolokia_url=f"http://localhost:{self.jolokia_port}/jolokia",
+            jolokia_to_mc_ticks_script=self.execd_minecraft_ticks,
+            global_tags=self.tags,
+        )
         with remote(self.node.host, self.node.user) as machine:
-            with open(self.config_template) as f:
-                template = Template(f.read())
-            fd, name = tempfile.mkstemp()
-
-            with os.fdopen(fd, mode="w+t") as out:
-                out.write(
-                    template.render(
-                        outputs_influxdb_v2=True,
-                        outputs_influxdb_v2_urls=self.influxdb_info.urls,
-                        outputs_influxdb_v2_token=self.influxdb_info.token,
-                        outputs_influxdb_v2_organization=self.influxdb_info.organization,
-                        outputs_influxdb_v2_bucket=self.influxdb_info.bucket,
-                        jolokia=self.jolokia,
-                        jolokia_url=f"http://localhost:{self.jolokia_port}/jolokia",
-                        jolokia_to_mc_ticks_script=self.execd_minecraft_ticks,
-                        global_tags=self.tags,
-                    )
-                )
-
-            stage(machine, name, f"{self.wd}/telegraf.conf")
-            os.remove(name)
+            # The rendered config holds the InfluxDB admin token, so it is
+            # written straight onto the node mode-0600 rather than rendered
+            # to a local tempfile and staged. A staged file is a plain scp,
+            # which does not carry the source's mode across -- the same
+            # 0600 tempfile used to land 0600 on a local node and
+            # world-readable on a remote one.
+            write_private_file(machine, f"{self.wd}/telegraf.conf", config)
 
             if self.execd_minecraft_ticks:
                 # stage() carries the binary's executable bit over to the

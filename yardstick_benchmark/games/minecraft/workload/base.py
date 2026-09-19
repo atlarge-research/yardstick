@@ -31,7 +31,13 @@ from pathlib import Path
 from typing import IO, Callable, Dict, List, Optional
 
 from yardstick_benchmark.model import Node
-from yardstick_benchmark.util import random_string, remote, stage
+from yardstick_benchmark.util import (
+    remote,
+    render_env_file,
+    stage,
+    unique_instance_name,
+    write_private_file,
+)
 
 
 # Root of the workload tree as it lives on the headnode (this Python
@@ -89,18 +95,27 @@ class MineflayerWorkload:
         """
         Args:
             node: Node to run the workload container on.
-            name: Apptainer instance name for detached runs. Defaults to
-                ``yardstick-<NAME>``; override it to run more than one
-                workload of the same kind on a node.
+            name: Apptainer instance name for detached runs. Defaults to a
+                unique ``yardstick-<NAME>-<uuid>``, so two workloads of the
+                same kind on one node -- a sweep's runs, or another user's --
+                never share a name (and so ``stop()`` never stops theirs).
+                Pass it for a predictable name while debugging.
             image_url: Container image to run.
             timeout: Safety cap on :meth:`run`. A workload normally exits on
                 its own well before this; it only bounds a stuck run.
         """
         self.node = node
-        self.instance_name = name or f"yardstick-{self.NAME}"
+        self.instance_name = name or unique_instance_name(f"yardstick-{self.NAME}")
         self.image_url = image_url
         self.timeout = timeout
-        self.wd = f"{node.wd}/{self.NAME}-{random_string(8)}"
+        # Staged files live in a directory named after the instance, as they
+        # do for MinecraftServer, so a leftover directory identifies the run
+        # it belongs to.
+        self.wd = f"{node.wd}/{self.instance_name}"
+        # The workload environment carries the server's RCON password and the
+        # InfluxDB token, so it is written to a mode-0600 file on the node and
+        # passed as --env-file rather than as --env arguments.
+        self.env_file = f"{self.wd}/container.env"
 
     @property
     def entry_script(self) -> str:
@@ -111,11 +126,9 @@ class MineflayerWorkload:
         """The container environment for this workload. Subclasses override."""
         raise NotImplementedError
 
-    def _env_args(self) -> List[str]:
-        args: List[str] = []
-        for key, value in self._env().items():
-            args += ["--env", f"{key}={value}"]
-        return args
+    def _write_env_file(self, machine) -> None:
+        """Put this workload's environment on the node, owner-readable only."""
+        write_private_file(machine, self.env_file, render_env_file(self._env()))
 
     def _container_args(self) -> List[str]:
         return [
@@ -123,13 +136,16 @@ class MineflayerWorkload:
             "--compat",
             "--bind",
             f"{self.wd}:{self.CONTAINER_SCRIPTS_ROOT}",
-        ] + self._env_args()
+            "--env-file",
+            self.env_file,
+        ]
 
     def deploy(self) -> None:
-        """Stage this workload's scripts onto the node."""
+        """Stage this workload's scripts and environment onto the node."""
         with remote(self.node.host, self.node.user) as machine:
             for relpath in self.FILES:
                 stage(machine, WORKLOAD_ROOT / relpath, f"{self.wd}/{relpath}")
+            self._write_env_file(machine)
 
     def run(self, health_check: Optional[Callable[[], None]] = None) -> None:
         """Run the workload in the foreground, blocking until it exits.
@@ -159,6 +175,11 @@ class MineflayerWorkload:
         grace_s = self.timeout.total_seconds() + 60
         deadline = time.monotonic() + grace_s
         with remote(self.node.host, self.node.user) as machine:
+            # Rewritten here as well as in deploy(): a caller that tweaked
+            # the workload between the two would otherwise run the old
+            # environment, and apptainer fails opaquely if the file is
+            # missing entirely.
+            self._write_env_file(machine)
             proc = machine["apptainer"][args].popen()
             # Drain stdout/stderr in background threads: surfaces the
             # workload's output and avoids a full pipe buffer blocking a
@@ -212,6 +233,7 @@ class MineflayerWorkload:
             + [self.image_url, self.instance_name, self.entry_script]
         )
         with remote(self.node.host, self.node.user) as machine:
+            self._write_env_file(machine)
             machine["apptainer"][args]()
 
     def logs(self) -> str:

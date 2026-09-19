@@ -62,10 +62,19 @@ def _args_for(component):
                 # start() reads /proc/meminfo to size the JVM heap from the
                 # node's own RAM, so the fake has to answer that.
                 output = "MemTotal:       16000000 kB\n" if name == "cat" else ""
+                is_apptainer = name == "apptainer"
 
                 class Cmd:
                     def __getitem__(self, args):
-                        captured["args"] = list(args)
+                        # Only apptainer's arguments are of interest; the
+                        # mkdir/sh calls that stage the env file would
+                        # otherwise overwrite them.
+                        if is_apptainer:
+                            captured["args"] = list(args)
+                        return self
+
+                    def __lshift__(self, data):
+                        # start() writes the env file via `sh -c ... << data`.
                         return self
 
                     def __call__(self, *a, **k):
