@@ -7,12 +7,19 @@ and is used for in-band server commands like :meth:`set_world_spawn`.
 """
 
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 import threading
-import uuid
 
 from yardstick_benchmark.model import Node
-from yardstick_benchmark.util import random_string, remote, stage, wait_for_tcp
+from yardstick_benchmark.util import (
+    random_string,
+    remote,
+    render_env_file,
+    stage,
+    unique_instance_name,
+    wait_for_tcp,
+    write_private_file,
+)
 
 
 JOLOKIA_JAR = Path(__file__).parent / "jolokia-agent-jvm-2.5.1-javaagent.jar"
@@ -160,7 +167,7 @@ class MinecraftServer:
         """
         self.node = node
         self.image_url = image_url
-        self.instance_name = name if name else f"mc-{uuid.uuid4()}"
+        self.instance_name = name if name else unique_instance_name("mc")
         self.rcon_password = rcon_password or random_string(16)
         self.version = version
         self.max_tick_time = max_tick_time
@@ -189,6 +196,11 @@ class MinecraftServer:
         # machine running Yardstick. It has to be copied to the node before
         # it can be bind-mounted into the container there.
         self.jolokia_jar = f"{self.wd}/jolokia.jar"
+        # Files holding this server's environment, RCON password included.
+        # They are written mode-0600 on the node and handed to apptainer as
+        # --env-file, so the password never reaches the node's process list.
+        self.env_file = f"{self.wd}/server.env"
+        self.rcon_env_file = f"{self.wd}/rcon.env"
         # Background health monitor state (see start_health_monitor()).
         self._crash: Optional[MinecraftServerCrashed] = None
         self._monitor_stop: Optional[threading.Event] = None
@@ -245,11 +257,13 @@ class MinecraftServer:
         env.update(self.extra_env)
         return env
 
-    def _env_args(self, memory: str) -> List[str]:
-        args: List[str] = []
-        for key, value in self._env(memory).items():
-            args += ["--env", f"{key}={value}"]
-        return args
+    def _rcon_env(self) -> Dict[str, str]:
+        """The environment rcon-cli needs to talk to this server."""
+        return {
+            "RCON_HOST": "localhost",
+            "RCON_PORT": str(self.rcon_port),
+            "RCON_PASSWORD": self.rcon_password,
+        }
 
     def deploy(self) -> None:
         """Create the server's working directory and stage the Jolokia agent."""
@@ -270,20 +284,26 @@ class MinecraftServer:
         with remote(self.node.host, self.node.user) as machine:
             self._stage(machine)
             memory = self._resolve_memory(machine)
-            args = (
-                [
-                    "instance",
-                    "run",
-                    "--no-https",
-                    "--compat",
-                    "--bind",
-                    f"{self.data_dir}:/data",
-                    "--bind",
-                    f"{self.jolokia_jar}:/opt/jolokia.jar",
-                ]
-                + self._env_args(memory)
-                + [self.image_url, self.instance_name]
+            # The image environment includes RCON_PASSWORD, so it goes into
+            # a mode-0600 file on the node instead of onto the command line,
+            # where `ps` would show it to every user of the machine.
+            write_private_file(
+                machine, self.env_file, render_env_file(self._env(memory))
             )
+            args = [
+                "instance",
+                "run",
+                "--no-https",
+                "--compat",
+                "--bind",
+                f"{self.data_dir}:/data",
+                "--bind",
+                f"{self.jolokia_jar}:/opt/jolokia.jar",
+                "--env-file",
+                self.env_file,
+                self.image_url,
+                self.instance_name,
+            ]
             machine["apptainer"][args]()
         self.running = True
 
@@ -323,21 +343,24 @@ class MinecraftServer:
         execing straight into the running instance, so no extra container
         is launched. The server must already be started and accepting
         connections (see wait_until_ready()).
+
+        The password reaches rcon-cli through a mode-0600 env file on the
+        node rather than as a --env argument: an RCON password in the
+        process list is a console session for anyone else on the machine.
         """
         if not commands:
             return
         args = [
             "exec",
-            "--env",
-            "RCON_HOST=localhost",
-            "--env",
-            f"RCON_PORT={self.rcon_port}",
-            "--env",
-            f"RCON_PASSWORD={self.rcon_password}",
+            "--env-file",
+            self.rcon_env_file,
             f"instance://{self.instance_name}",
             "rcon-cli",
         ] + list(commands)
         with remote(self.node.host, self.node.user) as machine:
+            write_private_file(
+                machine, self.rcon_env_file, render_env_file(self._rcon_env())
+            )
             machine["apptainer"][args]()
 
     def set_world_spawn(self, x: int, z: int, y: int = 4) -> None:

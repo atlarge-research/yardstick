@@ -29,18 +29,27 @@ from yardstick_benchmark.util import stage
 class _FakeCommand:
     """A plumbum-style bound command that logs instead of executing."""
 
-    def __init__(self, log, name, args=()):
+    def __init__(self, log, name, args=(), stdin=None):
         self._log = log
         self._name = name
         self._args = tuple(args)
+        self._stdin = stdin
 
     def __getitem__(self, args):
         if not isinstance(args, tuple):
             args = (args,)
-        return _FakeCommand(self._log, self._name, self._args + args)
+        return _FakeCommand(self._log, self._name, self._args + args, self._stdin)
+
+    def __lshift__(self, data):
+        """plumbum's stdin redirection, as `util.write_private_file()` uses
+        it to keep a secret out of the command's arguments."""
+        return _FakeCommand(self._log, self._name, self._args, data)
 
     def __call__(self, *args):
-        self._log.append((self._name,) + tuple(str(a) for a in self._args + args))
+        call = (self._name,) + tuple(str(a) for a in self._args + args)
+        if self._stdin is not None:
+            call += (str(self._stdin),)
+        self._log.append(call)
         return ""
 
 
@@ -206,12 +215,16 @@ def test_telegraf_deploy_stages_an_executable_collector_to_a_remote_node(monkeyp
     binary_dst = f"{telegraf.wd}/jolokia_get_minecraft_tick"
     assert ("upload", str(binary_src), binary_dst) in machine.calls
     assert ("chmod", "+x", binary_dst) in machine.calls
-    # The rendered config goes up too, and is not made executable.
-    config_uploads = [
-        c for c in machine.calls if c[0] == "upload" and c[2].endswith("telegraf.conf")
+    # The rendered config is *not* uploaded: it holds the InfluxDB token, so
+    # it is written on the node under a restrictive umask instead (scp would
+    # land it world-readable there while keeping it 0600 on a local node).
+    assert not [
+        c for c in machine.calls if c[0] == "upload" and "telegraf.conf" in c[2]
     ]
-    assert len(config_uploads) == 1
-    assert ("chmod", "+x", f"{telegraf.wd}/telegraf.conf") not in machine.calls
+    written = [c for c in machine.calls if c[0] == "sh" and "telegraf.conf" in c[2]]
+    assert len(written) == 1
+    assert "umask 077" in written[0][2]
+    assert "[agent]" in written[0][-1]
 
 
 @pytest.mark.slow
