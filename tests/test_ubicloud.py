@@ -75,7 +75,8 @@ if len(args) >= 3 and args[0] == "vm":
             sys.exit(1)
         fields = args[args.index("-f") + 1].split(",") if "-f" in args else []
         for field in fields:
-            print(f"{field}\t{vm.get(field, '')}")
+            # Real `ubi vm show` prints "key: value", not tab-separated.
+            print(f"{field}: {vm.get(field, '')}")
         sys.exit(0)
 
 sys.stderr.write(f"fake ubi: unhandled {args}\n")

@@ -170,13 +170,18 @@ class Ubicloud(Provisioner):
         return result.stdout
 
     def _show(self, ref: str, *fields: str) -> Dict[str, str]:
+        """Parse `ubi vm ... show -f a,b,c`, which prints one "key: value"
+        line per field. A field with no value prints as a bare "key:", so the
+        separator has to be the first colon rather than whitespace.
+        """
         out = self._run("vm", ref, "show", "-f", ",".join(fields))
         values: Dict[str, str] = {}
         for line in out.splitlines():
             if not line.strip():
                 continue
-            key, tab, value = line.partition("\t")
-            if not tab:
+            key, sep, value = line.partition(":")
+            if not sep:
+                # Fall back to whitespace for a tabular variant.
                 key, _, value = line.strip().partition(" ")
             values[key.strip()] = value.strip()
         return values
