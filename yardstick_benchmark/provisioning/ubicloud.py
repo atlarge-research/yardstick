@@ -362,6 +362,11 @@ touch {READY_MARKER}
         deadline = time.monotonic() + timeout_s
         wait_for_tcp(host, 22, timeout_s=max(30.0, deadline - time.monotonic()))
         logger.info("waiting for %s to finish provisioning", record["ref"])
+        # Reconnecting per poll is deliberate here, unlike the server's health
+        # monitor (which holds a util.RemoteSession): this loop runs against a
+        # machine that is still booting, so most of its early attempts fail at
+        # the connection itself and a held connection would have to be
+        # reopened anyway. It is also a handful of polls, not several hundred.
         while time.monotonic() < deadline:
             try:
                 with remote(host, user) as machine:

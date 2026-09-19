@@ -4,12 +4,13 @@ import socket
 import ipaddress
 import string
 import random
+import threading
 import time
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import contextmanager
-from typing import Callable, Iterable, Optional, TypeVar
+from typing import Any, Callable, Iterable, Optional, Tuple, TypeVar
 
 from plumbum import SshMachine, local
 from plumbum.machines.local import LocalMachine
@@ -120,6 +121,24 @@ _SSH_OPTS = [
 ]
 
 
+def _connect(host: str, user: Optional[str] = None) -> Tuple[Any, bool]:
+    """Open a plumbum machine for `host`.
+
+    Returns ``(machine, owned)``. ``owned`` says whether the caller is
+    responsible for closing it: a localhost "connection" is the process-wide
+    `local` machine, which is shared and must never be closed.
+    """
+    if is_localhost(host):
+        return local, False
+    machine = SshMachine(
+        host,
+        user=user,
+        ssh_opts=_SSH_OPTS,
+        scp_opts=_SSH_OPTS,
+    )
+    return machine, True
+
+
 @contextmanager
 def remote(host: str, user: Optional[str] = None):
     """Yield a plumbum machine for `host`, closing it on exit if it's an SSH
@@ -132,20 +151,120 @@ def remote(host: str, user: Optional[str] = None):
 
     Remote machines are opened with SSH keepalives so a long foreground
     command (e.g. a workload's run()) doesn't get its connection torn down.
+
+    This is the right tool for a one-off: a deploy step, a cleanup, an RCON
+    command. A caller that runs many small commands over a long period (a
+    poll loop) should hold a :class:`RemoteSession` instead, which opens one
+    connection and keeps it.
     """
-    if is_localhost(host):
-        yield local
-        return
-    machine = SshMachine(
-        host,
-        user=user,
-        ssh_opts=_SSH_OPTS,
-        scp_opts=_SSH_OPTS,
-    )
+    machine, owned = _connect(host, user)
     try:
         yield machine
     finally:
-        machine.close()
+        if owned:
+            machine.close()
+
+
+class RemoteSession:
+    """One connection to a node, held open across many commands.
+
+    :func:`remote` opens a connection per use, which is right for a deploy
+    step but wasteful in a loop. Worse, plumbum spawns a *second* ``ssh``
+    process for every command run on a machine (only path operations reuse
+    the machine's own shell session), so a poll that builds a machine and
+    runs one command costs two SSH handshakes. A few hundred polls is a few
+    hundred handshakes, each one a fresh chance for a network hiccup to look
+    like a failure.
+
+    A ``RemoteSession`` connects once, lazily, and runs every command through
+    a single plumbum shell session on that connection -- which is what shell
+    sessions are for: "they allow us to send multiple commands over a single
+    SSH connection". Per-command cost after the first is zero connections.
+
+    Thread safety: connecting is serialised, so several threads sharing one
+    session still open only one connection, and plumbum's own shell session
+    serialises the commands run on it. :meth:`close` does not hold that lock
+    while it tears the connection down, so it can be called from another
+    thread to unblock one that is stuck in a remote command.
+
+    Lifecycle: the owner must call :meth:`close`. It is idempotent, and a
+    closed session reconnects on next use -- which is also how a caller
+    recovers from a dropped connection: close it and carry on.
+
+        conn = RemoteSession(node.host, node.user)
+        try:
+            while running:
+                conn.run(conn.machine["grep"]["-q", "boom", log])
+        finally:
+            conn.close()
+    """
+
+    def __init__(self, host: str, user: Optional[str] = None) -> None:
+        self.host = host
+        self.user = user
+        # Guards connecting only. Held briefly, and never while a command is
+        # running, so close() from another thread cannot deadlock on it.
+        self._lock = threading.Lock()
+        self._machine: Any = None
+        self._session: Any = None
+        self._owned = False
+
+    def _ensure(self) -> Tuple[Any, Any]:
+        with self._lock:
+            if self._machine is None:
+                self._machine, self._owned = _connect(self.host, self.user)
+            if self._session is None:
+                self._session = self._machine.session()
+            return self._machine, self._session
+
+    @property
+    def machine(self) -> Any:
+        """The plumbum machine, connecting on first use.
+
+        Use it for path operations (``machine.path(...)``), which plumbum
+        already runs over the machine's own connection, and to build the
+        command objects handed to :meth:`run`.
+        """
+        return self._ensure()[0]
+
+    def run(self, cmd, retcode=None):
+        """Run a plumbum command object over the held connection.
+
+        Returns plumbum's ``(retcode, stdout, stderr)``. Pass the command as
+        an unexecuted plumbum command (``session.machine["grep"][args]``);
+        it is shell-quoted by plumbum, not by string formatting here.
+        """
+        _, session = self._ensure()
+        # ShellSession only accepts a command *string*; formulate() is the
+        # documented way to get a shell-quoted command line out of a plumbum
+        # command object (passing the object itself hits a plumbum bug).
+        return session.run(" ".join(cmd.formulate(1)), retcode=retcode)
+
+    def close(self) -> None:
+        """Tear the connection down. Idempotent; the next use reconnects."""
+        with self._lock:
+            machine, session, owned = self._machine, self._session, self._owned
+            self._machine = self._session = None
+            self._owned = False
+        # Outside the lock: closing kills the underlying ssh processes, which
+        # is what unblocks a thread waiting on a command that will never
+        # answer -- and that thread may want the lock on its way out.
+        if session is not None:
+            try:
+                session.close()
+            except Exception:
+                pass
+        if machine is not None and owned:
+            try:
+                machine.close()
+            except Exception:
+                pass
+
+    def __enter__(self) -> "RemoteSession":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        self.close()
 
 
 def stage(machine, src, dst: str) -> None:
