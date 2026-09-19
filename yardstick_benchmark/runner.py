@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional
 import threading
 from contextlib import contextmanager
 
+from yardstick_benchmark import collect_node_artifacts
 from yardstick_benchmark.config import BenchmarkConfig, build_kwargs
 from yardstick_benchmark.deployment import Deployment
 from yardstick_benchmark.model import Node
@@ -175,58 +176,75 @@ def _run_on(
     started_at = datetime.now(timezone.utc)
 
     with Deployment(*components, cleanup=not config.output.keep_node_data):
-        # Put spawn at the origin so a workload's coordinates mean the same
-        # thing from one run to the next.
-        server.set_world_spawn(0, 0)
-        server.start_health_monitor()
-
-        workloads = [
-            config.workload_class(
-                node,
-                **build_kwargs(
-                    config.workload_class,
-                    config.workload_options,
-                    context=_context(server, server_host, influxdb, index, total_bots),
-                    where="[workload]",
-                ),
-            )
-            for index, node in enumerate(workload_nodes)
-        ]
-
         try:
-            logger.info(
-                "running %s with %d player(s) across %d node(s)",
-                config.workload,
-                total_bots,
-                len(workload_nodes),
+            # Put spawn at the origin so a workload's coordinates mean the
+            # same thing from one run to the next.
+            server.set_world_spawn(0, 0)
+            server.start_health_monitor()
+
+            workloads = [
+                config.workload_class(
+                    node,
+                    **build_kwargs(
+                        config.workload_class,
+                        config.workload_options,
+                        context=_context(
+                            server, server_host, influxdb, index, total_bots
+                        ),
+                        where="[workload]",
+                    ),
+                )
+                for index, node in enumerate(workload_nodes)
+            ]
+
+            try:
+                logger.info(
+                    "running %s with %d player(s) across %d node(s)",
+                    config.workload,
+                    total_bots,
+                    len(workload_nodes),
+                )
+                fan_out(workloads, lambda w: w.deploy())
+                fan_out(workloads, lambda w: w.run(health_check=server.assert_healthy))
+            finally:
+                fan_out(workloads, lambda w: w.cleanup())
+
+            finished_at = datetime.now(timezone.utc)
+
+            # Did the players actually keep up? If the workload nodes ran out
+            # of CPU or memory, the server did less work than the experiment
+            # asked for and the numbers understate the load. Check before
+            # teardown, while the database is still up.
+            saturation = check_workload_saturation(
+                influxdb,
+                start=started_at.isoformat(),
+                stop=finished_at.isoformat(),
             )
-            fan_out(workloads, lambda w: w.deploy())
-            fan_out(workloads, lambda w: w.run(health_check=server.assert_healthy))
+            if not saturation.ok:
+                logger.warning("%s", saturation.summary())
+
+            # Export before leaving the block: teardown stops the database,
+            # and with keep_node_data = false it deletes its storage too.
+            logger.info("exporting metrics to %s", results_dir)
+            written = influxdb.export_csv(
+                results_dir,
+                start=started_at.isoformat(),
+                stop=finished_at.isoformat(),
+            )
         finally:
-            fan_out(workloads, lambda w: w.cleanup())
-
-        finished_at = datetime.now(timezone.utc)
-
-        # Did the players actually keep up? If the workload nodes ran out of
-        # CPU or memory, the server did less work than the experiment asked
-        # for and the numbers understate the load. Check before teardown,
-        # while the database is still up.
-        saturation = check_workload_saturation(
-            influxdb,
-            start=started_at.isoformat(),
-            stop=finished_at.isoformat(),
-        )
-        if not saturation.ok:
-            logger.warning("%s", saturation.summary())
-
-        # Export before leaving the block: teardown stops the database, and
-        # with keep_node_data = false it deletes its storage too.
-        logger.info("exporting metrics to %s", results_dir)
-        written = influxdb.export_csv(
-            results_dir,
-            start=started_at.isoformat(),
-            stop=finished_at.isoformat(),
-        )
+            # Logs and crash reports, while the nodes still have them:
+            # teardown removes their working directories and in cloud mode
+            # the machines are destroyed right after. In a `finally` because
+            # a run that *failed* is the one whose evidence is worth most --
+            # and collect_node_artifacts() never raises, so a run that
+            # succeeded can't be failed by it either.
+            logger.info("collecting node artifacts into %s", results_dir / "nodes")
+            collected = collect_node_artifacts(
+                results_dir / "nodes",
+                list(nodes.values()),
+                keep_world=config.output.keep_world,
+                level_name=getattr(server, "level_name", "world"),
+            )
 
     manifest = {
         "workload": config.workload,
@@ -241,6 +259,8 @@ def _run_on(
         "influxdb_host": influx_node.host,
         "config": _manifest_config(config),
         "files": sorted(p.name for p in written),
+        # Hosts whose logs and crash reports are under results/nodes/.
+        "node_artifacts": collected,
         # Recorded next to the data, so a result can't be read later without
         # the caveat that came with it.
         "workload_saturation": saturation.as_dict(),

@@ -329,12 +329,26 @@ class MonitoringConfig:
 
 @dataclass
 class OutputConfig:
-    """Where results go."""
+    """Where results go.
+
+    Every run collects each node's logs, crash reports and rendered configs
+    into ``<dir>/<run>/nodes/<host>/`` before teardown -- see
+    :func:`yardstick_benchmark.collect_node_artifacts`. That is not optional:
+    it is what makes a failed run explicable afterwards, and it costs
+    kilobytes. The generated world is the one thing big enough to be worth a
+    switch.
+    """
 
     dir: str = "results"
     #: Keep each node's working directory (worlds, logs, raw database) after
-    #: the run instead of deleting it.
+    #: the run instead of deleting it. Local mode only: in cloud mode the
+    #: machine is destroyed regardless, which is why artifacts are copied
+    #: into the results directory rather than left where they were produced.
     keep_node_data: bool = False
+    #: Also copy the generated world into the results directory. Off by
+    #: default because a world-generation run produces gigabytes of region
+    #: files; turn it on to inspect (or reuse) the world a run produced.
+    keep_world: bool = False
 
 
 @dataclass
@@ -613,4 +627,8 @@ teleports = 16
 [output]
 dir = "results"
 keep_node_data = false
+# Each node's logs, crash reports and rendered configs are always copied
+# into <dir>/<run>/nodes/<host>/ before teardown. The world is not: a
+# world-generation run produces gigabytes of it. Set this to keep it anyway.
+keep_world = false
 """

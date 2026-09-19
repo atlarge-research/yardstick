@@ -167,7 +167,13 @@ type = "mypackage.workloads.MyWorkload"
 
 Results land in `results/<workload>-<timestamp>/`: one CSV per measurement,
 plus a `run.json` manifest recording the configuration, timings and files
-produced. Load a measurement with:
+produced. Alongside them, `nodes/<host>/` holds what each machine itself
+produced -- the Minecraft server's `logs/latest.log` and `crash-reports/`,
+the containers' stdout/stderr, the `server.properties` and Telegraf config
+actually used. These are collected before teardown, and also when a run
+fails, which is when they matter most; the generated world is left behind
+unless you ask for it with `keep_world = true`, since a world-generation run
+produces gigabytes of it. Load a measurement with:
 
 ```python
 from yardstick_benchmark.results import read_csv
@@ -193,6 +199,7 @@ order, guaranteeing teardown:
 
 ```python
 from pathlib import Path
+from yardstick_benchmark import collect_node_artifacts
 from yardstick_benchmark.deployment import Deployment
 from yardstick_benchmark.games.minecraft.server import MinecraftServer
 from yardstick_benchmark.games.minecraft.workload import WorldGeneration
@@ -224,12 +231,16 @@ with Deployment(influxdb, server, telegraf):
         workload.cleanup()
 
     influxdb.export_csv(Path("results/my-run"))
+    collect_node_artifacts(Path("results/my-run/nodes"), [node])
 ```
 
 Components come up in the order given and go down in reverse, so list them in
 dependency order. Teardown runs whatever happens, including a failure partway
 through startup. Export results *inside* the block: teardown stops the
-database and removes its storage.
+database and removes its storage, and takes the nodes' logs and crash
+reports with it -- `collect_node_artifacts()` (from `yardstick_benchmark`)
+copies those out first and never raises, so it is safe to call from a
+`finally`.
 
 `example.py` is this, end to end and runnable.
 `yardstick_benchmark/runner.py` is the same thing driven by a configuration
