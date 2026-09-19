@@ -223,13 +223,13 @@ def test_stage_over_real_ssh_to_localhost(tmp_path):
     build an SshMachine by hand to reach the remote one.
     """
     from plumbum import SshMachine
-    from yardstick_benchmark.util import _SSH_KEEPALIVE_OPTS
+    from yardstick_benchmark.util import _SSH_OPTS
 
     try:
         machine = SshMachine(
             "localhost",
-            ssh_opts=_SSH_KEEPALIVE_OPTS,
-            scp_opts=_SSH_KEEPALIVE_OPTS,
+            ssh_opts=_SSH_OPTS,
+            scp_opts=_SSH_OPTS,
         )
     except Exception as exc:
         pytest.skip(f"no key-based SSH to localhost: {exc!r}")
