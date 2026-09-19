@@ -147,6 +147,32 @@ Edit Yardstick's internals and add a new player workload with different player b
 > **Question 7**  
 > How does the workload affect the game's performance?
 
+### Running a Benchmark Without a Notebook
+
+The notebook is the right tool while you are exploring, because the data and
+the plots stay in one place. For a plain run there is also a command-line
+path, which describes the whole experiment in a file instead of in code:
+
+```bash
+uv run yardstick init experiment.toml   # writes a commented starter config
+uv run yardstick validate experiment.toml
+uv run yardstick run experiment.toml
+```
+
+Open `experiment.toml` and read it — every setting in it is one the notebook
+sets in Python. Results land in a directory of CSV files plus a `run.json`
+recording exactly what produced them, which you can load with:
+
+```python
+from yardstick_benchmark.results import read_csv
+df = read_csv("results/<run>/minecraft_tick.csv", field="tick_duration_ms")
+```
+
+> **Question 8**
+> Run one of the earlier exercises again through the configuration file
+> instead of the notebook. Which of the two would you rather use for a
+> sweep over many configurations, and why?
+
 ### Done Before Time Runs Out?
 
 Explore Yardstick's features freely, or ask the lecturer to come up with an ad-hoc exercise to complete.

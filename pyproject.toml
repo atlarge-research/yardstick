@@ -11,6 +11,9 @@ dependencies = [
     "plumbum>=1.8.2,<2",
 ]
 
+[project.scripts]
+yardstick = "yardstick_benchmark.__main__:main"
+
 [project.optional-dependencies]
 # Install with: `uv sync --extra notebooks` (or `uv pip install
 # yardstick-benchmark[notebooks]` from PyPI). Required to run the
@@ -47,5 +50,5 @@ dev = [
 
 [tool.pytest.ini_options]
 markers = [
-    "slow: integration tests that start real apptainer instances; skipped by default with '-m \"not slow\"'",
+    "slow: integration tests that need real infrastructure -- apptainer instances, container pulls, or SSH; skipped by default with '-m \"not slow\"'",
 ]

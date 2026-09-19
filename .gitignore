@@ -509,3 +509,5 @@ notes.md
 # itzg/minecraft-server image by MinecraftServer.start() and must be
 # present in both source checkouts and the PyPI wheel.
 !yardstick_benchmark/games/minecraft/server/jolokia-agent-jvm-*.jar
+# Agent worktrees (git worktrees live here; never commit them)
+.claude/worktrees/

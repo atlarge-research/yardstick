@@ -1,12 +1,21 @@
+// WalkAround worker: one emulated player.
+//
+// Joins the server and walks, on foot, between random points inside a box of
+// `box_width` blocks centred on `box_center`. Plain survival-mode movement:
+// mineflayer-pathfinder walks the bot there, no flying, no digging, no
+// server-side commands, so this works on a default server.
+
 const pathfinder = require('mineflayer-pathfinder').pathfinder;
 const Movements = require('mineflayer-pathfinder').Movements;
 const { GoalXZ } = require('mineflayer-pathfinder').goals;
 const v = require('vec3');
-const { workerData } = require('worker_threads');
+const { workerData, parentPort } = require('worker_threads');
 
 const lib = require('../lib.js');
 
 const host = workerData.host;
+const port = workerData.port;
+const version = workerData.version;
 const username = workerData.username;
 const box_center = workerData.box_center;
 const box_width = workerData.box_width;
@@ -23,9 +32,19 @@ function nextGoal(bot) {
     return new GoalXZ(x, z);
 }
 
-const worker_bot = lib.createBot({ host, username });
+const worker_bot = lib.createBot({ host, port, version, username });
 worker_bot.loadPlugin(pathfinder);
+// If this player loses its connection there is nothing left to do here: end
+// the thread so the parent can replace it and the node keeps its target
+// number of players.
+worker_bot.once('end', (reason) => {
+    console.log(`${Date.now() / 1000} - bot ${username} disconnected (${reason})`);
+    process.exit(0);
+});
 worker_bot.once('spawn', async () => {
+    // Tell the parent this player actually made it into the world; a run
+    // where nobody does is a failed run, not an idle one.
+    parentPort.postMessage({ event: 'spawn', username });
     const defaultMove = new Movements(worker_bot);
     defaultMove.allowSprinting = false;
     defaultMove.canDig = false;

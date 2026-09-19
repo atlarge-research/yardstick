@@ -16,10 +16,14 @@
 
 # Global tags can be specified here in key="value" format.
 [global_tags]
-  # dc = "us-east-1" # will tag all metrics with dc=us-east-1
-  # rack = "1a"
-  ## Environment variables can be used as tags, and throughout the config file
-  # user = "$USER"
+  ## Yardstick tags every metric with the node it came from and that node's
+  ## role in the deployment, because a container's own hostname is not a
+  ## reliable way to tell which machine a measurement belongs to -- and
+  ## telling the game server's metrics from the emulated players' is the
+  ## whole point of collecting them.
+{% for key, value in (global_tags | default({})).items() %}
+  {{ key }} = "{{ value }}"
+{% endfor %}
 
 # Configuration for telegraf agent
 [agent]
@@ -136,7 +140,7 @@
 ## Send telegraf metrics to file(s)
 #[[outputs.file]]
 #  ## Files to write to, "stdout" is a specially handled file.
-#  files = ["metrics-{{inventory_hostname}}.csv"]
+#  files = ["metrics-${HOSTNAME}.csv"]
 #
 #  ## Use batch serialization format instead of line based delimiting.  The
 #  ## batch format allows for the production of non line based output formats and
@@ -329,7 +333,7 @@
   # default_field_prefix    = ""
   # default_field_separator = "."
   # Add agents URLs to query
-  urls = ["http://localhost:8778/jolokia"]
+  urls = ["{{ jolokia_url | default("http://localhost:8778/jolokia") }}"]
   # username = ""
   # password = ""
   # response_timeout = "5s"
@@ -367,7 +371,7 @@
     paths = ["AvailableProcessors", "CommittedVirtualMemorySize", "FreePhysicalMemorySize", "FreeSwapSpaceSize", "MaxFileDescriptorCount", "OpenFileDescriptorCount", "ProcessCpuLoad", "ProcessCpuTime", "SystemCpuLoad", "SystemLoadAverage", "TotalPhysicalMemorySize", "TotalSwapSpaceSize"]
   [[inputs.jolokia2_agent.metric]]
     name  = "minecraft_tick_times"
-    mbean = "net.minecraft.server:type=Serve"
+    mbean = "net.minecraft.server:type=Server"
     paths = ["averageTickTime", "tickTimes"]
 {% endif %}
 

@@ -95,7 +95,7 @@ def test_minecraft_tick_ingests_into_influxdb(tmp_path, apptainer_cleanup):
     telegraf = Telegraf(node, jolokia=True, execd_minecraft_ticks=True)
     telegraf.set_output_influxdb2(influxdb.get_info())
 
-    minecraft = MinecraftServer(name=mc_instance)
+    minecraft = MinecraftServer(node, name=mc_instance)
 
     try:
         influxdb.deploy()
@@ -127,14 +127,15 @@ def test_minecraft_tick_ingests_into_influxdb(tmp_path, apptainer_cleanup):
                 pass
 
 
-def test_minecraft_set_world_spawn(apptainer_cleanup):
+def test_minecraft_set_world_spawn(tmp_path, apptainer_cleanup):
     """Exercise MinecraftServer.rcon() (via set_world_spawn): verifies the
     `apptainer exec instance://...` path works against a running MC server.
     """
+    node = Node("localhost", tmp_path)
     mc_instance = "yardstick-test-mc-rcon"
     apptainer_cleanup.append(mc_instance)
 
-    minecraft = MinecraftServer(name=mc_instance)
+    minecraft = MinecraftServer(node, name=mc_instance)
     try:
         minecraft.start()
         minecraft.wait_until_ready()
