@@ -227,7 +227,7 @@ class MinecraftServer:
 
     def deploy(self) -> None:
         """Create the server's working directory on the node."""
-        with remote(self.node.host) as machine:
+        with remote(self.node.host, self.node.user) as machine:
             machine["mkdir"]["-p", self.data_dir]()
 
     def start(self) -> None:
@@ -237,7 +237,7 @@ class MinecraftServer:
         fails with an opaque bind error when the source path is missing, and
         the mkdir is idempotent and cheap.
         """
-        with remote(self.node.host) as machine:
+        with remote(self.node.host, self.node.user) as machine:
             machine["mkdir"]["-p", self.data_dir]()
             args = (
                 [
@@ -259,7 +259,7 @@ class MinecraftServer:
     def stop(self) -> None:
         """Stop the server instance. Safe to call if it never started."""
         self.stop_health_monitor()
-        with remote(self.node.host) as machine:
+        with remote(self.node.host, self.node.user) as machine:
             machine["apptainer"]["instance", "stop", self.instance_name].run(
                 retcode=None
             )
@@ -267,7 +267,7 @@ class MinecraftServer:
 
     def cleanup(self) -> None:
         """Remove the server's working directory (world, logs, crash reports)."""
-        with remote(self.node.host) as machine:
+        with remote(self.node.host, self.node.user) as machine:
             machine["rm"]["-rf", self.wd](retcode=None)
 
     def wait_until_ready(self, timeout_s: float = 180) -> None:
@@ -306,7 +306,7 @@ class MinecraftServer:
             f"instance://{self.instance_name}",
             "rcon-cli",
         ] + list(commands)
-        with remote(self.node.host) as machine:
+        with remote(self.node.host, self.node.user) as machine:
             machine["apptainer"][args]()
 
     def set_world_spawn(self, x: int, z: int, y: int = 4) -> None:
@@ -323,7 +323,7 @@ class MinecraftServer:
         against a dead server. The log scan runs as a `grep` on the node, so
         a long run's console log is never pulled across in full.
         """
-        with remote(self.node.host) as machine:
+        with remote(self.node.host, self.node.user) as machine:
             # A crash-report file is the unambiguous signal: vanilla writes
             # here only when the server actually crashes. Prefer it for the
             # message.

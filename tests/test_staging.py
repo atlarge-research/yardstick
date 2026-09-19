@@ -160,7 +160,7 @@ def _yield(machine):
 
 
 def _patch_remote(monkeypatch, module, machine):
-    monkeypatch.setattr(module, "remote", lambda host: _yield(machine))
+    monkeypatch.setattr(module, "remote", lambda host, user=None: _yield(machine))
 
 
 def test_workload_deploy_stages_every_file_to_a_remote_node(monkeypatch):

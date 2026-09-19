@@ -12,7 +12,7 @@ def clean(nodes: list[Node]) -> None:
     """
 
     def _rm(node: Node) -> None:
-        with remote(node.host) as machine:
+        with remote(node.host, node.user) as machine:
             machine["rm"]["-rf", str(node.wd)](retcode=None)
 
     fan_out(nodes, _rm)
@@ -25,7 +25,13 @@ def fetch(dest: Path, nodes: list[Node]) -> None:
     dest.mkdir(parents=True, exist_ok=True)
 
     def _pull(node: Node) -> None:
-        src = str(node.wd) if is_localhost(node.host) else f"{node.host}:{node.wd}"
+        if is_localhost(node.host):
+            src = str(node.wd)
+        else:
+            # rsync needs the login user for the same reason ssh does: the
+            # account on a provisioned VM is not the local one.
+            target = f"{node.user}@{node.host}" if node.user else node.host
+            src = f"{target}:{node.wd}"
         local["rsync"]["-a", src, str(dest)]()
 
     fan_out(nodes, _pull)

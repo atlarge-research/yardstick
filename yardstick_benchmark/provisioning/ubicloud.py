@@ -319,12 +319,13 @@ touch {READY_MARKER}
         from yardstick_benchmark.util import remote, wait_for_tcp
 
         host = str(record["host"])
+        user = str(record.get("unix_user") or self.unix_user)
         deadline = time.monotonic() + timeout_s
         wait_for_tcp(host, 22, timeout_s=max(30.0, deadline - time.monotonic()))
         logger.info("waiting for %s to finish provisioning", record["ref"])
         while time.monotonic() < deadline:
             try:
-                with remote(host) as machine:
+                with remote(host, user) as machine:
                     retcode, _, _ = machine["test"]["-f", self.READY_MARKER].run(
                         retcode=None
                     )
@@ -344,7 +345,11 @@ touch {READY_MARKER}
         self._run("vm", str(record["ref"]), "destroy", "-f")
 
     def node_for(self, record: Dict[str, Any]) -> Node:
-        return Node(str(record["host"]), Path(str(record["wd"])))
+        return Node(
+            str(record["host"]),
+            Path(str(record["wd"])),
+            user=str(record.get("unix_user") or self.unix_user),
+        )
 
 
 def _default_ssh_public_key() -> str:

@@ -87,7 +87,7 @@ class InfluxDB(object):
 
     def deploy(self) -> None:
         """Create the database's storage directories on the node."""
-        with remote(self.node.host) as machine:
+        with remote(self.node.host, self.node.user) as machine:
             machine["mkdir"]["-p", self.data_dir, self.config_dir]()
 
     def _initialised(self, machine) -> bool:
@@ -100,7 +100,7 @@ class InfluxDB(object):
         return machine.path(f"{self.data_dir}/influxd.bolt").exists()
 
     def start(self) -> None:
-        with remote(self.node.host) as machine:
+        with remote(self.node.host, self.node.user) as machine:
             machine["mkdir"]["-p", self.data_dir, self.config_dir]()
             args = [
                 "instance",
@@ -133,12 +133,12 @@ class InfluxDB(object):
             machine["apptainer"][args]()
 
     def stop(self) -> None:
-        with remote(self.node.host) as machine:
+        with remote(self.node.host, self.node.user) as machine:
             machine["apptainer"]["instance", "stop", self.name].run(retcode=None)
 
     def cleanup(self) -> None:
         """Remove the database's storage directory."""
-        with remote(self.node.host) as machine:
+        with remote(self.node.host, self.node.user) as machine:
             machine["rm"]["-rf", self.wd](retcode=None)
 
     def ready(self, timeout_s: float = 120) -> None:
@@ -324,7 +324,7 @@ class Telegraf(object):
                 "set_output_influxdb2(influxdb.get_info()) before deploy()"
             )
         mc_ticks_binary = Path(__file__).parent / "jolokia_get_minecraft_tick"
-        with remote(self.node.host) as machine:
+        with remote(self.node.host, self.node.user) as machine:
             with open(self.config_template) as f:
                 template = Template(f.read())
             fd, name = tempfile.mkstemp()
@@ -358,7 +358,7 @@ class Telegraf(object):
                 )
 
     def start(self) -> None:
-        with remote(self.node.host) as machine:
+        with remote(self.node.host, self.node.user) as machine:
             binds = [f"{self.wd}/telegraf.conf:/etc/telegraf/telegraf.conf"]
             if self.execd_minecraft_ticks:
                 binds.append(
@@ -376,9 +376,9 @@ class Telegraf(object):
             machine["apptainer"][args]()
 
     def stop(self) -> None:
-        with remote(self.node.host) as machine:
+        with remote(self.node.host, self.node.user) as machine:
             machine["apptainer"]["instance", "stop", self.name].run(retcode=None)
 
     def cleanup(self) -> None:
-        with remote(self.node.host) as machine:
+        with remote(self.node.host, self.node.user) as machine:
             machine["rm"]["-rf", self.wd](retcode=None)

@@ -119,10 +119,14 @@ _SSH_KEEPALIVE_OPTS = [
 
 
 @contextmanager
-def remote(host: str):
+def remote(host: str, user: Optional[str] = None):
     """Yield a plumbum machine for `host`, closing it on exit if it's an SSH
     connection. For localhost, yields the global `local` machine which has
     no per-use lifecycle.
+
+    `user` is the SSH login name. Without it plumbum connects as whoever is
+    running Yardstick, which is correct on a cluster where the accounts match
+    but wrong for a provisioned VM, where the image decides the login user.
 
     Remote machines are opened with SSH keepalives so a long foreground
     command (e.g. a workload's run()) doesn't get its connection torn down.
@@ -131,7 +135,10 @@ def remote(host: str):
         yield local
         return
     machine = SshMachine(
-        host, ssh_opts=_SSH_KEEPALIVE_OPTS, scp_opts=_SSH_KEEPALIVE_OPTS
+        host,
+        user=user,
+        ssh_opts=_SSH_KEEPALIVE_OPTS,
+        scp_opts=_SSH_KEEPALIVE_OPTS,
     )
     try:
         yield machine

@@ -127,7 +127,7 @@ class MineflayerWorkload:
 
     def deploy(self) -> None:
         """Stage this workload's scripts onto the node."""
-        with remote(self.node.host) as machine:
+        with remote(self.node.host, self.node.user) as machine:
             for relpath in self.FILES:
                 stage(machine, WORKLOAD_ROOT / relpath, f"{self.wd}/{relpath}")
 
@@ -158,7 +158,7 @@ class MineflayerWorkload:
         args = ["run"] + self._container_args() + [self.image_url, self.entry_script]
         grace_s = self.timeout.total_seconds() + 60
         deadline = time.monotonic() + grace_s
-        with remote(self.node.host) as machine:
+        with remote(self.node.host, self.node.user) as machine:
             proc = machine["apptainer"][args].popen()
             # Drain stdout/stderr in background threads: surfaces the
             # workload's output and avoids a full pipe buffer blocking a
@@ -211,7 +211,7 @@ class MineflayerWorkload:
             + self._container_args()
             + [self.image_url, self.instance_name, self.entry_script]
         )
-        with remote(self.node.host) as machine:
+        with remote(self.node.host, self.node.user) as machine:
             machine["apptainer"][args]()
 
     def logs(self) -> str:
@@ -222,7 +222,7 @@ class MineflayerWorkload:
         the node that runs it. Returns "" if they can't be located. Only
         meaningful after :meth:`start`; :meth:`run` streams its output live.
         """
-        with remote(self.node.host) as machine:
+        with remote(self.node.host, self.node.user) as machine:
             try:
                 home = machine.env["HOME"]
                 host = machine["hostname"]().strip()
@@ -241,12 +241,12 @@ class MineflayerWorkload:
 
     def stop(self) -> None:
         """Stop a detached run. Safe to call if it never started."""
-        with remote(self.node.host) as machine:
+        with remote(self.node.host, self.node.user) as machine:
             machine["apptainer"]["instance", "stop", self.instance_name].run(
                 retcode=None
             )
 
     def cleanup(self) -> None:
         """Remove the workload's staged files from the node."""
-        with remote(self.node.host) as machine:
+        with remote(self.node.host, self.node.user) as machine:
             machine["rm"]["-rf", self.wd](retcode=None)
