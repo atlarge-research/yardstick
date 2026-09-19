@@ -280,18 +280,47 @@ class ProvisioningConfig:
     server: Dict[str, Any] = field(default_factory=dict)
     workload: Dict[str, Any] = field(default_factory=dict)
 
+    #: Overrides for a dedicated metrics-database machine.
+    influxdb: Dict[str, Any] = field(default_factory=dict)
+
     def options_for(self, group: str) -> Dict[str, Any]:
         """Constructor options for one group of machines."""
         merged = dict(self.options)
-        merged.update(self.server if group == "server" else self.workload)
+        merged.update(getattr(self, group, {}))
         return merged
+
+
+#: Where the metrics database runs, relative to the machines under test.
+INFLUXDB_PLACEMENTS = ("workload", "dedicated", "server")
 
 
 @dataclass
 class MonitoringConfig:
-    """What to collect while the workload runs."""
+    """What to collect while the workload runs, and where to put it.
+
+    ``influxdb_placement`` decides which machine hosts the database:
+
+    ``workload``
+        On the first machine running emulated players. The default: it costs
+        nothing extra and, crucially, keeps the game server's machine to
+        itself. The database competes with the bots instead, which the
+        saturation check will report if it starts to matter.
+
+    ``dedicated``
+        On a machine of its own, from ``[provisioning.influxdb]``. The
+        cleanest option and the right one for a run whose numbers have to be
+        defensible, at the cost of another machine.
+
+    ``server``
+        On the game server's machine. Correct only for single-machine
+        (`local`) runs, where there is nowhere else to put it. Avoid it for
+        real measurements: InfluxDB's WAL flushes and compaction spike CPU
+        and disk I/O on exactly the machine whose tick durations are being
+        measured.
+    """
 
     enabled: bool = True
+    influxdb_placement: str = "workload"
     #: Scrape the game server's JVM through its Jolokia agent.
     jolokia: bool = True
     #: Run the Go collector that samples Minecraft's per-tick durations.
@@ -426,7 +455,10 @@ class BenchmarkConfig:
             if self.provisioning.workload_nodes < 1:
                 raise ConfigError("[provisioning] workload_nodes must be at least 1")
             provider = self.provider_class
-            for group in ("server", "workload"):
+            groups = ["server", "workload"]
+            if self.monitoring.influxdb_placement == "dedicated":
+                groups.append("influxdb")
+            for group in groups:
                 where = f"[provisioning.{group}]"
                 kwargs = build_kwargs(
                     provider, self.provisioning.options_for(group), where=where
@@ -440,6 +472,21 @@ class BenchmarkConfig:
                     provider(**kwargs)
                 except ProvisioningError as exc:
                     raise ConfigError(f"{where}: {exc}") from exc
+        if self.monitoring.influxdb_placement not in INFLUXDB_PLACEMENTS:
+            raise ConfigError(
+                f"[monitoring] unknown influxdb_placement "
+                f"{self.monitoring.influxdb_placement!r}. Valid values: "
+                f"{', '.join(INFLUXDB_PLACEMENTS)}"
+            )
+        if (
+            self.monitoring.influxdb_placement == "dedicated"
+            and self.deployment.mode == "local"
+        ):
+            raise ConfigError(
+                "[monitoring] influxdb_placement = 'dedicated' needs a mode "
+                "that can provision machines; in 'local' mode there is only "
+                "one machine. Use 'server' there."
+            )
         build_kwargs(self.game_class, self.game_options, where="[game]")
         build_kwargs(
             self.workload_class,
@@ -463,7 +510,12 @@ def _build_provisioning(values: Mapping[str, Any], where: str) -> ProvisioningCo
     raw = dict(values)
     server = raw.pop("server", {})
     workload = raw.pop("workload", {})
-    for name, value in (("server", server), ("workload", workload)):
+    influxdb = raw.pop("influxdb", {})
+    for name, value in (
+        ("server", server),
+        ("workload", workload),
+        ("influxdb", influxdb),
+    ):
         if not isinstance(value, dict):
             raise ConfigError(f"{where}: [provisioning.{name}] must be a table")
     provider = raw.pop("provider", "ubicloud")
@@ -478,6 +530,7 @@ def _build_provisioning(values: Mapping[str, Any], where: str) -> ProvisioningCo
         options=raw,
         server=dict(server),
         workload=dict(workload),
+        influxdb=dict(influxdb),
     )
 
 

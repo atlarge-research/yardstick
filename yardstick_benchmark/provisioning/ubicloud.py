@@ -23,6 +23,7 @@ from yardstick_benchmark.provisioning import (
     ProvisioningError,
     ProvisioningSafetyError,
 )
+from yardstick_benchmark.util import fan_out
 
 
 logger = logging.getLogger(__name__)
@@ -257,31 +258,40 @@ touch {READY_MARKER}
                 wd=template.format(user=self.unix_user),
             )
             refs.append(ref)
-            logger.info("creating %s (%s, %d GiB)", ref, self.size, self.storage_gib)
-            create_args = [
-                "vm",
-                ref,
-                "create",
-                "-s",
-                self.size,
-                "-S",
-                str(self.storage_gib),
-                "-b",
-                self.boot_image,
-                "-u",
-                self.unix_user,
-            ]
-            if self.init_script:
-                create_args += ["-i", self.init_script]
-            create_args.append(self.ssh_public_key)
-            self._run(*create_args)
-        for ref in refs:
-            self._wait_until_running(ref, ready_timeout_s)
+
+        # Everything below is per-VM and slow -- a create, then a boot, then
+        # several minutes of apt in the init script. Run the groups
+        # concurrently: provisioning four machines should take about as long
+        # as provisioning one, not four times as long.
+        fan_out(refs, self._create)
+        fan_out(refs, lambda ref: self._wait_until_running(ref, ready_timeout_s))
         records = [self._refresh(ref) for ref in refs]
         if self.init_script:
-            for record in records:
-                self._wait_until_provisioned(record, ready_timeout_s)
+            fan_out(
+                records,
+                lambda record: self._wait_until_provisioned(record, ready_timeout_s),
+            )
         return records
+
+    def _create(self, ref: str) -> None:
+        logger.info("creating %s (%s, %d GiB)", ref, self.size, self.storage_gib)
+        create_args = [
+            "vm",
+            ref,
+            "create",
+            "-s",
+            self.size,
+            "-S",
+            str(self.storage_gib),
+            "-b",
+            self.boot_image,
+            "-u",
+            self.unix_user,
+        ]
+        if self.init_script:
+            create_args += ["-i", self.init_script]
+        create_args.append(self.ssh_public_key)
+        self._run(*create_args)
 
     def _refresh(self, ref: str) -> Dict[str, Any]:
         """Fill in id and addresses from `ubi vm ... show`, and re-record."""

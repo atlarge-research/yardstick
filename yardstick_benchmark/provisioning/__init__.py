@@ -26,6 +26,7 @@ the same everywhere and are easy to get dangerously wrong:
 import json
 import logging
 import os
+import threading
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
@@ -49,6 +50,17 @@ class ProvisioningError(RuntimeError):
 class ProvisioningSafetyError(ProvisioningError):
     """An operation was refused because it could affect a resource this
     provisioner did not acquire."""
+
+
+#: Serialises ledger mutations. Every write is a read-modify-write of one
+#: JSON file, and machines are acquired in parallel -- two threads recording
+#: at once would silently drop one of the entries, which for this file means
+#: losing the only record of how to release a machine. Module-level because
+#: provisioners for different groups are separate objects sharing one file.
+#:
+#: This makes concurrent use safe within a process, not across processes; two
+#: Yardstick runs sharing a ledger path would still race.
+_LEDGER_LOCK = threading.Lock()
 
 
 class ResourceLedger:
@@ -85,12 +97,14 @@ class ResourceLedger:
 
     def record(self, ref: str, **fields: Any) -> None:
         """Add or update the entry for `ref`."""
-        records = [r for r in self.records() if r.get("ref") != ref]
-        records.append({"ref": ref, **fields})
-        self._write(records)
+        with _LEDGER_LOCK:
+            records = [r for r in self.records() if r.get("ref") != ref]
+            records.append({"ref": ref, **fields})
+            self._write(records)
 
     def forget(self, ref: str) -> None:
-        self._write([r for r in self.records() if r.get("ref") != ref])
+        with _LEDGER_LOCK:
+            self._write([r for r in self.records() if r.get("ref") != ref])
 
     def get(self, ref: str) -> Optional[Dict[str, Any]]:
         for record in self.records():

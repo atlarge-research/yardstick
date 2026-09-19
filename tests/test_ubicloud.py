@@ -27,13 +27,18 @@ from yardstick_benchmark.provisioning import (
 
 
 FAKE_CLI = r"""#!/usr/bin/env python3
-import json, os, sys
+import fcntl, json, os, sys
 
 LOG = os.environ["FAKE_UBI_LOG"]
 STATE = os.environ["FAKE_UBI_STATE"]
 FAIL_ON = os.environ.get("FAKE_UBI_FAIL_ON_CREATE", "")
 
 args = sys.argv[1:]
+# Yardstick creates machines in parallel, so several copies of this script
+# run at once; without a lock they clobber each other's state file.
+lock = open(STATE + ".lock", "w")
+fcntl.flock(lock, fcntl.LOCK_EX)
+
 with open(LOG, "a") as f:
     f.write(json.dumps(args) + "\n")
 
@@ -127,8 +132,11 @@ def test_provision_returns_nodes_and_records_them(fake):
 
     assert len(nodes) == 2
     assert all(isinstance(n, Node) for n in nodes)
-    assert [n.host for n in nodes] == ["203.0.113.1", "203.0.113.2"]
+    # Machines are created concurrently, so which one gets which address is
+    # up to the provider; only the set is predictable.
+    assert {n.host for n in nodes} == {"203.0.113.1", "203.0.113.2"}
     assert all(str(n.wd) == "/home/ubi/yardstick" for n in nodes)
+    assert all(n.user == "ubi" for n in nodes), "SSH needs the image's login user"
 
     acquired = cloud.acquired()
     assert len(acquired) == 2
@@ -295,3 +303,39 @@ def test_the_default_image_avoids_the_apparmor_userns_restriction():
     """Ubuntu >= 24.04 blocks unprivileged user namespaces with AppArmor,
     which is exactly what apptainer needs to run rootless."""
     assert Ubicloud.DEFAULT_BOOT_IMAGE == "ubuntu-jammy"
+
+
+def test_nodes_come_back_in_the_order_they_were_requested(fake):
+    """Callers index into this list -- the runner hands node i the bot_index
+    i -- so concurrent creation must not shuffle the result."""
+    cloud = fake()
+    nodes = cloud.provision(4)
+    refs = [r["ref"] for r in cloud.acquired()]
+    hosts_by_ref = {r["ref"]: r["host"] for r in cloud.acquired()}
+    assert [n.host for n in nodes] == [hosts_by_ref[ref] for ref in sorted(refs)]
+
+
+def test_machines_are_created_concurrently(fake, monkeypatch):
+    """Provisioning four machines should take about as long as one; each
+    spends minutes in its init script."""
+    import threading
+    import time
+
+    concurrent = []
+    live = {"n": 0}
+    guard = threading.Lock()
+    real_create = Ubicloud._create
+
+    def slow_create(self, ref):
+        with guard:
+            live["n"] += 1
+            concurrent.append(live["n"])
+        time.sleep(0.2)
+        with guard:
+            live["n"] -= 1
+        return real_create(self, ref)
+
+    monkeypatch.setattr(Ubicloud, "_create", slow_create)
+    cloud = fake(max_vms=4)
+    cloud.provision(4)
+    assert max(concurrent) > 1, "creates ran one after another"

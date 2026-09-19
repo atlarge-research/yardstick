@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import threading
 from contextlib import contextmanager
 
 from yardstick_benchmark.config import BenchmarkConfig, build_kwargs
@@ -40,80 +41,110 @@ def run(config: BenchmarkConfig, results_dir: Optional[Path] = None) -> Path:
         results_dir = Path(config.output.dir) / f"{config.workload}-{stamp}"
     results_dir = Path(results_dir)
 
-    with machines(config) as (server_node, workload_nodes):
-        return _run_on(config, server_node, workload_nodes, results_dir)
+    with machines(config) as placed:
+        return _run_on(config, placed, results_dir)
 
 
 @contextmanager
 def machines(config: BenchmarkConfig):
-    """Yield ``(server_node, workload_nodes)`` for the configured mode.
+    """Yield the machines a run needs, as ``{role: node-or-nodes}``.
 
-    In `local` mode the machines already exist and nothing is acquired. In
+    In `local` mode they already exist and nothing is acquired. In
     `cloud`/`cluster` mode they are provisioned and then released again --
     always, including when the benchmark raises, because a leaked VM bills
     until someone notices and a leaked cluster reservation blocks other
     users.
+
+    The game server always gets a machine to itself. Where the metrics
+    database goes is set by ``[monitoring] influxdb_placement``; it defaults
+    to a workload machine rather than the server's, because InfluxDB's WAL
+    flushes and compaction would otherwise spike CPU and disk I/O on exactly
+    the machine whose tick durations are being measured.
     """
+    placement = config.monitoring.influxdb_placement
     if config.deployment.mode == "local":
         wd = Path(config.deployment.wd)
         nodes = {host: Node(host, wd) for host in config.deployment.hosts}
         server_host = config.deployment.resolved_server_host()
-        yield nodes[server_host], [nodes[h] for h in config.deployment.workload_hosts()]
+        server = nodes[server_host]
+        workload = [nodes[h] for h in config.deployment.workload_hosts()]
+        influx = server if placement == "server" else workload[0]
+        yield {"server": server, "workload": workload, "influxdb": influx}
         return
 
     provider = config.provider_class
+
+    def pool(group: str):
+        return provider(
+            **build_kwargs(
+                provider,
+                config.provisioning.options_for(group),
+                where=f"[provisioning.{group}]",
+            )
+        )
+
+    plan = [
+        ("server", pool("server"), 1),
+        ("workload", pool("workload"), config.provisioning.workload_nodes),
+    ]
+    if placement == "dedicated":
+        plan.append(("influxdb", pool("influxdb"), 1))
+
     acquired: List[Any] = []
+    lock = threading.Lock()
+    results: Dict[str, List[Node]] = {}
+
+    def acquire(entry):
+        group, group_pool, count = entry
+        logger.info("provisioning %d machine(s) for %s", count, group)
+        nodes = group_pool.provision(count, wd=config.deployment.wd or None)
+        with lock:
+            acquired.append((group_pool, nodes))
+            results[group] = nodes
+
     try:
-        server_pool = provider(
-            **build_kwargs(
-                provider,
-                config.provisioning.options_for("server"),
-                where="[provisioning.server]",
-            )
-        )
-        logger.info("provisioning 1 server machine")
-        server_nodes = server_pool.provision(1, wd=config.deployment.wd or None)
-        acquired.append((server_pool, server_nodes))
-
-        workload_pool = provider(
-            **build_kwargs(
-                provider,
-                config.provisioning.options_for("workload"),
-                where="[provisioning.workload]",
-            )
-        )
-        count = config.provisioning.workload_nodes
-        logger.info("provisioning %d workload machine(s)", count)
-        workload_nodes = workload_pool.provision(count, wd=config.deployment.wd or None)
-        acquired.append((workload_pool, workload_nodes))
-
-        yield server_nodes[0], workload_nodes
+        # Provision the groups concurrently. Each machine spends minutes in
+        # its init script, so doing this one group after another roughly
+        # doubles the time before a run can start.
+        fan_out(plan, acquire)
+        server = results["server"][0]
+        workload = results["workload"]
+        if placement == "dedicated":
+            influx = results["influxdb"][0]
+        elif placement == "server":
+            influx = server
+        else:
+            influx = workload[0]
+        yield {"server": server, "workload": workload, "influxdb": influx}
     finally:
-        for pool, pool_nodes in reversed(acquired):
+        for group_pool, pool_nodes in reversed(acquired):
             try:
                 logger.info("releasing %d machine(s)", len(pool_nodes))
-                pool.release(pool_nodes)
+                group_pool.release(pool_nodes)
             except Exception as exc:
                 logger.error(
                     "could not release machines (%s). They are recorded in %s; "
-                    "run `yardstick cloud release` to give them back.",
+                    "run `yardstick machines release` to give them back.",
                     exc,
-                    pool.ledger.path,
+                    group_pool.ledger.path,
                 )
 
 
 def _run_on(
     config: BenchmarkConfig,
-    server_node: Node,
-    workload_nodes: List[Node],
+    placed: Dict[str, Any],
     results_dir: Path,
 ) -> Path:
+    server_node = placed["server"]
+    workload_nodes = placed["workload"]
+    influx_node = placed["influxdb"]
     server_host = server_node.host
     nodes = {server_node.host: server_node}
     for node in workload_nodes:
         nodes.setdefault(node.host, node)
+    nodes.setdefault(influx_node.host, influx_node)
 
-    influxdb = InfluxDB(server_node)
+    influxdb = InfluxDB(influx_node)
     server = config.game_class(
         server_node,
         **build_kwargs(config.game_class, config.game_options, where="[game]"),
@@ -207,6 +238,7 @@ def _run_on(
         "hosts": sorted(nodes),
         "server_host": server_host,
         "workload_hosts": [n.host for n in workload_nodes],
+        "influxdb_host": influx_node.host,
         "config": _manifest_config(config),
         "files": sorted(p.name for p in written),
         # Recorded next to the data, so a result can't be read later without

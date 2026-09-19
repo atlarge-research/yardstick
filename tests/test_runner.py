@@ -364,3 +364,61 @@ def test_telegraf_tags_identify_the_node_and_its_role(tmp_path):
     assert tags["127.0.0.1"]["yardstick_role"] == "server"
     assert tags["127.0.0.2"]["yardstick_role"] == "workload"
     assert tags["127.0.0.2"]["yardstick_node"] == "127.0.0.2"
+
+
+def test_influxdb_does_not_share_the_game_servers_machine(tmp_path):
+    """InfluxDB's WAL flushes and compaction would spike CPU and disk I/O on
+    exactly the machine whose tick durations are being measured."""
+    runner.run(_cloud_config(tmp_path))
+    assert BUILT["influxdb"].node.host != BUILT["game"].node.host
+    # ...and it lands on a workload machine by default, costing nothing extra.
+    assert BUILT["influxdb"].node.host in {w.node.host for w in BUILT["workloads"]}
+
+
+def test_influxdb_can_get_a_machine_of_its_own(tmp_path):
+    config = _cloud_config(
+        tmp_path,
+        extra="\n[monitoring]\ninfluxdb_placement = 'dedicated'\n",
+    )
+    runner.run(config)
+    hosts = {BUILT["game"].node.host} | {w.node.host for w in BUILT["workloads"]}
+    assert BUILT["influxdb"].node.host not in hosts
+    assert len(BUILT["provisioned"]) == 4, "server + 2 workload + 1 database"
+
+
+def test_local_mode_keeps_everything_on_the_one_machine(tmp_path):
+    runner.run(
+        _config(tmp_path, extra="\n[monitoring]\ninfluxdb_placement = 'server'\n")
+    )
+    assert BUILT["influxdb"].node.host == BUILT["game"].node.host
+
+
+def test_the_manifest_records_where_the_database_ran(tmp_path):
+    results = runner.run(_cloud_config(tmp_path))
+    manifest = json.loads((results / "run.json").read_text())
+    assert manifest["influxdb_host"] != manifest["server_host"]
+
+
+def test_machine_groups_are_provisioned_concurrently(tmp_path, monkeypatch):
+    """Each machine spends minutes in its init script, so provisioning the
+    groups one after another roughly doubles the wait before a run starts."""
+    import threading
+    import time
+
+    live = {"n": 0}
+    peak = []
+    guard = threading.Lock()
+    real_provision = FakePool.provision
+
+    def slow_provision(self, num, wd=None):
+        with guard:
+            live["n"] += 1
+            peak.append(live["n"])
+        time.sleep(0.2)
+        with guard:
+            live["n"] -= 1
+        return real_provision(self, num, wd=wd)
+
+    monkeypatch.setattr(FakePool, "provision", slow_provision)
+    runner.run(_cloud_config(tmp_path))
+    assert max(peak) > 1, "groups were provisioned one after another"

@@ -12,7 +12,7 @@ import threading
 import uuid
 
 from yardstick_benchmark.model import Node
-from yardstick_benchmark.util import random_string, remote, wait_for_tcp
+from yardstick_benchmark.util import random_string, remote, stage, wait_for_tcp
 
 
 JOLOKIA_JAR = Path(__file__).parent / "jolokia-agent-jvm-2.5.1-javaagent.jar"
@@ -179,6 +179,10 @@ class MinecraftServer:
         # a private /tmp dir) so fetch() collects it and clean() removes it.
         self.wd = f"{node.wd}/{self.instance_name}"
         self.data_dir = f"{self.wd}/data"
+        # The Jolokia agent ships with this package, i.e. it exists on the
+        # machine running Yardstick. It has to be copied to the node before
+        # it can be bind-mounted into the container there.
+        self.jolokia_jar = f"{self.wd}/jolokia.jar"
         # Background health monitor state (see start_health_monitor()).
         self._crash: Optional[MinecraftServerCrashed] = None
         self._monitor_stop: Optional[threading.Event] = None
@@ -226,19 +230,23 @@ class MinecraftServer:
         return args
 
     def deploy(self) -> None:
-        """Create the server's working directory on the node."""
+        """Create the server's working directory and stage the Jolokia agent."""
         with remote(self.node.host, self.node.user) as machine:
-            machine["mkdir"]["-p", self.data_dir]()
+            self._stage(machine)
+
+    def _stage(self, machine) -> None:
+        machine["mkdir"]["-p", self.data_dir]()
+        stage(machine, JOLOKIA_JAR, self.jolokia_jar)
 
     def start(self) -> None:
         """Launch the server as a background apptainer instance.
 
-        Creates the data directory first if deploy() wasn't called: apptainer
-        fails with an opaque bind error when the source path is missing, and
-        the mkdir is idempotent and cheap.
+        Stages first if deploy() wasn't called: apptainer fails with an
+        opaque bind error when a source path is missing, and both steps are
+        idempotent and cheap.
         """
         with remote(self.node.host, self.node.user) as machine:
-            machine["mkdir"]["-p", self.data_dir]()
+            self._stage(machine)
             args = (
                 [
                     "instance",
@@ -248,7 +256,7 @@ class MinecraftServer:
                     "--bind",
                     f"{self.data_dir}:/data",
                     "--bind",
-                    f"{JOLOKIA_JAR}:/opt/jolokia.jar",
+                    f"{self.jolokia_jar}:/opt/jolokia.jar",
                 ]
                 + self._env_args()
                 + [self.image_url, self.instance_name]

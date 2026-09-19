@@ -99,21 +99,31 @@ class InfluxDB(object):
         """
         return machine.path(f"{self.data_dir}/influxd.bolt").exists()
 
+    def _bind_args(self) -> List[str]:
+        """Bind mounts, all of them paths on the node."""
+        return [
+            "--bind",
+            f"{self.data_dir}:/var/lib/influxdb2",
+            "--bind",
+            f"{self.config_dir}:/etc/influxdb2",
+        ]
+
     def start(self) -> None:
         with remote(self.node.host, self.node.user) as machine:
             machine["mkdir"]["-p", self.data_dir, self.config_dir]()
-            args = [
-                "instance",
-                "run",
-                "--no-https",
-                "--compat",
-                "--bind",
-                f"{self.data_dir}:/var/lib/influxdb2",
-                "--bind",
-                f"{self.config_dir}:/etc/influxdb2",
-                "--env",
-                f"INFLUXD_HTTP_BIND_ADDRESS=:{self.port}",
-            ]
+            args = (
+                [
+                    "instance",
+                    "run",
+                    "--no-https",
+                    "--compat",
+                ]
+                + self._bind_args()
+                + [
+                    "--env",
+                    f"INFLUXD_HTTP_BIND_ADDRESS=:{self.port}",
+                ]
+            )
             if not self._initialised(machine):
                 args += [
                     "--env",
@@ -357,17 +367,21 @@ class Telegraf(object):
                     f"{self.wd}/jolokia_get_minecraft_tick",
                 )
 
+    def _bind_args(self) -> List[str]:
+        """Bind mounts, all of them paths staged onto the node by deploy()."""
+        binds = [f"{self.wd}/telegraf.conf:/etc/telegraf/telegraf.conf"]
+        if self.execd_minecraft_ticks:
+            binds.append(
+                f"{self.wd}/jolokia_get_minecraft_tick:/opt/jolokia_get_minecraft_tick"
+            )
+        bind_args: List[str] = []
+        for bind in binds:
+            bind_args += ["--bind", bind]
+        return bind_args
+
     def start(self) -> None:
         with remote(self.node.host, self.node.user) as machine:
-            binds = [f"{self.wd}/telegraf.conf:/etc/telegraf/telegraf.conf"]
-            if self.execd_minecraft_ticks:
-                binds.append(
-                    f"{self.wd}/jolokia_get_minecraft_tick:/opt/jolokia_get_minecraft_tick"
-                )
-            bind_args: List[str] = []
-            for bind in binds:
-                bind_args += ["--bind", bind]
-
+            bind_args = self._bind_args()
             args = (
                 ["instance", "run", "--no-https", "--compat"]
                 + bind_args
