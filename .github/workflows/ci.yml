@@ -21,8 +21,16 @@ jobs:
         run: uv run ruff format --check .
       - name: Test
         # The `slow` tests start real apptainer instances and pull container
-        # images; they're for a machine with apptainer, not for CI.
+        # images; they're for a machine with apptainer, not for this job.
+        # The `Slow tests` workflow runs them on demand and weekly.
         run: uv run pytest -m "not slow" -v
+
+      - name: Collect the slow tests
+        # They can't run here, but they can at least be kept importable and
+        # non-empty on every push: collection fails the job if a slow test
+        # module stopped importing, and exits 5 if the marker matches
+        # nothing at all.
+        run: uv run pytest -m slow --collect-only -q
 
   notebooks:
     runs-on: ubuntu-latest

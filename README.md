@@ -270,8 +270,44 @@ uv run ruff check .
 uv run ruff format .
 ```
 
-CI runs the fast tests, lint and format checks, verifies notebooks are
-committed without outputs, and compiles the Go collector.
+CI runs the fast tests, lint and format checks, the notebook checks below,
+and compiles the Go collector. It also *collects* the `slow` tests on every
+push -- they can't run there, but that keeps them importable.
+
+### The slow tests
+
+Eight tests are marked `slow`: they start apptainer instances, pull
+container images, reserve DAS nodes, or scp over real SSH. They don't run in
+the per-push job, so a separate **Slow tests** workflow runs them weekly
+(Mondays, 04:17 UTC) and on demand:
+
+```sh
+gh workflow run slow-tests.yml
+gh workflow run slow-tests.yml -f pytest_args="tests/test_influxdb_ingest.py"
+```
+
+or Actions -> "Slow tests" -> "Run workflow" in the web UI. It installs
+apptainer from `ppa:apptainer/ppa` on `ubuntu-22.04` -- the same install the
+Ubicloud bootstrap does, and jammy because Ubuntu blocks unprivileged user
+namespaces with AppArmor from 23.10 on, which is exactly what apptainer
+needs to run rootless. Each slow test skips itself when its prerequisite is
+missing, so the job's last step fails if *everything* skipped; a green run
+that verified nothing is the failure mode this workflow exists to avoid.
+
+`tests/test_das_integration.py` always skips there: `preserve` only exists
+on a DAS head node. Run those by hand from one:
+
+```sh
+uv run pytest -m slow tests/test_das_integration.py -s
+```
+
+### Notebook checks
+
+Notebooks are not executed in CI -- a real run needs a deployment -- but
+`tests/test_notebooks.py` checks statically that every code cell parses,
+that every `yardstick_benchmark` import still resolves, and that every call
+into `yardstick_benchmark` still fits the signature it is calling. That last
+one is what catches a notebook left behind by a refactor.
 
 ### Notebook outputs
 

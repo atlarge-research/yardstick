@@ -9,9 +9,15 @@ Yardstick did not create -- is unrecoverable:
     mid-create still leaves something to clean up from;
   * a failed fleet is rolled back rather than half-left;
   * nothing is ever discovered by listing or name-matching.
+
+The fake is also pinned against recorded output from the real CLI, under
+``tests/fixtures/ubi/``. A fake that encodes the same assumption as the code
+under test proves nothing -- that is exactly how `ubi vm show` came to be
+parsed as tab-separated while the CLI printed ``key: value``.
 """
 
 import json
+import re
 import stat
 from pathlib import Path
 
@@ -366,3 +372,79 @@ def test_an_explicit_key_is_used_verbatim(fake):
     cloud.provision(1)
     create = next(args for args in fake.log() if args[2:3] == ["create"])
     assert create[-1] == "ssh-ed25519 AAAAexplicit me@host"
+
+
+# ------------------------------------------------- the fake vs. the real CLI
+#
+# Everything above trusts the fake. These pin the fake, and the parser, to
+# recorded output from the real `ubi`; see tests/fixtures/ubi/README.md for
+# where it came from and how to re-record it.
+
+RECORDED = Path(__file__).parent / "fixtures" / "ubi"
+
+#: The fields Ubicloud._refresh and _wait_until_running actually ask for.
+SHOW_FIELDS = ("id", "ip4", "ip6", "state")
+
+#: One "key: value" line per field; a field with no value is a bare "key:".
+REAL_SHOW_LINE = re.compile(r"[a-z0-9_]+:(?: \S.*)?")
+
+
+def _show_lines(text: str) -> list[str]:
+    return [line for line in text.splitlines() if line.strip()]
+
+
+@pytest.mark.parametrize("sample", ["vm_show_running", "vm_show_creating"])
+def test_recorded_output_is_key_colon_value(sample):
+    """Guards the fixtures themselves: if someone re-records them in a
+    different shape, the assertions below would silently mean less."""
+    lines = _show_lines((RECORDED / f"{sample}.txt").read_text())
+    assert [line.split(":")[0] for line in lines] == list(SHOW_FIELDS)
+    for line in lines:
+        assert REAL_SHOW_LINE.fullmatch(line), f"unexpected line shape: {line!r}"
+
+
+def test_the_parser_reads_recorded_real_output(fake):
+    """The regression the fake could not catch: `state` has to come back as
+    "running", not "" under a key of "state:"."""
+    cloud = fake()
+    cloud._run = lambda *args, **kwargs: (RECORDED / "vm_show_running.txt").read_text()
+
+    assert cloud._show("eu-central-h1/vm", *SHOW_FIELDS) == {
+        "id": "vm0j5f8z9k2m3n4p5q6r7s8t9v",
+        "ip4": "203.0.113.42",
+        # Split on the *first* colon only, or an address loses most of itself.
+        "ip6": "2001:db8:4f2a:1::2",
+        "state": "running",
+    }
+
+
+def test_the_parser_reads_a_field_the_cli_left_empty(fake):
+    """A VM that has no IPv4 address yet prints a bare "ip4:"."""
+    cloud = fake()
+    cloud._run = lambda *args, **kwargs: (RECORDED / "vm_show_creating.txt").read_text()
+
+    fields = cloud._show("eu-central-h1/vm", *SHOW_FIELDS)
+    assert fields["ip4"] == ""
+    assert fields["state"] == "creating"
+
+
+def test_the_fake_cli_prints_what_the_real_one_prints(fake):
+    """The fake is only worth anything while its output format matches.
+
+    Compares the fake's `vm show` line-for-line in shape against the
+    recording -- same fields, same order, same separator.
+    """
+    cloud = fake()
+    cloud.provision(1)
+    ref = cloud.acquired()[0]["ref"]
+
+    produced = _show_lines(cloud._run("vm", ref, "show", "-f", ",".join(SHOW_FIELDS)))
+    recorded = _show_lines((RECORDED / "vm_show_running.txt").read_text())
+
+    assert [line.split(":")[0] for line in produced] == [
+        line.split(":")[0] for line in recorded
+    ]
+    for line in produced:
+        assert REAL_SHOW_LINE.fullmatch(line), (
+            f"the fake printed {line!r}, which the real CLI would not"
+        )
