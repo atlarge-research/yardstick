@@ -141,12 +141,31 @@ class FakeTelegraf(FakeComponent):
         self.output = info
 
 
+def fake_collect(dest, nodes, keep_world=False, level_name="world"):
+    """Stand-in for collect_node_artifacts: rsync needs real nodes."""
+    BUILT["log"].append("collect_node_artifacts")
+    BUILT["collected"] = {
+        "dest": Path(dest),
+        "hosts": [n.host for n in nodes],
+        "keep_world": keep_world,
+        "level_name": level_name,
+    }
+    hosts = []
+    for node in nodes:
+        into = Path(dest) / node.host
+        into.mkdir(parents=True, exist_ok=True)
+        (into / "latest.log").write_text("[12:00:00] [Server thread/INFO]: Done\n")
+        hosts.append(node.host)
+    return sorted(hosts)
+
+
 @pytest.fixture(autouse=True)
 def fakes(monkeypatch):
     BUILT.clear()
     BUILT["log"] = []
     monkeypatch.setattr(runner, "InfluxDB", FakeInfluxDB)
     monkeypatch.setattr(runner, "Telegraf", FakeTelegraf)
+    monkeypatch.setattr(runner, "collect_node_artifacts", fake_collect)
     yield BUILT
 
 
@@ -229,6 +248,61 @@ def test_workload_is_cleaned_up_even_when_it_fails(tmp_path, monkeypatch):
 def test_monitoring_can_be_switched_off(tmp_path):
     runner.run(_config(tmp_path, extra="\n[monitoring]\nenabled = false\n"))
     assert "telegrafs" not in BUILT
+
+
+def test_node_artifacts_are_collected_before_teardown(tmp_path):
+    """Teardown deletes the nodes' working directories, and in cloud mode the
+    machines go away right after -- so the logs have to be pulled first."""
+    results = runner.run(_config(tmp_path))
+    log = BUILT["log"]
+    assert log.index("collect_node_artifacts") < log.index("game.stop")
+    assert log.index("collect_node_artifacts") < log.index("influxdb.cleanup")
+    assert (results / "nodes" / "localhost" / "latest.log").exists()
+    manifest = json.loads((results / "run.json").read_text())
+    assert manifest["node_artifacts"] == ["localhost"]
+
+
+def test_artifacts_are_collected_from_every_node(tmp_path):
+    """One directory per host, so a multi-node run's logs stay attributable."""
+    runner.run(_config(tmp_path, hosts='["127.0.0.1", "127.0.0.2"]'))
+    assert sorted(BUILT["collected"]["hosts"]) == ["127.0.0.1", "127.0.0.2"]
+
+
+def test_artifacts_are_collected_even_when_the_run_fails(tmp_path, monkeypatch):
+    """The failed run is the one whose logs are worth having."""
+
+    def boom(self, health_check=None):
+        raise RuntimeError("bots died")
+
+    monkeypatch.setattr(FakeWorkload, "run", boom)
+    with pytest.raises(RuntimeError, match="bots died"):
+        runner.run(_config(tmp_path))
+    log = BUILT["log"]
+    assert "collect_node_artifacts" in log
+    assert log.index("collect_node_artifacts") < log.index("game.stop")
+
+
+def test_the_deployment_comes_down_even_if_collection_blows_up(tmp_path, monkeypatch):
+    """collect_node_artifacts() handles its own failures (see
+    tests/test_artifacts.py). Should one ever escape it anyway, it must not
+    leave a server and a database running."""
+
+    def unreachable(*args, **kwargs):
+        raise RuntimeError("node fell over")
+
+    monkeypatch.setattr(runner, "collect_node_artifacts", unreachable)
+    with pytest.raises(RuntimeError, match="fell over"):
+        runner.run(_config(tmp_path))
+    assert "game.stop" in BUILT["log"] and "influxdb.stop" in BUILT["log"]
+
+
+def test_the_world_is_left_on_the_node_unless_asked_for(tmp_path):
+    """A world-generation run produces gigabytes of region files."""
+    runner.run(_config(tmp_path))
+    assert BUILT["collected"]["keep_world"] is False
+    assert BUILT["collected"]["level_name"] == "world"
+    runner.run(_config(tmp_path, extra="keep_world = true"))
+    assert BUILT["collected"]["keep_world"] is True
 
 
 def test_keep_node_data_skips_cleanup(tmp_path):

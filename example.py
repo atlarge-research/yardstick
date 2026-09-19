@@ -19,6 +19,7 @@ import getpass
 from datetime import timedelta
 from pathlib import Path
 
+from yardstick_benchmark import collect_node_artifacts
 from yardstick_benchmark.deployment import Deployment
 from yardstick_benchmark.games.minecraft.server import MinecraftServer
 from yardstick_benchmark.games.minecraft.workload import WalkAround
@@ -59,27 +60,33 @@ def main() -> None:
     # accepting writes before Telegraf starts and the server is ticking
     # before the bots connect.
     with Deployment(influxdb, minecraft, telegraf):
-        minecraft.set_world_spawn(0, 0)
-        # Abort the workload promptly if the server crashes under load,
-        # rather than letting the bots spin against a dead server.
-        minecraft.start_health_monitor()
-
-        walkaround.deploy()
         try:
-            # run() blocks until the workload's entry script exits, so we
-            # learn when it actually finished instead of guessing.
-            walkaround.run(health_check=minecraft.assert_healthy)
+            minecraft.set_world_spawn(0, 0)
+            # Abort the workload promptly if the server crashes under load,
+            # rather than letting the bots spin against a dead server.
+            minecraft.start_health_monitor()
+
+            walkaround.deploy()
+            try:
+                # run() blocks until the workload's entry script exits, so we
+                # learn when it actually finished instead of guessing.
+                walkaround.run(health_check=minecraft.assert_healthy)
+            finally:
+                walkaround.cleanup()
+
+            counts = influxdb.verify_data(
+                expected_measurements=["cpu", "mem", "disk", "system", "minecraft_tick"]
+            )
+            print(f"InfluxDB point counts by measurement: {counts}")
+
+            # Export inside the block: teardown stops the database and
+            # removes its storage.
+            written = influxdb.export_csv(RESULTS)
         finally:
-            walkaround.cleanup()
-
-        counts = influxdb.verify_data(
-            expected_measurements=["cpu", "mem", "disk", "system", "minecraft_tick"]
-        )
-        print(f"InfluxDB point counts by measurement: {counts}")
-
-        # Export inside the block: teardown stops the database and removes
-        # its storage.
-        written = influxdb.export_csv(RESULTS)
+            # The node's logs and crash reports go the same way at teardown,
+            # so copy them out first -- especially if the block above failed,
+            # which is when they explain something. This never raises.
+            collect_node_artifacts(RESULTS / "nodes", [node])
 
     print(f"wrote {len(written)} measurement file(s) to {RESULTS}")
 
