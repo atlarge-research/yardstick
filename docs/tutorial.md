@@ -27,7 +27,7 @@ To connect to DAS-6, append the following configuration to your SSH configuratio
 ```
 Host das6
 	HostName fs0.das6.cs.vu.nl
-	User DAS5_USERNAME
+	User DAS6_USERNAME
 ```
 
 You should now be able to connect to the DAS-6 using the command `ssh das6`.
@@ -48,56 +48,143 @@ Next, use its "Connect to Host..." feature to connect VSCode to DAS6.
 ### Python Environment
 
 Now that your VSCode is connected to DAS6, open a terminal (shortcut: `ctrl+~`).
-We will proceed by installing Miniconda, which we use to manage Python and native dependencies required for Yardstick to run.
+We use [uv](https://docs.astral.sh/uv/) to manage Python and Yardstick's
+dependencies. It installs as a single binary and needs no administrator rights:
 
-You can follow the steps outlined on their [Web page](https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh), or follow the commands listed below:
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Close (`ctrl+D`) and reopen (`ctrl+~`) your shell so `uv` is on your `PATH`.
 
 > [!IMPORTANT]
-> When asked for an installation location, make sure to use the `target_dir` location shown below, where `whoami`, including back ticks, is replaced by your DAS6 username.
+> By default, users on DAS6 have limited storage space in their home
+> directory, which the container images will exhaust. Point both uv's cache
+> and apptainer's at your scratch directory before you start, and add these
+> lines to your `~/.bashrc` so they apply to every new shell:
 >
-> The installation location is important because, by default, users on DAS6 have limited storage space available in their home directory, the default installation location, which can lead to errors during or after the installation process.
+> ```bash
+> export UV_CACHE_DIR=/var/scratch/`whoami`/uv-cache
+> export APPTAINER_CACHEDIR=/var/scratch/`whoami`/apptainer-cache
+> ```
 
-Run these commands to install Miniconda:
-
-```bash
-target_dir=/var/scratch/`whoami`/miniconda3
-mkdir -p $target_dir
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $target_dir/miniconda.sh
-bash $target_dir/miniconda.sh -b -u -p $target_dir
-rm -rf $target_dir/miniconda.sh
-$target_dir/bin/conda init bash
-```
-
-You will need to close (`ctrl+D`) and reopen (`ctrl+~`) your shell before changes take effect.
-
-Create a new conda environment named yardstick by running:
-
-```
-conda create -n yardstick python=3.9
-conda activate yardstick
-```
-
-Once activated, run the following commands to obtain Yardstick and its dependencies:
+Now get Yardstick and its dependencies:
 
 ```bash
-conda install jupyter pandas seaborn
-pip install yardstick-benchmark
+git clone https://github.com/atlarge-research/yardstick
+cd yardstick
+uv sync --extra notebooks
+```
+
+That creates a `.venv` in the repository with everything the benchmark and
+the example notebooks need. There is nothing else to install: the game
+server, the metrics database, the metrics agent and the emulated players all
+run as [apptainer](https://apptainer.org/) containers, which DAS6 already
+provides.
+
+Check that it worked:
+
+```bash
+uv run yardstick list
 ```
 
 ## Running Experiments
 
-You are now ready to visit the [example experiment](../example.ipynb) and start running experiments with Yardstick.
+There are two ways to run Yardstick, and this tutorial uses both.
 
-Create a new directory on DAS-6 for this tutorial, download the example notebook into the newly created directory, and open the directory in VSCode:
+### Reserving a Node
+
+DAS6 is a shared cluster. The machine you land on when you `ssh das6` is the
+*head node*, which everyone shares and which you should never run a benchmark
+on -- your measurements would be meaningless and you'd disrupt everyone
+else's. Instead you reserve a compute node for yourself.
+
+Yardstick currently runs all of its components on the machine it is started
+from, so the benchmark has to run *on* the node you reserve. Reserve one for
+30 minutes and log in to it:
+
+```bash
+preserve -np 1 -t 1800
+preserve -llist
+```
+
+`preserve -llist` gives an overview of reservations on DAS6. You'll see a
+line similar to the one below, with your username:
 
 ```
-mkdir yardstick-tutorial
-cd yardstick-tutorial
-wget https://raw.githubusercontent.com/atlarge-research/yardstick/master/example.ipynb
+id      user            start           stop            state   nhosts  hosts
+351651  core2435        06/21   07:02   06/21   07:18   R       2       node001 node015
 ```
 
-Open the `yardstick-tutorial` folder in VSCode, open the IPython Notebook, and click the button in the top right of the VSCode window to select a Kernel.
-Install the necessary VSCode extensions (probably Jupyter and Python) and select `Python Environments... > yardstick`. This is the yardstick environment we just created and prepared with Miniconda which contains all the necessary dependencies.
+This shows that user `core2435` has reserved 2 nodes: `node001` and `node015`
+from 7:02am until 7:18am.
+
+Which node did you reserve? How many nodes are in use by others? How many do
+they use?
+
+Once your reservation's state is `R`, connect to your node and go back to the
+repository:
+
+```bash
+ssh node0XY
+cd yardstick
+```
+
+> [!IMPORTANT]
+> Your reservation ends at the time `preserve -llist` shows, and your
+> processes are killed when it does. If a run stops abruptly, check whether
+> your reservation expired -- and reserve more time than you think you need.
+
+### Your First Run: a Configuration File
+
+The quickest way to run a benchmark is to describe it in a file. From the
+`yardstick` directory on your reserved node:
+
+```bash
+uv run yardstick init experiment.toml
+```
+
+Open `experiment.toml` and read it -- it is commented, and every setting in
+it is one you may want to change later. Then check and run it:
+
+```bash
+uv run yardstick validate experiment.toml
+uv run yardstick run experiment.toml -v
+```
+
+The first run takes a while (~10 minutes): it downloads the container images,
+boots a Minecraft server, runs the workload, and collects metrics. This is
+expected.
+
+While it runs, open a second terminal on the same node and watch the
+containers Yardstick started:
+
+```bash
+apptainer instance list
+```
+
+When the run finishes it prints a results directory. It contains one CSV per
+measurement plus a `run.json` recording exactly what was run:
+
+```bash
+ls results/*/
+cat results/*/run.json
+```
+
+### The Notebook
+
+A configuration file is convenient, but for exploring results you want the
+data and the plots in the same place. Open `experiments/tick_latency.ipynb`
+in VSCode, connected to your reserved node. When prompted for a kernel, choose the `.venv/bin/python`
+interpreter in the repository; VSCode may also offer to install the Jupyter
+and Python extensions, which you should accept.
+
+We recommend reading the notebook cell by cell to develop a sufficiently good
+understanding of what is going on. Then run all cells.
+
+When the experiment has completed, it is time to review the resulting plots.
+
+Are the numbers surprising? Why (not)?
 
 In the remainder of this section, we will ask you to perform increasingly difficult experiments,
 which will make you increasingly adept at using Yardstick specifically, and performing experiments on a distributed system generally.
@@ -107,65 +194,89 @@ which will make you increasingly adept at using Yardstick specifically, and perf
 > If you are doing this tutorial as part of a lecture or workshop, there may not be sufficient time remaining to complete all exercises.
 > This is by design. If you are out of time but remain curious about this work, feel free to explore the remaining sections from home. Your account is likely valid for several weeks.
 
-### Jupyter Notebook Example
+### Visualize Another Metric
 
-We recommend reading the file line by line to develop a sufficiently good understanding of what is going on.
-Afterwards, run your first experiment by running all cells in the notebook.
-The cell that runs the experiment can take a long time (~10 minutes) to complete.
-This is expected.
-While the experiment is running, you can run type `preserve -llist` in the terminal to get an overview of node reservations on the DAS6. You'll likely see a line similar to the one below, with your username:
+The notebook plots the server's tick duration, which is the headline measure
+of how hard the server is working. It is far from the only thing collected:
+Telegraf records CPU, memory, disk and network metrics for every node, and
+the JVM's heap and garbage-collection behaviour for the server.
 
+Run `uv run yardstick run experiment.toml` and look at the CSV files in the
+results directory to see what is available. Then add a cell to the notebook
+that plots another metric -- we recommend the network bandwidth usage of the
+server node.
+
+A measurement file loads into pandas with:
+
+```python
+import pandas as pd
+df = pd.read_csv("results/<run>/net.csv", comment="#")
 ```
-id      user            start           stop            state   nhosts  hosts
-351651  core2435        06/21   07:02   06/21   07:18   R       2       node001 node015
-```
-
-This shows that user `core2435` has reserved 2 nodes: `node001` and `node015` from 7:02am until 7:18am.
-
-Which nodes did you reserve? How many nodes are in use by others? How many nodes do they use?
-
-When the experiment has completed, it is time to review the resulting plots.
-
-Are the numbers surprising? Why (not)?
-
-### Visualizing Results
-
-Initiall, only the CPU utilization is plotted.
-However, there is a table containing the server's tick duration.
-Add a plot that visualizes the server's tick duration over time.
-
-Do the tick durations match your expectations?
-Why (not)?
-
-### Visualize Network Bandwidth Usage
-
-The data used for the previous plots is obtained by reading `csv` files in the experiment's output directory.
-This directory contains several other files containing other metrics.
-
-Load one of the output files to visualize another metric. We recommend visualizing the network bandwidth usage of the server node.
 
 ### Compare by Varying the Number of Players
 
-Edit the notebook to run the experiments twice in a row with varying numbers of players.
-
+Edit the notebook to run the experiment twice in a row with different numbers
+of players, and plot both results on the same axes.
 
 Does changing the number of players have an impact on the game's performance?
 
+> [!TIP]
+> `experiments/world_generation_time.ipynb` already does this -- it loops over
+> several player counts in one run cell. Read it for the pattern.
+
 ### Compare by Changing the Game's Configuration
 
-Edit Yardstick's internals and change the game's configuration file to evaluate the impact of changing the simulation distance of the game server.
+The server's *simulation distance* controls how many chunks around each
+player the server actively ticks, so it directly affects how much work each
+player creates. It is a setting on the game server:
 
-How does this distance affect the game's performance?
+```toml
+[game]
+simulation_distance = 4
+```
+
+Run the benchmark at a few different simulation distances and compare.
+
+How does this distance affect the game's performance? Is the relationship
+what you expected?
+
+> [!TIP]
+> Set `seed` in the `[game]` section so every run generates the same world.
+> Without it, you are comparing runs over different terrain.
 
 ### Evaluate the Impact of Player Workloads
 
-The example uses a player workload called `WalkAround`,
-in which a variable number of players connect to the server and walk around a predefined area.
-However, we suspect that the behavior of players can have a significant impact of the game's performance.
+The first experiment uses a player workload called `WalkAround`, in which
+players connect and walk around a predefined area. `WorldGeneration` is
+another: players teleport to unexplored terrain and wait for the server to
+generate it. Run both and compare -- `uv run yardstick list` shows what is
+available, and you select one with:
 
-Edit Yardstick's internals and add a new player workload with different player behavior.
+```toml
+[workload]
+type = "worldgen"
+```
 
-How does the workload affect the game's performance?
+How does the workload affect the game's performance? Why would world
+generation stress a server differently from walking around?
+
+### Write Your Own Workload
+
+We suspect that the behavior of players can have a significant impact on the
+game's performance. Write a workload of your own to find out.
+
+A workload is a Python class plus the JavaScript its emulated players run.
+Start from `yardstick_benchmark/games/minecraft/workload/walkaround/`: it is
+about a hundred lines, and the base class in `workload/base.py` documents
+what a subclass has to supply. Your class does not need to be registered
+anywhere -- name it by its import path in the configuration file:
+
+```toml
+[workload]
+type = "mypackage.MyWorkload"
+```
+
+How does your workload affect the game's performance?
 
 ### Done Before Time Runs Out?
 
@@ -180,11 +291,11 @@ Start by running your experiment or by launching the game server manually on a w
 Next, use `preserve -llist` to identify which machine (e.g., node0XY) is running the game server.<sup id="a4">[4](#fn4)</sup> Now create two SSH tunnels from your local machine to the worker node that is running the game server, replacing `node0XY` with the correct hostname:
 
 ```
-ssh -L 25565:node0XY:25565 das5
+ssh -L 25565:node0XY:25565 das6
 ```
 *Working out how this command works exactly is left as an exercise for the reader.*
 
-Finally, start your Minecraft 1.12.2 client on your local machine and connect to the server at `localhost:25565`. You should now be connected to the game server running on the DAS-6.
+Finally, start your Minecraft client on your local machine -- matching the version the server runs, which is the `version` setting in the `[game]` section (see `MinecraftServer.DEFAULT_VERSION` for the default) -- and connect to the server at `localhost:25565`. You should now be connected to the game server running on the DAS-6.
 
 ---
 
