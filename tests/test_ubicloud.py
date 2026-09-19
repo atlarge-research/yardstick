@@ -18,7 +18,8 @@ from pathlib import Path
 import pytest
 
 from yardstick_benchmark.model import Node
-from yardstick_benchmark.ubicloud import (
+from yardstick_benchmark.provisioning import (
+    Provisioner,
     Ubicloud,
     UbicloudError,
     UbicloudSafetyError,
@@ -124,9 +125,9 @@ def test_provision_returns_nodes_and_records_them(fake):
     assert [n.host for n in nodes] == ["203.0.113.1", "203.0.113.2"]
     assert all(str(n.wd) == "/home/ubi/yardstick" for n in nodes)
 
-    tracked = cloud.tracked()
-    assert len(tracked) == 2
-    assert all(vm.id for vm in tracked), "ids must be captured for later destroy"
+    acquired = cloud.acquired()
+    assert len(acquired) == 2
+    assert all(r["id"] for r in acquired), "ids must be captured for later release"
 
 
 def test_the_ledger_entry_is_written_before_the_vm_is_created(fake):
@@ -135,19 +136,19 @@ def test_the_ledger_entry_is_written_before_the_vm_is_created(fake):
     cloud = fake()
     order = []
 
-    real_record = cloud._record
+    real_record = cloud._pre_record
     real_run = cloud._run
 
-    def spy_record(vm):
-        order.append(f"record:{vm.ref}")
-        return real_record(vm)
+    def spy_record(ref, **fields):
+        order.append(f"record:{ref}")
+        return real_record(ref, **fields)
 
     def spy_run(*args, **kwargs):
         if len(args) >= 3 and args[2] == "create":
             order.append(f"create:{args[1]}")
         return real_run(*args, **kwargs)
 
-    cloud._record = spy_record
+    cloud._pre_record = spy_record
     cloud._run = spy_run
     cloud.provision(1)
 
@@ -159,8 +160,8 @@ def test_the_ledger_entry_is_written_before_the_vm_is_created(fake):
 def test_destroy_refuses_an_id_not_in_the_ledger(fake):
     """The whole safety model: a VM Yardstick did not create is unreachable."""
     cloud = fake()
-    with pytest.raises(UbicloudSafetyError, match="not in Yardstick's ledger"):
-        cloud.destroy("eu-central-h1/ubi-dev-box")
+    with pytest.raises(UbicloudSafetyError, match="not in the ledger"):
+        cloud.release_ref("eu-central-h1/ubi-dev-box")
     assert fake.log() == [], "nothing should have been sent to the CLI"
 
 
@@ -179,7 +180,7 @@ def test_release_destroys_only_the_given_nodes(fake):
     nodes = cloud.provision(3)
     cloud.release([nodes[1]])
 
-    remaining = {vm.ref for vm in cloud.tracked()}
+    remaining = {r["ref"] for r in cloud.acquired()}
     assert len(remaining) == 2
     destroys = [args[1] for args in fake.log() if args[2:3] == ["destroy"]]
     assert len(destroys) == 1
@@ -198,7 +199,7 @@ def test_release_all_tears_down_everything_recorded(fake):
     cloud.provision(3)
     destroyed = cloud.release_all()
     assert len(destroyed) == 3
-    assert cloud.tracked() == []
+    assert cloud.acquired() == []
     assert fake.live() == {}
 
 
@@ -209,7 +210,7 @@ def test_a_failed_fleet_is_rolled_back(fake, monkeypatch):
     with pytest.raises(UbicloudError):
         cloud.provision(3)
     assert fake.live() == {}, "successfully created VMs must be destroyed again"
-    assert cloud.tracked() == []
+    assert cloud.acquired() == []
 
 
 def test_oversized_machines_are_refused():
@@ -234,7 +235,7 @@ def test_a_corrupt_ledger_stops_everything_rather_than_guessing(fake):
     cloud = fake()
     fake.ledger_path.write_text("{ not json")
     with pytest.raises(UbicloudError, match="corrupt"):
-        cloud.tracked()
+        cloud.acquired()
 
 
 def test_missing_cli_gives_an_actionable_error(fake):
@@ -248,5 +249,9 @@ def test_ledger_survives_a_new_object(fake):
     cloud = fake()
     cloud.provision(2)
     later = fake()
-    assert len(later.tracked()) == 2
+    assert len(later.acquired()) == 2
     assert len(later.release_all()) == 2
+
+
+def test_ubicloud_is_a_provisioner():
+    assert issubclass(Ubicloud, Provisioner)
