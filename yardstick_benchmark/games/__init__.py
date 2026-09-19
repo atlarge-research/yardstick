@@ -1,7 +1,7 @@
-
 import pkgutil
 import importlib
 from abc import ABC, abstractmethod
+
 
 class Game(object):
     def __init__(self, server: pkgutil.ModuleType, workload: pkgutil.ModuleType):
@@ -27,7 +27,9 @@ def get(config: dict) -> Game:
     for w in workloads:
         print(w)
         if w.name == workload_name:
-            workload = importlib.import_module(f"pamuk.games.{name}.workload.{workload_name}")
+            workload = importlib.import_module(
+                f"pamuk.games.{name}.workload.{workload_name}"
+            )
             break
     if workload is None:
         raise ValueError(f"workload {workload_name} not found")
@@ -38,19 +40,19 @@ class Server(ABC):
     @abstractmethod
     def deploy(self) -> None:
         pass
-    
+
     @abstractmethod
     def start(self) -> None:
         pass
-    
+
     @abstractmethod
     def stop(self) -> None:
         pass
-    
+
     @abstractmethod
     def clean(self) -> None:
         pass
-    
+
     @abstractmethod
     def exporters(self) -> list[str]:
         pass

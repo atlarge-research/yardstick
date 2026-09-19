@@ -16,7 +16,7 @@ from jinja2 import Template
 from influxdb_client.client.influxdb_client import InfluxDBClient
 
 from yardstick_benchmark.model import Node
-from yardstick_benchmark.util import random_string, remote, stage
+from yardstick_benchmark.util import random_string, remote, stage, wait_for_url
 
 
 # Default port the Minecraft server's Jolokia agent listens on. Kept in step
@@ -140,6 +140,14 @@ class InfluxDB(object):
         """Remove the database's storage directory."""
         with remote(self.node.host) as machine:
             machine["rm"]["-rf", self.wd](retcode=None)
+
+    def ready(self, timeout_s: float = 120) -> None:
+        """Block until the database answers on its /health endpoint.
+
+        Deployment calls this automatically after start(); Telegraf's first
+        write batch fails if it beats the database to readiness.
+        """
+        wait_for_url(f"{self.url}/health", timeout_s=timeout_s)
 
     def get_info(self) -> InfluxDBInfo:
         return InfluxDBInfo([self.url], self.admin_token)

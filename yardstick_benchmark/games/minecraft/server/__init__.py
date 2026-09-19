@@ -281,6 +281,10 @@ class MinecraftServer:
         """
         wait_for_tcp(self.node.host, self.rcon_port, timeout_s=timeout_s)
 
+    def ready(self, timeout_s: float = 180) -> None:
+        """Alias for wait_until_ready(), the hook Deployment looks for."""
+        self.wait_until_ready(timeout_s=timeout_s)
+
     def rcon(self, *commands: str) -> None:
         """Send one or more commands to the running server via RCON.
 
