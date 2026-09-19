@@ -108,6 +108,13 @@ _SSH_KEEPALIVE_OPTS = [
     "TCPKeepAlive=yes",
     "-o",
     "BatchMode=yes",
+    # A machine provisioned seconds ago has a host key nothing has seen
+    # before, and BatchMode means ssh cannot ask about it -- so without this
+    # the very first connection to every new node fails. accept-new trusts a
+    # key the first time but still refuses a *changed* key, which is the part
+    # that actually protects against interception.
+    "-o",
+    "StrictHostKeyChecking=accept-new",
 ]
 
 

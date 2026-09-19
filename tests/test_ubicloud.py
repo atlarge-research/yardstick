@@ -94,6 +94,10 @@ def fake(tmp_path, monkeypatch):
 
     def make(**kwargs):
         kwargs.setdefault("ssh_public_key", "ssh-ed25519 AAAA test@example")
+        # No init script by default: the readiness wait it triggers would
+        # try to SSH to the fake's TEST-NET addresses. The bootstrap path
+        # gets its own tests below.
+        kwargs.setdefault("init_script", "")
         kwargs.setdefault("ledger", tmp_path / "ledger.json")
         kwargs.setdefault("cli", str(cli))
         return Ubicloud(**kwargs)
@@ -256,3 +260,38 @@ def test_ledger_survives_a_new_object(fake):
 
 def test_ubicloud_is_a_provisioner():
     assert issubclass(Ubicloud, Provisioner)
+
+
+def test_the_init_script_is_passed_to_create(fake):
+    """Ubicloud's images are bare, so a node with no apptainer fails every
+    deploy() later on. The bootstrap has to actually be sent."""
+    cloud = fake(init_script="#!/bin/bash\necho hi\n")
+    cloud._wait_until_provisioned = lambda record, timeout_s: None
+    cloud.provision(1)
+    create = next(args for args in fake.log() if args[2:3] == ["create"])
+    assert "-i" in create
+    assert create[create.index("-i") + 1] == "#!/bin/bash\necho hi\n"
+
+
+def test_no_init_script_means_no_readiness_wait(fake):
+    called = []
+    cloud = fake(init_script="")
+    cloud._wait_until_provisioned = lambda record, timeout_s: called.append(1)
+    cloud.provision(1)
+    assert called == [], "nothing to wait for when no bootstrap was requested"
+    create = next(args for args in fake.log() if args[2:3] == ["create"])
+    assert "-i" not in create
+
+
+def test_the_default_bootstrap_installs_apptainer_and_marks_readiness():
+    script = Ubicloud.DEFAULT_INIT_SCRIPT
+    assert "apt-get install -y apptainer" in script
+    # Ubicloud reports a VM running long before apt has finished, so the
+    # marker is the only reliable signal that the machine is usable.
+    assert Ubicloud.READY_MARKER in script
+
+
+def test_the_default_image_avoids_the_apparmor_userns_restriction():
+    """Ubuntu >= 24.04 blocks unprivileged user namespaces with AppArmor,
+    which is exactly what apptainer needs to run rootless."""
+    assert Ubicloud.DEFAULT_BOOT_IMAGE == "ubuntu-jammy"

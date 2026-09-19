@@ -51,6 +51,10 @@ class Ubicloud(Provisioner):
         name_prefix: Prefix for generated VM names. Affects legibility in the
             Ubicloud console only -- nothing keys off it, because names are
             never used to decide what to destroy.
+        init_script: Script run as root at first boot. Defaults to
+            DEFAULT_INIT_SCRIPT, which installs apptainer. Pass "" to skip
+            it entirely (the machine will then need apptainer already
+            present).
         ledger: Path to the JSON file recording created VMs.
         cli: Path to the `ubi` executable.
     """
@@ -58,8 +62,34 @@ class Ubicloud(Provisioner):
     LEDGER_NAME = "ubicloud-vms.json"
 
     DEFAULT_LOCATION = "eu-central-h1"
-    DEFAULT_BOOT_IMAGE = "ubuntu-noble"
+
+    # Ubuntu 22.04 rather than the newer 24.04: from 24.04 Ubuntu restricts
+    # unprivileged user namespaces with AppArmor, which is exactly what
+    # apptainer needs to run a container as an ordinary user. It can be
+    # worked around (the .deb from Apptainer's GitHub releases ships an
+    # AppArmor profile, unlike the PPA build), but a benchmark runner is not
+    # the place to be debugging host security policy.
+    DEFAULT_BOOT_IMAGE = "ubuntu-jammy"
     DEFAULT_WD = "/home/{user}/yardstick"
+
+    #: Written by the init script once the machine is ready to be used.
+    READY_MARKER = "/var/lib/yardstick-ready"
+
+    #: Installs what a Yardstick node needs. Ubicloud's images are bare, so
+    #: without this a freshly provisioned VM has no apptainer and every
+    #: deploy() fails on the far side. Runs as root at first boot; the marker
+    #: at the end is what _wait_until_ready polls for, because Ubicloud
+    #: reports a VM "running" as soon as it boots, long before this finishes.
+    DEFAULT_INIT_SCRIPT = f"""#!/bin/bash
+set -eux
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get install -y software-properties-common
+add-apt-repository -y ppa:apptainer/ppa
+apt-get update
+apt-get install -y apptainer rsync
+touch {READY_MARKER}
+"""
 
     # Ubicloud's standard line is 4 GB of RAM per vCPU (standard-2 is 2 vCPU
     # / 8 GB), scaling linearly.
@@ -113,6 +143,7 @@ class Ubicloud(Provisioner):
         unix_user: str = "ubi",
         max_vms: int = MAX_VMS,
         name_prefix: str = "yardstick",
+        init_script: Optional[str] = None,
         ledger: Optional[Path] = None,
         cli: str = "ubi",
     ) -> None:
@@ -137,6 +168,9 @@ class Ubicloud(Provisioner):
         self.unix_user = unix_user
         self.max_vms = max_vms
         self.name_prefix = name_prefix
+        self.init_script = (
+            self.DEFAULT_INIT_SCRIPT if init_script is None else init_script
+        )
         self.cli = cli
 
     # ---------------------------------------------------------------- CLI
@@ -219,7 +253,7 @@ class Ubicloud(Provisioner):
             )
             refs.append(ref)
             logger.info("creating %s (%s, %d GiB)", ref, self.size, self.storage_gib)
-            self._run(
+            create_args = [
                 "vm",
                 ref,
                 "create",
@@ -231,11 +265,18 @@ class Ubicloud(Provisioner):
                 self.boot_image,
                 "-u",
                 self.unix_user,
-                self.ssh_public_key,
-            )
+            ]
+            if self.init_script:
+                create_args += ["-i", self.init_script]
+            create_args.append(self.ssh_public_key)
+            self._run(*create_args)
         for ref in refs:
             self._wait_until_running(ref, ready_timeout_s)
-        return [self._refresh(ref) for ref in refs]
+        records = [self._refresh(ref) for ref in refs]
+        if self.init_script:
+            for record in records:
+                self._wait_until_provisioned(record, ready_timeout_s)
+        return records
 
     def _refresh(self, ref: str) -> Dict[str, Any]:
         """Fill in id and addresses from `ubi vm ... show`, and re-record."""
@@ -260,6 +301,39 @@ class Ubicloud(Provisioner):
                 return
             time.sleep(5)
         raise ProvisioningError(f"{ref} was not running within {timeout_s:.0f}s")
+
+    def _wait_until_provisioned(self, record: Dict[str, Any], timeout_s: float) -> None:
+        """Block until the init script has finished on the machine.
+
+        Ubicloud reports a VM "running" the moment it boots, which is well
+        before apt has finished installing anything. Without this, the first
+        deploy() races the init script and fails with apptainer not found.
+        """
+        import time
+
+        from yardstick_benchmark.util import remote, wait_for_tcp
+
+        host = str(record["host"])
+        deadline = time.monotonic() + timeout_s
+        wait_for_tcp(host, 22, timeout_s=max(30.0, deadline - time.monotonic()))
+        logger.info("waiting for %s to finish provisioning", record["ref"])
+        while time.monotonic() < deadline:
+            try:
+                with remote(host) as machine:
+                    retcode, _, _ = machine["test"]["-f", self.READY_MARKER].run(
+                        retcode=None
+                    )
+                if retcode == 0:
+                    logger.info("%s is provisioned", record["ref"])
+                    return
+            except Exception as exc:  # SSH not answering yet
+                logger.debug("%s not reachable yet (%s)", host, exc)
+            time.sleep(10)
+        raise ProvisioningError(
+            f"{record['ref']} did not finish its init script within "
+            f"{timeout_s:.0f}s. Check the machine's cloud-init output; the "
+            f"marker it waits for is {self.READY_MARKER}."
+        )
 
     def _release_one(self, record: Dict[str, Any]) -> None:
         self._run("vm", str(record["ref"]), "destroy", "-f")
