@@ -172,3 +172,71 @@ def test_each_provisioner_gets_its_own_default_ledger():
     from yardstick_benchmark.provisioning import Das, Ubicloud
 
     assert Das.LEDGER_NAME != Ubicloud.LEDGER_NAME
+
+
+def test_rollback_does_not_release_another_provisioners_resources(tmp_path):
+    """Two groups are provisioned concurrently through separate provisioner
+    objects that share one ledger file (that is what the runner does). A
+    failure in one used to roll back "every ref that appeared since I
+    started", which includes the other group's machines -- destroying live
+    resources and handing their owner Nodes that no longer exist.
+    """
+    import threading
+
+    ledger = tmp_path / "shared.json"
+    live = set()
+    started = threading.Event()
+    recorded = threading.Event()
+
+    class Slow(FakeProvider):
+        """Records its resource, then waits so the other group can fail."""
+
+        def _acquire(self, num, **kwargs):
+            self._pre_record("slow-0", host="10.0.0.9", wd="/tmp/wd")
+            self.live.add("slow-0")
+            recorded.set()
+            started.wait(timeout=5)
+            return [{"ref": "slow-0", "host": "10.0.0.9", "wd": "/tmp/wd"}]
+
+    class Failing(FakeProvider):
+        def _acquire(self, num, **kwargs):
+            recorded.wait(timeout=5)  # let the other group record first
+            self._pre_record("fail-0", host="10.0.0.1", wd="/tmp/wd")
+            raise ProvisioningError("provider blew up")
+
+    slow = Slow(ledger, live=live)
+    failing = Failing(ledger, live=live)
+
+    errors = []
+
+    def run_slow():
+        try:
+            slow.provision(1)
+        except Exception as exc:  # pragma: no cover - should not happen
+            errors.append(exc)
+
+    t = threading.Thread(target=run_slow)
+    t.start()
+    with pytest.raises(ProvisioningError):
+        failing.provision(1)
+    started.set()
+    t.join(timeout=5)
+
+    assert errors == []
+    assert "slow-0" in live, "the other group's machine was released by our rollback"
+    assert "fail-0" not in live
+
+
+def test_rollback_releases_only_this_calls_resources(tmp_path):
+    """Pre-existing ledger entries -- an earlier run that was never released
+    -- must not be swept up by a later failure either."""
+    ledger = tmp_path / "shared.json"
+    live = {"old-0"}
+    ResourceLedger(ledger).record("old-0", host="10.0.0.5", wd="/tmp/wd")
+
+    provider = FakeProvider(ledger, fail_at=1, live=live)
+    with pytest.raises(ProvisioningError):
+        provider.provision(3)
+
+    assert "old-0" in live, "an earlier run's machine was released"
+    assert {r["ref"] for r in provider.acquired()} == {"old-0"}

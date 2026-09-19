@@ -129,6 +129,11 @@ class Provisioner(ABC):
     LEDGER_NAME = "provisioned.json"
 
     def __init__(self, ledger: Optional[Path] = None):
+        # Refs pre-recorded by the provision() call running on this thread.
+        # Rollback must use this rather than diffing the ledger: several
+        # provisioners share one ledger file and run concurrently, so "refs
+        # that appeared since I started" includes another group's machines.
+        self._in_flight = threading.local()
         self.ledger = ResourceLedger(
             Path(ledger) if ledger is not None else DEFAULT_STATE_DIR / self.LEDGER_NAME
         )
@@ -153,6 +158,9 @@ class Provisioner(ABC):
     def _pre_record(self, ref: str, **fields: Any) -> None:
         """Note an intent to acquire `ref`, before doing so."""
         self.ledger.record(ref, **fields)
+        pending = getattr(self._in_flight, "refs", None)
+        if pending is not None:
+            pending.append(ref)
 
     def _rollback(self, ref: str) -> None:
         """Best-effort release of something a failed :meth:`_acquire` may or
@@ -174,21 +182,25 @@ class Provisioner(ABC):
     def provision(self, num: int = 1, **kwargs: Any) -> List[Node]:
         """Acquire `num` machines and return them as Nodes.
 
-        A failure part way through releases whatever was already acquired,
-        rather than leaving a partial fleet behind.
+        A failure part way through releases whatever *this call* acquired,
+        rather than leaving a partial fleet behind -- and specifically not
+        whatever else happens to have appeared in the ledger meanwhile, which
+        may belong to another group being provisioned concurrently.
         """
         if num < 1:
             raise ValueError("num must be at least 1")
-        before = {r["ref"] for r in self.ledger.records()}
+        self._in_flight.refs = []
         try:
             records = self._acquire(num, **kwargs)
         except BaseException:
-            new = [r["ref"] for r in self.ledger.records() if r["ref"] not in before]
-            if new:
-                logger.warning("provisioning failed; rolling back %d", len(new))
-            for ref in new:
+            mine = list(self._in_flight.refs)
+            if mine:
+                logger.warning("provisioning failed; rolling back %d", len(mine))
+            for ref in mine:
                 self._rollback(ref)
             raise
+        finally:
+            self._in_flight.refs = None
         return [self.node_for(record) for record in records]
 
     def acquired(self) -> List[Dict[str, Any]]:
