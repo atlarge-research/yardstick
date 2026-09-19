@@ -170,9 +170,18 @@ plus a `run.json` manifest recording the configuration, timings and files
 produced. Load a measurement with:
 
 ```python
-import pandas as pd
-df = pd.read_csv("results/worldgen-20260919-101500/minecraft_tick.csv", comment="#")
+from yardstick_benchmark.results import read_csv
+df = read_csv("results/worldgen-20260919-101500/minecraft_tick.csv",
+              field="tick_duration_ms")
 ```
+
+> [!WARNING]
+> Do not read these with a plain `pd.read_csv(path, comment="#")`. The export
+> is Flux's annotated CSV: one file holds several result tables, each with its
+> own header row, and tables in the same file can have different columns. A
+> naive read leaves the header rows in as data and stacks mismatched columns
+> on top of each other — it returns a DataFrame that looks right and is not.
+> `read_csv()` above parses each table separately and aligns them by name.
 
 ### From Python
 
