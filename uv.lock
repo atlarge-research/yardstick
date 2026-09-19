@@ -3164,6 +3164,7 @@ dependencies = [
     { name = "influxdb-client" },
     { name = "jinja2" },
     { name = "plumbum" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
 ]
 
 [package.optional-dependencies]
@@ -3196,6 +3197,7 @@ requires-dist = [
     { name = "pandas", marker = "extra == 'notebooks'", specifier = ">=2" },
     { name = "plumbum", specifier = ">=1.8.2,<2" },
     { name = "seaborn", marker = "extra == 'notebooks'", specifier = ">=0.13" },
+    { name = "tomli", marker = "python_full_version < '3.11'", specifier = ">=2.0" },
 ]
 provides-extras = ["notebooks"]
 
