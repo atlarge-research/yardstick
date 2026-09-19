@@ -33,7 +33,7 @@ def main() -> None:
     telegraf.set_output_influxdb2(influxdb.get_info())
 
     # System under test: one Minecraft server, with Jolokia + RCON enabled.
-    minecraft = MinecraftServer("yardstick-mc")
+    minecraft = MinecraftServer(node, "yardstick-mc")
 
     try:
         influxdb.deploy()
