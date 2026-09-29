@@ -112,6 +112,26 @@ uv sync --extra notebooks
 The `notebooks` extra adds matplotlib, pandas, seaborn, ipykernel and
 nbstripout; leave it off for a deployment that only needs to run benchmarks.
 
+`uv sync` uses the Python version in `.python-version`. If your machine does
+not have that version, uv downloads it. Then uv creates `.venv` and installs
+the dependency versions in `uv.lock`. Run `uv sync` again when `uv.lock` or
+`pyproject.toml` changes, e.g., after a `git pull`.
+
+### With mise
+
+If you use [mise](https://mise.jdx.dev/), it can install uv and Go (for the
+[tick collector](#the-go-tick-collector)) and activate `.venv` when you
+enter the repository:
+
+```sh
+mise trust
+mise install
+uv sync --extra notebooks
+```
+
+To check the result, `which python` must show `.venv/bin/python` in the
+repository, and `python --version` must show the version in `.python-version`.
+
 ## Running a benchmark
 
 There are two ways in, depending on how much you want to change.

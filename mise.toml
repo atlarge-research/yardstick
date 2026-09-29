@@ -1,0 +1,6 @@
+[tools]
+uv = "latest"
+go = "1.25"
+
+[env]
+_.python.venv = ".venv"
