@@ -8,7 +8,7 @@ readme = "README.md"
 dependencies = [
     "influxdb-client>=1.50.0",
     "jinja2>=3,<4",
-    "plumbum>=1.8.2,<2",
+    "plumbum>=2.0.2,<3",
 ]
 
 [project.scripts]
