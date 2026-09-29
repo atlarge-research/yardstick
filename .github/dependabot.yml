@@ -1,0 +1,45 @@
+version: 2
+updates:
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      python:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "deps"
+
+  # Baked into the published workload image: merge only together with an image release.
+  - package-ecosystem: "npm"
+    directory: "/yardstick_benchmark/games/minecraft/workload"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    groups:
+      npm:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "deps"
+
+  - package-ecosystem: "gomod"
+    directory: "/yardstick_benchmark/monitoring"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "deps"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"
