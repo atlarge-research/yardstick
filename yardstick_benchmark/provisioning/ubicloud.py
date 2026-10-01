@@ -323,15 +323,36 @@ touch {READY_MARKER}
         self._run(*create_args)
 
     def _refresh(self, ref: str) -> Dict[str, Any]:
-        """Fill in id and addresses from `ubi vm ... show`, and re-record."""
+        """Fill in id and addresses from `ubi vm ... show`, and re-record.
+
+        Both address families are recorded: the public one, which is how the
+        control plane reaches the machine, and the private one it has inside
+        its Ubicloud subnet, which is how the other machines of this run
+        should reach it (see :meth:`yardstick_benchmark.model.Node`). The
+        subnet is recorded too -- without it there is no way to tell whether
+        a private address means anything to a given peer.
+        """
         record = dict(self.ledger.get(ref) or {"ref": ref})
-        fields = self._show(ref, "id", "ip4", "ip6")
+        fields = self._show(
+            ref, "id", "ip4", "ip6", "private-ipv4", "private-ipv6", "subnet"
+        )
         ip4 = fields.get("ip4") or None
         ip6 = fields.get("ip6") or None
         host = ip4 or ip6
         if not host:
             raise ProvisioningError(f"VM {ref} has no reachable address")
-        record.update(id=fields.get("id") or None, ip4=ip4, ip6=ip6, host=host)
+        private_ip4 = fields.get("private-ipv4") or None
+        private_ip6 = fields.get("private-ipv6") or None
+        record.update(
+            id=fields.get("id") or None,
+            ip4=ip4,
+            ip6=ip6,
+            host=host,
+            private_ip4=private_ip4,
+            private_ip6=private_ip6,
+            private_host=private_ip4 or private_ip6,
+            subnet=fields.get("subnet") or None,
+        )
         self.ledger.record(**record)
         return record
 
@@ -384,8 +405,27 @@ touch {READY_MARKER}
         self._run("vm", str(record["ref"]), "destroy", "-f")
 
     def node_for(self, record: Dict[str, Any]) -> Node:
+        """Build the Node for a ledger record.
+
+        `host` stays the public address: the control plane is normally
+        outside the subnet, and SSH has to work from there. The private
+        address rides along and is used only between machines that report the
+        same subnet.
+
+        That subnet is qualified with the location, because the name Ubicloud
+        reports is only unique within one. Two groups provisioned in
+        different locations would otherwise look co-located if their default
+        subnets happened to be named alike, and the private addresses they
+        handed each other would not route.
+        """
+        subnet = record.get("subnet")
+        location = record.get("location")
         return Node(
             str(record["host"]),
             Path(str(record["wd"])),
             user=str(record.get("unix_user") or self.unix_user),
+            private_host=str(record["private_host"])
+            if record.get("private_host")
+            else None,
+            subnet=f"{location}/{subnet}" if subnet else None,
         )

@@ -168,7 +168,10 @@ def _run_on(
                     "yardstick_role": "server" if is_server else "workload",
                 },
             )
-            telegraf.set_output_influxdb2(influxdb.get_info())
+            # Every agent writes to the database for the whole run. Hand it
+            # the URL for *this* node, which is the private one when the two
+            # machines share a subnet.
+            telegraf.set_output_influxdb2(influxdb.get_info(node))
             components.append(telegraf)
 
     total_bots = _total_bots(config, len(workload_nodes))
@@ -186,7 +189,9 @@ def _run_on(
                 **build_kwargs(
                     config.workload_class,
                     config.workload_options,
-                    context=_context(server, server_host, influxdb, index, total_bots),
+                    context=_context(
+                        server, server_node, influxdb, node, index, total_bots
+                    ),
                     where="[workload]",
                 ),
             )
@@ -239,6 +244,9 @@ def _run_on(
         "server_host": server_host,
         "workload_hosts": [n.host for n in workload_nodes],
         "influxdb_host": influx_node.host,
+        "addressing": _manifest_addressing(
+            server_node, workload_nodes, influx_node, list(nodes.values())
+        ),
         "config": _manifest_config(config),
         "files": sorted(p.name for p in written),
         # Recorded next to the data, so a result can't be read later without
@@ -252,8 +260,15 @@ def _run_on(
     return results_dir
 
 
-def _context(server, server_host, influxdb, bot_index, total_bots) -> Dict[str, Any]:
+def _context(
+    server, server_node, influxdb, node, bot_index, total_bots
+) -> Dict[str, Any]:
     """Values a workload can't know from its own config section.
+
+    `node` is the machine this workload will run on, and the addresses it is
+    given are the ones reachable *from there*: the players' connections, RCON
+    and its InfluxDB writes are the benchmark's own traffic and should stay
+    on the private network when the machines share one.
 
     build_kwargs() keeps only the keys the workload's constructor actually
     accepts, so a workload that doesn't use RCON simply never sees the
@@ -262,16 +277,59 @@ def _context(server, server_host, influxdb, bot_index, total_bots) -> Dict[str, 
     own default with None.
     """
     context = {
-        "server_host": server_host,
+        "server_host": server_node.data_plane_host(node),
         "server_port": getattr(server, "game_port", None),
         "rcon_port": getattr(server, "rcon_port", None),
         "rcon_password": getattr(server, "rcon_password", None),
         "minecraft_version": getattr(server, "version", None),
-        "influxdb_info": influxdb.get_info(),
+        "influxdb_info": influxdb.get_info(node),
         "bot_index": bot_index,
         "total_bots": total_bots,
     }
     return {k: v for k, v in context.items() if v is not None}
+
+
+def _manifest_addressing(
+    server_node: Node,
+    workload_nodes: List[Node],
+    influx_node: Node,
+    all_nodes: List[Node],
+) -> Dict[str, Any]:
+    """Which address each piece of benchmark traffic actually used.
+
+    Latency numbers read very differently depending on whether the players
+    reached the server over the private network or out through the public
+    one, and that is not recoverable from the result afterwards -- so it is
+    written down here, per endpoint, rather than left to be inferred from the
+    deployment mode.
+    """
+    machines = [
+        {
+            "host": node.host,
+            "private_host": node.private_host,
+            "subnet": node.subnet,
+        }
+        for node in all_nodes
+    ]
+    server_from = {
+        node.host: server_node.data_plane_host(node) for node in workload_nodes
+    }
+    influxdb_from = {node.host: influx_node.data_plane_host(node) for node in all_nodes}
+    private = {m["private_host"] for m in machines if m["private_host"]}
+    return {
+        # True when at least one flow got a private address, i.e. when this
+        # run's timings are not directly comparable with one that went over
+        # the public path throughout.
+        "private_used": any(
+            addr in private
+            for addr in list(server_from.values()) + list(influxdb_from.values())
+        ),
+        "nodes": machines,
+        # How each workload machine addressed the game server (MC_HOST,
+        # RCON_HOST), and how each machine addressed the database.
+        "server_from": server_from,
+        "influxdb_from": influxdb_from,
+    }
 
 
 def _total_bots(config: BenchmarkConfig, node_count: int) -> int:

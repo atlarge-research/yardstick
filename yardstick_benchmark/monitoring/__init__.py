@@ -99,7 +99,24 @@ class InfluxDB(object):
 
     @property
     def url(self) -> str:
+        """Where the control plane reaches the database.
+
+        The machine running Yardstick queries the database directly -- the
+        readiness check, the saturation check and the CSV export all go
+        through here -- so this is always the node's public address. Traffic
+        written *into* the database from another node goes to
+        :meth:`url_for` instead.
+        """
         return f"http://{self.node.host}:{self.port}"
+
+    def url_for(self, peer: Node) -> str:
+        """Where a service running on `peer` should write to.
+
+        Telegraf agents and the workload containers write a batch of points
+        every few seconds for the length of a run; between co-located
+        machines that traffic has no business leaving the private network.
+        """
+        return f"http://{self.node.data_plane_host(peer)}:{self.port}"
 
     def deploy(self) -> None:
         """Create the database's storage directories on the node."""
@@ -175,8 +192,15 @@ class InfluxDB(object):
         """
         wait_for_url(f"{self.url}/health", timeout_s=timeout_s)
 
-    def get_info(self) -> InfluxDBInfo:
-        return InfluxDBInfo([self.url], self.admin_token)
+    def get_info(self, peer: Optional[Node] = None) -> InfluxDBInfo:
+        """Connection details for a client of this database.
+
+        Without `peer` the URL is the control-plane one. With it, it is the
+        URL a service running on that node should use -- the private address
+        when the two machines share a subnet.
+        """
+        url = self.url if peer is None else self.url_for(peer)
+        return InfluxDBInfo([url], self.admin_token)
 
     def _client(self) -> InfluxDBClient:
         info = self.get_info()

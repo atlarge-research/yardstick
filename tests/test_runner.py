@@ -88,20 +88,33 @@ class FakeWorkload:
 class FakeInfo:
     bucket = "yardstick"
     organization = "yardstick"
-    urls = ["http://localhost:8086"]
     token = "token"
+
+    def __init__(self, urls=("http://localhost:8086",)):
+        self.urls = list(urls)
 
 
 class FakeInfluxDB(FakeComponent):
+    PORT = 8086
+
     def __init__(self, node, **kwargs):
         super().__init__(BUILT["log"], "influxdb")
         self.node = node
         self.exported = None
-        self.info = FakeInfo()
+        self.info = FakeInfo([self.url])
         BUILT["influxdb"] = self
 
-    def get_info(self):
-        return self.info
+    # Mirrors the real InfluxDB: one URL for the control plane, another for
+    # whoever writes into it from a node.
+    @property
+    def url(self):
+        return f"http://{self.node.host}:{self.PORT}"
+
+    def url_for(self, peer):
+        return f"http://{self.node.data_plane_host(peer)}:{self.PORT}"
+
+    def get_info(self, peer=None):
+        return self.info if peer is None else FakeInfo([self.url_for(peer)])
 
     # The saturation check queries the database directly; answer with no
     # rows, which it reports as "could not check" rather than as healthy.
@@ -198,7 +211,7 @@ def test_workload_is_told_how_to_reach_the_server(tmp_path):
     options = BUILT["workloads"][0].options
     assert options["server_host"] == "localhost"
     assert options["rcon_password"] == "hunter2"
-    assert options["influxdb_info"] is BUILT["influxdb"].info
+    assert options["influxdb_info"].urls == [BUILT["influxdb"].url]
     assert options["bots_per_node"] == 4
 
 
@@ -258,10 +271,17 @@ def test_telegraf_scrapes_jolokia_only_on_the_server_node(tmp_path):
 
 
 class FakePool:
-    """Stands in for a Provisioner in cloud/cluster mode."""
+    """Stands in for a Provisioner in cloud/cluster mode.
 
-    def __init__(self, **options):
+    Its machines come with both addresses a real cloud provider reports: a
+    public one and a private one inside a subnet. Every pool uses the same
+    subnet by default, as Ubicloud's machines in one location do; `subnet`
+    overrides it for the cases where the groups do not in fact share one.
+    """
+
+    def __init__(self, subnet="test-subnet", **options):
         self.options = options
+        self.subnet = subnet
         self.released = []
         self.ledger = type("L", (), {"path": "/tmp/ledger.json"})()
         BUILT.setdefault("pools", []).append(self)
@@ -269,7 +289,12 @@ class FakePool:
     def provision(self, num, wd=None):
         base = len(BUILT.setdefault("provisioned", []))
         nodes = [
-            Node(f"198.51.100.{base + i}", Path(wd or "/home/ubi/yardstick"))
+            Node(
+                f"198.51.100.{base + i}",
+                Path(wd or "/home/ubi/yardstick"),
+                private_host=f"10.0.0.{base + i}",
+                subnet=self.subnet,
+            )
             for i in range(num)
         ]
         BUILT["provisioned"].extend(nodes)
@@ -422,3 +447,89 @@ def test_machine_groups_are_provisioned_concurrently(tmp_path, monkeypatch):
     monkeypatch.setattr(FakePool, "provision", slow_provision)
     runner.run(_cloud_config(tmp_path))
     assert max(peak) > 1, "groups were provisioned one after another"
+
+
+def test_benchmark_traffic_between_co_located_machines_stays_private(tmp_path):
+    """Players, RCON and metric writes are the traffic being measured; sending
+    them out through the public interface and back adds latency and variance
+    that has nothing to do with the game server."""
+    runner.run(_cloud_config(tmp_path))
+    server_node = BUILT["game"].node
+    influx_private = BUILT["influxdb"].node.private_host
+
+    # Bots and RCON address the server by its private IP...
+    for workload in BUILT["workloads"]:
+        assert workload.options["server_host"] == server_node.private_host
+        # ...and so does the workload's own InfluxDB writing.
+        assert workload.options["influxdb_info"].urls == [
+            f"http://{influx_private}:8086"
+        ]
+
+    # Every Telegraf agent, including the one on the database's own machine.
+    for telegraf in BUILT["telegrafs"]:
+        assert telegraf.output.urls == [f"http://{influx_private}:8086"]
+
+
+def test_the_control_plane_keeps_the_public_addresses(tmp_path):
+    """SSH and staging run from outside the subnet; a private address there
+    would simply hang."""
+    runner.run(_cloud_config(tmp_path))
+    public = {n.host for n in BUILT["provisioned"]}
+    assert BUILT["game"].node.host in public
+    assert {t.node.host for t in BUILT["telegrafs"]} <= public
+    assert {w.node.host for w in BUILT["workloads"]} <= public
+    # And the database is still queried publicly: the export and the
+    # saturation check run on the machine driving the benchmark.
+    assert BUILT["influxdb"].url == f"http://{BUILT['influxdb'].node.host}:8086"
+
+
+def test_machines_in_different_subnets_keep_talking_publicly(tmp_path):
+    """A private address only means anything inside its own subnet. Handing
+    one to a machine outside it does not fail cleanly, so it must not happen."""
+    config = _cloud_config(
+        tmp_path,
+        extra="\n[provisioning.server]\nsubnet = 'subnet-a'\n"
+        "\n[provisioning.workload]\nsubnet = 'subnet-b'\n",
+    )
+    runner.run(config)
+    server_node = BUILT["game"].node
+    for workload in BUILT["workloads"]:
+        assert workload.options["server_host"] == server_node.host
+
+
+def test_local_mode_addressing_is_unchanged(tmp_path):
+    """Nodes with no private address at all keep using the only one they
+    have."""
+    runner.run(_config(tmp_path, hosts='["127.0.0.1", "127.0.0.2"]'))
+    assert BUILT["workloads"][0].options["server_host"] == "127.0.0.1"
+    influx_host = BUILT["influxdb"].node.host
+    assert all(
+        t.output.urls == [f"http://{influx_host}:8086"] for t in BUILT["telegrafs"]
+    )
+
+
+def test_the_manifest_records_which_addresses_were_used(tmp_path):
+    """A run's latencies can only be compared with another's if it is known
+    whether the traffic went over the private network."""
+    results = runner.run(_cloud_config(tmp_path))
+    manifest = json.loads((results / "run.json").read_text())
+    addressing = manifest["addressing"]
+    assert addressing["private_used"] is True
+
+    server_node = BUILT["game"].node
+    workload_hosts = [w.node.host for w in BUILT["workloads"]]
+    assert set(addressing["server_from"]) == set(workload_hosts)
+    assert set(addressing["server_from"].values()) == {server_node.private_host}
+    assert set(addressing["influxdb_from"].values()) == {
+        BUILT["influxdb"].node.private_host
+    }
+    recorded = {entry["host"]: entry for entry in addressing["nodes"]}
+    assert recorded[server_node.host]["private_host"] == server_node.private_host
+    assert recorded[server_node.host]["subnet"] == "test-subnet"
+
+
+def test_the_manifest_says_so_when_nothing_went_privately(tmp_path):
+    results = runner.run(_config(tmp_path, hosts='["127.0.0.1", "127.0.0.2"]'))
+    manifest = json.loads((results / "run.json").read_text())
+    assert manifest["addressing"]["private_used"] is False
+    assert manifest["addressing"]["nodes"][0]["private_host"] is None
