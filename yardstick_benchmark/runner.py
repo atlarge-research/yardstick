@@ -21,6 +21,7 @@ from yardstick_benchmark.config import BenchmarkConfig, build_kwargs
 from yardstick_benchmark.deployment import Deployment
 from yardstick_benchmark.model import Node
 from yardstick_benchmark.monitoring import InfluxDB, Telegraf
+from yardstick_benchmark.report import try_generate_report
 from yardstick_benchmark.saturation import check_workload_saturation
 from yardstick_benchmark.util import fan_out
 
@@ -247,6 +248,15 @@ def _run_on(
     }
     (results_dir / "run.json").write_text(json.dumps(manifest, indent=2) + "\n")
     logger.info("wrote %d measurement file(s) to %s", len(written), results_dir)
+
+    # Deliberately last, and deliberately unable to fail the run: a benchmark
+    # that ran and exported its metrics is a success even if no chart could
+    # be drawn. The same report can be regenerated from this directory at any
+    # time with `yardstick report`.
+    report = try_generate_report(results_dir)
+    if report is not None:
+        print(f"report: {report}")
+
     if not saturation.ok:
         print(saturation.summary())
     return results_dir
@@ -288,6 +298,10 @@ def _manifest_config(config: BenchmarkConfig) -> Dict[str, Any]:
         "game": {"type": config.game, **config.game_options},
         "workload": {"type": config.workload, **config.workload_options},
         "deployment": asdict(config.deployment),
+        # Recorded so a report can say what the machines were: for a
+        # provisioned run the sizes are part of the result, not an
+        # implementation detail of how it was started.
+        "provisioning": asdict(config.provisioning),
         "monitoring": asdict(config.monitoring),
         "output": asdict(config.output),
     }

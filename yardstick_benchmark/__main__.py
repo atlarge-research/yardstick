@@ -3,6 +3,7 @@
     yardstick init experiment.toml       write a commented starter config
     yardstick validate experiment.toml   check it without deploying anything
     yardstick run experiment.toml        run the benchmark
+    yardstick report results/some-run    write an HTML report for a past run
     yardstick list                       show the built-in games and workloads
     yardstick machines list              show machines Yardstick provisioned
     yardstick machines release           give them all back
@@ -59,6 +60,28 @@ def build_parser() -> argparse.ArgumentParser:
         "validate", help="check a configuration without deploying anything"
     )
     _add_config_arg(validate_parser)
+
+    report_parser = sub.add_parser(
+        "report",
+        help="write an HTML report for a results directory",
+        description=(
+            "Build a self-contained HTML report from a results directory. "
+            "It reads the exported CSVs and run.json, never the metrics "
+            "database, so it works on any run whose directory still exists."
+        ),
+    )
+    report_parser.add_argument(
+        "results",
+        type=Path,
+        help="a results directory, i.e. one holding run.json",
+    )
+    report_parser.add_argument(
+        "-o",
+        "--output",
+        type=Path,
+        default=None,
+        help="file to write (default: <results>/report.html)",
+    )
 
     init_parser = sub.add_parser("init", help="write a starter configuration")
     init_parser.add_argument("config", type=Path, help="file to create")
@@ -168,6 +191,19 @@ def main(argv=None) -> int:
                 file=sys.stderr,
             )
             return 1
+        return 0
+
+    if args.command == "report":
+        # Imported here because it needs the `notebooks` extra, which a
+        # machine that only runs benchmarks does not have to install.
+        from yardstick_benchmark.report import ReportError, generate_report
+
+        try:
+            path = generate_report(args.results, args.output)
+        except ReportError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        print(f"report: {path}")
         return 0
 
     if args.command == "init":
