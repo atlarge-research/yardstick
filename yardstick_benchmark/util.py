@@ -1,5 +1,6 @@
 import os
 import posixpath
+import shlex
 import socket
 import ipaddress
 import string
@@ -7,9 +8,10 @@ import random
 import time
 import urllib.error
 import urllib.request
+import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import contextmanager
-from typing import Callable, Iterable, Optional, TypeVar
+from typing import Callable, Iterable, Mapping, Optional, TypeVar
 
 from plumbum import SshMachine, local
 from plumbum.machines.local import LocalMachine
@@ -34,6 +36,35 @@ def is_localhost(host: str) -> bool:
 def random_string(length: int = 8) -> str:
     alphabet = string.ascii_lowercase + string.digits
     return "".join(random.choices(alphabet, k=length))
+
+
+def unique_instance_name(prefix: str) -> str:
+    """An apptainer instance name no concurrent run will also pick.
+
+    Instance names are a flat, per-user namespace on a node, so a fixed
+    default like ``telegraf`` makes two runs on one machine -- two people on
+    a shared cluster node, or one person's parameter sweep -- fight over a
+    single name. Worse, teardown issues ``apptainer instance stop
+    <name>``, which then stops whichever container got the name first,
+    possibly someone else's. A uuid suffix removes the collision; the
+    prefix keeps ``apptainer instance list`` readable.
+    """
+    return f"{prefix}-{uuid.uuid4()}"
+
+
+def render_env_file(env: Mapping[str, str]) -> str:
+    """Render `env` in the format apptainer's ``--env-file`` expects.
+
+    Apptainer evaluates an env file as a shell script (with command
+    execution disabled) and then expands ``$VAR`` references in the
+    resulting values -- exactly what it already does to a ``--env
+    KEY=VALUE`` argument. So every value is shell-quoted here: without that,
+    a value containing a space or a ``#`` is a parse error rather than a
+    value. The one behavioural difference from ``--env`` is in our favour:
+    apptainer *does* run command substitutions in a ``--env`` argument, and
+    refuses to run them in an env file.
+    """
+    return "".join(f"{key}={shlex.quote(str(value))}\n" for key, value in env.items())
 
 
 def fan_out(
@@ -183,3 +214,31 @@ def stage(machine, src, dst: str) -> None:
 
     if os.access(str(src_path), os.X_OK):
         machine["chmod"]["+x", dst]()
+
+
+def write_private_file(machine, dst: str, content: str) -> None:
+    """Write `content` to `dst` on `machine` as a file only its owner can read.
+
+    This is how every file holding a credential gets onto a node: the
+    apptainer ``--env-file`` carrying the RCON password, and Telegraf's
+    rendered config carrying the InfluxDB admin token. Two things matter
+    here that :func:`stage` does not give:
+
+    * The content travels on the helper command's *stdin*, never in its
+      arguments, so it does not show up in the node's process list -- which
+      is the whole reason for moving it off the apptainer command line.
+    * The file is created under ``umask 077``, so it is never even briefly
+      world-readable. Staging a locally-created mode-0600 file would not do:
+      ``scp`` does not carry the source's mode across, so the same file
+      lands 0600 on a local node and world-readable on a remote one. An
+      existing file is removed first, because a redirect into one keeps
+      whatever mode it already had.
+
+    Parent directories are created first, as in :func:`stage`.
+    """
+    parent = posixpath.dirname(dst)
+    if parent:
+        machine["mkdir"]["-p", parent]()
+    quoted = shlex.quote(dst)
+    script = f"umask 077 && rm -f {quoted} && cat > {quoted}"
+    (machine["sh"]["-c", script] << content)()
