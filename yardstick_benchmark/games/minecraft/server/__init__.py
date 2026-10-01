@@ -12,7 +12,13 @@ import threading
 import uuid
 
 from yardstick_benchmark.model import Node
-from yardstick_benchmark.util import random_string, remote, stage, wait_for_tcp
+from yardstick_benchmark.util import (
+    RemoteSession,
+    random_string,
+    remote,
+    stage,
+    wait_for_tcp,
+)
 
 
 JOLOKIA_JAR = Path(__file__).parent / "jolokia-agent-jvm-2.5.1-javaagent.jar"
@@ -193,6 +199,10 @@ class MinecraftServer:
         self._crash: Optional[MinecraftServerCrashed] = None
         self._monitor_stop: Optional[threading.Event] = None
         self._monitor_thread: Optional[threading.Thread] = None
+        # The connection the monitor thread polls over. Owned by that thread;
+        # only stop_health_monitor() touches it from outside, and only to
+        # close a connection whose thread refused to stop.
+        self._monitor_conn: Optional[RemoteSession] = None
 
     def _resolve_memory(self, machine) -> str:
         """The itzg MEMORY value: the explicit `memory`, else half the node's
@@ -353,34 +363,45 @@ class MinecraftServer:
         server crash aborts the run promptly instead of letting clients spin
         against a dead server. The log scan runs as a `grep` on the node, so
         a long run's console log is never pulled across in full.
+
+        This opens and closes a connection, which is right for a one-off
+        check. The background monitor polls
+        :meth:`_raise_if_crashed` over a connection it holds instead.
         """
-        with remote(self.node.host, self.node.user) as machine:
-            # A crash-report file is the unambiguous signal: vanilla writes
-            # here only when the server actually crashes. Prefer it for the
-            # message.
-            crash_dir = machine.path(f"{self.data_dir}/crash-reports")
-            reports = sorted(crash_dir // "*.txt") if crash_dir.is_dir() else []
-            if reports:
-                try:
-                    detail = machine["head"]["-c", "2000", str(reports[-1])]()
-                except Exception:
-                    detail = "(could not read crash report)"
-                raise MinecraftServerCrashed(
-                    f"Minecraft server '{self.instance_name}' crashed "
-                    f"(see {reports[-1]}):\n{detail}"
+        with RemoteSession(self.node.host, self.node.user) as conn:
+            self._raise_if_crashed(conn)
+
+    def _raise_if_crashed(self, conn: RemoteSession) -> None:
+        """:meth:`raise_if_crashed`, over a caller-supplied connection."""
+        machine = conn.machine
+        # A crash-report file is the unambiguous signal: vanilla writes
+        # here only when the server actually crashes. Prefer it for the
+        # message.
+        crash_dir = machine.path(f"{self.data_dir}/crash-reports")
+        reports = sorted(crash_dir // "*.txt") if crash_dir.is_dir() else []
+        if reports:
+            try:
+                _, detail, _ = conn.run(
+                    machine["head"]["-c", "2000", str(reports[-1])], retcode=0
                 )
-            # Fall back to scanning the console log for crash markers. -a
-            # keeps grep in text mode even if the log picked up a stray
-            # non-UTF-8 byte; -o -m1 makes it print just the first marker it
-            # matched, which is what we report.
-            log = machine.path(f"{self.data_dir}/logs/latest.log")
-            if not log.is_file():
-                return
-            args = ["-a", "-o", "-m", "1", "-F"]
-            for marker in _CRASH_LOG_MARKERS:
-                args += ["-e", marker]
-            args.append(str(log))
-            retcode, out, _ = machine["grep"][args].run(retcode=None)
+            except Exception:
+                detail = "(could not read crash report)"
+            raise MinecraftServerCrashed(
+                f"Minecraft server '{self.instance_name}' crashed "
+                f"(see {reports[-1]}):\n{detail}"
+            )
+        # Fall back to scanning the console log for crash markers. -a
+        # keeps grep in text mode even if the log picked up a stray
+        # non-UTF-8 byte; -o -m1 makes it print just the first marker it
+        # matched, which is what we report.
+        log = machine.path(f"{self.data_dir}/logs/latest.log")
+        if not log.is_file():
+            return
+        args = ["-a", "-o", "-m", "1", "-F"]
+        for marker in _CRASH_LOG_MARKERS:
+            args += ["-e", marker]
+        args.append(str(log))
+        retcode, out, _ = conn.run(machine["grep"][args])
         if retcode != 0:
             return
         matched = out.strip().splitlines()
@@ -393,29 +414,43 @@ class MinecraftServer:
     def start_health_monitor(self, interval_s: float = 5.0) -> None:
         """Begin polling the server's health in the background.
 
-        Spawns a daemon thread that calls raise_if_crashed() every
-        `interval_s` while the server runs as a background service; the first
-        detected crash is recorded and the thread stops. The orchestrator
-        surfaces it cheaply on its own thread via assert_healthy() (e.g. as the
+        Spawns a daemon thread that checks for a crash every `interval_s`
+        while the server runs as a background service; the first detected
+        crash is recorded and the thread stops. The orchestrator surfaces it
+        cheaply on its own thread via assert_healthy() (e.g. as the
         `health_check` passed to a workload's run()). Idempotent-ish: call
         stop_health_monitor() before re-starting.
+
+        The whole loop runs over one connection to the node, opened here and
+        closed when the monitor stops -- a half-hour run is one SSH
+        connection rather than one per poll. A failed poll drops the
+        connection so the next one reconnects, which is how the monitor
+        survives a node that went away for a while.
         """
         self.stop_health_monitor()
         self._crash = None
         stop = threading.Event()
         self._monitor_stop = stop
+        conn = RemoteSession(self.node.host, self.node.user)
+        self._monitor_conn = conn
 
         def _loop() -> None:
-            while not stop.wait(interval_s):
-                try:
-                    self.raise_if_crashed()
-                except MinecraftServerCrashed as exc:
-                    self._crash = exc
-                    return
-                except Exception:
-                    # A transient read error (log rotating, node briefly
-                    # unreachable) must not kill the monitor.
-                    continue
+            try:
+                while not stop.wait(interval_s):
+                    try:
+                        self._raise_if_crashed(conn)
+                    except MinecraftServerCrashed as exc:
+                        self._crash = exc
+                        return
+                    except Exception:
+                        # A transient read error (log rotating, node briefly
+                        # unreachable) must not kill the monitor -- but the
+                        # connection may be the thing that broke, so drop it
+                        # and let the next poll open a fresh one.
+                        conn.close()
+                        continue
+            finally:
+                conn.close()
 
         self._monitor_thread = threading.Thread(
             target=_loop, name=f"mc-health-{self.instance_name}", daemon=True
@@ -423,13 +458,24 @@ class MinecraftServer:
         self._monitor_thread.start()
 
     def stop_health_monitor(self) -> None:
-        """Stop the background health monitor (if running)."""
+        """Stop the background health monitor (if running), closing the
+        connection it polls over."""
         if self._monitor_stop is not None:
             self._monitor_stop.set()
-        if self._monitor_thread is not None:
-            self._monitor_thread.join(timeout=5)
+        thread, conn = self._monitor_thread, self._monitor_conn
+        if thread is not None:
+            thread.join(timeout=5)
+            if thread.is_alive() and conn is not None:
+                # Stuck in a command against a node that stopped answering.
+                # Closing kills the ssh processes, which unblocks the thread
+                # -- better than leaving one behind until the process exits.
+                conn.close()
+                thread.join(timeout=5)
+        elif conn is not None:
+            conn.close()
         self._monitor_stop = None
         self._monitor_thread = None
+        self._monitor_conn = None
 
     def assert_healthy(self) -> None:
         """Raise the crash the background monitor caught, if any. Cheap to call
