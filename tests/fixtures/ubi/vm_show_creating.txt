@@ -1,0 +1,4 @@
+id: vm0j5f8z9k2m3n4p5q6r7s8t9v
+ip4:
+ip6: 2001:db8:4f2a:1::2
+state: creating
