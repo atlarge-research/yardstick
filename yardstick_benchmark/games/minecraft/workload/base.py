@@ -28,7 +28,7 @@ import threading
 import time
 from datetime import timedelta
 from pathlib import Path
-from typing import IO, Callable, Dict, List, Optional
+from typing import IO, Any, Callable, Dict, List, Optional, Tuple
 
 from yardstick_benchmark.model import Node
 from yardstick_benchmark.util import random_string, remote, stage
@@ -101,6 +101,22 @@ class MineflayerWorkload:
         self.image_url = image_url
         self.timeout = timeout
         self.wd = f"{node.wd}/{self.NAME}-{random_string(8)}"
+
+    #: Attributes that describe the load this workload generates, and so
+    #: belong in a published result. An allow-list: a new attribute is
+    #: private until someone adds it here, so a credential or an address
+    #: cannot reach a results file by accident.
+    PARAMETERS: Tuple[str, ...] = ()
+
+    def describe(self) -> Dict[str, Any]:
+        """What this workload did, as JSON-ready values, for the run manifest."""
+        described: Dict[str, Any] = {"type": self.NAME}
+        for name in self.PARAMETERS:
+            value = getattr(self, name)
+            if isinstance(value, timedelta):
+                name, value = f"{name}_s", value.total_seconds()
+            described[name] = value
+        return described
 
     @property
     def entry_script(self) -> str:
