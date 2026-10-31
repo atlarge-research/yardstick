@@ -42,6 +42,17 @@ class WorldGeneration(MineflayerWorkload):
         "worldgen/main.js",
         "worldgen/worker.js",
     )
+    PARAMETERS = (
+        "teleports",
+        "bots_per_node",
+        "total_bots",
+        "start_distance",
+        "step_distance",
+        "teleport_y",
+        "chunk_load_timeout",
+        "bots_join_delay",
+        "minecraft_version",
+    )
 
     def __init__(
         self,

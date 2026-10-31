@@ -7,7 +7,8 @@ and is used for in-band server commands like :meth:`set_world_spawn`.
 """
 
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
+import re
 import threading
 import uuid
 
@@ -32,6 +33,10 @@ _CRASH_LOG_MARKERS = (
     "Watchdog/ERROR",
     "java.lang.OutOfMemoryError",
 )
+
+
+# What `rcon-cli seed` prints, e.g. "Seed: [-4172144997902289642]".
+_SEED_REPLY = re.compile(r"Seed: \[(-?\d+)\]")
 
 
 def _flag(value: bool) -> str:
@@ -181,6 +186,10 @@ class MinecraftServer:
         self.jolokia_port = jolokia_port
         self.extra_env = dict(extra_env) if extra_env else {}
         self.running = False
+        # What the server actually ran with, known only once it is up: the
+        # configured `memory` may be None, and so may `seed`.
+        self.resolved_memory: Optional[str] = memory or None
+        self.resolved_seed: Optional[str] = None if seed is None else str(seed)
         # Server state lives under the node's working directory (rather than
         # a private /tmp dir) so fetch() collects it and clean() removes it.
         self.wd = f"{node.wd}/{self.instance_name}"
@@ -270,6 +279,7 @@ class MinecraftServer:
         with remote(self.node.host, self.node.user) as machine:
             self._stage(machine)
             memory = self._resolve_memory(machine)
+            self.resolved_memory = memory
             args = (
                 [
                     "instance",
@@ -313,11 +323,57 @@ class MinecraftServer:
         wait_for_tcp(self.node.host, self.rcon_port, timeout_s=timeout_s)
 
     def ready(self, timeout_s: float = 180) -> None:
-        """Alias for wait_until_ready(), the hook Deployment looks for."""
+        """The hook Deployment looks for: wait until the server is up, then
+        learn which world it generates."""
         self.wait_until_ready(timeout_s=timeout_s)
+        self._learn_seed()
 
-    def rcon(self, *commands: str) -> None:
-        """Send one or more commands to the running server via RCON.
+    def _learn_seed(self) -> None:
+        """Ask the running server which world seed it uses.
+
+        Without a configured seed the server picks a random one, and a result
+        is only reproducible if it says which. A failure here is not a reason
+        to fail the run: the seed stays unknown, which describe() reports.
+        """
+        if self.resolved_seed is not None:
+            return
+        try:
+            reply = self.rcon("seed")
+        except Exception:
+            return
+        found = _SEED_REPLY.search(reply or "")
+        if found:
+            self.resolved_seed = found.group(1)
+
+    #: Settings that identify a run, as the server ran them. An allow-list,
+    #: so an option added later (a password, say) stays out of results until
+    #: someone decides it belongs there.
+    DESCRIBED = (
+        "version",
+        "view_distance",
+        "simulation_distance",
+        "max_tick_time",
+        "max_players",
+        "difficulty",
+        "gamemode",
+        "pvp",
+        "online_mode",
+        "spawn_protection",
+        "image_url",
+    )
+
+    def describe(self) -> Dict[str, Any]:
+        """The server as it ran, for the run manifest. Never holds secrets."""
+        described: Dict[str, Any] = {
+            name: getattr(self, name) for name in self.DESCRIBED
+        }
+        described["memory"] = self.resolved_memory
+        described["seed"] = self.resolved_seed
+        return described
+
+    def rcon(self, *commands: str) -> str:
+        """Send one or more commands to the running server via RCON and
+        return what the server printed.
 
         Uses the rcon-cli binary that itzg/minecraft-server bundles by
         execing straight into the running instance, so no extra container
@@ -325,7 +381,7 @@ class MinecraftServer:
         connections (see wait_until_ready()).
         """
         if not commands:
-            return
+            return ""
         args = [
             "exec",
             "--env",
@@ -338,7 +394,7 @@ class MinecraftServer:
             "rcon-cli",
         ] + list(commands)
         with remote(self.node.host, self.node.user) as machine:
-            machine["apptainer"][args]()
+            return machine["apptainer"][args]()
 
     def set_world_spawn(self, x: int, z: int, y: int = 4) -> None:
         """Move the world spawn to (x, y, z) via RCON."""

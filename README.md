@@ -186,8 +186,11 @@ type = "mypackage.workloads.MyWorkload"
 ```
 
 Results land in `results/<workload>-<timestamp>/`: one CSV per measurement,
-plus a `run.json` manifest recording the configuration, timings and files
-produced. Load a measurement with:
+plus a `run.json` manifest recording what the run used (the game version,
+world seed and heap size as the server resolved them), timings and files
+produced. The manifest holds no passwords, addresses or local paths, so it is
+safe to share. A game or workload of your own records only its type, unless
+it implements `describe()`. Load a measurement with:
 
 ```python
 from yardstick_benchmark.results import read_csv

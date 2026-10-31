@@ -230,15 +230,15 @@ def _run_on(
 
     manifest = {
         "workload": config.workload,
-        "game": config.game,
         "started_at": started_at.isoformat(),
         "finished_at": finished_at.isoformat(),
         "duration_s": (finished_at - started_at).total_seconds(),
         "total_bots": total_bots,
-        "hosts": sorted(nodes),
-        "server_host": server_host,
-        "workload_hosts": [n.host for n in workload_nodes],
-        "influxdb_host": influx_node.host,
+        "nodes": _manifest_nodes(
+            server_node, workload_nodes, influx_node, config.monitoring
+        ),
+        "game": _describe(server, config.game),
+        "workload_parameters": _describe(workloads[0], config.workload),
         "config": _manifest_config(config),
         "files": sorted(p.name for p in written),
         # Recorded next to the data, so a result can't be read later without
@@ -283,11 +283,57 @@ def _total_bots(config: BenchmarkConfig, node_count: int) -> int:
     return per_node * node_count
 
 
+#: Provisioning options that say what a machine is, and so belong in a
+#: result. Everything else a provider accepts (an SSH key path, say) stays out.
+_MACHINE_FACTS = ("size", "location")
+
+
+def _describe(component: Any, name: str) -> Dict[str, Any]:
+    """What `component` says about itself, or only its name if it says nothing.
+
+    Components of your own need not implement describe(); they then record
+    nothing but their type, never the raw options they were given.
+    """
+    describe = getattr(component, "describe", None)
+    described = dict(describe()) if callable(describe) else {}
+    return {"type": name, **described}
+
+
+def _manifest_nodes(
+    server_node, workload_nodes, influx_node, monitoring
+) -> Dict[str, Any]:
+    """The machines of a run by role. Addresses are left out on purpose: a
+    result gets shared, and the machines are gone by then."""
+    if influx_node is server_node:
+        influxdb = "server"
+    elif monitoring.influxdb_placement == "dedicated":
+        influxdb = "dedicated"
+    else:
+        influxdb = "workload-0"
+    return {"workload": len(workload_nodes), "influxdb": influxdb}
+
+
 def _manifest_config(config: BenchmarkConfig) -> Dict[str, Any]:
-    return {
-        "game": {"type": config.game, **config.game_options},
-        "workload": {"type": config.workload, **config.workload_options},
-        "deployment": asdict(config.deployment),
+    """The configuration as written, minus anything that is secret or local.
+
+    What the components resolved to (seed, heap size, version) is recorded
+    separately, from the components themselves.
+    """
+    recorded: Dict[str, Any] = {
+        "deployment": {"mode": config.deployment.mode},
         "monitoring": asdict(config.monitoring),
-        "output": asdict(config.output),
     }
+    if config.deployment.mode != "local":
+        provisioning = config.provisioning
+        recorded["machines"] = {
+            "provider": provisioning.provider,
+            **{
+                group: {
+                    key: value
+                    for key, value in provisioning.options_for(group).items()
+                    if key in _MACHINE_FACTS
+                }
+                for group in ("server", "workload")
+            },
+        }
+    return recorded

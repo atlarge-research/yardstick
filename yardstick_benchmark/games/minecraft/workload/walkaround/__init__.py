@@ -33,6 +33,15 @@ class WalkAround(MineflayerWorkload):
         "walkaround/main.js",
         "walkaround/worker.js",
     )
+    PARAMETERS = (
+        "duration",
+        "box_width",
+        "box_x",
+        "box_z",
+        "bots_join_delay",
+        "bots_per_node",
+        "minecraft_version",
+    )
 
     def __init__(
         self,
