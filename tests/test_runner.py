@@ -206,9 +206,8 @@ def test_a_manifest_records_what_was_run(tmp_path):
     results = runner.run(_config(tmp_path))
     manifest = json.loads((results / "run.json").read_text())
     assert manifest["total_bots"] == 4
-    assert manifest["server_host"] == "localhost"
     assert manifest["files"] == ["cpu.csv"]
-    assert manifest["config"]["game"]["max_players"] == 50
+    assert manifest["game"]["type"] == "tests.test_runner.FakeGame"
     assert manifest["duration_s"] >= 0
 
 
@@ -396,7 +395,35 @@ def test_local_mode_keeps_everything_on_the_one_machine(tmp_path):
 def test_the_manifest_records_where_the_database_ran(tmp_path):
     results = runner.run(_cloud_config(tmp_path))
     manifest = json.loads((results / "run.json").read_text())
-    assert manifest["influxdb_host"] != manifest["server_host"]
+    assert manifest["nodes"]["influxdb"] == "workload-0"
+
+
+def test_the_manifest_holds_no_addresses_and_no_secrets(tmp_path):
+    results = runner.run(_cloud_config(tmp_path))
+    text = (results / "run.json").read_text()
+    assert "198.51.100" not in text
+    assert "hunter2" not in text
+    assert "/home/ubi" not in text
+
+
+def test_a_secret_in_the_game_table_stays_out_of_the_manifest(tmp_path):
+    config = _config(tmp_path)
+    config.game_options["rcon_password"] = "s3cret"
+    results = runner.run(config)
+    assert "s3cret" not in (results / "run.json").read_text()
+
+
+def test_a_game_without_describe_records_only_its_type(tmp_path):
+    results = runner.run(_config(tmp_path))
+    manifest = json.loads((results / "run.json").read_text())
+    assert manifest["game"] == {"type": "tests.test_runner.FakeGame"}
+    assert manifest["workload_parameters"] == {"type": "tests.test_runner.FakeWorkload"}
+
+
+def test_cloud_machine_sizes_are_recorded(tmp_path):
+    results = runner.run(_cloud_config(tmp_path))
+    manifest = json.loads((results / "run.json").read_text())
+    assert set(manifest["config"]["machines"]) == {"provider", "server", "workload"}
 
 
 def test_machine_groups_are_provisioned_concurrently(tmp_path, monkeypatch):
