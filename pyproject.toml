@@ -21,9 +21,9 @@ yardstick = "yardstick_benchmark.__main__:main"
 # VS Code / Jupyter to attach to this venv as a kernel; matplotlib +
 # pandas are used by the notebooks themselves.
 notebooks = [
-    "ipykernel>=6",
-    "matplotlib>=3.7",
-    "pandas>=2",
+    "ipykernel>=7.4.0",
+    "matplotlib>=3.11.2",
+    "pandas>=3.1.0",
     "seaborn>=0.13",
     # Strips notebook outputs on commit via a git filter; see README
     # ("Keeping notebook outputs out of git").
@@ -44,8 +44,8 @@ artifacts = [
 
 [dependency-groups]
 dev = [
-    "pytest>=8.4.2",
-    "ruff>=0.15.2",
+    "pytest>=9.2.0",
+    "ruff>=0.17.3",
 ]
 
 [tool.pytest.ini_options]
